@@ -86,9 +86,11 @@ class Shape():
     materials = None
     if load_materials:
       materials = []
+      i = 0
       for m in self.meshes:
         #file_name = os.path.join(dir_name, m.material.properties[('file', 0)])
         file_name = os.path.join(dir_name, sorted(glob.glob1(dir_name, '*.jpg'))[i])
+        i = i + 1
         assert(os.path.exists(file_name)), \
             'Texture file {:s} foes not exist.'.format(file_name)
         materials.append(self._load_materials_from_file(file_name, materials_scale))
