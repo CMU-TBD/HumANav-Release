@@ -1,4 +1,4 @@
-# HumANav
+# tbd_HumANav
 Welcome to the Human Active Navigation Dataset (HumANav), a codebase for photorealistic simulations of humans in indoor office environments! We are a team of researchers from UC Berkeley and Google Brain.
 
 This codebase is a part of our work in ["Visual Navigation Among Humans with Optimal Control as a Supervisor"](https://arxiv.org/pdf/2003.09354.pdf). In this work we show that HumANav enables zero-shot transfer of learning based navigation algorithms directly from simulation to reality. We hope that HumANav can be a useful tool for the broader visual navigation, computer vision, and robotics communities.
@@ -42,7 +42,7 @@ sudo apt-get install g++
 ### Setup A Virtual Environment
 ```
 conda env create -f environment.yml
-conda activate humanav
+conda activate tbd_humanav
 ```
 
 #### Patch the OpenGL Installation
@@ -51,7 +51,7 @@ In the terminal run the following commands.
 1. /PATH/TO/HumANav/humanav
 2. bash patches/apply_patches_3.sh
 ```
-If the script fails there are instructions in apply_patches_3.sh describing how to manually apply the patch.
+If the script fails there are instructions in apply_patches_3.sh describing how to manually apply the patch. Additionally, the failure may be due to a bug in this version of `pyassimp` which can be fixed by following [this commit](https://github.com/assimp/assimp/commit/b6d3cbcb61f4cc4c42678d5f183351f95c97c8d4) and simply changing `isinstance(obj,int)` to `isinstance(obj, (int, str, bytes))` on line 96 of `anaconda3/envs/tbd_humanav/lib/python3.6/site-packages/pyassimp/core.py`. Then try running the patches again, or manually (not recommended).
 
 #### Install Libassimp-dev
 In the terminal run:
