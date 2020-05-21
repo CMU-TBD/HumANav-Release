@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import os
+import os, sys
 from dotmap import DotMap
 from humanav.humanav_renderer import HumANavRenderer
 from humanav.renderer_params import create_params as create_base_params
@@ -71,6 +71,8 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_
     ax.set_title('Depth')
 
     fig.savefig(filename, bbox_inches='tight', pad_inches=0)
+    print('\033[32m', "Successfully rendered image:", filename, '\033[0m')
+
 
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
@@ -134,7 +136,6 @@ def example1():
     # Plot the rendered images
     plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_13, [human_pos_3, gus_human_pos_3], 'example1.png')
 
-
 def get_known_human_identity(r):
     """
     Specify a known human identity. An identity
@@ -195,5 +196,9 @@ def example2():
 
 
 if __name__ == '__main__':
-    example1() 
-    #example2() #not running example2 yet
+    try:
+        example1() 
+        #example2() #not running example2 yet
+    except:
+        print('\033[31m', "Failed to render image", '\033[0m')
+        sys.exit(1)

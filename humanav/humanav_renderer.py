@@ -217,8 +217,8 @@ class HumANavRenderer():
         nodes_n3 = np.concatenate([starts_n2*1., thetas_n1 / self.building.robot.delta_theta], axis=1)
         # Disparity in centimeters
         disparity_imgs_cm = np.array(self.building.render_nodes(nodes_n3, 'disparity', human_visible=human_visible))
-
-        depth_imgs_meters = 100. / disparity_imgs_cm[..., 0]
+        
+        depth_imgs_meters = 100. / (disparity_imgs_cm[..., 1]+0.000001) #no divide by 0 error
 
         # Optionally Clip Depth Readings
         if self.p.camera_params.max_depth_meters < np.inf:

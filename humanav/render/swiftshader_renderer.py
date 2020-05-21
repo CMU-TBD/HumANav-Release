@@ -25,7 +25,7 @@ r"""Implements loading and rendering of meshes. Contains 2 classes:
 """
 
 import numpy as np, os
-import cv2, ctypes, logging, os, glob, numpy as np
+import cv2, ctypes, logging, os, glob, sys, numpy as np
 import pyassimp as assimp
 from OpenGL.GLES2 import *
 from OpenGL.EGL import *
@@ -80,10 +80,11 @@ class Shape():
     for i, m in enumerate(self.meshes):
       m.name = name_prefix + m.name + '_{:05d}'.format(i) + name_suffix
     #logging.error('#Meshes: %d', len(self.meshes))
-    print('\033[36m', "Number of Meshes:", len(self.meshes), '\033[0m')
+    print('\033[35m', "Number of Meshes:", len(self.meshes), '\033[0m')
     dir_name = os.path.dirname(obj_file)
     # Load materials
     materials = None
+    print('\033[33m', "Loading meshes from", dir_name, '\033[00m')
     if load_materials:
       materials = []
       i = 0
@@ -91,10 +92,13 @@ class Shape():
         #file_name = os.path.join(dir_name, m.material.properties[('file', 0)])
         file_name = os.path.join(dir_name, sorted(glob.glob1(dir_name, '*.jpg'))[i])
         i = i + 1
-        assert(os.path.exists(file_name)), \
-            'Texture file {:s} foes not exist.'.format(file_name)
+        #assert(os.path.exists(file_name)), 'Texture file {:s} foes not exist.'.format(file_name)
+        if(not(os.path.exists(file_name))):
+          print('\033[31m', "Texture file", file_name, "does not exist.", '\033[0m')
+          sys.exit(1)
         materials.append(self._load_materials_from_file(file_name, materials_scale))
     self.scene = scene
+    print('\033[32m', "All meshes successfully loaded", '\033[0m')
     self.materials = materials
 
   @staticmethod
@@ -160,9 +164,10 @@ class Shape():
         v, f, np.random.RandomState(0), n_samples_per_face)
     return p, face_areas, face_idx
   
-  def __del__(self):
-    scene = self.scene
-    assimp.release(scene)
+  def __del__(self): #cause lots of errors and no benefit?
+    dummy = 1
+    #scene = self.scene
+    #assimp.release(scene)
 
 class HumanShape(Shape):
     def __init__(self, obj_file, human_materials, name_prefix='', name_suffix=''):
@@ -624,8 +629,8 @@ class SwiftshaderRenderer():
   def __del__(self):
     self.clear_scene()
     eglMakeCurrent(self.egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)
-    eglDestroySurface(self.egl_display, self.egl_surface)
-    eglTerminate(self.egl_display)
+    #eglDestroySurface(self.egl_display, self.egl_surface)
+    #eglTerminate(self.egl_display)
 
 def get_r_obj(camera_param):
   cp = camera_param
