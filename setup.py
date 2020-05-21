@@ -1,7 +1,7 @@
 from setuptools import setup
 from setuptools import find_packages
 
-setup(name='humanav',
+setup(name='tbd_humanav',
   version='0.0',
   author='Varun Tolani',
   author_email='vtolani@eecs.berkeley.edu',

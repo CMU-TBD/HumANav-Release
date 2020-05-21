@@ -14,7 +14,8 @@
 # ==============================================================================
 
 ### Note: Change area_names to process only a subset of the data
-area_names=("1" "3" "4" "5a" "6")
+#area_names=("1" "3" "4" "5a" "6")
+area_names=("3")
 
 mkdir -p stanford_building_parser_dataset
 mkdir -p stanford_building_parser_dataset/mesh
