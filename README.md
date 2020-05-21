@@ -12,17 +12,17 @@ More information & a live demo of the HumANav Dataset is available on the [proje
 
 ## Download and Configure Data
 
-#### Download SMPL data & Render human meshes
-Follow the instructions in surreal/README.md.
+### Download SMPL data & Render human meshes
+Follow the instructions in [`surreal/README.md`](https://github.com/CMU-TBD/tbd_HumANav/blob/master/surreal/README.md) to correctly install the human meshes.
 
-#### Download SD3DIS data
-Follow the instructions in sd3dis/README.md
+### Download SD3DIS data
+Follow the instructions in [`sd3dis/README.md`](https://github.com/CMU-TBD/tbd_HumANav/blob/master/sd3dis/README.md) to correctly install the building/area meshes. 
 
 ### Configure HumANav to look for your data.
-In ./humanav/renderer_params.py change the following line
+In `./humanav/renderer_params.py` change the following line to your installation of `tbd_HumANav`
 ```
 def get_path_to_humanav():
-    return '/PATH/TO/HumANav'
+    return '/PATH/TO/tbd_HumANav'
 ```
 
 Note: HumANav is independent of the actual indoor office environment and human meshes used. In this work we use human meshes exported from the [SURREAL](https://www.di.ens.fr/willow/research/surreal/data/) dataset and scans of indoor office environments from the [S3DIS](http://buildingparser.stanford.edu/dataset.html) dataset. However, if you would like to use other meshes, please download and configure them yourself and update the parameters in renderer_params.py to point to your data installation.
