@@ -79,8 +79,8 @@ class Shape():
     self.meshes = [scene.meshes[i] for i in filter_ind]
     for i, m in enumerate(self.meshes):
       m.name = name_prefix + m.name + '_{:05d}'.format(i) + name_suffix
-    logging.error('#Meshes: %d', len(self.meshes))
-
+    #logging.error('#Meshes: %d', len(self.meshes))
+    print('\033[36m', "Number of Meshes:", len(self.meshes), '\033[0m')
     dir_name = os.path.dirname(obj_file)
     # Load materials
     materials = None
@@ -653,7 +653,8 @@ def _test_renderer(modality, N=16):
   r = 3;
   out_dir = os.path.join('tmp', 'test-renderer', modality + '-' + utils.get_time_str())
   utils.mkdir_if_missing(out_dir)
-  logging.error('Logging to directory: %s', out_dir)
+  #logging.error('Logging to directory: %s', out_dir)
+  print('\033[36m', "Logging to the directory:", out_dir, '\033[0m')
   for i in range(N):
     angle = i*(2.*np.pi)/N
     camera_xyz = [r*np.sin(angle), r*np.cos(angle), 1.]
@@ -672,7 +673,8 @@ def _test_renderer(modality, N=16):
         cv2.imwrite('{:s}/depth_{:04d}.png'.format(out_dir, i), (_[...,0]).astype(np.uint8))
       assert(np.mean(_[...,0]) > 4 and np.mean(_[...,0]) < 4.6)
       assert(np.mean(_[...,1]) > 0.85 and np.mean(_[...,1]) < 0.91)
-  logging.error('Finished logging to directory: %s', out_dir)
+  #logging.error('Finished logging to directory: %s', out_dir)
+  print('\033[36m', "Finished logging to directory:", out_dir, '\033[0m')
   print(r_obj.render_timer.display(log_at=1, log_str='render timer', type='calls'))
 
 def test_rgb():
