@@ -23,7 +23,7 @@ cd stanford_building_parser_dataset_raw
 
 # Untar the files and extract the meshes.
 for t in "${area_names[@]}"; do
-	  tar -xf area_"$t"_no_xyz.tar area_$t/3d/rgb_textures
+	  tar -xf noXYZ_area_"$t"_no_xyz.tar area_$t/3d/rgb_textures
 	    mv area_$t/3d/rgb_textures ../stanford_building_parser_dataset/mesh/area$t
 	      rmdir area_$t/3d
 	        rmdir area_$t
