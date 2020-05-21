@@ -59,6 +59,14 @@ In the terminal run:
 sudo apt-get install libassimp-dev
 ```
 
+#### Install pip/conda packages
+In the terminal (and in the virtual environment from above [`tbd_lab`]) run:
+```
+chmod a+x get_packages.sh
+./get_packages.sh
+```
+The script should inform you of all packages being installed and their status, to install manually just look inside
+
 #### Install HumANav as a pip package
 Follow the steps below to install HumANav as a pip package, so it can be easily integrated with any other codebase.
 ```
