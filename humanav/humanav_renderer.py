@@ -44,7 +44,7 @@ class HumANavRenderer():
                 assert(False)
         else:
             self.human_radius = self.default_human_radius
-            self.human_mesh_params = None
+        self.human_mesh_params = []#changed to list format
 
     @classmethod
     def get_renderer(cls, params):
@@ -110,33 +110,31 @@ class HumANavRenderer():
         human_mesh_params = self.building.human_mesh_info
         return human_mesh_params
 
-    def add_human_at_position_with_speed(self, pos_3, speed, identity_rng, mesh_rng, only_sample_human_identity=False):
-        """
-        Inserts a human mesh at [x, y, theta]
-        specified by pos_3.
-        """
-        if self.p.load_meshes:
-            # Sample a human gender, texture, body_shape
-            self.human_gender, self.human_texture, self.body_shape = \
-                    self.d.get_random_human_gender_texture_and_body_shape(identity_rng)
-
-            if not only_sample_human_identity:
-                # Load the human mesh into the scene
-                self.building.load_human_into_scene(self.d, pos_3, speed,
-                                                    self.human_gender, self.human_texture,
-                                                    self.body_shape, mesh_rng)
-
-                # Log that there is a human in the environment
-                self.human_loaded = True
-                self.human_traversible = self.building.map._human_traversible
-                
-                # If updating the human traversible a radius will be dynamically
-                # computed for each human position, else the
-                try:
-                    self.human_radius = self.building.map._human_radius
-                except AttributeError:
-                    self.human_radius = self.default_human_radius
-                self.human_mesh_params = self.building.human_mesh_info
+    def add_human_at_position_with_speed(self, humans, only_sample_human_identity=False):
+        more_humans = []
+        for i, (pos_3, speed, identity_rng, mesh_rng) in enumerate(humans):
+            """
+            Inserts a human mesh at [x, y, theta]
+            specified by pos_3.
+            """
+            if self.p.load_meshes:
+                # Sample a human gender, texture, body_shape
+                self.human_gender, self.human_texture, self.body_shape = self.d.get_random_human_gender_texture_and_body_shape(identity_rng)
+                more_humans.append(tuple([pos_3, speed, self.human_gender, self.human_texture, self.body_shape, mesh_rng]))#to be used in load_human_into_scene function that now takes a list of humans
+                if not only_sample_human_identity:
+                    # If updating the human traversible a radius will be dynamically
+                    # computed for each human position, else the
+                    try:
+                        self.human_radius = self.building.map._human_radius
+                    except AttributeError:
+                        self.human_radius = self.default_human_radius
+                _, _, human_mesh_info = self.d.load_random_human(speed, self.human_gender, self.human_texture, self.body_shape, mesh_rng)
+                self.human_mesh_params.append(human_mesh_info)#add human to list
+                #print('\033[96m', "Printing human mesh params")
+                #print(human_mesh_info, '\033[0m')
+        self.building.load_human_into_scene(self.d, more_humans)
+        self.human_loaded = True #if ALL humans have been loaded
+        self.human_traversible = self.building.map._human_traversible
 
     def remove_human(self):
         """

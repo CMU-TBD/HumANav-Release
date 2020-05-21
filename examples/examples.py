@@ -27,8 +27,7 @@ def create_params():
     return p
 
 
-def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m,
-                camera_pos_13, human_pos_3, filename):
+def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_13, humans_pos_3, filename):
 
     # Compute the real_world extent (in meters) of the traversible
     extent = [0., traversible.shape[1], 0., traversible.shape[0]]
@@ -44,9 +43,11 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m,
     # Plot the camera
     ax.plot(camera_pos_13[0, 0], camera_pos_13[0, 1], 'bo', markersize=10, label='Camera')
     ax.quiver(camera_pos_13[0, 0], camera_pos_13[0, 1], np.cos(camera_pos_13[0, 2]), np.sin(camera_pos_13[0, 2]))
-    # Plot the human
-    ax.plot(human_pos_3[0], human_pos_3[1], 'ro', markersize=10, label='Human')
-    ax.quiver(human_pos_3[0], human_pos_3[1], np.cos(human_pos_3[2]), np.sin(human_pos_3[2]))
+    
+    # Plot the humans (added support for multiple humans)
+    for human_pos in humans_pos_3:
+        ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10, label='Human')
+        ax.quiver(human_pos[0], human_pos[1], np.cos(human_pos[2]), np.sin(human_pos[2]))
 
     ax.legend()
     ax.set_xlim([camera_pos_13[0, 0]-5., camera_pos_13[0, 0]+5.])
@@ -89,10 +90,10 @@ def example1():
     Code for loading a random human into the environment
     and rendering topview, rgb, and depth images.
     """
-    p = create_params()
+    p = create_params() # used to instantiate the camera and its parameters
 
-    r = HumANavRenderer.get_renderer(p)
-    dx_cm, traversible = r.get_config()
+    r = HumANavRenderer.get_renderer(p)#get the renderer from the camera p
+    dx_cm, traversible = r.get_config()#optain "resolution and traversible of building"
 
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm/100.
@@ -100,21 +101,27 @@ def example1():
     # Set the identity seed. This is used to sample a random human identity
     # (gender, texture, body shape)
     identity_rng = np.random.RandomState(48)
-
+    gus_identity_rng = np.random.RandomState(59)
+    
     # Set the Mesh seed. This is used to sample the actual mesh to be loaded
     # which reflects the pose of the human skeleton.
     mesh_rng = np.random.RandomState(20)
-
+    gus_mesh_rng = np.random.RandomState(410)
+                                     
     # State of the camera and the human. 
     # Specified as [x (meters), y (meters), theta (radians)] coordinates
     camera_pos_13 = np.array([[7.5, 12., -1.3]])
     human_pos_3 = np.array([8.0, 9.75, np.pi/2.])
-
+    gus_human_pos_3 = np.array([7.5, 9, np.pi/2.])
+    
     # Speed of the human in m/s
     human_speed = 0.7
 
+    humans = []
+    humans.append(tuple([gus_human_pos_3, human_speed, gus_identity_rng, gus_mesh_rng]))
+    humans.append(tuple([human_pos_3, human_speed, identity_rng, mesh_rng]))
     # Load a random human at a specified state and speed
-    r.add_human_at_position_with_speed(human_pos_3, human_speed, identity_rng, mesh_rng)
+    r.add_human_at_position_with_speed(humans)
 
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
@@ -125,8 +132,7 @@ def example1():
     r.remove_human()
 
     # Plot the rendered images
-    plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m,
-                camera_pos_13, human_pos_3, 'example1.png')
+    plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_13, [human_pos_3, gus_human_pos_3], 'example1.png')
 
 
 def get_known_human_identity(r):
@@ -190,4 +196,4 @@ def example2():
 
 if __name__ == '__main__':
     example1() 
-    example2() 
+    #example2() #not running example2 yet

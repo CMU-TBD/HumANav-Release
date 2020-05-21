@@ -1,4 +1,4 @@
-humanav.egg-info/
+tbd_humanav.egg-info/
 *.pyc
 server/outdir
 tmp/
@@ -11,7 +11,6 @@ surreal/code/human_textures/
 surreal/code/test_human_mesh_generation/
 surreal/download/SURREAL/
 examples/*.png
-tbd_humanav.egg-info/
 surreal/code/get-pip.py
 humanav/renderer_params.py
 surreal/code/config

@@ -60,9 +60,9 @@ class Building():
       self.map.traversible = self.traversible
 
     # Instance variable for storing human information
-    self.human_mesh_info = None
-    self.human_pos_3 = None
-    self.human = None
+    self.human_mesh_info = []
+    self.human_pos_3 = []
+    self.human = [] #making a LIST of humans
 
   def set_r_obj(self, r_obj):
     self.r_obj = r_obj
@@ -133,55 +133,61 @@ class Building():
       pos_3 = np.array([xy_offset_map[0], xy_offset_map[1], pos_3[2]])
       return pos_3
   
-  def load_human_into_scene(self, dataset, pos_3, speed, gender,
-                            human_materials, body_shape, rng, dedup_tbo=False,
-                            allow_repeat_humans=False):
+  def load_human_into_scene(self, dataset, humans, dedup_tbo=False, allow_repeat_humans=False):
     """
     Load a 'gendered' human mesh with 'body shape' and texture, 'human_materials',
     into a building at 'pos_3' with 'speed' in the static building.
     """
-    self.human_pos_3 = pos_3*1.
-
-    # Load the human mesh
-    shapess, center_pos_3, human_mesh_info = \
-            dataset.load_random_human(speed, gender, human_materials, body_shape, rng)
-
-    self.human_mesh_info = human_mesh_info
-
-    # Make sure the human's feet are actually on the ground in SBPD
-    # (i.e. the minimum z coordinate is 0)
-    z_offset = shapess[0].meshes[0].vertices[:, 2].min()
-    shapess[0].meshes[0].vertices = np.concatenate([shapess[0].meshes[0].vertices[:, :2],
-                                                    shapess[0].meshes[0].vertices[:, 2:3]-z_offset],
-                                                   axis=1)
-
-    # Make sure the human is in the canonical position
-    # The centerpoint between the left and right foot should be (0, 0)
-    # and the heading (average of the direction of the two feet) should be 0
-    shapess[0].meshes[0].vertices = self._transform_to_ego(shapess[0].meshes[0].vertices,
-                                                           center_pos_3)
-    human_ego_vertices = shapess[0].meshes[0].vertices*1.
-
-    # Move the human to the desired location
-    pos_3 = self._traversible_world_to_vertex_world(pos_3)
-    shapess[0].meshes[0].vertices = self._transform_to_world(shapess[0].meshes[0].vertices, pos_3)
-
+    shapess = []
+    center_pos_3 = []
+    for i, (pos_3, speed, gender, human_materials, body_shape, rng) in enumerate(humans):
+        self.human_pos_3.append(pos_3*1.)
+        # Load the human mesh
+        shapess_0, center_pos_3_0, human_mesh_info_0 = dataset.load_random_human(speed, gender, human_materials, body_shape, rng)
+        shapess.append(shapess_0[0])
+        center_pos_3.append(center_pos_3_0)
+    human_ego_vertices = []
+    for i in range(len(humans)):
+        
+        # Make sure the human's feet are actually on the ground in SBPD
+        # (i.e. the minimum z coordinate is 0)
+        z_offset = shapess[i].meshes[0].vertices[:, 2].min()
+        shapess[i].meshes[0].vertices = np.concatenate([shapess[i].meshes[0].vertices[:, :2],
+                                                        shapess[i].meshes[0].vertices[:, 2:3] - z_offset],
+                                                       axis=1)
+        # Make sure the human is in the canonical position
+        # The centerpoint between the left and right foot should be (0, 0)
+        # and the heading (average of the direction of the two feet) should be 0
+        shapess[i].meshes[0].vertices = self._transform_to_ego(shapess[i].meshes[0].vertices, center_pos_3[i])
+        
+        human_ego_vertices.append(shapess[i].meshes[0].vertices*1.)
+        # Move the human to the desired location
+        #print('\033[31m', "MOVING HUMAN", i, "to", pos_3, "or?", self.human_pos_3[i], '\033[0m')
+        pos_3 = self._traversible_world_to_vertex_world(self.human_pos_3[i])
+        shapess[i].meshes[0].vertices = self._transform_to_world(shapess[i].meshes[0].vertices, pos_3)
+        self.human.append(shapess[i])
+        #self.human_ego_vertices[i] = human_ego_vertices[i]
+    #print('\033[32m', "All humans:")
+    #print(shapess, '\033[0m')
+    #print("printing human 1")
+    #print(shapess[0])
     self.renderer_entitiy_ids += self.r_obj.load_shapes(shapess, dedup_tbo, allow_repeat_humans=allow_repeat_humans)
+    #self.renderer_entitiy_ids += self.r_obj.load_shapes(shapess, dedup_tbo, allow_repeat_humans=True)
 
+    #dosent affect drawing
     # Update The Traversible
     if dataset.surreal_params.compute_human_traversible:
         map = self.map
         env = self.env
         robot= self.robot
-        map = add_human_to_traversible(
-          map, robot.base, robot.height, robot.radius, env.valid_min,
-          env.valid_max, env.num_point_threshold, shapess=shapess, sc=100.,
-            n_samples_per_face=env.n_samples_per_face, human_xy_center_2=pos_3[:2])
+        for i in range(len(humans)):
+            map = add_human_to_traversible(
+                map, robot.base, robot.height, robot.radius, env.valid_min,
+                env.valid_max, env.num_point_threshold, shapess=shapess, sc=100.,
+                n_samples_per_face=env.n_samples_per_face, human_xy_center_2=pos_3[:2])
 
         self.traversible = map.traversible
         self.map = map
-    self.human = shapess[0]
-    self.human_ego_vertices = human_ego_vertices
 
   def remove_human(self):
       """
@@ -193,12 +199,13 @@ class Building():
       # Remove the human from the list of loaded entities
       human_entitiy_ids = list(filter(lambda x: 'human' in x, self.renderer_entitiy_ids))
 
-      # Only one human supported currently
-      assert (len(human_entitiy_ids) <= 1)
+      #Multiple humans currently supported
+      #assert (len(human_entitiy_ids) <= 1)
 
-      for human_entity_id in human_entitiy_ids:
-          self.renderer_entitiy_ids.remove(human_entity_id)
-
+      for i in range(len(human_entitiy_ids)):
+          #print('\033[35m', "Deleted Human: " + str(i), '\033[0m')
+          self.renderer_entitiy_ids.remove(human_entitiy_ids[i])
+          
       # Update the traversible to be human free
       self.map.traversible = self.map._traversible
       self.traversible = self.map._traversible

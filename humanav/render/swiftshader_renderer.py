@@ -483,7 +483,7 @@ class SwiftshaderRenderer():
     """
     human_keys = list(filter(lambda x: 'human' in x, self.entities.keys()))
 
-    # Currently only 1 human is supported
+    # Currently only 1 human is supported, for now
     assert(len(human_keys) <= 1)
 
     if len(human_keys) == 1:
@@ -538,10 +538,10 @@ class SwiftshaderRenderer():
     dedup_dict = {}
     for i, shape in enumerate(shapes):
       for j in range(len(shape.meshes)):
-        name = shape.meshes[j].name
-        if not (allow_repeat_humans and 'human' in name):
-            assert name not in entities, '{:s} entity already exists.'.format(name)
-        if shape.materials[j][0] in dedup_dict and dedup_tbo:
+        name = shape.meshes[j].name + str(i) #add i for indication of which human
+        #if not (allow_repeat_humans and 'human' in name):
+        #    assert name not in entities, '{:s} entity already exists.'.format(name)
+        if shape.materials[j][0] in dedup_dict and dedup_tbo:#might need to comment everything here but else?
           tbo = dedup_dict[shape.materials[j][0]]
           # logging.error('dedup: %s', shape.materials[j][0])
           num, vbo, tbo = self._load_mesh_into_gl(shape.meshes[j], material=None, tbo=tbo)
@@ -550,6 +550,7 @@ class SwiftshaderRenderer():
           dedup_dict[shape.materials[j][0]] = tbo
         entities[name] = {'num': num, 'vbo': vbo, 'tbo': tbo, 'visible': False}
         entity_ids.append(name)
+    #self.entities = entities?
     return entity_ids
 
   def set_entity_visible(self, entity_ids, visibility):
@@ -609,17 +610,16 @@ class SwiftshaderRenderer():
       Delete the mesh information for the loaded human (vertices, faces, textures)
       """
       human_keys = list(filter(lambda x: 'human' in x, self.entities.keys()))
-
-      # Only one human supported currently
-      if len(human_keys) == 1:
-          entity = self.entities.pop(human_keys[0], None)
+      #print('\033[36m', "Humans as seen in the renderer:")
+      #print(list(enumerate(human_keys)), '\033[0m')
+      # Only one human supported currently (going to need to add for a list of humans)
+      for i in range(len(human_keys)):
+          entity = self.entities.pop(human_keys[i], None)
           vbo = entity['vbo']
           tbo = entity['tbo']
           num = entity['num']
           glDeleteBuffers(1, [vbo])
           glDeleteTextures(1, [tbo])
-      else:
-          assert (len(human_keys) == 0)
 
   def __del__(self):
     self.clear_scene()
