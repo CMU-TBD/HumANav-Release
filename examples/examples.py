@@ -29,7 +29,6 @@ def create_params():
     p.camera_params.modalities = ['rgb', 'disparity']
     return p
 
-
 def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_13, humans_pos_3, filename):
 
     # Compute the real_world extent (in meters) of the traversible
@@ -75,8 +74,6 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_
 
     fig.savefig(filename, bbox_inches='tight', pad_inches=0)
     print('\033[32m', "Successfully rendered image:", filename, '\033[0m')
-
-
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
     # Convert from real world units to grid world units
@@ -130,9 +127,9 @@ def example1(num_humans):
         print("Generating human", i, "at", human_pos_3[i])
         # Speed of the human in m/s
         human_speed.append(random())# random value from 0 to 1
-        humans.append(tuple([human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i]]))
-    # Load a random human at a specified state and speed
-    r.add_human_at_position_with_speed(humans)
+        #humans.append(tuple([human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i]]))
+        # Load a random human at a specified state and speed
+        r.add_human_at_position_with_speed(human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i], i)
 
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
@@ -205,7 +202,7 @@ def example2():
 
 if __name__ == '__main__':
     try:
-        example1(10) 
+        example1(30) 
         #example2() #not running example2 yet
     except:
         print('\033[31m', "Failed to render image", '\033[0m')

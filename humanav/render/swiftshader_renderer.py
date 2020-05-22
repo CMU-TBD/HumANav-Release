@@ -546,7 +546,7 @@ class SwiftshaderRenderer():
         name = shape.meshes[j].name + str(i) #add i for indication of which human
         #if not (allow_repeat_humans and 'human' in name):
         #    assert name not in entities, '{:s} entity already exists.'.format(name)
-        if shape.materials[j][0] in dedup_dict and dedup_tbo:#might need to comment everything here but else?
+        if shape.materials[j][0] in dedup_dict and dedup_tbo:
           tbo = dedup_dict[shape.materials[j][0]]
           # logging.error('dedup: %s', shape.materials[j][0])
           num, vbo, tbo = self._load_mesh_into_gl(shape.meshes[j], material=None, tbo=tbo)
@@ -555,7 +555,7 @@ class SwiftshaderRenderer():
           dedup_dict[shape.materials[j][0]] = tbo
         entities[name] = {'num': num, 'vbo': vbo, 'tbo': tbo, 'visible': False}
         entity_ids.append(name)
-    #self.entities = entities?
+        #print(shape.meshes)
     return entity_ids
 
   def set_entity_visible(self, entity_ids, visibility):
