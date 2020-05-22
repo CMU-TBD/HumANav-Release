@@ -90,7 +90,7 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
 
     return rgb_image_1mk3, depth_image_1mk1
 
-def example1():
+def example1(num_humans):
     """
     Code for loading a random human into the environment
     and rendering topview, rgb, and depth images.
@@ -104,13 +104,13 @@ def example1():
     dx_m = dx_cm/100.
 
     camera_pos_13 = np.array([[7.5, 12., -1.3]])
+    print("Rendering camera (robot) at", camera_pos_13)
     humans = []#tuple of all the below
     identity_rng = []
     mesh_rng = []
     human_pos_3 = []
     human_speed = []
-    for i in range(10):
-        print("Generating human", i)
+    for i in range(num_humans):
         # Set the identity seed. This is used to sample a random human identity
         # (gender, texture, body shape)
         identity_rng.append(np.random.RandomState(randint(10, 100)))
@@ -121,11 +121,13 @@ def example1():
 
         # State of the camera and the human. 
         # Specified as [x (meters), y (meters), theta (radians)] coordinates
-        offset_x = 2 * random() - 1 #(-2, 2)
-        offset_y = 2 * random() - 1 #(-2, 2)
-        offset_theta = random() #(0, 1)
-        human_pos_3.append(np.array([8.0 + offset_x, 9.75 + offset_y, np.pi/2. + offset_theta]))
-    
+        xdiff = 6
+        ydiff = 6
+        offset_x = xdiff * random() - xdiff/2 #(-2, 2)
+        offset_y = ydiff * random() - ydiff/2 #(-2, 2)
+        offset_theta = 3.141592 * random() #(0, pi)
+        human_pos_3.append(np.array([7.5 + offset_x, 12 + offset_y, np.pi/2. + offset_theta]))
+        print("Generating human", i, "at", human_pos_3[i])
         # Speed of the human in m/s
         human_speed.append(random())# random value from 0 to 1
         humans.append(tuple([human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i]]))
@@ -203,7 +205,7 @@ def example2():
 
 if __name__ == '__main__':
     try:
-        example1() 
+        example1(10) 
         #example2() #not running example2 yet
     except:
         print('\033[31m', "Failed to render image", '\033[0m')
