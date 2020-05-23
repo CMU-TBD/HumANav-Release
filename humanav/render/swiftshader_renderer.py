@@ -627,7 +627,7 @@ class SwiftshaderRenderer():
           glDeleteTextures(1, [tbo])
 
   def __del__(self):
-    self.clear_scene()
+    #self.clear_scene()
     eglMakeCurrent(self.egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)
     #eglDestroySurface(self.egl_display, self.egl_surface)
     #eglTerminate(self.egl_display)

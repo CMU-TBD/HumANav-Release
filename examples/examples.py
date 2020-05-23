@@ -87,6 +87,14 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
 
     return rgb_image_1mk3, depth_image_1mk1
 
+def generate_random_pos_3(center, xdiff = 3, ydiff = 3):
+    # Generates a random position near the center within an elliptical radius of xdiff and ydiff
+    offset_x = 2*xdiff * random() - xdiff #bound by (-xdiff, xdiff)
+    offset_y = 2*ydiff * random() - ydiff #bound by (-ydiff, ydiff)
+    offset_theta = 2 * np.pi * random()    #bound by (0, 2*pi)
+    return np.add(center, np.array([offset_x, offset_y, offset_theta]))
+        
+
 def example1(num_humans):
     """
     Code for loading a random human into the environment
@@ -100,8 +108,11 @@ def example1(num_humans):
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm/100.
 
-    camera_pos_13 = np.array([[7.5, 12., -1.3]])
-    print("Rendering camera (robot) at", camera_pos_13)
+    # Camera (robot) position modeled as (x, y, theta) in 2D array
+    # Multiple entries yield multiple shots
+    camera_pos_13 = np.array([[7.5, 12., -1.3], [5, 8, 0]]) 
+    for i in range(np.shape(camera_pos_13)[0]):#(vertical dimensions)
+        print("Rendering camera (robot) at", camera_pos_13[i])
     humans = []#tuple of all the below
     identity_rng = []
     mesh_rng = []
@@ -118,12 +129,8 @@ def example1(num_humans):
 
         # State of the camera and the human. 
         # Specified as [x (meters), y (meters), theta (radians)] coordinates
-        xdiff = 6
-        ydiff = 6
-        offset_x = xdiff * random() - xdiff/2 #(-2, 2)
-        offset_y = ydiff * random() - ydiff/2 #(-2, 2)
-        offset_theta = 3.141592 * random() #(0, pi)
-        human_pos_3.append(np.array([7.5 + offset_x, 12 + offset_y, np.pi/2. + offset_theta]))
+        human_pos_3.append(generate_random_pos_3(camera_pos_13[0]))
+        
         print("Generating human", i, "at", human_pos_3[i])
         # Speed of the human in m/s
         human_speed.append(random())# random value from 0 to 1
@@ -202,7 +209,7 @@ def example2():
 
 if __name__ == '__main__':
     try:
-        example1(30) 
+        example1(20) 
         #example2() #not running example2 yet
     except:
         print('\033[31m', "Failed to render image", '\033[0m')
