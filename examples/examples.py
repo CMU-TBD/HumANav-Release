@@ -110,7 +110,7 @@ def example1(num_humans):
 
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
-    camera_pos_13 = np.array([[7.5, 12., -1.3], [5, 8, 0]]) 
+    camera_pos_13 = np.array([[7.5, 12., -1.3], [8, 9, np.pi/2]]) 
     for i in range(np.shape(camera_pos_13)[0]):#(vertical dimensions)
         print("Rendering camera (robot) at", camera_pos_13[i])
     humans = []#tuple of all the below
@@ -130,7 +130,7 @@ def example1(num_humans):
         # State of the camera and the human. 
         # Specified as [x (meters), y (meters), theta (radians)] coordinates
         human_pos_3.append(generate_random_pos_3(camera_pos_13[0]))
-        
+
         print("Generating human", i, "at", human_pos_3[i])
         # Speed of the human in m/s
         human_speed.append(random())# random value from 0 to 1
@@ -140,13 +140,13 @@ def example1(num_humans):
 
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
-    rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True)
+    for i in range(np.shape(camera_pos_13)[0]):
+        rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
+        # Plot the rendered images
+        plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, np.array([camera_pos_13[i]]), human_pos_3, "example1_v" + str(i) + ".png")
     # Remove the human from the environment
     r.remove_human()
-
-    # Plot the rendered images
-    plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_13, human_pos_3, 'example1.png')
 
 def get_known_human_identity(r):
     """
