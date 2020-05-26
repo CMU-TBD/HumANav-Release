@@ -181,7 +181,7 @@ class Building():
         self.traversible = map.traversible
         self.map = map
     self.human.append(shapess[0])
-    self.human_ego_vertices = human_ego_vertices
+    self.human_ego_vertices = (human_ego_vertices)
 
   def remove_human(self):
       """

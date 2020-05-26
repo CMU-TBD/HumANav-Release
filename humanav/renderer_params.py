@@ -48,14 +48,14 @@ def create_params():
                        texture_dir=get_surreal_texture_dir(),
                        body_shapes_train=[519, 1320, 521, 523, 779, 365, 1198, 368],
                        body_shapes_test=[337, 944, 1333, 502, 344, 538, 413],
-                       compute_human_traversible=False,
+                       compute_human_traversible=True,
                        render_humans_in_gray_only=False
                       )
 
     return p
 
 def get_path_to_humanav():
-    return '/PATH/TO/HumANav'
+    return '/Path/To/tbd_HumANav/'
 
 def get_traversible_dir():
     return os.path.join(get_path_to_humanav(), 'sd3dis/stanford_building_parser_dataset/traversibles')

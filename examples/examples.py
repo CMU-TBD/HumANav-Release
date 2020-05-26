@@ -50,7 +50,17 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_
     for human_pos in humans_pos_3:
         ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10, label='Human')
         ax.quiver(human_pos[0], human_pos[1], np.cos(human_pos[2]), np.sin(human_pos[2]))
-
+    
+    # Drawing traversible (for debugging)
+    debug_drawing = False
+    if(debug_drawing):
+        for y in range(int(traversible.shape[1]/2.)):
+            for x in range(int(traversible.shape[0]/2.)):
+                if(traversible[2*x][2*y]):
+                    ax.plot(2*y*dx_m, 2*x*dx_m, 'go', markersize=2)
+                else:
+                    ax.plot(2*y*dx_m, 2*x*dx_m, 'ro', markersize=2)
+    
     ax.legend()
     ax.set_xlim([camera_pos_13[0, 0]-5., camera_pos_13[0, 0]+5.])
     ax.set_ylim([camera_pos_13[0, 1]-5., camera_pos_13[0, 1]+5.])
@@ -129,7 +139,11 @@ def example1(num_humans):
 
         # State of the camera and the human. 
         # Specified as [x (meters), y (meters), theta (radians)] coordinates
-        human_pos_3.append(generate_random_pos_3(camera_pos_13[0]))
+        new_pos_3 = np.array([-1, -1, 0])# start far out of the traversible
+        # Note: the traversible is mapped unintuitively, goes [y, x]
+        while(traversible[int(new_pos_3[1]/dx_m)][int(new_pos_3[0]/dx_m)] == False):
+            new_pos_3 = generate_random_pos_3(camera_pos_13[0], 6, 6);
+        human_pos_3.append(new_pos_3)
 
         print("Generating human", i, "at", human_pos_3[i])
         # Speed of the human in m/s
@@ -208,9 +222,9 @@ def example2():
 
 
 if __name__ == '__main__':
-    try:
-        example1(20) 
+    #try:
+        example1(40) 
         #example2() #not running example2 yet
-    except:
-        print('\033[31m', "Failed to render image", '\033[0m')
-        sys.exit(1)
+    #except:
+    #    print('\033[31m', "Failed to render image", '\033[0m')
+    #    sys.exit(1)
