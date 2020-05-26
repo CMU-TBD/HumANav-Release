@@ -138,6 +138,9 @@ class HumANavRenderer():
                     self.human_radius = self.default_human_radius
                 self.human_mesh_params = self.building.human_mesh_info
 
+    def get_traversible(self):
+        return self.building.traversible
+
     def remove_human(self):
         """
         If a human mesh has been loaded into the SBPD

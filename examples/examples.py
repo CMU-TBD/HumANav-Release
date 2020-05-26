@@ -47,8 +47,11 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_
     ax.quiver(camera_pos_13[0, 0], camera_pos_13[0, 1], np.cos(camera_pos_13[0, 2]), np.sin(camera_pos_13[0, 2]))
     
     # Plot the humans (added support for multiple humans)
-    for human_pos in humans_pos_3:
-        ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10, label='Human')
+    for i, human_pos in enumerate(humans_pos_3):
+        if(i == 0):
+            ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10, label='Human')
+        else:
+            ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10) #no label
         ax.quiver(human_pos[0], human_pos[1], np.cos(human_pos[2]), np.sin(human_pos[2]))
     
     # Drawing traversible (for debugging)
@@ -103,7 +106,23 @@ def generate_random_pos_3(center, xdiff = 3, ydiff = 3):
     offset_y = 2*ydiff * random() - ydiff #bound by (-ydiff, ydiff)
     offset_theta = 2 * np.pi * random()    #bound by (0, 2*pi)
     return np.add(center, np.array([offset_x, offset_y, offset_theta]))
-        
+
+def within_traversible(new_pos, traversible, dx_m, radius = 1, stroked_radius = False):
+    # Returns whether or not the position is in a valid spot in the traversible
+    # the Radius input can determine how many surrounding spots must also be valid
+    for i in range(2*radius):
+        for j in range(2*radius):
+            if(stroked_radius):
+                if (0 < i and i < 2*radius - 1):
+                    if(0 < j and j < 2*radius - 1):
+                        continue; # Skip check if inside the radius                
+            pos_x = int(new_pos[0]/dx_m) - radius + i
+            pos_y = int(new_pos[1]/dx_m) - radius + j
+            print((pos_x, pos_y));
+            # Note: the traversible is mapped unintuitively, goes [y, x]
+            if (not traversible[pos_y][pos_x]): # Looking for invalid spots
+                return False
+    return True
 
 def example1(num_humans):
     """
@@ -113,7 +132,7 @@ def example1(num_humans):
     p = create_params() # used to instantiate the camera and its parameters
 
     r = HumANavRenderer.get_renderer(p)#get the renderer from the camera p
-    dx_cm, traversible = r.get_config()#optain "resolution and traversible of building"
+    dx_cm, traversible = r.get_config()#obtain "resolution and traversible of building"
 
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm/100.
@@ -140,8 +159,7 @@ def example1(num_humans):
         # State of the camera and the human. 
         # Specified as [x (meters), y (meters), theta (radians)] coordinates
         new_pos_3 = np.array([-1, -1, 0])# start far out of the traversible
-        # Note: the traversible is mapped unintuitively, goes [y, x]
-        while(traversible[int(new_pos_3[1]/dx_m)][int(new_pos_3[0]/dx_m)] == False):
+        while(not within_traversible(new_pos_3, traversible, dx_m, 3, True)):
             new_pos_3 = generate_random_pos_3(camera_pos_13[0], 6, 6);
         human_pos_3.append(new_pos_3)
 
@@ -151,7 +169,7 @@ def example1(num_humans):
         #humans.append(tuple([human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i]]))
         # Load a random human at a specified state and speed
         r.add_human_at_position_with_speed(human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i], i)
-
+        #traversible = r.get_traversible() #probably should use getters/setters
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
     for i in range(np.shape(camera_pos_13)[0]):
@@ -223,7 +241,7 @@ def example2():
 
 if __name__ == '__main__':
     #try:
-        example1(40) 
+        example1(10) 
         #example2() #not running example2 yet
     #except:
     #    print('\033[31m', "Failed to render image", '\033[0m')
