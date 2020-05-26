@@ -29,7 +29,7 @@ def create_params():
     p.camera_params.modalities = ['rgb', 'disparity']
     return p
 
-def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_13, humans_pos_3, filename):
+def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, camera_pos_13, humans_pos_3, filename):
 
     # Compute the real_world extent (in meters) of the traversible
     extent = [0., traversible.shape[1], 0., traversible.shape[0]]
@@ -41,6 +41,14 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, camera_pos_
     ax = fig.add_subplot(1, 3, 1)
     ax.imshow(traversible, extent=extent, cmap='gray',
               vmin=-.5, vmax=1.5, origin='lower')
+
+    # Plot the 5x5 meter human radius grid atop the environment traversible
+    alphas = np.empty(np.shape(human_traversible))
+    for y in range(human_traversible.shape[1]):
+            for x in range(human_traversible.shape[0]):
+                alphas[x][y] = not(human_traversible[x][y])
+    ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
+              vmin=-.5, vmax=1.5, origin='lower', alpha = alphas)
 
     # Plot the camera
     ax.plot(camera_pos_13[0, 0], camera_pos_13[0, 1], 'bo', markersize=10, label='Camera')
@@ -118,7 +126,6 @@ def within_traversible(new_pos, traversible, dx_m, radius = 1, stroked_radius = 
                         continue; # Skip check if inside the radius                
             pos_x = int(new_pos[0]/dx_m) - radius + i
             pos_y = int(new_pos[1]/dx_m) - radius + j
-            print((pos_x, pos_y));
             # Note: the traversible is mapped unintuitively, goes [y, x]
             if (not traversible[pos_y][pos_x]): # Looking for invalid spots
                 return False
@@ -133,7 +140,8 @@ def example1(num_humans):
 
     r = HumANavRenderer.get_renderer(p)#get the renderer from the camera p
     dx_cm, traversible = r.get_config()#obtain "resolution and traversible of building"
-
+    human_traversible = np.empty(traversible.shape)
+    human_traversible.fill(True) #initially all good
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm/100.
 
@@ -159,7 +167,8 @@ def example1(num_humans):
         # State of the camera and the human. 
         # Specified as [x (meters), y (meters), theta (radians)] coordinates
         new_pos_3 = np.array([-1, -1, 0])# start far out of the traversible
-        while(not within_traversible(new_pos_3, traversible, dx_m, 3, True)):
+        while(not within_traversible(new_pos_3, traversible, dx_m, 3, True) or 
+              not within_traversible(new_pos_3, human_traversible, dx_m, 3, True)):
             new_pos_3 = generate_random_pos_3(camera_pos_13[0], 6, 6);
         human_pos_3.append(new_pos_3)
 
@@ -169,14 +178,17 @@ def example1(num_humans):
         #humans.append(tuple([human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i]]))
         # Load a random human at a specified state and speed
         r.add_human_at_position_with_speed(human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i], i)
-        #traversible = r.get_traversible() #probably should use getters/setters
+        human_traversible = r.get_human_traversible() #update human traversible
+
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
+
+    # Plotting an image for each camera location
     for i in range(np.shape(camera_pos_13)[0]):
         rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
         # Plot the rendered images
-        plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m, np.array([camera_pos_13[i]]), human_pos_3, "example1_v" + str(i) + ".png")
+        plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, np.array([camera_pos_13[i]]), human_pos_3, "example1_v" + str(i) + ".png")
     # Remove the human from the environment
     r.remove_human()
 
@@ -241,7 +253,7 @@ def example2():
 
 if __name__ == '__main__':
     #try:
-        example1(10) 
+        example1(20) 
         #example2() #not running example2 yet
     #except:
     #    print('\033[31m', "Failed to render image", '\033[0m')

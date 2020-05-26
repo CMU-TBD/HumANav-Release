@@ -50,6 +50,7 @@ class Building():
     # and traversible (the current traversible which may include
     # space occupied by any humans in the environment)
     self.traversible = map.traversible*1
+    self.human_traversible = map._human_traversible*1
 
     self.name = name 
     self.flipped = flip
@@ -59,10 +60,10 @@ class Building():
       self.map._traversible = self.traversible
       self.map.traversible = self.traversible
 
-    # Instance variable for storing human information
+    # Instance variable for storing human information and humans
     self.human_mesh_info = []
     self.human_pos_3 = []
-    self.human = [] #making a LIST of humans
+    self.human = []
 
   def set_r_obj(self, r_obj):
     self.r_obj = r_obj
@@ -168,7 +169,7 @@ class Building():
     shapess[0].meshes[0].name += str(identification)
     self.renderer_entitiy_ids += self.r_obj.load_shapes(shapess, dedup_tbo, allow_repeat_humans=allow_repeat_humans)
 
-    # Update The Traversible
+    # Update The Human Traversible
     if dataset.surreal_params.compute_human_traversible:
         map = self.map
         env = self.env
@@ -179,6 +180,9 @@ class Building():
             n_samples_per_face=env.n_samples_per_face, human_xy_center_2=pos_3[:2])
 
         self.traversible = map.traversible
+        new_human_traversible = np.stack([self.human_traversible, map._human_traversible], axis=2)
+        new_human_traversible = np.all(new_human_traversible, axis=2)
+        self.human_traversible = new_human_traversible
         self.map = map
     self.human.append(shapess[0])
     self.human_ego_vertices = (human_ego_vertices)

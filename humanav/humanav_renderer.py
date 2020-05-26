@@ -128,7 +128,7 @@ class HumANavRenderer():
 
                 # Log that there is a human in the environment
                 self.human_loaded = True
-                self.human_traversible = self.building.map._human_traversible
+                self.human_traversible = self.building.human_traversible
                 
                 # If updating the human traversible a radius will be dynamically
                 # computed for each human position, else the
@@ -138,8 +138,8 @@ class HumANavRenderer():
                     self.human_radius = self.default_human_radius
                 self.human_mesh_params = self.building.human_mesh_info
 
-    def get_traversible(self):
-        return self.building.traversible
+    def get_human_traversible(self):
+        return self.human_traversible#building.traversible
 
     def remove_human(self):
         """
