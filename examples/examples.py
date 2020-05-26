@@ -49,7 +49,7 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible
                 alphas[x][y] = not(human_traversible[x][y])
     ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
               vmin=-.5, vmax=1.5, origin='lower', alpha = alphas)
-
+    alphas = np.all(np.invert(human_traversible))
     # Plot the camera
     ax.plot(camera_pos_13[0, 0], camera_pos_13[0, 1], 'bo', markersize=10, label='Camera')
     ax.quiver(camera_pos_13[0, 0], camera_pos_13[0, 1], np.cos(camera_pos_13[0, 2]), np.sin(camera_pos_13[0, 2]))
@@ -121,9 +121,8 @@ def within_traversible(new_pos, traversible, dx_m, radius = 1, stroked_radius = 
     for i in range(2*radius):
         for j in range(2*radius):
             if(stroked_radius):
-                if (0 < i and i < 2*radius - 1):
-                    if(0 < j and j < 2*radius - 1):
-                        continue; # Skip check if inside the radius                
+                if not((j == 0 or j == num_dots - 1 or k == 0 or k == num_dots - 1)):
+                    continue;
             pos_x = int(new_pos[0]/dx_m) - radius + i
             pos_y = int(new_pos[1]/dx_m) - radius + j
             # Note: the traversible is mapped unintuitively, goes [y, x]
@@ -148,6 +147,16 @@ def example1(num_humans):
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
     camera_pos_13 = np.array([[7.5, 12., -1.3], [8, 9, np.pi/2]]) 
+    num_cameras = np.shape(camera_pos_13)[0]
+    for i in range(num_cameras):
+        num_dots = 5
+        skip = 3
+        for j in range(num_dots):
+            for k in range(num_dots):
+                if (j == 0 or j == num_dots - 1 or k == 0 or k == num_dots - 1):
+                    camera_x = int(camera_pos_13[i][0]/dx_m) - int(skip/2.*num_dots) + skip*j
+                    camera_y = int(camera_pos_13[i][1]/dx_m) - int(skip/2.*num_dots) + skip*k
+                    traversible[camera_y][camera_x] = False
     for i in range(np.shape(camera_pos_13)[0]):#(vertical dimensions)
         print("Rendering camera (robot) at", camera_pos_13[i])
     humans = []#tuple of all the below
@@ -167,8 +176,8 @@ def example1(num_humans):
         # State of the camera and the human. 
         # Specified as [x (meters), y (meters), theta (radians)] coordinates
         new_pos_3 = np.array([-1, -1, 0])# start far out of the traversible
-        while(not within_traversible(new_pos_3, traversible, dx_m, 3, True) or 
-              not within_traversible(new_pos_3, human_traversible, dx_m, 3, True)):
+        while(not within_traversible(new_pos_3, traversible, dx_m, 3) or 
+              not within_traversible(new_pos_3, human_traversible, dx_m, 3)):
             new_pos_3 = generate_random_pos_3(camera_pos_13[0], 6, 6);
         human_pos_3.append(new_pos_3)
 
@@ -184,7 +193,7 @@ def example1(num_humans):
     human_mesh_info = r.human_mesh_params
 
     # Plotting an image for each camera location
-    for i in range(np.shape(camera_pos_13)[0]):
+    for i in range(num_cameras):
         rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
         # Plot the rendered images

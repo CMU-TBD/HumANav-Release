@@ -181,8 +181,7 @@ class Building():
 
         self.traversible = map.traversible
         new_human_traversible = np.stack([self.human_traversible, map._human_traversible], axis=2)
-        new_human_traversible = np.all(new_human_traversible, axis=2)
-        self.human_traversible = new_human_traversible
+        self.human_traversible = np.all(new_human_traversible, axis=2)
         self.map = map
     self.human.append(shapess[0])
     self.human_ego_vertices = (human_ego_vertices)
