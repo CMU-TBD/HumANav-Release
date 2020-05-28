@@ -29,7 +29,7 @@ def create_params():
     p.camera_params.modalities = ['rgb', 'disparity']
     return p
 
-def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, camera_pos_13, humans_pos_3, human_goal_3, filename):
+def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, camera_pos_13, humans_pos_3, human_goal_3, human_speed, filename):
 
     # Compute the real_world extent (in meters) of the traversible
     extent = [0., traversible.shape[1], 0., traversible.shape[0]]
@@ -60,7 +60,7 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible
             ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10, label='Human')
         else:
             ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10) #no label
-        ax.quiver(human_pos[0], human_pos[1], np.cos(human_pos[2]), np.sin(human_pos[2]))
+        ax.quiver(human_pos[0], human_pos[1], np.cos(human_pos[2]), np.sin(human_pos[2]), scale=human_speed[i]*100)
     
     # Plot the human goals
     for i, pos_3 in enumerate(human_goal_3):
@@ -166,6 +166,8 @@ def example1(num_humans):
                     camera_x = int(camera_pos_13[i][0]/dx_m) - int(skip/2.*num_dots) + skip*j
                     camera_y = int(camera_pos_13[i][1]/dx_m) - int(skip/2.*num_dots) + skip*k
                     traversible[camera_y][camera_x] = False
+    # In order to print more readable arrays
+    np.set_printoptions(precision = 3)
 
     # Output position of new camera renders
     for i in range(num_cameras):
@@ -222,7 +224,7 @@ def example1(num_humans):
         rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
         # Plot the rendered images
-        plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, np.array([camera_pos_13[i]]), human_pos_3, human_goal_3, "example1_v" + str(i) + ".png")
+        plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, np.array([camera_pos_13[i]]), human_pos_3, human_goal_3, human_speed, "example1_v" + str(i) + ".png")
     # Remove the human from the environment
     r.remove_human()
 
