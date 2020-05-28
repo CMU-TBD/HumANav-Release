@@ -60,7 +60,7 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible
             ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10, label='Human')
         else:
             ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10) #no label
-        ax.quiver(human_pos[0], human_pos[1], np.cos(human_pos[2]), np.sin(human_pos[2]), scale=human_speed[i]*100)
+        ax.quiver(human_pos[0], human_pos[1], np.cos(human_pos[2]), np.sin(human_pos[2]), scale=(1-human_speed[i])*4+1, scale_units='inches')
     
     # Plot the human goals
     for i, pos_3 in enumerate(human_goal_3):
@@ -167,7 +167,7 @@ def example1(num_humans):
                     camera_y = int(camera_pos_13[i][1]/dx_m) - int(skip/2.*num_dots) + skip*k
                     traversible[camera_y][camera_x] = False
     # In order to print more readable arrays
-    np.set_printoptions(precision = 3)
+    np.set_printoptions(precision = 2)
 
     # Output position of new camera renders
     for i in range(num_cameras):
@@ -207,11 +207,11 @@ def example1(num_humans):
         diff_y = human_goal_3[i][1] - human_pos_3[i][1]
         human_pos_3[i][2] = math.atan2(diff_y, diff_x)
 
-        print("Human", i, "at", human_pos_3[i], "& goal", human_goal_3[i])
-
         # Generating random speed of the human in m/s
         human_speed.append(random())# random value from 0 to 1
-        #humans.append(tuple([human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i]]))
+
+        print("Human", i, "at", human_pos_3[i], "& goal", human_goal_3[i][:2], "& speed", round(human_speed[i], 3), "m/s")
+        
         # Load a random human at a specified state and speed
         r.add_human_at_position_with_speed(human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i], i)
         human_traversible = r.get_human_traversible() #update human traversible
