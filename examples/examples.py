@@ -28,8 +28,19 @@ def create_params():
 
     p.camera_params.modalities = ['rgb', 'disparity']
     return p
+def mkdir_p(mypath):
+    '''Creates a directory. equivalent to using mkdir -p on the command line'''
 
-def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, camera_pos_13, humans_pos_3, human_goal_3, human_speed, filename):
+    from errno import EEXIST
+    from os import makedirs,path
+
+    try:
+        makedirs(mypath)
+    except OSError as exc: # Python >2.5
+        if exc.errno == EEXIST and path.isdir(mypath):
+            pass
+        else: raise
+def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, camera_pos_13, humans_pos_3, human_goal_3, human_speed, time, filename):
 
     # Compute the real_world extent (in meters) of the traversible
     extent = [0., traversible.shape[1], 0., traversible.shape[0]]
@@ -99,8 +110,9 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title('Depth')
-
-    fig.savefig(filename, bbox_inches='tight', pad_inches=0)
+    local_path = "time" + str(time)
+    mkdir_p(local_path)
+    fig.savefig(os.path.join(local_path, filename), bbox_inches='tight', pad_inches=0)
     print('\033[32m', "Successfully rendered image:", filename, '\033[0m')
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
@@ -153,7 +165,12 @@ def example1(num_humans):
 
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
-    camera_pos_13 = np.array([[7.5, 12., -1.3], [8, 9, np.pi/2]]) 
+    camera_pos_13 = np.array([
+        [7.5, 12., -1.3], # middle view
+        [8, 9, 1.7],  # bottom-up view
+        [5.5, 11.5, 0.1],       # left-right view
+        [11, 11.5, 3.2]   # right-left view
+    ])
 
     # Add surrounding boundary dots to camer's so generated humans won't interfere
     num_cameras = np.shape(camera_pos_13)[0]
@@ -178,6 +195,7 @@ def example1(num_humans):
     human_pos_3 = []
     human_goal_3 = []
     human_speed = []
+    time = 0
     for i in range(num_humans):
         # Set the identity seed. This is used to sample a random human identity
         # (gender, texture, body shape)
@@ -224,7 +242,7 @@ def example1(num_humans):
         rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
         # Plot the rendered images
-        plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, np.array([camera_pos_13[i]]), human_pos_3, human_goal_3, human_speed, "example1_v" + str(i) + ".png")
+        plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, np.array([camera_pos_13[i]]), human_pos_3, human_goal_3, human_speed, time, "example1_v" + str(i) + ".png")
     # Remove the human from the environment
     r.remove_human()
 
@@ -289,7 +307,7 @@ def example2():
 
 if __name__ == '__main__':
     #try:
-        example1(10) 
+        example1(5) 
         #example2() #not running example2 yet
     #except:
     #    print('\033[31m', "Failed to render image", '\033[0m')
