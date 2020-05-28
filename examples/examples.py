@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys
+import os, sys, math
 from dotmap import DotMap
 from humanav.humanav_renderer import HumANavRenderer
 from humanav.renderer_params import create_params as create_base_params
@@ -29,7 +29,7 @@ def create_params():
     p.camera_params.modalities = ['rgb', 'disparity']
     return p
 
-def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, camera_pos_13, humans_pos_3, filename):
+def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, camera_pos_13, humans_pos_3, human_goal_3, filename):
 
     # Compute the real_world extent (in meters) of the traversible
     extent = [0., traversible.shape[1], 0., traversible.shape[0]]
@@ -61,6 +61,13 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible
         else:
             ax.plot(human_pos[0], human_pos[1], 'ro', markersize=10) #no label
         ax.quiver(human_pos[0], human_pos[1], np.cos(human_pos[2]), np.sin(human_pos[2]))
+    
+    # Plot the human goals
+    for i, pos_3 in enumerate(human_goal_3):
+        if(i == 0):
+            ax.plot(pos_3[0], pos_3[1], 'go', markersize=10, label='Goal')
+        else:
+            ax.plot(pos_3[0], pos_3[1], 'go', markersize=10) #no label
     
     # Drawing traversible (for debugging)
     debug_drawing = False
@@ -121,7 +128,7 @@ def within_traversible(new_pos, traversible, dx_m, radius = 1, stroked_radius = 
     for i in range(2*radius):
         for j in range(2*radius):
             if(stroked_radius):
-                if not((j == 0 or j == num_dots - 1 or k == 0 or k == num_dots - 1)):
+                if not((i == 0 or i == radius - 1 or j == 0 or j == radius - 1)):
                     continue;
             pos_x = int(new_pos[0]/dx_m) - radius + i
             pos_y = int(new_pos[1]/dx_m) - radius + j
@@ -147,6 +154,8 @@ def example1(num_humans):
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
     camera_pos_13 = np.array([[7.5, 12., -1.3], [8, 9, np.pi/2]]) 
+
+    # Add surrounding boundary dots to camer's so generated humans won't interfere
     num_cameras = np.shape(camera_pos_13)[0]
     for i in range(num_cameras):
         num_dots = 5
@@ -157,12 +166,15 @@ def example1(num_humans):
                     camera_x = int(camera_pos_13[i][0]/dx_m) - int(skip/2.*num_dots) + skip*j
                     camera_y = int(camera_pos_13[i][1]/dx_m) - int(skip/2.*num_dots) + skip*k
                     traversible[camera_y][camera_x] = False
-    for i in range(np.shape(camera_pos_13)[0]):#(vertical dimensions)
+
+    # Output position of new camera renders
+    for i in range(num_cameras):
         print("Rendering camera (robot) at", camera_pos_13[i])
-    humans = []#tuple of all the below
+    
     identity_rng = []
     mesh_rng = []
     human_pos_3 = []
+    human_goal_3 = []
     human_speed = []
     for i in range(num_humans):
         # Set the identity seed. This is used to sample a random human identity
@@ -178,11 +190,24 @@ def example1(num_humans):
         new_pos_3 = np.array([-1, -1, 0])# start far out of the traversible
         while(not within_traversible(new_pos_3, traversible, dx_m, 3) or 
               not within_traversible(new_pos_3, human_traversible, dx_m, 3)):
-            new_pos_3 = generate_random_pos_3(camera_pos_13[0], 6, 6);
+            new_pos_3 = generate_random_pos_3(camera_pos_13[0], 3, 3);
         human_pos_3.append(new_pos_3)
 
-        print("Generating human", i, "at", human_pos_3[i])
-        # Speed of the human in m/s
+        # Generating new position as human's goal (endpoint)
+        new_pos_3 = np.array([-1, -1, 0])# start far out of the traversible
+        while(not within_traversible(new_pos_3, traversible, dx_m, 3) or 
+              not within_traversible(new_pos_3, human_traversible, dx_m, 3)):
+            new_pos_3 = generate_random_pos_3(human_pos_3[i], 1.5, 1.5);
+        human_goal_3.append(new_pos_3)
+
+        # Update human i's angle to point towards the goal
+        diff_x = human_goal_3[i][0] - human_pos_3[i][0]
+        diff_y = human_goal_3[i][1] - human_pos_3[i][1]
+        human_pos_3[i][2] = math.atan2(diff_y, diff_x)
+
+        print("Human", i, "at", human_pos_3[i], "& goal", human_goal_3[i])
+
+        # Generating random speed of the human in m/s
         human_speed.append(random())# random value from 0 to 1
         #humans.append(tuple([human_pos_3[i], human_speed[i], identity_rng[i], mesh_rng[i]]))
         # Load a random human at a specified state and speed
@@ -197,7 +222,7 @@ def example1(num_humans):
         rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
         # Plot the rendered images
-        plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, np.array([camera_pos_13[i]]), human_pos_3, "example1_v" + str(i) + ".png")
+        plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, human_traversible, dx_m, np.array([camera_pos_13[i]]), human_pos_3, human_goal_3, "example1_v" + str(i) + ".png")
     # Remove the human from the environment
     r.remove_human()
 
@@ -262,7 +287,7 @@ def example2():
 
 if __name__ == '__main__':
     #try:
-        example1(20) 
+        example1(10) 
         #example2() #not running example2 yet
     #except:
     #    print('\033[31m', "Failed to render image", '\033[0m')
