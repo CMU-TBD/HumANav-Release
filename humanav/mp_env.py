@@ -141,6 +141,7 @@ class Building():
     Load a 'gendered' human mesh with 'body shape' and texture, 'human_materials',
     into a building at 'pos_3' with 'speed' in the static building.
     """
+
     self.human_pos_3.append(pos_3*1.)
 
     # Load the human mesh
@@ -166,7 +167,7 @@ class Building():
     # Move the human to the desired location
     pos_3 = self._traversible_world_to_vertex_world(pos_3)
     shapess[0].meshes[0].vertices = self._transform_to_world(shapess[0].meshes[0].vertices, pos_3)
-    shapess[0].meshes[0].name += str(identification)
+    shapess[0].meshes[0].name += identification
     self.renderer_entitiy_ids += self.r_obj.load_shapes(shapess, dedup_tbo, allow_repeat_humans=allow_repeat_humans)
 
     # Update The Human Traversible

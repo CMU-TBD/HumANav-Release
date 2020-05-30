@@ -222,7 +222,6 @@ def get_graph_origin_loc(rng, traversible):
   locs = locs + rng.rand(*(locs.shape)) - 0.5
   return locs
 
-
 def generate_egocentric_maps(scaled_maps, map_scales, map_crop_sizes, loc,
                              x_axis, y_axis, dst_theta=np.pi/2.0, dst_loc=None):
   maps = []
@@ -312,7 +311,6 @@ def walk_on_map(traversable, start, end):
   idx_ = np.ravel_multi_index((idx[:,1],idx[:,0]), traversable.shape)
   vals = traversable.ravel()[idx_]
   return pts, vals
-
 
 def sample_positions_on_map(seed, traversible, resolution, n):
   rng = np.random.RandomState(seed)
