@@ -246,8 +246,8 @@ def example2(num_humans = 1):
 
 if __name__ == '__main__':
     #try:
-        example1(5) 
-        example2(5)
+        example1(2) 
+        example2(1)
     #except:
     #    print('\033[31m', "Failed to render image", '\033[0m')
     #    sys.exit(1)

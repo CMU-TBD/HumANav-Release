@@ -64,6 +64,9 @@ class Building():
     self.human_mesh_info = []
     self.human_pos_3 = []
     self.human = []
+    self.people = {}
+    self.ind_human_traversibles = {}
+  
 
   def set_r_obj(self, r_obj):
     self.r_obj = r_obj
@@ -139,6 +142,8 @@ class Building():
     Load a 'gendered' human mesh with 'body shape' and texture, 'human_materials',
     into a building at 'pos_3' with 'speed' in the static building.
     """
+    # Add human to dictionary in building
+    self.people[human.identity] = human
     pos_3 = human.pos_3
     speed = human.speed
     gender = human.gender
@@ -186,11 +191,19 @@ class Building():
             n_samples_per_face=env.n_samples_per_face, human_xy_center_2=pos_3[:2])
 
         self.traversible = map.traversible
-        new_human_traversible = np.stack([self.human_traversible, map._human_traversible], axis=2)
-        self.human_traversible = np.all(new_human_traversible, axis=2)
+        self.ind_human_traversibles[human.identity] = map._human_traversible
+        self.human_traversible = self.compute_human_traversible()
         self.map = map
     self.human.append(shapess[0])
     self.human_ego_vertices = (human_ego_vertices)
+
+  def compute_human_traversible(self):
+      new_human_traversible = np.ones_like(self.map._traversible*1.)
+      for ID, _ in list(self.people.items()):
+        if(ID in self.ind_human_traversibles):
+          new_human_traversible = np.stack([new_human_traversible, self.ind_human_traversibles[ID]], axis=2)
+          new_human_traversible = np.all(new_human_traversible, axis=2)
+      return new_human_traversible
 
   def remove_human(self, ID):
       """
@@ -214,6 +227,11 @@ class Building():
       # Update the traversible to be human free
       self.map.traversible = self.map._traversible
       self.traversible = self.map._traversible
+      self.ind_human_traversibles.pop(ID)
+      self.human_traversible = self.compute_human_traversible()
+
+      # Remove from dictionary
+      self.people.pop(ID)
 
   def move_human_to_position_with_speed(self, dataset, pos_3, speed, gender,
                                         human_materials, body_shape, rng):

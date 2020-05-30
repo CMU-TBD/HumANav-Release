@@ -172,7 +172,7 @@ def compute_traversibility(map, robot_base, robot_height, robot_radius,
   map_out._human_traversible = np.ones_like(traversible*1.)
   map_out.obstacle_free = obstacle_free
   map_out.valid_space = valid_space
-  return map_out
+  return map_out  
 
 def resize_maps(map, map_scales, resize_method):
   scaled_maps = []

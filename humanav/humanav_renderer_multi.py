@@ -136,6 +136,7 @@ class HumANavRendererMulti():
         for ID, _ in list(self.humans.items()):
             assert isinstance(ID, tuple)
             self.remove_human(ID)
+        #human_traversible.fill(True) # clear human_traversible
     
     def move_human_to_position_with_speed(self, pos_3, speed, mesh_rng):
         """

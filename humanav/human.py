@@ -114,7 +114,7 @@ class Human():
         """
         # Set the Mesh seed. This is used to sample the actual mesh to be loaded
         # which reflects the pose of the human skeleton.
-        mesh_rng = np.random.RandomState(randint(10, 100))
+        mesh_rng = np.random.RandomState(randint(1, 1000))
 
         # State of the center and the human. 
         # Specified as [x (meters), y (meters), theta (radians)] coordinates
@@ -133,11 +133,11 @@ class Human():
         """
         # Set the identity seed. This is used to sample a random human identity
         # (name, gender, texture, body shape)
-        identity_rng = np.random.RandomState(randint(10, 100))
+        identity_rng = np.random.RandomState(randint(1, 1000))
 
         # Set the Mesh seed. This is used to sample the actual mesh to be loaded
         # which reflects the pose of the human skeleton.
-        mesh_rng = np.random.RandomState(randint(10, 100))
+        mesh_rng = np.random.RandomState(randint(1, 1000))
 
         return self.generate_random_human_at_pos_with_goal(self, dataset, pos_3, goal_3, speed, identity_rng, mesh_rng)
 
