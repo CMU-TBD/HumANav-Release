@@ -37,7 +37,7 @@ class Human():
 
         # Using the SBPD dataset to generate a random gender, texture, and body shape
         human_gender, human_texture, body_shape = \
-            dataset.get_random_human_gender_texture_and_body_shape(identity_rng, load_materials=False)
+            dataset.get_random_human_gender_texture_and_body_shape(identity_rng)
         return human_name, human_gender, human_texture, body_shape
 
     def generate_random_human_at_pos_with_goal(self, pos_3, goal_3, speed, identity_rng, mesh_rng, dataset):

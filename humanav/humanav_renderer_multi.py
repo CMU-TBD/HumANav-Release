@@ -100,22 +100,10 @@ class HumANavRendererMulti():
         Inserts a human mesh at [x, y, theta]
         specified by pos_3.
         """
-        pos_3 = human.pos_3
-        speed = human.speed
-        human_gender = human.gender
-        human_texture = human.texture
-        body_shape = human.shape
-        mesh_rng = human.mesh_rng
-        identification = human.name#fix this
-        
         if self.p.load_meshes:
-            self.human_gender, self.human_texture, self.body_shape = \
-                self.d.get_random_human_gender_texture_and_body_shape(mesh_rng)
             if not only_sample_human_identity:
                 # Load the human mesh into the scene
-                self.building.load_human_into_scene(self.d, pos_3, speed,
-                                                    self.human_gender, self.human_texture,
-                                                    self.body_shape, mesh_rng, identification)
+                self.building.load_human_into_scene(self.d,human)
 
                 # Log that there is a human in the environment
                 self.human_traversible = self.building.human_traversible

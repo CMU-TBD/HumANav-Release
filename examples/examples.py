@@ -114,7 +114,7 @@ def example1(num_humans):
     r = HumANavRendererMulti.get_renderer(p)#get the renderer from the camera p
 
     # Get the surreal dataset for human generation
-    surreal_data = sbpd.get_dataset(p.dataset_name, 'all', data_dir=p.sbpd_data_dir, surreal_params=p.surreal)
+    surreal_data = r.d
 
     dx_cm, traversible = r.get_config()#obtain "resolution and traversible of building"
     human_traversible = np.empty(traversible.shape)
@@ -237,7 +237,7 @@ def example2():
 
 if __name__ == '__main__':
     #try:
-        example1(5) 
+        example1(15) 
         #example2() #not running example2 yet
     #except:
     #    print('\033[31m', "Failed to render image", '\033[0m')

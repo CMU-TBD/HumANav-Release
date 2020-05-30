@@ -134,13 +134,18 @@ class Building():
       pos_3 = np.array([xy_offset_map[0], xy_offset_map[1], pos_3[2]])
       return pos_3
   
-  def load_human_into_scene(self, dataset, pos_3, speed, gender,
-                            human_materials, body_shape, rng, identification, dedup_tbo=False,
-                            allow_repeat_humans=False):
+  def load_human_into_scene(self, dataset, human, dedup_tbo=False, allow_repeat_humans=False):
     """
     Load a 'gendered' human mesh with 'body shape' and texture, 'human_materials',
     into a building at 'pos_3' with 'speed' in the static building.
     """
+    pos_3 = human.pos_3
+    speed = human.speed
+    gender = human.gender
+    human_materials = human.texture
+    body_shape = human.shape
+    rng = human.mesh_rng
+    identification = human.name
 
     self.human_pos_3.append(pos_3*1.)
 
