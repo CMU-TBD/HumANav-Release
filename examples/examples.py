@@ -179,7 +179,7 @@ def example1(num_humans):
     # Remove all the humans from the environment
     r.remove_all_humans()
 
-def example2():
+def example2(num_humans = 1):
     """
     Code for loading a specified human identity into the environment
     and rendering topview, rgb, and depth images.
@@ -199,8 +199,6 @@ def example2():
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm/100.
 
-    (name, gender, texture, shape) = Human.create_random_human_identity(Human, surreal_data, np.random.RandomState(randint(10, 100)))
-
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
     camera_pos_13 = np.array([
@@ -211,6 +209,8 @@ def example2():
     ])
     num_cameras = np.shape(camera_pos_13)[0]
 
+    humans = []
+
     # Create default environment which is a dictionary
     # containing ["map_scale", "traversibles"]
     # which is a constant and list of traversibles respectively
@@ -219,12 +219,17 @@ def example2():
     # obstacle traversible / human traversible
     environment["traversibles"] = (traversible, human_traversible) 
 
-    # generate new human from known identification/mesh information
-    human_0 = Human.generate_human_with_known_identity(Human, name, gender, texture, shape, environment, camera_pos_13[0])
 
-    # Load a random human at a specified state and speed
-    r.add_human_at_position_with_speed(human_0)
-    environment["traversibles"] = (traversible, r.get_human_traversible()) #update human traversible
+
+    for i in range(num_humans):
+            # generate new human from known identification/mesh information
+            (name, gender, texture, shape) = Human.create_random_human_identity(Human, surreal_data, np.random.RandomState(randint(1, 1000)))
+            humans.append(Human.generate_human_with_known_identity(Human, name, gender, texture, shape, 
+            environment, camera_pos_13[0]))
+
+            # Load a random human at a specified state and speed
+            r.add_human_at_position_with_speed(humans[i])
+            environment["traversibles"] = (traversible, r.get_human_traversible()) #update human traversible
 
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
@@ -234,15 +239,15 @@ def example2():
         rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
         # Plot the rendered images
-        plot_images(rgb_image_1mk3, depth_image_1mk1, environment, np.array([camera_pos_13[i]]), [human_0], "example2_v" + str(i) + ".png")
+        plot_images(rgb_image_1mk3, depth_image_1mk1, environment, np.array([camera_pos_13[i]]), humans, "example2_v" + str(i) + ".png")
 
     # Remove the human from the environment
-    r.remove_human(human_0.get_identity())
+    r.remove_all_humans()
 
 if __name__ == '__main__':
     #try:
-        #example1(5) 
-        example2() #not running example2 yet
+        example1(5) 
+        example2(5)
     #except:
     #    print('\033[31m', "Failed to render image", '\033[0m')
     #    sys.exit(1)
