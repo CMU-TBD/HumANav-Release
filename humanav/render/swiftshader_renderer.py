@@ -610,21 +610,21 @@ class SwiftshaderRenderer():
       glDeleteBuffers(1, [vbo])
       glDeleteTextures(1, [tbo])
 
-  def remove_human(self):
+  def remove_human(self, ID):
       """
       Delete the mesh information for the loaded human (vertices, faces, textures)
+      with specified identification, ID
       """
       human_keys = list(filter(lambda x: 'human' in x, self.entities.keys()))
-      #print('\033[36m', "Humans as seen in the renderer:")
-      #print(list(enumerate(human_keys)), '\033[0m')
-      # Only one human supported currently (going to need to add for a list of humans)
+      name = ID[0]
       for i in range(len(human_keys)):
-          entity = self.entities.pop(human_keys[i], None)
-          vbo = entity['vbo']
-          tbo = entity['tbo']
-          num = entity['num']
-          glDeleteBuffers(1, [vbo])
-          glDeleteTextures(1, [tbo])
+          if name in human_keys[i]:
+            entity = self.entities.pop(human_keys[i], None)
+            vbo = entity['vbo']
+            tbo = entity['tbo']
+            num = entity['num']
+            glDeleteBuffers(1, [vbo])
+            glDeleteTextures(1, [tbo])
 
   def __del__(self):
     #self.clear_scene()

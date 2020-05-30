@@ -192,22 +192,24 @@ class Building():
     self.human.append(shapess[0])
     self.human_ego_vertices = (human_ego_vertices)
 
-  def remove_human(self):
+  def remove_human(self, ID):
       """
       Remove a human that has been loaded into the SBPD environment
+      - Note that the ID is a tuple consisting of a human's
+      (Name : string, Gender : string, Shape : int)
       """
       # Delete the human mesh from memory
-      self.r_obj.remove_human()
+      self.r_obj.remove_human(ID)
 
       # Remove the human from the list of loaded entities
       human_entitiy_ids = list(filter(lambda x: 'human' in x, self.renderer_entitiy_ids))
 
-      #Multiple humans currently supported
-      #assert (len(human_entitiy_ids) <= 1)
-
       for i in range(len(human_entitiy_ids)):
-          #print('\033[35m', "Deleted Human: " + str(i), '\033[0m')
-          self.renderer_entitiy_ids.remove(human_entitiy_ids[i])
+          # Remove the human that matches the ID
+          name = ID[0]
+          if name in human_entitiy_ids[i]:
+            print('\033[35m', "Deleted Human: " + name, '\033[0m')
+            self.renderer_entitiy_ids.remove(human_entitiy_ids[i])
 
       # Update the traversible to be human free
       self.map.traversible = self.map._traversible
@@ -237,6 +239,10 @@ class Building():
     self.r_obj.set_entity_visible(self.renderer_entitiy_ids, visibility)
 
   def set_human_visibility(self, visibility):
+    """
+    Makes ALL humans visible or not, to remove a singular
+    human use remove_human(ID)
+    """
     human_entity_ids = list(filter(lambda x: 'human' in x, self.renderer_entitiy_ids))
     self.r_obj.set_entity_visible(human_entity_ids, visibility)
 

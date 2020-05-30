@@ -16,10 +16,8 @@ class Human():
         self.gender = gender
         self.shape = shape
         self.texture = texture
-        self.identity = {'human_name': self.name,
-                         'human_gender': self.gender,
-                         'human_texture': self.texture,
-                         'body_shape': self.shape}
+        # Hashable Tuple for dictionaries
+        self.identity = (self.name, self.gender, self.shape)
         self.mesh_rng = mesh_rng    
         self.pos_3 = pos_3
         self.goal_3 = goal_3

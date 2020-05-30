@@ -104,7 +104,7 @@ class HumANavRendererMulti():
             if not only_sample_human_identity:
                 # Load the human mesh into the scene
                 self.building.load_human_into_scene(self.d,human)
-
+                self.humans[human.identity] = human
                 # Log that there is a human in the environment
                 self.human_traversible = self.building.human_traversible
                 
@@ -124,13 +124,15 @@ class HumANavRendererMulti():
         Remove the human h overloaded with ID below
         - Must be done from self.building and self.humans
         """
-        remove_human(h.identity)
+        assert isinstance(h, Human.Human)
+        self.remove_human(h.identity)
     
     def remove_human(self, ID):
         """
         Remove the human with identity ID
         - Must be done from self.building and self.humans
         """
+        assert isinstance(ID, tuple)
         if self.p.load_meshes:
             self.building.remove_human(ID)
             self.humans.pop(ID)
@@ -139,8 +141,9 @@ class HumANavRendererMulti():
         """
         Remove all humans in the scene
         """
-        for h in self.humans:
-            remove_human(h)
+        for ID, _ in list(self.humans.items()):
+            assert isinstance(ID, tuple)
+            self.remove_human(ID)
     
     def move_human_to_position_with_speed(self, pos_3, speed, mesh_rng):
         """

@@ -165,6 +165,7 @@ def example1(num_humans):
 
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
+    r.remove_all_humans()
     
     # Plotting an image for each camera location
     for i in range(num_cameras):
@@ -174,7 +175,6 @@ def example1(num_humans):
         plot_images(rgb_image_1mk3, depth_image_1mk1, environment, np.array([camera_pos_13[i]]), humans, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
-    r.remove_all_humans()
 
 def get_known_human_identity(r):
     """
@@ -237,7 +237,7 @@ def example2():
 
 if __name__ == '__main__':
     #try:
-        example1(15) 
+        example1(5) 
         #example2() #not running example2 yet
     #except:
     #    print('\033[31m', "Failed to render image", '\033[0m')
