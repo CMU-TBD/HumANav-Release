@@ -97,13 +97,13 @@ class HumANavRendererMulti():
 
     def add_human_at_position_with_speed(self, human, only_sample_human_identity=False):
         """
-        Inserts a human mesh at [x, y, theta]
-        specified by pos_3.
+        Inserts a human mesh where their positional
+        arguments specify
         """
         if self.p.load_meshes:
             if not only_sample_human_identity:
                 # Load the human mesh into the scene
-                self.building.load_human_into_scene(self.d,human)
+                self.building.load_human_into_scene(self.d, human)
                 self.humans[human.identity] = human
                 # Log that there is a human in the environment
                 self.human_traversible = self.building.human_traversible
@@ -118,14 +118,6 @@ class HumANavRendererMulti():
 
     def get_human_traversible(self):
         return self.human_traversible
-
-    def remove_human(self, h):
-        """
-        Remove the human h overloaded with ID below
-        - Must be done from self.building and self.humans
-        """
-        assert isinstance(h, Human.Human)
-        self.remove_human(h.identity)
     
     def remove_human(self, ID):
         """

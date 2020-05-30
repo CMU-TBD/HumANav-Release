@@ -5,7 +5,6 @@ from dotmap import DotMap
 from random import seed, random, randint
 from humanav import sbpd
 from humanav.human import Human
-from humanav.renderer_params import get_surreal_texture_dir
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
 
@@ -151,13 +150,17 @@ def example1(num_humans):
         print("Rendering camera (robot) at", camera_pos_13[i])
     
     humans = []
+
+    # Create default environment which is a dictionary
+    # containing ["map_scale", "traversibles"]
+    # which is a constant and list of traversibles respectively
     environment = {}
     environment["map_scale"] = dx_m
     # obstacle traversible / human traversible
     environment["traversibles"] = (traversible, human_traversible) 
     for i in range(num_humans):
         # Generates a random human from the environment
-        humans.append(Human.generate_random_human(Human, environment, surreal_data, camera_pos_13[0]))
+        humans.append(Human.generate_random_human_from_environment(Human, surreal_data, environment, camera_pos_13[0]))
 
         # Load a random human at a specified state and speed
         r.add_human_at_position_with_speed(humans[i])
@@ -165,7 +168,6 @@ def example1(num_humans):
 
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
-    r.remove_all_humans()
     
     # Plotting an image for each camera location
     for i in range(num_cameras):
@@ -175,70 +177,72 @@ def example1(num_humans):
         plot_images(rgb_image_1mk3, depth_image_1mk1, environment, np.array([camera_pos_13[i]]), humans, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
-
-def get_known_human_identity(r):
-    """
-    Specify a known human identity. An identity
-    is a dictionary with keys {'human_gender', 'human_texture', 'body_shape'}
-    """
-
-    # Method 1: Set a seed and sample a random identity
-    identity_rng = np.random.RandomState(48)
-    human_identity = r.load_random_human_identity(identity_rng)
-
-    # Method 2: If you know which human you want to load,
-    # specify the params manually (or load them from a file)
-    human_identity = {'human_gender': 'male', 'human_texture': [os.path.join(get_surreal_texture_dir(), 'train/male/nongrey_male_0110.jpg')], 'body_shape': 1320}
-    return human_identity
+    r.remove_all_humans()
 
 def example2():
     """
     Code for loading a specified human identity into the environment
     and rendering topview, rgb, and depth images.
-    Note: Example 2 is expected to produce the same output as Example1
+    - Note: Example 2 is expected to produce the same output as Example1 
+    from before the multi-human redux
     """
     p = create_params()
 
-    r = HumANavRenderer.get_renderer(p)
+    r = HumANavRendererMulti.get_renderer(p)
     dx_cm, traversible = r.get_config()
+    human_traversible = np.empty(traversible.shape)
+    human_traversible.fill(True) #initially all good
+
+    # Get the surreal dataset for human generation
+    surreal_data = r.d
 
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm/100.
 
-    human_identity = get_known_human_identity(r)
+    (name, gender, texture, shape) = Human.create_random_human_identity(Human, surreal_data, np.random.RandomState(randint(10, 100)))
 
-    # Set the Mesh seed. This is used to sample the actual mesh to be loaded
-    # which reflects the pose of the human skeleton.
-    mesh_rng = np.random.RandomState(20)
+    # Camera (robot) position modeled as (x, y, theta) in 2D array
+    # Multiple entries yield multiple shots
+    camera_pos_13 = np.array([
+        [7.5, 12., -1.3],   # middle view
+        [8, 9, 1.7],        # bottom-up view
+        [5.5, 11.5, 0.1],   # left-right view
+        [11, 11.5, 3.2]     # right-left view
+    ])
+    num_cameras = np.shape(camera_pos_13)[0]
 
-    # State of the camera and the human. 
-    # Specified as [x (meters), y (meters), theta (radians)] coordinates
-    camera_pos_13 = np.array([[7.5, 12., -1.3]])
-    human_pos_3 = np.array([8.0, 9.75, np.pi/2.])
+    # Create default environment which is a dictionary
+    # containing ["map_scale", "traversibles"]
+    # which is a constant and list of traversibles respectively
+    environment = {}
+    environment["map_scale"] = dx_m
+    # obstacle traversible / human traversible
+    environment["traversibles"] = (traversible, human_traversible) 
 
-    # Speed of the human in m/s
-    human_speed = 0.7
+    # generate new human from known identification/mesh information
+    human_0 = Human.generate_human_with_known_identity(Human, name, gender, texture, shape, environment, camera_pos_13[0])
 
     # Load a random human at a specified state and speed
-    r.add_human_with_known_identity_at_position_with_speed(human_pos_3, human_speed, mesh_rng, human_identity)
+    r.add_human_at_position_with_speed(human_0)
+    environment["traversibles"] = (traversible, r.get_human_traversible()) #update human traversible
 
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
+    
+    # Plotting an image for each camera location
+    for i in range(num_cameras):
+        rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
-    rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True)
+        # Plot the rendered images
+        plot_images(rgb_image_1mk3, depth_image_1mk1, environment, np.array([camera_pos_13[i]]), [human_0], "example2_v" + str(i) + ".png")
 
     # Remove the human from the environment
-    r.remove_human()
-
-    # Plot the rendered images
-    plot_images(rgb_image_1mk3, depth_image_1mk1, traversible, dx_m,
-                camera_pos_13, human_pos_3, 'example2.png')
-
+    r.remove_human(human_0.get_identity())
 
 if __name__ == '__main__':
     #try:
-        example1(5) 
-        #example2() #not running example2 yet
+        #example1(5) 
+        example2() #not running example2 yet
     #except:
     #    print('\033[31m', "Failed to render image", '\033[0m')
     #    sys.exit(1)
