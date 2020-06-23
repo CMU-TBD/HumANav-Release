@@ -1,4 +1,4 @@
-# tbd_HumANav
+# tbd_SocNavBenchmark
 Welcome to the Human Active Navigation Dataset (HumANav), a codebase for photorealistic simulations of humans in indoor office environments! We are a team of researchers from UC Berkeley and Google Brain.
 
 This codebase is a part of our work in ["Visual Navigation Among Humans with Optimal Control as a Supervisor"](https://arxiv.org/pdf/2003.09354.pdf). In this work we show that HumANav enables zero-shot transfer of learning based navigation algorithms directly from simulation to reality. We hope that HumANav can be a useful tool for the broader visual navigation, computer vision, and robotics communities.
@@ -13,16 +13,16 @@ More information & a live demo of the HumANav Dataset is available on the [proje
 ## Download and Configure Data
 
 ### Download SMPL data & Render human meshes
-Follow the instructions in [`surreal/README.md`](https://github.com/CMU-TBD/tbd_HumANav/blob/master/surreal/README.md) to correctly install the human meshes.
+Follow the instructions in [`surreal/README.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/surreal/README.md) to correctly install the human meshes.
 
 ### Download SD3DIS data
-Follow the instructions in [`sd3dis/README.md`](https://github.com/CMU-TBD/tbd_HumANav/blob/master/sd3dis/README.md) to correctly install the building/area meshes. 
+Follow the instructions in [`sd3dis/README.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/sd3dis/README.md) to correctly install the building/area meshes. 
 
 ### Configure HumANav to look for your data.
-In `./humanav/renderer_params.py` change the following line to your installation of `tbd_HumANav`
+In `./humanav/renderer_params.py` change the following line to your installation of `tbd_SocNavBenchmark`
 ```
 def get_path_to_humanav():
-    return '/PATH/TO/tbd_HumANav'
+    return '/PATH/TO/tbd_SocNavBenchmark'
 ```
 
 Note: HumANav is independent of the actual indoor office environment and human meshes used. In this work we use human meshes exported from the [SURREAL](https://www.di.ens.fr/willow/research/surreal/data/) dataset and scans of indoor office environments from the [S3DIS](http://buildingparser.stanford.edu/dataset.html) dataset. However, if you would like to use other meshes, please download and configure them yourself and update the parameters in renderer_params.py to point to your data installation.
@@ -67,17 +67,17 @@ chmod a+x get_packages.sh
 ```
 The script should inform you of all packages being installed and their status, to install manually just look inside
 
-#### Install HumANav as a pip package
+#### Install tbd_SocNavBenchmark as a pip package
 Follow the steps below to install HumANav as a pip package, so it can be easily integrated with any other codebase.
 ```
-cd /PATH/TO/HumANav
+cd /PATH/TO/tbd_SocNavBenchmark
 pip install -e .
 ```
 
-## Test the HumANav installation
+## Test the tbd_SocNavBenchmark installation
 To get you started we've included examples.py, which contains 2 code examples for rendering different image modalities (topview, RGB, Depth) from HumANav.
 ```
-cd /PATH/TO/HumANav/examples
+cd /PATH/TO/tbd_SocNavBenchmark/examples
 PYOPENGL_PLATFORM=egl PYTHONPATH='.' python examples.py
 ```
 The output of examples.py is example1.png and example2.png, both of which are expected to match the image below. If the images match, you have successfully installed & configured HumANav!
