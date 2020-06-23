@@ -29,7 +29,7 @@ class Human():
         self.texture = texture
         # Hashable Tuple for dictionaries
         self.identity = (self.name, self.gender, self.shape)
-        self.mesh_rng = mesh_rng    
+        self.mesh_rng = mesh_rng
         self.pos_3 = pos_3
         self.goal_3 = goal_3
         self.speed = speed
@@ -172,7 +172,7 @@ class Human():
             for j in range(2*radius):
                 if(stroked_radius):
                     if not((i == 0 or i == radius - 1 or j == 0 or j == radius - 1)):
-                        continue;
+                        continue
                 pos_x = int(new_pos[0] / map_scale) - radius + i
                 pos_y = int(new_pos[1] / map_scale) - radius + j
                 # Note: the traversible is mapped unintuitively, goes [y, x]
@@ -205,12 +205,12 @@ class Human():
         # Generating new position as human's position
         human_pos_3 = np.array([-1, -1, 0])# start far out of the traversible
         while(not self.within_traversible(self, human_pos_3, global_traversible, map_scale, radius=3)):
-            human_pos_3 = self.generate_random_pos_3(self, center, 3, 3);
+            human_pos_3 = self.generate_random_pos_3(self, center, 3, 3)
 
         # Generating new position as human's goal (endpoint)
         goal_pos_3 = np.array([-1, -1, 0])# start far out of the traversible
         while(not self.within_traversible(self, goal_pos_3, global_traversible, map_scale, radius=3)):
-            goal_pos_3 = self.generate_random_pos_3(self, human_pos_3, 1.5, 1.5);
+            goal_pos_3 = self.generate_random_pos_3(self, human_pos_3, 1.5, 1.5)
 
         # Update human i's angle to point towards the goal
         diff_x = goal_pos_3[0] - human_pos_3[0]

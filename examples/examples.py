@@ -124,10 +124,9 @@ def example1(num_humans):
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
     camera_pos_13 = np.array([
-        [7.5, 12., -1.3],   # middle view
-        [8, 9, 1.7],        # bottom-up view
-        [5.5, 11.5, 0.1],   # left-right view
-        [11, 11.5, 3.2]     # right-left view
+        [10., 20., 0],   # middle of the corridor
+        [15.,17., -np.pi]   # middle of the corridor
+
     ])
 
     # Add surrounding boundary dots to camer's so generated humans won't interfere

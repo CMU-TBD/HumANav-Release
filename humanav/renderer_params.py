@@ -6,9 +6,12 @@ import os
 def create_params():
     p = DotMap()
     p.dataset_name = 'sbpd'
-    p.building_name = 'area1'
+    p.building_name = 'area3'
     p.flip = False
     p.load_meshes = True
+    # False allows users to compute a new traversible when
+    # using a new area dataset, True will look for the  
+    # precomputed traversible from the traversible folder
     p.load_traversible_from_pickle_file = True
 
     p.camera_params = DotMap(modalities=['rgb'],  # rgb or disparity
@@ -30,7 +33,7 @@ def create_params():
     # camera_elevation_degree degrees vertically
     # from the horizontal plane.
     p.robot_params = DotMap(radius=18,
-                            base=10,
+                            base=5,
                             height=100,
                             sensor_height=80,
                             camera_elevation_degree=-45,  # camera tilt
