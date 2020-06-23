@@ -1,7 +1,7 @@
 from setuptools import setup
 from setuptools import find_packages
 
-setup(name='tbd_humanav',
+setup(name='tbd_socnavbench',
   version='0.0',
   author='Varun Tolani',
   author_email='vtolani@eecs.berkeley.edu',

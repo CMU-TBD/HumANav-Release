@@ -1,4 +1,4 @@
-name: tbd_humanav
+name: tbd_socnavbench
 channels:
   - defaults
 dependencies:

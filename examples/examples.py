@@ -88,8 +88,9 @@ def plot_images(rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13, hu
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title('Depth')
-    fig.savefig(filename, bbox_inches='tight', pad_inches=0)
-    print('\033[32m', "Successfully rendered image:", filename, '\033[0m')
+    full_file_name = os.path.join("examples/",filename)
+    fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
+    print('\033[32m', "Successfully rendered image:", full_file_name, '\033[0m')
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
     # Convert from real world units to grid world units
