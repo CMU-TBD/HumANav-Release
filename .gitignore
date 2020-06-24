@@ -14,3 +14,9 @@ examples/*.png
 surreal/code/get-pip.py
 humanav/renderer_params.py
 surreal/code/config
+tests/*.png
+.vscode/
+base_data/
+surreal/code/config
+params/base_data_directory.py
+humanav/renderer_params.py
