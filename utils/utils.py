@@ -63,6 +63,12 @@ def _to_json_serializable_dict(param_dict):
         param_dict[key] = _to_serializable_type(param_dict[key])
     return param_dict
 
+def touch(path):
+    basedir = os.path.dirname(path)
+    if not os.path.exists(basedir):
+        os.makedirs(basedir)
+    with open(path, 'a'):
+        os.utime(path, None)
 
 def mkdir_if_missing(dirname):
     if not os.path.exists(dirname):

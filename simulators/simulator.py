@@ -554,7 +554,7 @@ class Simulator(SimulatorHelper):
         """ By default the simulator does not support video capture."""
         return None
 
-    def render(self, axs, freq=4, render_waypoints=False, render_velocities=False, prepend_title='', zoom=0):
+    def render(self, axs, freq=4, render_waypoints=False, render_velocities=False, prepend_title='', zoom=0, markersize=10):
         if type(axs) is list or type(axs) is np.ndarray:
             self._render_trajectory(axs[0], freq, render_waypoints)
 
@@ -562,13 +562,13 @@ class Simulator(SimulatorHelper):
                 self._render_velocities(axs[1], axs[2])
             [ax.set_title('{:s}{:s}'.format(prepend_title, ax.get_title())) for ax in axs]
         else:
-            self._render_trajectory(axs, freq, render_waypoints, zoom)
+            self._render_trajectory(axs, freq, render_waypoints, zoom, markersize)
             axs.set_title('{:s}{:s}'.format(prepend_title, axs.get_title()))
 
     def _render_obstacle_map(self, ax):
         self.obstacle_map.render(ax)
 
-    def _render_trajectory(self, ax, freq=4, render_waypoints = False, zoom=0):
+    def _render_trajectory(self, ax, freq=4, render_waypoints = False, zoom=0, markersize=10):
         p = self.params
 
         self._render_obstacle_map(ax, zoom)
@@ -576,14 +576,14 @@ class Simulator(SimulatorHelper):
         if render_waypoints and 'waypoint_config' in self.vehicle_data.keys():
             # Dont want ax in a list 
             self.vehicle_trajectory.render(ax, freq=freq, plot_quiver=False)
-            self._render_waypoints(ax)
+            self._render_waypoints(ax, markersize)
         else:
             self.vehicle_trajectory.render(ax, freq=freq, plot_quiver=False)
 
         boundary_params = {'norm': p.goal_dist_norm, 'cutoff':
                            p.goal_cutoff_dist, 'color': 'g'}
-        self.start_config.render(ax, batch_idx=0, marker='o', color='blue')
-        self.goal_config.render_with_boundary(ax, batch_idx=0, marker='*', color='black',
+        self.start_config.render(ax, batch_idx=0, marker='o', markersize=markersize, color='blue')
+        self.goal_config.render_with_boundary(ax, batch_idx=0, marker='*', markersize=markersize, color='black',
                                               boundary_params=boundary_params)
 
         goal = self.goal_config.position_nk2()[0, 0]
@@ -605,7 +605,7 @@ class Simulator(SimulatorHelper):
         final_y = final_pos.numpy()[1]
         ax.plot(final_x, final_y, text_color+'.')
         
-    def _render_waypoints(self, ax, plot_quiver=False, plot_text=True,text_offset=(0,0)):
+    def _render_waypoints(self, ax, plot_quiver=False, plot_text=True,text_offset=(0,0), markersize=10):
         # Plot the system configuration and corresponding
         # waypoint produced in the same color
         if(self.vehicle_data['waypoint_config'] is not None):
@@ -615,7 +615,7 @@ class Simulator(SimulatorHelper):
             for i, (system_config, waypt_config) in enumerate(zip(system_configs, waypt_configs)):
                 color = cmap(i / system_configs.n)
                 system_config.render(ax, batch_idx=0, plot_quiver=plot_quiver,
-                                    marker='o', color=color)
+                                    marker='o', markersize=markersize, color=color)
 
                 # Render the waypoint's number at each
                 # waypoint's location

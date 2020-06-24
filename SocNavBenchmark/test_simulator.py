@@ -20,16 +20,17 @@ from trajectory.trajectory import SystemConfig
 from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
 from planners.sampling_planner import SamplingPlanner
+from utils.utils import touch
 
-def touch(path):
-    basedir = os.path.dirname(path)
-    if not os.path.exists(basedir):
-        os.makedirs(basedir)
-    with open(path, 'a'):
-        os.utime(path, None)
+def create_params():
+    p = create_base_params()
+
+	# Set any custom parameters
+    return p
+    
 
 def test_planner():
-    h_p = create_base_params()
+    p = create_params()
     # Create planner parameters
     planner_params = create_planner_params()
     sim_params = create_sim_params()
@@ -63,18 +64,19 @@ def test_planner():
     splanner.optimize(start_config)
     splanner.simulator.simulate()
     # Visualization
-    fig = plt.figure()
+    fig = plt.figure(figsize=(30, 10))
+    plt.rcParams.update({'font.size': 22})
     ax = fig.add_subplot(1,3,1)
-    splanner.simulator.render(ax)
+    splanner.simulator.render(ax, markersize=20)
     ax = fig.add_subplot(1,3,2)
-    splanner.simulator.render(ax, zoom=4)
+    splanner.simulator.render(ax, zoom=4, markersize=20)
     ax = fig.add_subplot(1,3,3)
     splanner.simulator.vehicle_trajectory.render(ax, freq=1, plot_quiver=True)
-    splanner.simulator._render_waypoints(ax,plot_quiver=True, plot_text=False, text_offset=(0, 0))
-    file_name = os.path.join(h_p.humanav_dir, 'tests/test_simulator.png')
+    splanner.simulator._render_waypoints(ax,plot_quiver=True, plot_text=False, text_offset=(0, 0), markersize=20)
+    file_name = os.path.join(p.humanav_dir, 'tests/test_simulator.png')
     if(not os.path.exists(file_name)):
         print('\033[31m', "Failed to find:", file_name, '\033[33m', "and therefore it will be created", '\033[0m')
-        touch(file_name)
+        touch(file_name) # Just as the bash command
 
     fig.savefig(file_name, bbox_inches='tight', pad_inches=0)
     print('\033[32m', "Successfully rendered:", file_name, '\033[0m')
