@@ -19,4 +19,5 @@ tests/*.png
 base_data/
 surreal/code/config
 params/base_data_directory.py
-humanav/renderer_params.py
+tests/humanav/
+tests/visual-nav/
