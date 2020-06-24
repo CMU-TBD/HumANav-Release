@@ -22,9 +22,9 @@ import PIL
 import cv2
 import sys
 if sys.version_info[0] == 2:
-    from . import utils
+    from humanav import utils
 else:
-    from mp_env import utils #py3
+    from humanav import utils #py3
 
 def _get_xy_bounding_box(vertex, padding):
   """Returns the xy bounding box of the environment."""

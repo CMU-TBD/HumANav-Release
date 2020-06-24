@@ -30,7 +30,7 @@ import pyassimp as assimp
 from OpenGL.GLES2 import *
 from OpenGL.EGL import *
 from mp_env.render import rotation_utils
-from mp_env import utils
+from humanav import utils
 
 __version__ = 'swiftshader_renderer'
 
