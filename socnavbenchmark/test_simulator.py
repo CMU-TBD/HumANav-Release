@@ -21,8 +21,15 @@ from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
 from planners.sampling_planner import SamplingPlanner
 
+def touch(path):
+    basedir = os.path.dirname(path)
+    if not os.path.exists(basedir):
+        os.makedirs(basedir)
+    with open(path, 'a'):
+        os.utime(path, None)
 
 def test_planner():
+    h_p = create_base_params()
     # Create planner parameters
     planner_params = create_planner_params()
     sim_params = create_sim_params()
@@ -34,10 +41,10 @@ def test_planner():
     dt = 0.1
  
     # Goal states and initial speeds
-    goal_pos_n11 = tf.constant([[[8., 12.5]]]) # Goal position (must be 1x1x2 array)
+    goal_pos_n11 = tf.constant([[[12., 18.75]]]) # Goal position (must be 1x1x2 array)
     goal_heading_n11 = tf.constant([[[-np.pi/2.]]])
     # Start states and initial speeds
-    start_pos_n11 = tf.constant([[[18.5, 22.5]]]) # Goal position (must be 1x1x2 array)
+    start_pos_n11 = tf.constant([[[27.75, 33.75]]]) # Goal position (must be 1x1x2 array)
     start_heading_n11 = tf.constant([[[0.]]])
     start_speed_nk1 = tf.ones((1, 1, 1), dtype=tf.float32)
     # Define start and goal configurations
@@ -64,8 +71,14 @@ def test_planner():
     ax = fig.add_subplot(1,3,3)
     splanner.simulator.vehicle_trajectory.render(ax, freq=1, plot_quiver=True)
     splanner.simulator._render_waypoints(ax,plot_quiver=True, plot_text=False, text_offset=(0, 0))
+    file_name = os.path.join(h_p.humanav_dir, 'tests/test_simulator.png')
+    if(not os.path.exists(file_name)):
+        print('\033[31m', "Failed to find:", file_name, '\033[33m', "and therefore it will be created", '\033[0m')
+        touch(file_name)
 
-    fig.savefig('/tests/test_planner.png', bbox_inches='tight', pad_inches=0)
+    fig.savefig(file_name, bbox_inches='tight', pad_inches=0)
+    print('\033[32m', "Successfully rendered:", file_name, '\033[0m')
+
 
 if __name__ == '__main__':
     test_planner()
