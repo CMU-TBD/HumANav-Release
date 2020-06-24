@@ -1,7 +1,7 @@
 from humanav.render import swiftshader_renderer as sr
 from humanav import sbpd, map_utils as mu
 from humanav import depth_utils as du
-from humanav.human import Human
+from humans.human import Human
 from humanav import utils
 import numpy as np
 import sys

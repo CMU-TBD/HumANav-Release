@@ -4,7 +4,7 @@ import os, sys, math
 from dotmap import DotMap
 from random import seed, random, randint
 from humanav import sbpd
-from humanav.human import Human
+from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
 from utils.utils import touch
