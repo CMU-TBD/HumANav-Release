@@ -67,17 +67,16 @@ def test_planner():
     fig = plt.figure(figsize=(30, 10))
     plt.rcParams.update({'font.size': 22})
     ax = fig.add_subplot(1,3,1)
-    splanner.simulator.render(ax, markersize=20)
+    splanner.simulator.render(ax, markersize=10)
     ax = fig.add_subplot(1,3,2)
     splanner.simulator.render(ax, zoom=4, markersize=20)
     ax = fig.add_subplot(1,3,3)
-    splanner.simulator.vehicle_trajectory.render(ax, freq=1, plot_quiver=True)
+    splanner.simulator.vehicle_trajectory.render(ax, freq=1, plot_quiver=False)
     splanner.simulator._render_waypoints(ax,plot_quiver=True, plot_text=False, text_offset=(0, 0), markersize=20)
-    file_name = os.path.join(p.humanav_dir, 'tests/test_simulator.png')
+    file_name = os.path.join(p.humanav_dir, 'tests/visual-nav/test_simulator.png')
     if(not os.path.exists(file_name)):
         print('\033[31m', "Failed to find:", file_name, '\033[33m', "and therefore it will be created", '\033[0m')
         touch(file_name) # Just as the bash command
-
     fig.savefig(file_name, bbox_inches='tight', pad_inches=0)
     print('\033[32m', "Successfully rendered:", file_name, '\033[0m')
 
