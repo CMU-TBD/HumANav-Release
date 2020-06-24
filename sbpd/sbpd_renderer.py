@@ -1,5 +1,6 @@
+from humanav import sbpd
 from mp_env.render import swiftshader_renderer as sr
-from mp_env import sbpd, map_utils as mu
+from mp_env import map_utils as mu
 from utils import depth_utils as du
 import numpy as np
 import sys

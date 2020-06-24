@@ -31,8 +31,9 @@ else:
     from humanav import utils
     from humanav import mp_env
 
-def get_dataset(dataset_name, imset, data_dir, surreal_params):
+def get_dataset(dataset_name, imset, data_dir, surreal_params = None):
   if dataset_name == 'sbpd':
+
     dataset = StanfordBuildingParserDataset(imset,
                                             data_dir=data_dir,
                                             surreal_params=surreal_params)
