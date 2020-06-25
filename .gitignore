@@ -21,3 +21,4 @@ surreal/code/config
 params/base_data_directory.py
 tests/humanav/
 tests/visual-nav/
+tests/socnav/

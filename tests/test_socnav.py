@@ -37,7 +37,7 @@ def create_params():
     return p
     
 
-def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans):
+def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans, plot_quiver = False):
     ax.imshow(traversible, extent=extent, cmap='gray',
               vmin=-.5, vmax=1.5, origin='lower')
 
@@ -51,8 +51,8 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, huma
     alphas = np.all(np.invert(human_traversible))
 
     # Plot the camera
-    ax.plot(camera_pos_13[0, 0], camera_pos_13[0, 1], 'bo', markersize=10, label='Camera')
-    ax.quiver(camera_pos_13[0, 0], camera_pos_13[0, 1], np.cos(camera_pos_13[0, 2]), np.sin(camera_pos_13[0, 2]))
+    ax.plot(camera_pos_13[0], camera_pos_13[1], 'bo', markersize=10, label='Camera')
+    ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(camera_pos_13[2]), np.sin(camera_pos_13[2]))
 
     # Plot the humans (added support for multiple humans) and their trajectories
     for i, human in enumerate(humans):
@@ -62,14 +62,15 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, huma
         human.get_trajectory().render(ax, freq=1, plot_quiver=False)
         if(i == 0):
             # Only add label on the first humans
-            ax.plot(human_pos_2[0], human_pos_2[1], markerfacecolor="#FFA500", marker='o', markersize=10, label='Human')
+            ax.plot(human_pos_2[0], human_pos_2[1], markerfacecolor="#FF7C00", marker='o', markersize=10, label='Human')
             ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10, label='Goal')
         else:
-            ax.plot(human_pos_2[0], human_pos_2[1], markerfacecolor="#FFA500", marker='o', markersize=10)
+            ax.plot(human_pos_2[0], human_pos_2[1], markerfacecolor="#FF7C00", marker='o', markersize=10)
             ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10)
-        ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(human_heading), scale=2, scale_units='inches')
+        if(plot_quiver):
+            ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(human_heading), scale=2, scale_units='inches')
 
-def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13, humans, filename):
+def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, camera_pos_13, humans, filename):
 
     map_scale = environment["map_scale"]
     traversible = environment["traversibles"][0] # Obstacles/building traversible
@@ -83,17 +84,19 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
     # Plot the 5x5 meter occupancy grid centered around the camera
     ax = fig.add_subplot(1, 4, 1)
     
-    ax.set_xlim([camera_pos_13[0, 0]-5., camera_pos_13[0, 0]+5.])
-    ax.set_ylim([camera_pos_13[0, 1]-5., camera_pos_13[0, 1]+5.])
-    plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans)
+    zoom = 5.5
+    ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
+    ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
+    plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans, plot_quiver=True)
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title('Topview (zoomed)')
     
     # Render entire map-view from the top
+    outer_zoom = min(traversible.shape[0], traversible.shape[1]) * map_scale # to keep square plot
     ax = fig.add_subplot(1, 4, 2)
-    #ax.set_xlim(0., traversible.shape[0] * map_scale)
-    #ax.set_ylim(0., traversible.shape[1] * map_scale)
+    ax.set_xlim(0., outer_zoom)
+    ax.set_ylim(0., outer_zoom)
     plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans)
     ax.set_xticks([])
     ax.set_yticks([])
@@ -113,7 +116,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
     ax.set_yticks([])
     ax.set_title('Depth')
 
-    full_file_name = os.path.join(p.humanav_dir, 'tests/humanav', filename)
+    full_file_name = os.path.join(p.humanav_dir, 'tests/socnav', filename)
     if(not os.path.exists(full_file_name)):
         print('\033[31m', "Failed to find:", full_file_name, '\033[33m', "and therefore it will be created", '\033[0m')
         touch(full_file_name) # Just as the bash command
@@ -218,7 +221,7 @@ def test_socnav(num_humans):
         rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
         # Plot the rendered images
-        plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, np.array([camera_pos_13[i]]), human_list, "example1_v" + str(i) + ".png")
+        plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, camera_pos_13[i], human_list, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
     r.remove_all_humans()

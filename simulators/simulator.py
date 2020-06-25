@@ -69,7 +69,7 @@ class Simulator(SimulatorHelper):
             end_episode, episode_data = self._enforce_episode_termination_conditions(vehicle_trajectory,
                                                                                      vehicle_data, 
                                                                                      commanded_actions_nkf)
-        print("Took",i,"iterations")
+        # print("Took",i,"iterations")
         self.vehicle_trajectory = episode_data['vehicle_trajectory']
         self.vehicle_data = episode_data['vehicle_data']
         self.vehicle_data_last_step = episode_data['vehicle_data_last_step']

@@ -396,7 +396,7 @@ class Trajectory(object):
         
         if plot_quiver:
             ax.quiver(xs[::freq], ys[::freq], tf.cos(thetas[::freq]), tf.sin(thetas[::freq]))
-        print('\033[33m', "Rendering Trajectory", '\033[0m')
+        #  print('\033[33m', "Rendering Trajectory", '\033[0m')
         title_str = '{:s} Trajectory'.format(name)
         ax.plot(xs, ys, 'r-', linewidth=linewidth)
         if label_start_and_end:

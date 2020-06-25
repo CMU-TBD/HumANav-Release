@@ -42,8 +42,6 @@ class ControlPipelineV0(ControlPipelineBase):
 
         # Compute the closest velocity bin for this starting configuration
         idx = tf.squeeze(self._compute_bin_idx_for_start_velocities(start_config.speed_nk1()[:, :, 0])).numpy()
-        #debug:
-        #end debug
         # Convert waypoints for this velocity bin into world coordinates
         self.waypt_configs_world[idx] = self.system_dynamics.to_world_coordinates(start_config, self.waypt_configs[idx], self.waypt_configs_world[idx], mode='assign')
         # Setup world coordinate tensors if needed
@@ -57,7 +55,7 @@ class ControlPipelineV0(ControlPipelineBase):
                 self._plan_to_a_waypoint(idx, start_config, goal_config)
             
         trajectories_lqr.update_valid_mask_nk()
-        print(waypt_configs.n)
+        # print(waypt_configs.n)
         return waypt_configs, horizons, trajectories_lqr, trajectories_spline, controllers
 
     def _plan_to_all_waypoints(self, idx, start_config):
