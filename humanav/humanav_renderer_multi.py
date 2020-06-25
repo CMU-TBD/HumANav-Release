@@ -88,7 +88,7 @@ class HumANavRendererMulti():
         # Load the human texture into memory
         #human_texture[human.identity] = [sr.HumanShape._load_materials_from_file(human.texture[0], 1.0)]
 
-        humans[human.identity] = human # might need to deepcopy this
+        humans[human.get_identity()] = human # might need to deepcopy this
 
         # Load the human into the scene
         self.building.load_human_into_scene(self.d, human, allow_repeat_humans = allow_repeat_humans)
@@ -104,10 +104,9 @@ class HumANavRendererMulti():
             if not only_sample_human_identity:
                 # Load the human mesh into the scene
                 self.building.load_human_into_scene(self.d, human)
-                self.humans[human.identity] = human
+                self.humans[human.get_identity()] = human
                 # Log that there is a human in the environment
                 self.human_traversible = self.building.human_traversible
-                
                 # If updating the human traversible a radius will be dynamically
                 # computed for each human position, else the
                 try:
@@ -137,7 +136,7 @@ class HumANavRendererMulti():
             assert isinstance(ID, tuple)
             self.remove_human(ID)
         #human_traversible.fill(True) # clear human_traversible
-    
+
     def move_human_to_position_with_speed(self, pos_3, speed, mesh_rng):
         """
         Moves an existing human mesh to the pos_3 (

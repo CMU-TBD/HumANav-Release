@@ -143,14 +143,18 @@ class Building():
     into a building at 'pos_3' with 'speed' in the static building.
     """
     # Add human to dictionary in building
-    self.people[human.identity] = human
-    pos_3 = human.pos_3
-    speed = human.speed
-    gender = human.gender
-    human_materials = human.texture
-    body_shape = human.shape
-    rng = human.mesh_rng
-    identification = human.name
+    human_appearance = human.get_appearance()
+    human_start_config = human.get_start_config()
+    self.people[human.get_identity()] = human
+    heading = (human_start_config.heading_nk1().numpy())[0][0]
+    pos_2 = (human_start_config.position_nk2().numpy())[0][0]
+    pos_3 = np.append(pos_2, heading)
+    speed = human_start_config.speed_nk1()
+    gender = human_appearance.get_gender()
+    human_materials = human_appearance.get_texture()
+    body_shape = human_appearance.get_shape()
+    rng = human_appearance.get_mesh_rng()
+    identification = human.get_name()
 
     self.human_pos_3.append(pos_3*1.)
 

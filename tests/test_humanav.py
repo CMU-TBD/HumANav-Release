@@ -60,13 +60,17 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
     
     # Plot the humans (added support for multiple humans)
     for i, human in enumerate(humans):
+        human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
+        human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
+        human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
+
         if(i == 0):
-            ax.plot(human.pos_3[0], human.pos_3[1], 'ro', markersize=10, label='Human')
-            ax.plot(human.goal_3[0], human.goal_3[1], 'go', markersize=10, label='Goal')
+            ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10, label='Human')
+            ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10, label='Goal')
         else:
-            ax.plot(human.pos_3[0], human.pos_3[1], 'ro', markersize=10)
-            ax.plot(human.goal_3[0], human.goal_3[1], 'go', markersize=10)
-        ax.quiver(human.pos_3[0], human.pos_3[1], np.cos(human.pos_3[2]), np.sin(human.pos_3[2]), scale=2, scale_units='inches')
+            ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10)
+            ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10)
+        ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(human_heading), scale=2, scale_units='inches')
     
     ax.legend()
     ax.set_xlim([camera_pos_13[0, 0]-5., camera_pos_13[0, 0]+5.])
@@ -129,8 +133,9 @@ def test_1(num_humans):
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
     camera_pos_13 = np.array([
-        [10., 20., 0],   # middle of the corridor
-        [15.,17., -np.pi]   # middle of the corridor
+        [9., 22., -np.pi/4],
+        [16.,17., -np.pi],
+        [9.,15., np.pi/2.],
 
     ])
 
@@ -152,7 +157,7 @@ def test_1(num_humans):
     # Output position of new camera renders
     for i in range(num_cameras):
         print("Rendering camera (robot) at", camera_pos_13[i])
-    
+        
     humans = []
 
     # Create default environment which is a dictionary
@@ -162,9 +167,10 @@ def test_1(num_humans):
     environment["map_scale"] = dx_m
     # obstacle traversible / human traversible
     environment["traversibles"] = (traversible, human_traversible) 
+    room_center = np.array([12., 17., 0.]) #of area 3 (scaled up 50%)
     for i in range(num_humans):
         # Generates a random human from the environment
-        humans.append(Human.generate_random_human_from_environment(Human, surreal_data, environment, camera_pos_13[0]))
+        humans.append(Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=8))
 
         # Load a random human at a specified state and speed
         r.add_human_at_position_with_speed(humans[i])
@@ -183,69 +189,5 @@ def test_1(num_humans):
     # Remove all the humans from the environment
     r.remove_all_humans()
 
-def test_2(num_humans = 1):
-    """
-    Code for loading a specified human identity into the environment
-    and rendering topview, rgb, and depth images.
-    - Note: Example 2 is expected to produce the same output as Example1 
-    from before the multi-human redux
-    """
-    p = create_params()
-
-    r = HumANavRendererMulti.get_renderer(p)
-    dx_cm, traversible = r.get_config()
-    human_traversible = np.empty(traversible.shape)
-    human_traversible.fill(True) #initially all good
-
-    # Get the surreal dataset for human generation
-    surreal_data = r.d
-
-    # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-    dx_m = dx_cm/100.
-
-    # Camera (robot) position modeled as (x, y, theta) in 2D array
-    # Multiple entries yield multiple shots
-    camera_pos_13 = np.array([
-        [12., 18., -1.3],   # middle view
-        [15, 25, 4.5],        # bottom-up view
-    ])
-    num_cameras = np.shape(camera_pos_13)[0]
-
-    humans = []
-
-    # Create default environment which is a dictionary
-    # containing ["map_scale", "traversibles"]
-    # which is a constant and list of traversibles respectively
-    environment = {}
-    environment["map_scale"] = dx_m
-    # obstacle traversible / human traversible
-    environment["traversibles"] = (traversible, human_traversible) 
-
-
-
-    for i in range(num_humans):
-            # generate new human from known identification/mesh information
-            (name, gender, texture, shape) = Human.create_random_human_identity(Human, surreal_data, np.random.RandomState(randint(1, 1000)))
-            humans.append(Human.generate_human_with_known_identity(Human, name, gender, texture, shape, 
-            environment, camera_pos_13[0]))
-
-            # Load a random human at a specified state and speed
-            r.add_human_at_position_with_speed(humans[i])
-            environment["traversibles"] = (traversible, r.get_human_traversible()) #update human traversible
-
-    # Get information about which mesh was loaded
-    human_mesh_info = r.human_mesh_params
-    
-    # Plotting an image for each camera location
-    for i in range(num_cameras):
-        rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
-
-        # Plot the rendered images
-        plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, np.array([camera_pos_13[i]]), humans, "example2_v" + str(i) + ".png")
-
-    # Remove the human from the environment
-    r.remove_all_humans()
-
 if __name__ == '__main__':
-    test_1(2) 
-    test_2(1)
+    test_1(5) # run basic room test with 5 humans

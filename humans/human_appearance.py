@@ -15,7 +15,7 @@ class HumanAppearance():
         self.texture = texture
         self.mesh_rng = mesh_rng
 
-    # Getters for the Human class
+    # Getters for the HumanAppearance class
     def get_shape(self):
         return self.shape
     def get_gender(self):
@@ -54,6 +54,6 @@ class HumanAppearance():
         mesh_rng = np.random.RandomState(randint(1, 1000))
 
         gender, texture, shape = \
-            self.create_random_human_identity_from_dataset(dataset)
+            self.create_random_human_identity_from_dataset(self, dataset)
 
         return self.generate_human_appearance(self, gender, texture, shape, mesh_rng)

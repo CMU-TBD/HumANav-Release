@@ -20,10 +20,10 @@ class HumanConfigs():
         self.start_config = start_config
         self.goal_config = goal_config
 
-    # Getters for the Human class
-    def get_start(self):
+    # Getters for the HumanConfigs class
+    def get_start_config(self):
         return self.start_config
-    def get_goal(self):
+    def get_goal_config(self):
         return self.goal_config
 
     def generate_human_config(self, start_config, goal_config):
@@ -32,35 +32,9 @@ class HumanConfigs():
         """
         return HumanConfigs(start_config, goal_config)
 
-    def generate_random_human_config_from_start(self, start_config, environment, center = np.array([0, 0, 0])):
-        """
-        Generate a human with a random goal config given a known start
-        config. The generated start config will be near center by a threshold
-        """
-        goal_config = generate_random_config(self, environment, center)
-        return generate_human_config(self, start_config, goal_config)
-
-    def generate_random_human_config_with_goal(self, goal_config, environment, center = np.array([0, 0, 0])):
-        """
-        Generate a human with a random start config given a known goal
-        config. The generated start config will be near center by a threshold
-        """
-        start_pos = generate_random_config(self, environment, center)
-        return generate_human_config(self, start_config, goal_config)
-
-    def generate_random_human_config(self, environment, center = np.array([0, 0, 0])):
-        """
-        Generate a random human config (both start and goal configs) from
-        the given environment
-        """
-        start_config = generate_random_config(self, environment, center)
-        goal_config = generate_random_config(self, environment, center)
-        return generate_human_config(self, start_config, goal_config)
-
-    def generate_random_config(self, environment, dt=0.1, center=np.array([0.,0.,0.]), max_vel=0.6):
-        pos_3 = self.generate_random_pos_in_environment(self, center, environment)
+    def generate_config_from_pos_3(self, pos_3, dt=0.1, speed = 0):
         pos_n11 = tf.constant([[[pos_3[0], pos_3[1]]]], dtype=tf.float32)
-        initial_linear_velocity = random.random() * max_vel # range of speed from [0, 0.6)
+        initial_linear_velocity = random.random() * speed # range of speed from [0, 0.6)
         heading_n11 = tf.constant([[[pos_3[2]]]], dtype=tf.float32)
         speed_nk1 = tf.ones((1, 1, 1), dtype=tf.float32) * initial_linear_velocity
         return SystemConfig(dt, 1, 1,
@@ -68,6 +42,35 @@ class HumanConfigs():
                                heading_nk1=heading_n11,
                                speed_nk1=speed_nk1,
                                variable=False)
+
+    def generate_random_config(self, environment, dt=0.1, center=np.array([0.,0.,0.]), max_vel=0.6, radius=5.):
+        pos_3 = self.generate_random_pos_in_environment(self, center, environment, radius)
+        return self.generate_config_from_pos_3(self, pos_3, dt, max_vel)
+        
+    def generate_random_human_config_from_start(self, start_config, environment, center = np.array([0, 0, 0])):
+        """
+        Generate a human with a random goal config given a known start
+        config. The generated start config will be near center by a threshold
+        """
+        goal_config = self.generate_random_config(self, environment, center=center)
+        return self.generate_human_config(self, start_config, goal_config)
+
+    def generate_random_human_config_with_goal(self, goal_config, environment, center = np.array([0, 0, 0])):
+        """
+        Generate a human with a random start config given a known goal
+        config. The generated start config will be near center by a threshold
+        """
+        start_pos = self.generate_random_config(self, environment, center=center)
+        return self.generate_human_config(self, start_config, goal_config)
+
+    def generate_random_human_config(self, environment, center = np.array([0, 0, 0]), radius = 5.):
+        """
+        Generate a random human config (both start and goal configs) from
+        the given environment
+        """
+        start_config = self.generate_random_config(self, environment, center=center, radius=radius)
+        goal_config = self.generate_random_config(self, environment, center=center, radius=radius)
+        return self.generate_human_config(self, start_config, goal_config)
 
     # For generating positional arguments in an environment
     def generate_random_pos_3(self, center, xdiff = 3, ydiff = 3):
@@ -96,7 +99,7 @@ class HumanConfigs():
                     return False
         return True
 
-    def generate_random_pos_in_environment(self, center, environment):
+    def generate_random_pos_in_environment(self, center, environment, radius=5):
         """
         Generate a random position (x : meters, y : meters, theta : radians) 
         and near the 'center' with a nearby valid goal position. 
@@ -121,7 +124,7 @@ class HumanConfigs():
         # Generating new position as human's position
         pos_3 = np.array([-1, -1, 0])# start far out of the traversible
         while(not self.within_traversible(self, pos_3, global_traversible, map_scale, radius=3)):
-            pos_3 = self.generate_random_pos_3(self, center, 3, 3)
+            pos_3 = self.generate_random_pos_3(self, center, radius, radius)
 
         # Random theta from 0 to pi
         pos_3[2] = random.random()* 2 * np.pi
