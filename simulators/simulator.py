@@ -170,7 +170,12 @@ class Simulator(SimulatorHelper):
             end_episode = True
             for i, condition in enumerate(p.episode_termination_reasons):
                 if(time_idxs[i].numpy() != np.inf):
-                    print("Terminated due to", condition)
+                    color = '\033[32m' # green
+                    if(condition is "Timeout"):
+                        color= '\033[33m' # blue
+                    elif(condition is "Collision"):
+                        color= '\033[31m' # red
+                    print(color, "Terminated due to", condition, '\033[0m')
                     if(condition is "Timeout"):
                         print("Max time:", p.episode_horizon)
             # clipping the trajectory only ends it early, we want it to actually reach the goal

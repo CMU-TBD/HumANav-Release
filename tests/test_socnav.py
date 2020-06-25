@@ -62,10 +62,10 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, huma
         human.get_trajectory().render(ax, freq=1, plot_quiver=False)
         if(i == 0):
             # Only add label on the first humans
-            ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10, label='Human')
+            ax.plot(human_pos_2[0], human_pos_2[1], markerfacecolor="#FFA500", marker='o', markersize=10, label='Human')
             ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10, label='Goal')
         else:
-            ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10)
+            ax.plot(human_pos_2[0], human_pos_2[1], markerfacecolor="#FFA500", marker='o', markersize=10)
             ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10)
         ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(human_heading), scale=2, scale_units='inches')
 
@@ -83,7 +83,6 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
     # Plot the 5x5 meter occupancy grid centered around the camera
     ax = fig.add_subplot(1, 4, 1)
     
-    ax.legend()
     ax.set_xlim([camera_pos_13[0, 0]-5., camera_pos_13[0, 0]+5.])
     ax.set_ylim([camera_pos_13[0, 1]-5., camera_pos_13[0, 1]+5.])
     plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans)
@@ -93,9 +92,8 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
     
     # Render entire map-view from the top
     ax = fig.add_subplot(1, 4, 2)
-    ax.legend()
-    ax.set_xlim(0., traversible.shape[0])
-    ax.set_ylim(0., traversible.shape[1])
+    #ax.set_xlim(0., traversible.shape[0] * map_scale)
+    #ax.set_ylim(0., traversible.shape[1] * map_scale)
     plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans)
     ax.set_xticks([])
     ax.set_yticks([])
