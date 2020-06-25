@@ -12,10 +12,7 @@ from humanav.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
 
-from obstacles.sbpd_map import SBPDMap
-from objectives.obstacle_avoidance import ObstacleAvoidance
 from simulators.sbpd_simulator import SBPDSimulator
-from trajectory.trajectory import Trajectory
 from trajectory.trajectory import SystemConfig
 from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
