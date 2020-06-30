@@ -52,8 +52,6 @@ class SamplingPlanner(Planner):
             K_nkfd = controllers['K_nkfd'][min_idx:min_idx + 1]
             k_nkf1 = controllers['k_nkf1'][min_idx:min_idx + 1]
 
-        # img_nmkd = self.simulator.get_observation(config=start_config)
-
         data = {'system_config': SystemConfig.copy(start_config),
                 'waypoint_config': SystemConfig.copy(self.opt_waypt),
                 'trajectory': Trajectory.copy(self.opt_traj),

@@ -7,9 +7,8 @@ class Planner(object):
     """Plans optimal trajectories (by minimizing an objective function)
     through an environment. """
 
-    def __init__(self, simulator, params):
-        self.simulator = simulator
-        self.obj_fn = self.simulator.obj_fn
+    def __init__(self, obj_fn, params):
+        self.obj_fn = obj_fn
         self.params = params.planner.parse_params(params)
 
         self.opt_waypt = SystemConfig(dt=params.dt, n=1, k=1, variable=True)
