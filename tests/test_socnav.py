@@ -9,12 +9,12 @@ from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
 # Planner + Simulator:
-from simulators.sbpd_simulator import SBPDSimulator
+from simulators.central_sbpd_simulator import CentralSBPDSimulator
 from planners.sampling_planner import SamplingPlanner
 from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
 # Other
-from utils.utils import touch
+from utils.utils import touch, print_colors
 
 def create_params():
     p = create_base_params()
@@ -167,7 +167,7 @@ def test_socnav(num_humans):
 
     # Output position of new camera renders
     for i in range(num_cameras):
-        print("Rendering camera (robot) at", camera_pos_13[i])
+        print(" Rendering camera (robot) at", camera_pos_13[i])
 
     # Creating list of to-be humans that will partake in the scene
     human_list = []
@@ -191,7 +191,7 @@ def test_socnav(num_humans):
     # Create planner parameters
     planner_params = create_planner_params()
     sim_params = create_sim_params()
-    sim = SBPDSimulator(sim_params)
+    sim = CentralSBPDSimulator(sim_params, )
     splanner = SamplingPlanner(sim, planner_params)
 
 
@@ -200,21 +200,24 @@ def test_socnav(num_humans):
     """
     for i in range(num_humans):
         # Generates a random human from the environment
-        new_human_i = Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=4)
+        new_human_i = Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=6)
         human_list.append(new_human_i)
 
         # Load a random human at a specified state and speed
         r.add_human_at_position_with_speed(human_list[i])
         environment["traversibles"] = (traversible, r.get_human_traversible()) #update human traversible
 
-        # Input human fields into simulator and run simulation
-        splanner.simulator.reset_with_start_and_goal(new_human_i.get_start_config(), new_human_i.get_goal_config())
-        splanner.optimize(new_human_i.get_start_config())
-        splanner.simulator.simulate()
-        new_human_i.update_trajectory(splanner.simulator.vehicle_trajectory)
+        # Input human fields into simulator 
+        splanner.simulator.add_agent(human_to_agent(new_human_i))
+    
+    # run simulation
+    # splanner.simulator.reset_with_start_and_goal(new_human_i.get_start_config(), new_human_i.get_goal_config())
+    # splanner.optimize(new_human_i.get_start_config())
+    splanner.simulator.simulate()
+    new_human_i.update_trajectory(splanner.simulator.vehicle_trajectory)
 
     # Get information about which mesh was loaded
-    human_mesh_info = r.human_mesh_params
+    # human_mesh_info = r.human_mesh_params
     
     # Plotting an image for each camera location
     for i in range(num_cameras):
@@ -227,4 +230,4 @@ def test_socnav(num_humans):
     r.remove_all_humans()
 
 if __name__ == '__main__':
-    test_socnav(2) # run basic room test with 5 humans
+    test_socnav(1) # run basic room test with 5 humans

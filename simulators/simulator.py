@@ -8,6 +8,7 @@ from objectives.obstacle_avoidance import ObstacleAvoidance
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from utils.fmm_map import FmmMap
+from utils.utils import print_colors
 import matplotlib
 
 
@@ -170,14 +171,14 @@ class Simulator(SimulatorHelper):
             end_episode = True
             for i, condition in enumerate(p.episode_termination_reasons):
                 if(time_idxs[i].numpy() != np.inf):
-                    color = '\033[32m' # green
+                    color = "green"
                     if(condition is "Timeout"):
-                        color= '\033[33m' # blue
+                        color= "blue"
                     elif(condition is "Collision"):
-                        color= '\033[31m' # red
-                    print(color, "Terminated due to", condition, '\033[0m')
+                        color= "red"
+                    print(print_colors()[color], "Terminated due to", condition, print_colors()["reset"])
                     if(condition is "Timeout"):
-                        print("Max time:", p.episode_horizon)
+                        print(print_colors()["blue"], "Max time:", p.episode_horizon, print_colors()["reset"])
             # clipping the trajectory only ends it early, we want it to actually reach the goal
             # vehicle_trajectory.clip_along_time_axis(termination_time)
             planner_data, planner_data_last_step, last_step_data_valid = \

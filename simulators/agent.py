@@ -1,6 +1,10 @@
-from humanav.renderer_params import get_surreal_texture_dir
+import tensorflow as tf
+from objectives.objective_function import ObjectiveFunction
+from objectives.angle_distance import AngleDistance
+from objectives.goal_distance import GoalDistance
+from objectives.obstacle_avoidance import ObstacleAvoidance
+
 from humans.human import Human
-from random import seed, random, randint
 from utils.utils import print_colors
 import random, string, math
 import numpy as np
@@ -11,57 +15,198 @@ import pickle
 
 class Agent():
 
-    def __init__(self, name, appearance, configs, trajectory=None):
-        self.start_config = None
-        self.goal_config = None
+    def __init__(self, start, goal, planner = None):
+        self.start_config = start
+        self.current_config = start
+        self.goal_config = goal
+
+        self.planner = planner
+
+        self.obj_fn = None # Until called by simulator
+        self.obj_val = None 
+
         self.end_episode = False
+
         self.vehicle_trajectory = None
         self.vehicle_data = None
-        self.vehicle_data_last_step = None
+        self.planner_data = None
         self.last_step_data_valid = None 
         self.episode_type = None 
         self.valid_episode = None 
         self.commanded_actions_1kf = None 
-        self.obj_val = None 
+        self.commanded_actions_nkf = None
 
-    def human_to_agent(self, appearance, configs, max_chars = 20):
+    def human_to_agent(self, human):
         """
-        Sample a new random human from all required features
+        Sample a new agent from a human with configs
         """
-        # In order to print more readable arrays
-        name = self._generate_name(self, max_chars)
-        np.set_printoptions(precision = 2)
-        pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
-        goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
-        print(print_colors()["yellow"], "Human", name, "at", pos_2 ,"with goal", goal_2, print_colors()["reset"])
-        return Human(name, appearance, configs)
+        return Agent(human.get_start_config(), human.get_goal_config())
 
-        
-    def generate_human_with_appearance(self, appearance, environment, center = np.array([0.,0.,0.])):
-        """
-        Sample a new human with a known appearance at a random 
-        config with a random goal config.
-        """
-        configs = HumanConfigs.generate_random_human_config(HumanConfigs, environment, center)
-        return generate_human(self, appearance, configs)
-    
-    def generate_human_with_configs(self, configs, dataset):
-        """
-        Sample a new random from known configs and a randomized
-        appearance, if any of the configs are None they will be generated
-        """
-        appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance, dataset)
-        return generate_human(self, appearance, configs)
-        
-    def generate_random_human_from_environment(self, dataset, environment, center = np.array([0.,0.,0.]), radius = 5.):
-        """
-        Sample a new human without knowing any configs or appearance fields
-        NOTE: needs environment to produce valid configs, and needs a dataset
-        to produce an appearance
-        """
-        appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance, dataset)
-        configs = HumanConfigs.generate_random_human_config(HumanConfigs, environment, center, radius=radius)
-        return self.generate_human(self, appearance, configs)
-        
+    def _compute_objective_value(self, vehicle_trajectory):
+        p = self.params.objective_fn_params
+        if p.obj_type == 'valid_mean':
+            vehicle_trajectory.update_valid_mask_nk()
+        else:
+            assert(p.obj_type in ['valid_mean', 'mean'])
+        obj_val = tf.squeeze(self.obj_fn.evaluate_function(vehicle_trajectory))
+        return obj_val
 
-    
+    def _init_obj_fn(self, p, obstacle_map):
+        """
+        Initialize the objective function given sim params
+        """
+
+        obj_fn = ObjectiveFunction(p.objective_fn_params)
+        if not p.avoid_obstacle_objective.empty():
+            obj_fn.add_objective(ObstacleAvoidance( params=p.avoid_obstacle_objective, obstacle_map=obstacle_map))
+        if not p.goal_distance_objective.empty():
+            obj_fn.add_objective(GoalDistance( params=p.goal_distance_objective, fmm_map=obstacle_map.fmm_map))
+        if not p.goal_angle_objective.empty():
+            obj_fn.add_objective(AngleDistance( params=p.goal_angle_objective, fmm_map=obstacle_map.fmm_map))
+        return obj_fn
+
+    def _update_obj_fn(self):
+        """
+        Update the objective function to use a new
+        obstacle_map and fmm map
+        PROBABLY never going to use this
+        """
+        for objective in self.obj_fn.objectives:
+            if isinstance(objective, ObstacleAvoidance):
+                objective.obstacle_map = self.obstacle_map
+            elif isinstance(objective, GoalDistance):
+                objective.fmm_map = self.fmm_map
+            elif isinstance(objective, AngleDistance):
+                objective.fmm_map = self.fmm_map
+            else:
+                assert(False)
+
+    def _enforce_episode_termination_conditions(self, params, obstacle_map):
+        vehicle_trajectory = self.vehicle_trajectory
+        planner_data = self.planner_data
+        commanded_actions_nkf = self.commanded_actions_nkf
+
+        p = params
+        time_idxs = []
+        for condition in p.episode_termination_reasons:
+            time_idxs.append(self._compute_time_idx_for_termination_condition(vehicle_trajectory, 
+                                                                              obstacle_map,
+                                                                              condition))
+        try:
+            idx = np.argmin(time_idxs)
+        except ValueError:
+            idx = np.argmin([time_idx.numpy() for time_idx in time_idxs])
+
+        try:
+            termination_time = time_idxs[idx].numpy()
+        except ValueError:
+            termination_time = time_idxs[idx]
+
+        if termination_time != np.inf:
+            end_episode = True
+            for i, condition in enumerate(p.episode_termination_reasons):
+                if(time_idxs[i].numpy() != np.inf):
+                    color = "green"
+                    if(condition is "Timeout"):
+                        color= "blue"
+                    elif(condition is "Collision"):
+                        color= "red"
+                    print(print_colors()[color], "Terminated due to", condition, print_colors()["reset"])
+                    if(condition is "Timeout"):
+                        print(print_colors()["blue"], "Max time:", p.episode_horizon, print_colors()["reset"])
+            # clipping the trajectory only ends it early, we want it to actually reach the goal
+            # vehicle_trajectory.clip_along_time_axis(termination_time)
+            planner_data, planner_data_last_step, last_step_data_valid = \
+                self.planner.mask_and_concat_data_along_batch_dim(planner_data, k=termination_time)
+            commanded_actions_1kf = tf.concat(commanded_actions_nkf, axis=1)[:, :termination_time]
+
+            # If all of the data was masked then
+            # the episode simulated is not valid
+            valid_episode = True
+            if planner_data['system_config'] is None:
+                valid_episode = False
+            episode_data = {'vehicle_trajectory': vehicle_trajectory,
+                            'vehicle_data': planner_data,
+                            'vehicle_data_last_step': planner_data_last_step,
+                            'last_step_data_valid': last_step_data_valid,
+                            'episode_type': idx,
+                            'valid_episode': valid_episode,
+                            'commanded_actions_1kf': commanded_actions_1kf}
+        else:
+            end_episode = False
+            episode_data = {}
+
+        return end_episode, episode_data
+
+
+    def _compute_time_idx_for_termination_condition(self, params, obstacle_map, condition):
+        """
+        For a given trajectory termination condition (i.e. timeout, collision, etc.)
+        computes the earliest time index at which this condition is met. Returns
+        infinity if a condition is not met.
+        """
+        if condition == 'Timeout':
+            time_idx = self._compute_time_idx_for_timeout(params)
+        elif condition == 'Collision':
+            time_idx = self._compute_time_idx_for_collision(obstacle_map, params)
+        elif condition == 'Success':
+            time_idx = self._compute_time_idx_for_success(params)
+        else:
+            raise NotImplementedError
+
+        return time_idx
+
+    def _compute_time_idx_for_timeout(self, params):
+        """
+        If vehicle_trajectory has exceeded episode_horizon,
+        return episode_horizon, else return infinity.
+        """
+        if self.vehicle_trajectory.k >= params.episode_horizon:
+            time_idx = tf.constant(params.episode_horizon)
+        else:
+            time_idx = tf.constant(np.inf)
+        return time_idx
+
+    def _compute_time_idx_for_collision(self, obstacle_map, params):
+        """
+        Compute and return the earliest time index of collision in vehicle
+        trajectory. If there is no collision return infinity.
+        """
+        pos_1k2 = self.vehicle_trajectory.position_nk2()
+        obstacle_dists_1k = obstacle_map.dist_to_nearest_obs(pos_1k2)
+        collisions = tf.where(tf.less(obstacle_dists_1k, 0.0))
+        collision_idxs = collisions[:, 1]
+        if tf.size(collision_idxs).numpy() != 0:
+            time_idx = collision_idxs[0]
+        else:
+            time_idx = tf.constant(np.inf)
+        return time_idx
+
+    def _dist_to_goal(self, use_euclidean=False):
+        """Calculate the FMM distance between
+        each state in trajectory and the goal."""
+        for objective in self.obj_fn.objectives:
+            if isinstance(objective, GoalDistance):
+                euclidean = 0
+                if use_euclidean:
+                    diff_x = self.vehicle_trajectory.position_nk2()[0][-1][0] - self.goal_config.position_nk2()[0][0][0]
+                    diff_y = self.vehicle_trajectory.position_nk2()[0][-1][1] - self.goal_config.position_nk2()[0][0][1]
+                    euclidean = np.sqrt(diff_x**2 + diff_y**2)
+                # also compute euclidean distance as a heuristic
+                dist_to_goal_nk = objective.compute_dist_to_goal_nk(self.trajectory) + euclidean
+        return dist_to_goal_nk
+
+    def _compute_time_idx_for_success(self, params):
+        """
+        Compute and return the earliest time index of success (reaching the goal region)
+        in vehicle trajectory. If there is no collision return infinity.
+        """
+        dist_to_goal_1k = self._dist_to_goal(self.vehicle_trajectory)
+        successes = tf.where(tf.less(dist_to_goal_1k,
+                                     params.goal_cutoff_dist))
+        success_idxs = successes[:, 1]
+        if tf.size(success_idxs).numpy() != 0:
+            time_idx = success_idxs[0]
+        else:
+            time_idx = tf.constant(np.inf)
+        return time_idx

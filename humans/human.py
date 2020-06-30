@@ -1,11 +1,8 @@
-from humanav.render import swiftshader_renderer as sr
-from humanav import sbpd, map_utils as mu
-from humanav import depth_utils as du
-from humanav import utils
 from humanav.renderer_params import get_surreal_texture_dir
 from humans.human_appearance import HumanAppearance
 from humans.human_configs import HumanConfigs
 from random import seed, random, randint
+from utils.utils import print_colors
 import random, string, math
 import numpy as np
 import sys
@@ -18,14 +15,12 @@ class Human():
     identity = None
     appearance = None
     configs = None
-    trajectory = None
-    def __init__(self, name, appearance, configs, trajectory=None):
+    def __init__(self, name, appearance, configs):
         self.name = name
         self.appearance = appearance
         # Identity is a hashable tuple of a human's name, gender, and shape
         self.identity = (name, appearance.gender, appearance.shape)
         self.configs = configs
-        self.trajectory = trajectory
 
     # Getters for the Human class
     def get_name(self):
@@ -38,10 +33,6 @@ class Human():
         return self.configs.get_start_config()
     def get_goal_config(self):
         return self.configs.get_goal_config()
-    def update_trajectory(self, trajectory):
-        self.trajectory = trajectory
-    def get_trajectory(self):
-        return self.trajectory
 
     def _generate_name(self, max_chars):
         return "".join([random.choice(string.ascii_letters + string.digits) for n in range(max_chars)])
@@ -55,7 +46,7 @@ class Human():
         np.set_printoptions(precision = 2)
         pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
         goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
-        print('\033[35m', "Human", name, "at", pos_2 ,"with goal", goal_2, '\033[0m')
+        print(print_colors()["yellow"], "Human", name, "at", pos_2 ,"with goal", goal_2, print_colors()["reset"])
         return Human(name, appearance, configs)
 
         

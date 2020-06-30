@@ -109,3 +109,14 @@ def subplot2(plt, Y_X, sz_y_sz_x=(10, 10), space_y_x=(0.1, 0.1), T=False):
     else:
         axes_list = axes.ravel()[::-1].tolist()
     return fig, axes, axes_list
+
+def print_colors():
+    # Create dictionary of common print colors
+    color_list = {}
+    color_list["orange"] = '\033[33m'
+    color_list["green"] = '\033[32m'
+    color_list["red"] = '\033[31m'
+    color_list["blue"] = '\033[36m'
+    color_list["yellow"] = '\033[35m'
+    color_list["reset"] = '\033[00m'
+    return color_list
