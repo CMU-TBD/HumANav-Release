@@ -61,19 +61,28 @@ class CentralSimulator(SimulatorHelper):
             for a in self.agents:
                 vehicle_data = a.planner.empty_data_dict()
                 if(not a.end_episode):
-                    a.trajectory_segment, a.next_config, a.trajectory_data, a.commanded_actions_1kf = self._iterate(a)
+                    trajectory_segment, next_config, trajectory_data, commanded_actions_1kf = self._iterate(a)
                     # Append to Vehicle Data
                     for key in vehicle_data.keys():
-                        a.vehicle_data[key].append(a.trajectory_data[key])
+                        a.vehicle_data[key].append(trajectory_data[key])
 
-                    a.vehicle_trajectory.append_along_time_axis(a.trajectory_segment)
-                    a.commanded_actions_nkf.append(a.commanded_actions_1kf)
+                    a.vehicle_trajectory.append_along_time_axis(trajectory_segment)
+                    a.commanded_actions_nkf.append(commanded_actions_1kf)
                     # update config
-                    # a.current_config = next_config
+                    a.current_config = next_config
                     # overwrites vehicle data with last instance before termination
                     # vehicle_data_last = copy.copy(vehicle_data) #making a hardcopy
                     a.end_episode, a.episode_data = a._enforce_episode_termination_conditions(self.params, self.obstacle_map)
         print("Took",i,"iterations")
+        for a in self.agents:
+            a.vehicle_trajectory = a.episode_data['vehicle_trajectory']
+            a.vehicle_data = a.episode_data['vehicle_data']
+            a.vehicle_data_last_step = a.episode_data['vehicle_data_last_step']
+            a.last_step_data_valid = a.episode_data['last_step_data_valid']
+            a.episode_type = a.episode_data['episode_type']
+            a.valid_episode = a.episode_data['valid_episode']
+            a.commanded_actions_1kf = a.episode_data['commanded_actions_1kf']
+            a.obj_val = a._compute_objective_value(a.vehicle_trajectory)
 
     def _iterate(self, agent):
         """ Runs the planner for one step from config to generate a
@@ -93,7 +102,7 @@ class CentralSimulator(SimulatorHelper):
         start_config = agent.current_config
         # The 'plan' is open loop control
         if 'trajectory' not in planner_data.keys():
-            trajectory, a.commanded_actions_nkf = self.apply_control_open_loop(start_config,
+            trajectory, commanded_actions_nkf = self.apply_control_open_loop(start_config,
                                                                              planner_data['optimal_control_nk2'],
                                                                              T=self.params.control_horizon-1,
                                                                              sim_mode=self.system_dynamics.simulation_params.simulation_mode)

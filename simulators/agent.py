@@ -87,9 +87,6 @@ class Agent():
         """
 
     def _enforce_episode_termination_conditions(self, params, obstacle_map):
-        vehicle_trajectory = self.vehicle_trajectory
-        commanded_actions_nkf = self.commanded_actions_nkf
-
         p = params
         time_idxs = []
         for condition in p.episode_termination_reasons:
@@ -122,14 +119,14 @@ class Agent():
             # vehicle_trajectory.clip_along_time_axis(termination_time)
             self.planner_data, planner_data_last_step, last_step_data_valid = \
                 self.planner.mask_and_concat_data_along_batch_dim(self.planner_data, k=termination_time)
-            commanded_actions_1kf = tf.concat(commanded_actions_nkf, axis=1)[:, :termination_time]
+            commanded_actions_1kf = tf.concat(self.commanded_actions_nkf, axis=1)[:, :termination_time]
 
             # If all of the data was masked then
             # the episode simulated is not valid
             valid_episode = True
             if self.planner_data['system_config'] is None:
                 valid_episode = False
-            episode_data = {'vehicle_trajectory': vehicle_trajectory,
+            episode_data = {'vehicle_trajectory': self.vehicle_trajectory,
                             'vehicle_data': self.planner_data,
                             'vehicle_data_last_step': planner_data_last_step,
                             'last_step_data_valid': last_step_data_valid,
