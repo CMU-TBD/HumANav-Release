@@ -56,7 +56,7 @@ class SamplingPlanner(Planner):
                 'waypoint_config': SystemConfig.copy(self.opt_waypt),
                 'trajectory': Trajectory.copy(self.opt_traj),
                 'spline_trajectory': Trajectory.copy(trajectories_spline),
-                'planning_horizon': min_horizon,
+                'planning_horizon': [min_horizon],
                 'K_nkfd': K_nkfd,
                 'k_nkf1': k_nkf1,
                 'img_nmkd': []} # Dont think we need for our purposes

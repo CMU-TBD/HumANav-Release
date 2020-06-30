@@ -109,13 +109,13 @@ class Planner(object):
         data_last['planning_horizon_n1'] = [data['planning_horizon'][last_data_idx]] 
         data_last['K_nkfd'] = data['K_nkfd'][last_data_idx]
         data_last['k_nkf1'] = data['k_nkf1'][last_data_idx]
-        data_last['img_nmkd'] = data['img_nmkd'][last_data_idx]
+        data_last['img_nmkd'] = []#data['img_nmkd'][last_data_idx] #Dont think we need for our purposes
 
         # Get the main planner data
-        data['system_config'] = SystemConfig.concat_across_batch_dim(np.array(data['system_config'])[valid_mask])
-        data['waypoint_config'] = SystemConfig.concat_across_batch_dim(np.array(data['waypoint_config'])[valid_mask])
-        data['trajectory'] = Trajectory.concat_across_batch_dim(np.array(data['trajectory'])[valid_mask])
-        data['spline_trajectory'] = Trajectory.concat_across_batch_dim(np.array(data['spline_trajectory'])[valid_mask])
+        data['system_config'] = SystemConfig.concat_across_batch_dim([data['system_config']])
+        data['waypoint_config'] = SystemConfig.concat_across_batch_dim([data['waypoint_config']])
+        data['trajectory'] = Trajectory.concat_across_batch_dim([data['trajectory']])
+        data['spline_trajectory'] = Trajectory.concat_across_batch_dim([data['spline_trajectory']])
         data['planning_horizon_n1'] = np.array(data['planning_horizon'])[valid_mask][:, None]
         data['K_nkfd'] = tf.boolean_mask(tf.concat(data['K_nkfd'], axis=0), valid_mask)
         data['k_nkf1'] = tf.boolean_mask(tf.concat(data['k_nkf1'], axis=0), valid_mask)

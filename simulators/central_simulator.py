@@ -37,8 +37,10 @@ class CentralSimulator(SimulatorHelper):
 
     def add_agent(self, agent):
         # have each agent potentially have their own planners
-        a.planner = agent._init_planner(self.params)
-        a.obj_fn = agent._init_obj_fn(self.params, self.obstacle_map)
+        agent.obj_fn = agent._init_obj_fn(self.params, self.obstacle_map)
+        agent.planner = agent._init_planner(self.params)
+        agent.vehicle_data = agent.planner.empty_data_dict()
+        agent.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         self.agents.append(agent)
 
     def exists_running_agent(self):
@@ -59,48 +61,39 @@ class CentralSimulator(SimulatorHelper):
             for a in self.agents:
                 vehicle_data = a.planner.empty_data_dict()
                 if(not a.end_episode):
-                    trajectory_segment, next_config, trajectory_data, commanded_actions_1kf = self._iterate(a)
+                    a.trajectory_segment, a.next_config, a.trajectory_data, a.commanded_actions_1kf = self._iterate(a)
                     # Append to Vehicle Data
                     for key in vehicle_data.keys():
-                        a.vehicle_data[key].append(trajectory_data[key])
+                        a.vehicle_data[key].append(a.trajectory_data[key])
 
-                    a.vehicle_trajectory.append_along_time_axis(trajectory_segment)
-                    a.commanded_actions_nkf.append(commanded_actions_1kf)
-                    a.commanded_actions_1kf = commanded_actions_1kf
+                    a.vehicle_trajectory.append_along_time_axis(a.trajectory_segment)
+                    a.commanded_actions_nkf.append(a.commanded_actions_1kf)
                     # update config
-                    a.current_config = next_config
+                    # a.current_config = next_config
                     # overwrites vehicle data with last instance before termination
                     # vehicle_data_last = copy.copy(vehicle_data) #making a hardcopy
                     a.end_episode, a.episode_data = a._enforce_episode_termination_conditions(self.params, self.obstacle_map)
         print("Took",i,"iterations")
-        # self.vehicle_trajectory = episode_data['vehicle_trajectory']
-        # self.vehicle_data = episode_data['vehicle_data']
-        # self.vehicle_data_last_step = episode_data['vehicle_data_last_step']
-        # self.last_step_data_valid = episode_data['last_step_data_valid']
-        # self.episode_type = episode_data['episode_type']
-        # self.valid_episode = episode_data['valid_episode']
-        # self.commanded_actions_1kf = episode_data['commanded_actions_1kf']
-        # self.obj_val = self._compute_objective_value(self.vehicle_trajectory)
 
     def _iterate(self, agent):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
         the subtrajectory, and relevant planner data"""
         config = agent.current_config
-        planner_data = agent.planner.optimize(config)
-        trajectory_segment, trajectory_data, commanded_actions_nkf = self._process_planner_data(config, planner_data)
+        agent.planner_data = agent.planner.optimize(config)
+        trajectory_segment, trajectory_data, commanded_actions_nkf = self._process_planner_data(agent, agent.planner_data)
         next_config = SystemConfig.init_config_from_trajectory_time_index(trajectory_segment, t=-1)
         return trajectory_segment, next_config, trajectory_data, commanded_actions_nkf
 
-    def _process_planner_data(self, start_config, planner_data):
+    def _process_planner_data(self, agent, planner_data):
         """
         Process the planners current plan. This could mean applying
         open loop control or LQR feedback control on a system.
         """
-
+        start_config = agent.current_config
         # The 'plan' is open loop control
         if 'trajectory' not in planner_data.keys():
-            trajectory, commanded_actions_nkf = self.apply_control_open_loop(start_config,
+            trajectory, a.commanded_actions_nkf = self.apply_control_open_loop(start_config,
                                                                              planner_data['optimal_control_nk2'],
                                                                              T=self.params.control_horizon-1,
                                                                              sim_mode=self.system_dynamics.simulation_params.simulation_mode)
@@ -123,7 +116,7 @@ class CentralSimulator(SimulatorHelper):
             else:
                 assert(False)
 
-        self.planner.clip_data_along_time_axis(planner_data, self.params.control_horizon)
+        agent.planner.clip_data_along_time_axis(planner_data, self.params.control_horizon)
         return trajectory, planner_data, commanded_actions_nkf
 
     def get_observation(self, config=None, pos_n3=None, **kwargs):

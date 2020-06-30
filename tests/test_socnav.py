@@ -6,6 +6,7 @@ from random import seed, random, randint
 # Humanav
 from humanav import sbpd
 from humans.human import Human
+from simulators.agent import Agent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
 # Planner + Simulator:
@@ -189,11 +190,9 @@ def test_socnav(num_humans):
     """
 
     # Create planner parameters
-    planner_params = create_planner_params()
+    # planner_params = create_planner_params()
     sim_params = create_sim_params()
-    sim = CentralSBPDSimulator(sim_params)
-    splanner = SamplingPlanner(sim, planner_params)
-
+    simulator = CentralSBPDSimulator(sim_params)
 
     """
     Generate the humans and run the simulation on every human
@@ -208,13 +207,14 @@ def test_socnav(num_humans):
         environment["traversibles"] = (traversible, r.get_human_traversible()) #update human traversible
 
         # Input human fields into simulator 
-        splanner.simulator.add_agent(human_to_agent(new_human_i))
+        simulator.add_agent(Agent.human_to_agent(Agent, new_human_i))
     
     # run simulation
     # splanner.simulator.reset_with_start_and_goal(new_human_i.get_start_config(), new_human_i.get_goal_config())
     # splanner.optimize(new_human_i.get_start_config())
-    splanner.simulator.simulate()
-    new_human_i.update_trajectory(splanner.simulator.vehicle_trajectory)
+    simulator.simulate()
+    for human_i in human_list:
+        human_i.update_trajectory(simulator.agents[i].vehicle_trajectory)
 
     # Get information about which mesh was loaded
     # human_mesh_info = r.human_mesh_params
@@ -230,4 +230,4 @@ def test_socnav(num_humans):
     r.remove_all_humans()
 
 if __name__ == '__main__':
-    test_socnav(1) # run basic room test with 5 humans
+    test_socnav(1) # run basic room test with 1 human

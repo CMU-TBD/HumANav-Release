@@ -15,12 +15,15 @@ class Human():
     identity = None
     appearance = None
     configs = None
-    def __init__(self, name, appearance, configs):
+    trajectory = None
+    def __init__(self, name, appearance, configs, trajectory=None):
         self.name = name
         self.appearance = appearance
         # Identity is a hashable tuple of a human's name, gender, and shape
         self.identity = (name, appearance.gender, appearance.shape)
         self.configs = configs
+        self.trajectory = trajectory
+
 
     # Getters for the Human class
     def get_name(self):
@@ -33,6 +36,10 @@ class Human():
         return self.configs.get_start_config()
     def get_goal_config(self):
         return self.configs.get_goal_config()
+    def update_trajectory(self, trajectory):
+        self.trajectory = trajectory
+    def get_trajectory(self):
+        return self.trajectory
 
     def _generate_name(self, max_chars):
         return "".join([random.choice(string.ascii_letters + string.digits) for n in range(max_chars)])
