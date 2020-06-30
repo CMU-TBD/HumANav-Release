@@ -34,7 +34,7 @@ class Agent():
         self.episode_type = None 
         self.valid_episode = None 
         self.commanded_actions_1kf = None 
-        self.commanded_actions_nkf = None
+        self.commanded_actions_nkf = []
 
     def human_to_agent(self, human):
         """
@@ -42,20 +42,19 @@ class Agent():
         """
         return Agent(human.get_start_config(), human.get_goal_config())
 
-    def _compute_objective_value(self, vehicle_trajectory):
-        p = self.params.objective_fn_params
+    def _compute_objective_value(self, params):
+        p = params.objective_fn_params
         if p.obj_type == 'valid_mean':
-            vehicle_trajectory.update_valid_mask_nk()
+            self.vehicle_trajectory.update_valid_mask_nk()
         else:
             assert(p.obj_type in ['valid_mean', 'mean'])
-        obj_val = tf.squeeze(self.obj_fn.evaluate_function(vehicle_trajectory))
+        obj_val = tf.squeeze(self.obj_fn.evaluate_function(self.vehicle_trajectory))
         return obj_val
 
     def _init_obj_fn(self, p, obstacle_map):
         """
         Initialize the objective function given sim params
         """
-
         obj_fn = ObjectiveFunction(p.objective_fn_params)
         if not p.avoid_obstacle_objective.empty():
             obj_fn.add_objective(ObstacleAvoidance( params=p.avoid_obstacle_objective, obstacle_map=obstacle_map))
@@ -65,12 +64,17 @@ class Agent():
             obj_fn.add_objective(AngleDistance( params=p.goal_angle_objective, fmm_map=obstacle_map.fmm_map))
         return obj_fn
 
+    def _init_planner(self, params):
+        p = params
+        return p.planner_params.planner(obj_fn=self.obj_fn,
+                                        params=p.planner_params)
+
     def _update_obj_fn(self):
         """
         Update the objective function to use a new
         obstacle_map and fmm map
         PROBABLY never going to use this
-        """
+        
         for objective in self.obj_fn.objectives:
             if isinstance(objective, ObstacleAvoidance):
                 objective.obstacle_map = self.obstacle_map
@@ -80,6 +84,7 @@ class Agent():
                 objective.fmm_map = self.fmm_map
             else:
                 assert(False)
+        """
 
     def _enforce_episode_termination_conditions(self, params, obstacle_map):
         vehicle_trajectory = self.vehicle_trajectory
@@ -193,7 +198,7 @@ class Agent():
                     diff_y = self.vehicle_trajectory.position_nk2()[0][-1][1] - self.goal_config.position_nk2()[0][0][1]
                     euclidean = np.sqrt(diff_x**2 + diff_y**2)
                 # also compute euclidean distance as a heuristic
-                dist_to_goal_nk = objective.compute_dist_to_goal_nk(self.trajectory) + euclidean
+                dist_to_goal_nk = objective.compute_dist_to_goal_nk(self.vehicle_trajectory) + euclidean
         return dist_to_goal_nk
 
     def _compute_time_idx_for_success(self, params):

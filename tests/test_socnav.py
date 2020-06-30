@@ -191,7 +191,7 @@ def test_socnav(num_humans):
     # Create planner parameters
     planner_params = create_planner_params()
     sim_params = create_sim_params()
-    sim = CentralSBPDSimulator(sim_params, )
+    sim = CentralSBPDSimulator(sim_params)
     splanner = SamplingPlanner(sim, planner_params)
 
 

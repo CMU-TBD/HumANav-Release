@@ -15,7 +15,6 @@ class CentralSimulator(SimulatorHelper):
         self.params = params.simulator.parse_params(params)
         self.obstacle_map = self._init_obstacle_map()
         # self.obj_fn = self._init_obj_fn()
-        self.planner = self._init_planner()
         self.system_dynamics = self._init_system_dynamics()
         self.agents = []
 
@@ -38,8 +37,8 @@ class CentralSimulator(SimulatorHelper):
 
     def add_agent(self, agent):
         # have each agent potentially have their own planners
-        agent.planner = self.planner
-        agent._init_obj_fn(self.params, self.obstacle_map)
+        a.planner = agent._init_planner(self.params)
+        a.obj_fn = agent._init_obj_fn(self.params, self.obstacle_map)
         self.agents.append(agent)
 
     def exists_running_agent(self):
@@ -53,13 +52,12 @@ class CentralSimulator(SimulatorHelper):
         """ A function that simulates an entire episode. The agent starts at self.start_config, repeatedly
         calling _iterate to generate subtrajectories. Generates a vehicle_trajectory for the episode, calculates its
         objective value, and sets the episode_type (timeout, collision, success)"""
-        vehicle_data = self.planner.empty_data_dict()
-        commanded_actions_nkf = []
         print(print_colors()["yellow"], "Running simulation on", len(self.agents), "agents", print_colors()["reset"])
         i = 0
         while self.exists_running_agent():
             i = i + 1
             for a in self.agents:
+                vehicle_data = a.planner.empty_data_dict()
                 if(not a.end_episode):
                     trajectory_segment, next_config, trajectory_data, commanded_actions_1kf = self._iterate(a)
                     # Append to Vehicle Data
@@ -177,11 +175,6 @@ class CentralSimulator(SimulatorHelper):
             dx=p.obstacle_map_params.dx,
             map_origin_2=p.obstacle_map_params.map_origin_2,
             mask_grid_mn=self.obstacle_occupancy_grid)
-
-    def _init_planner(self):
-        p = self.params
-        return p.planner_params.planner(simulator=self,
-                                        params=p.planner_params)
 
     # Functions for computing relevant metrics
     # on robot trajectories
