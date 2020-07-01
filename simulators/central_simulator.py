@@ -42,7 +42,7 @@ class CentralSimulator(SimulatorHelper):
         agent.vehicle_data = agent.planner.empty_data_dict()
         agent.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         self.agents.append(agent)
-
+ 
     def exists_running_agent(self):
         for x in self.agents:
             # if there is even just a single agent running
@@ -59,13 +59,12 @@ class CentralSimulator(SimulatorHelper):
         while self.exists_running_agent():
             i = i + 1
             for a in self.agents:
-                vehicle_data = a.planner.empty_data_dict()
+                # vehicle_data = a.planner.empty_data_dict()
                 if(not a.end_episode):
                     trajectory_segment, next_config, trajectory_data, commanded_actions_1kf = self._iterate(a)
                     # Append to Vehicle Data
-                    for key in vehicle_data.keys():
+                    for key in a.vehicle_data.keys():
                         a.vehicle_data[key].append(trajectory_data[key])
-
                     a.vehicle_trajectory.append_along_time_axis(trajectory_segment)
                     a.commanded_actions_nkf.append(commanded_actions_1kf)
                     # update config
@@ -82,14 +81,13 @@ class CentralSimulator(SimulatorHelper):
             a.episode_type = a.episode_data['episode_type']
             a.valid_episode = a.episode_data['valid_episode']
             a.commanded_actions_1kf = a.episode_data['commanded_actions_1kf']
-            a.obj_val = a._compute_objective_value(a.vehicle_trajectory)
+            a.obj_val = a._compute_objective_value(self.params)
 
     def _iterate(self, agent):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
         the subtrajectory, and relevant planner data"""
-        config = agent.current_config
-        agent.planner_data = agent.planner.optimize(config)
+        agent.planner_data = agent.planner.optimize(agent.current_config, agent.goal_config)
         trajectory_segment, trajectory_data, commanded_actions_nkf = self._process_planner_data(agent, agent.planner_data)
         next_config = SystemConfig.init_config_from_trajectory_time_index(trajectory_segment, t=-1)
         return trajectory_segment, next_config, trajectory_data, commanded_actions_nkf

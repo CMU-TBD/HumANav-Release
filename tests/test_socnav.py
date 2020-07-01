@@ -3,9 +3,12 @@ import numpy as np
 import os, sys, math
 from dotmap import DotMap
 from random import seed, random, randint
+import tensorflow as tf
+tf.enable_eager_execution()
 # Humanav
 from humanav import sbpd
 from humans.human import Human
+from humans.human_configs import HumanConfigs
 from simulators.agent import Agent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
@@ -16,6 +19,8 @@ from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
 # Other
 from utils.utils import touch, print_colors
+from trajectory.trajectory import SystemConfig
+
 
 def create_params():
     p = create_base_params()
@@ -193,13 +198,38 @@ def test_socnav(num_humans):
     # planner_params = create_planner_params()
     sim_params = create_sim_params()
     simulator = CentralSBPDSimulator(sim_params)
+ 
+    # Spline trajectory params
+    n = 1
+    dt = 0.1
 
+    # Goal states and initial speeds
+    goal_pos_n11 = tf.constant([[[12., 18.75]]]) # Goal position (must be 1x1x2 array)
+    goal_heading_n11 = tf.constant([[[-np.pi/2.]]])
+    # Start states and initial speeds
+    start_pos_n11 = tf.constant([[[10., 15.]]]) # Goal position (must be 1x1x2 array)
+    start_heading_n11 = tf.constant([[[np.pi]]])
+    start_speed_nk1 = tf.ones((1, 1, 1), dtype=tf.float32)
+    # Define start and goal configurations
+    start_config = SystemConfig(dt, n,
+                               k=1,
+                               position_nk2=start_pos_n11,
+                               heading_nk1=start_heading_n11,
+                               speed_nk1=start_speed_nk1,
+                               variable=False)
+    goal_config = SystemConfig(dt, n,
+                               k=1,
+                               position_nk2=goal_pos_n11,
+                               heading_nk1=goal_heading_n11,
+                               variable=True)
     """
     Generate the humans and run the simulation on every human
     """
+    fixed_start_goal = HumanConfigs(start_config, goal_config)
     for i in range(num_humans):
         # Generates a random human from the environment
-        new_human_i = Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=6)
+        # new_human_i = Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=6)
+        new_human_i = Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
         human_list.append(new_human_i)
 
         # Load a random human at a specified state and speed

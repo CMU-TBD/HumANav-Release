@@ -63,7 +63,7 @@ class Human():
         config with a random goal config.
         """
         configs = HumanConfigs.generate_random_human_config(HumanConfigs, environment, center)
-        return generate_human(self, appearance, configs)
+        return self.generate_human(self, appearance, configs)
     
     def generate_human_with_configs(self, configs, dataset):
         """
@@ -71,7 +71,7 @@ class Human():
         appearance, if any of the configs are None they will be generated
         """
         appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance, dataset)
-        return generate_human(self, appearance, configs)
+        return self.generate_human(self, appearance, configs)
         
     def generate_random_human_from_environment(self, dataset, environment, center = np.array([0.,0.,0.]), radius = 5.):
         """

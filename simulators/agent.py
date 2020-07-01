@@ -27,6 +27,7 @@ class Agent():
 
         self.end_episode = False
 
+        self.episode_data = None
         self.vehicle_trajectory = None
         self.vehicle_data = None
         self.planner_data = None
@@ -202,7 +203,7 @@ class Agent():
         Compute and return the earliest time index of success (reaching the goal region)
         in vehicle trajectory. If there is no collision return infinity.
         """
-        dist_to_goal_1k = self._dist_to_goal(self.vehicle_trajectory)
+        dist_to_goal_1k = self._dist_to_goal(use_euclidean=False)
         successes = tf.where(tf.less(dist_to_goal_1k,
                                      params.goal_cutoff_dist))
         success_idxs = successes[:, 1]
