@@ -69,11 +69,11 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, huma
         human.get_trajectory().render(ax, freq=1, color=color, plot_quiver=False)
         if(i == 0):
             # Only add label on the first humans
-            ax.plot(human_pos_2[0], human_pos_2[1], markerfacecolor="#FF7C00", marker='o', markersize=10, label='Human')
-            ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10, label='Goal')
+            ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10, label='Human')
+            ax.plot(human_goal_2[0], human_goal_2[1], markerfacecolor="#FF7C00", marker='o', markersize=10, label='Goal')
         else:
-            ax.plot(human_pos_2[0], human_pos_2[1], markerfacecolor="#FF7C00", marker='o', markersize=10)
-            ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10)
+            ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10)
+            ax.plot(human_goal_2[0], human_goal_2[1], markerfacecolor="#FF7C00", marker='o', markersize=10)
         if(plot_quiver):
             ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(human_heading), scale=2, scale_units='inches')
 
@@ -88,10 +88,10 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, c
 
     fig = plt.figure(figsize=(40, 10))
 
-    # Plot the 5x5 meter occupancy grid centered around the camera
+    # Plot the 5x5 meter occupancy grid centered around the camera 
+    zoom = 5.5 # zoom in by a constant amount
     ax = fig.add_subplot(1, 4, 1)
-    
-    zoom = 5.5
+    ax.legend()
     ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
     ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
     plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans, plot_quiver=True)
@@ -102,6 +102,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, c
     # Render entire map-view from the top
     outer_zoom = min(traversible.shape[0], traversible.shape[1]) * map_scale # to keep square plot
     ax = fig.add_subplot(1, 4, 2)
+    ax.legend()
     ax.set_xlim(0., outer_zoom)
     ax.set_ylim(0., outer_zoom)
     plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans)

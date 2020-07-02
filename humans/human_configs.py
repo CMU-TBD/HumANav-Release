@@ -30,6 +30,7 @@ class HumanConfigs():
     def generate_human_config(self, start_config, goal_config):
         """
         Sample a new random human from all required features
+        return HumanConfigs(start_config, goal_config)
         """
         return HumanConfigs(start_config, goal_config)
 
@@ -61,7 +62,7 @@ class HumanConfigs():
         Generate a human with a random start config given a known goal
         config. The generated start config will be near center by a threshold
         """
-        start_pos = self.generate_random_config(self, environment, center=center)
+        start_config = self.generate_random_config(self, environment, center=center)
         return self.generate_human_config(self, start_config, goal_config)
 
     def generate_random_human_config(self, environment, center = np.array([0, 0, 0]), radius = 5.):
