@@ -1,10 +1,12 @@
 import tensorflow as tf
+import copy
 from objectives.objective_function import ObjectiveFunction
 from objectives.angle_distance import AngleDistance
 from objectives.goal_distance import GoalDistance
 from objectives.obstacle_avoidance import ObstacleAvoidance
 
 from humans.human import Human
+from utils.fmm_map import FmmMap
 from utils.utils import print_colors
 import random, string, math
 import numpy as np
@@ -17,13 +19,15 @@ class Agent():
 
     def __init__(self, start, goal, planner = None):
         self.start_config = start
-        self.current_config = start
+        self.current_config = copy.copy(start)
         self.goal_config = goal
 
         self.planner = planner
 
         self.obj_fn = None # Until called by simulator
         self.obj_val = None 
+
+        self.fmm_map = None
 
         self.end_episode = False
 
@@ -70,22 +74,48 @@ class Agent():
         return p.planner_params.planner(obj_fn=self.obj_fn,
                                         params=p.planner_params)
 
-    def _update_obj_fn(self):
+    def _update_fmm_map(self, params, obstacle_map):
         """
-        Update the objective function to use a new
-        obstacle_map and fmm map
-        PROBABLY never going to use this
+        For SBPD the obstacle map does not change,
+        so just update the goal position.
+        """
+        goal_pos_n2 = self.goal_config.position_nk2()[:, 0]
+        if self.fmm_map is not None:
+            self.fmm_map.change_goal(goal_pos_n2)
+        else:
+            self.fmm_map = self._init_fmm_map(params, obstacle_map, goal_pos_n2)
+        self._update_obj_fn(obstacle_map)
+
+    def _init_fmm_map(self, params, obstacle_map, goal_pos_n2=None):
+        p = params
+        self.obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
+
+        if goal_pos_n2 is None:
+            goal_pos_n2 = self.goal_config.position_nk2()[0]
+
+        return FmmMap.create_fmm_map_based_on_goal_position(
+            goal_positions_n2=goal_pos_n2,
+            map_size_2=np.array(p.obstacle_map_params.map_size_2),
+            dx=p.obstacle_map_params.dx,
+            map_origin_2=p.obstacle_map_params.map_origin_2,
+            mask_grid_mn=self.obstacle_occupancy_grid)
+
+    def _update_obj_fn(self, obstacle_map):
+        
+        # Update the objective function to use a new
+        # obstacle_map and fmm map
+        # PROBABLY never going to use this
         
         for objective in self.obj_fn.objectives:
             if isinstance(objective, ObstacleAvoidance):
-                objective.obstacle_map = self.obstacle_map
+                objective.obstacle_map = obstacle_map
             elif isinstance(objective, GoalDistance):
                 objective.fmm_map = self.fmm_map
             elif isinstance(objective, AngleDistance):
                 objective.fmm_map = self.fmm_map
             else:
                 assert(False)
-        """
+        
 
     def _enforce_episode_termination_conditions(self, params, obstacle_map):
         p = params

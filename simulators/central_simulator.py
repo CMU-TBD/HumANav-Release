@@ -41,6 +41,7 @@ class CentralSimulator(SimulatorHelper):
         agent.planner = agent._init_planner(self.params)
         agent.vehicle_data = agent.planner.empty_data_dict()
         agent.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        agent._update_fmm_map(self.params, self.obstacle_map)
         self.agents.append(agent)
  
     def exists_running_agent(self):
@@ -57,10 +58,13 @@ class CentralSimulator(SimulatorHelper):
         print(print_colors()["yellow"], "Running simulation on", len(self.agents), "agents", print_colors()["reset"])
         i = 0
         while self.exists_running_agent():
-            i = i + 1
             for a in self.agents:
+                if(i == 0):
+                    print("start: ", a.start_config.position_nk2().numpy())
+                    print("goal: ", a.goal_config.position_nk2().numpy())
                 # vehicle_data = a.planner.empty_data_dict()
                 if(not a.end_episode):
+                    print(a.current_config.position_nk2().numpy())
                     trajectory_segment, next_config, trajectory_data, commanded_actions_1kf = self._iterate(a)
                     # Append to Vehicle Data
                     for key in a.vehicle_data.keys():
@@ -72,6 +76,7 @@ class CentralSimulator(SimulatorHelper):
                     # overwrites vehicle data with last instance before termination
                     # vehicle_data_last = copy.copy(vehicle_data) #making a hardcopy
                     a._enforce_episode_termination_conditions(self.params, self.obstacle_map)
+            i = i + 1
         print("Took",i,"iterations")
         for a in self.agents:
             a.vehicle_trajectory = a.episode_data['vehicle_trajectory']
@@ -143,12 +148,10 @@ class CentralSimulator(SimulatorHelper):
     def _reset_obstacle_map(self, rng):
         raise NotImplementedError
 
-    def _update_fmm_map(self):
-        raise NotImplementedError
-
     def _init_obstacle_map(self):
-        """ Initializes a new obstacle map."""
-        raise NotImplementedError
+        """ Initializes the sbpd map."""
+        p = self.params.obstacle_map_params
+        return p.obstacle_map(p)
 
     def _init_system_dynamics(self):
         """
@@ -161,20 +164,6 @@ class CentralSimulator(SimulatorHelper):
         except AttributeError:
             p = self.params.planner_params.control_pipeline_params.system_dynamics_params
             return p.system(dt=p.dt, params=p)
-
-    def _init_fmm_map(self, goal_pos_n2=None):
-        p = self.params
-        self.obstacle_occupancy_grid = self.obstacle_map.create_occupancy_grid_for_map()
-
-        if goal_pos_n2 is None:
-            goal_pos_n2 = self.goal_config.position_nk2()[0]
-
-        return FmmMap.create_fmm_map_based_on_goal_position(
-            goal_positions_n2=goal_pos_n2,
-            map_size_2=np.array(p.obstacle_map_params.map_size_2),
-            dx=p.obstacle_map_params.dx,
-            map_origin_2=p.obstacle_map_params.map_origin_2,
-            mask_grid_mn=self.obstacle_occupancy_grid)
 
     # Functions for computing relevant metrics
     # on robot trajectories

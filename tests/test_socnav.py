@@ -13,7 +13,7 @@ from simulators.agent import Agent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
 # Planner + Simulator:
-from simulators.central_sbpd_simulator import CentralSBPDSimulator
+from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
 from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
@@ -197,7 +197,7 @@ def test_socnav(num_humans):
     # Create planner parameters
     # planner_params = create_planner_params()
     sim_params = create_sim_params()
-    simulator = CentralSBPDSimulator(sim_params)
+    simulator = CentralSimulator(sim_params)
  
     # Spline trajectory params
     n = 1
