@@ -228,7 +228,7 @@ def test_socnav(num_humans):
     fixed_start_goal = HumanConfigs(start_config, goal_config)
     for i in range(num_humans):
         # Generates a random human from the environment
-        new_human_i = Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=6)
+        new_human_i = Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=5)
         # new_human_i = Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
         human_list.append(new_human_i)
 
@@ -243,7 +243,7 @@ def test_socnav(num_humans):
     # splanner.simulator.reset_with_start_and_goal(new_human_i.get_start_config(), new_human_i.get_goal_config())
     # splanner.optimize(new_human_i.get_start_config())
     simulator.simulate()
-    for human_i in human_list:
+    for i, human_i in enumerate(human_list):
         human_i.update_trajectory(simulator.agents[i].vehicle_trajectory)
 
     # Get information about which mesh was loaded
@@ -260,4 +260,4 @@ def test_socnav(num_humans):
     r.remove_all_humans()
 
 if __name__ == '__main__':
-    test_socnav(1) # run basic room test with 1 human
+    test_socnav(5) # run basic room test with 1 human

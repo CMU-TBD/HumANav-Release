@@ -55,7 +55,7 @@ class CentralSimulator(SimulatorHelper):
         """ A function that simulates an entire episode. The agent starts at self.start_config, repeatedly
         calling _iterate to generate subtrajectories. Generates a vehicle_trajectory for the episode, calculates its
         objective value, and sets the episode_type (timeout, collision, success)"""
-        print(print_colors()["yellow"], "Running simulation on", len(self.agents), "agents", print_colors()["reset"])
+        print(print_colors()["blue"], "Running simulation on", len(self.agents), "agents", print_colors()["reset"])
         i = 0
         while self.exists_running_agent():
             for a in self.agents:
