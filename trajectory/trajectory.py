@@ -388,7 +388,7 @@ class Trajectory(object):
                               valid_horizons_n1=valid_horizons_n1, direct_init=True)
 
     def render(self, axs, batch_idx=0, freq=4, plot_quiver=True, plot_heading=False,
-               plot_velocity=False, label_start_and_end=False, name='', linewidth=4):
+               plot_velocity=False, color="red", label_start_and_end=False, name='', linewidth=4):
         ax = axs#[0][0]
         xs = self._position_nk2[batch_idx, :, 0]
         ys = self._position_nk2[batch_idx, :, 1]
@@ -398,7 +398,7 @@ class Trajectory(object):
             ax.quiver(xs[::freq], ys[::freq], tf.cos(thetas[::freq]), tf.sin(thetas[::freq]))
         #  print('\033[33m', "Rendering Trajectory", '\033[0m')
         title_str = '{:s} Trajectory'.format(name)
-        ax.plot(xs, ys, 'r-', linewidth=linewidth)
+        ax.plot(xs, ys, '-', color=color, linewidth=linewidth)
         if label_start_and_end:
             start_5 = self.position_heading_speed_and_angular_speed_nk5()[batch_idx, 0]
             end_5 = self.position_heading_speed_and_angular_speed_nk5()[batch_idx, -1]

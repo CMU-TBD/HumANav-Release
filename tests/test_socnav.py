@@ -65,7 +65,8 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, huma
         human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
         human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
         human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
-        human.get_trajectory().render(ax, freq=1, plot_quiver=False)
+        color = human.get_termination()
+        human.get_trajectory().render(ax, freq=1, color=color, plot_quiver=False)
         if(i == 0):
             # Only add label on the first humans
             ax.plot(human_pos_2[0], human_pos_2[1], markerfacecolor="#FF7C00", marker='o', markersize=10, label='Human')
@@ -149,7 +150,6 @@ def test_socnav(num_humans):
     p = create_params() # used to instantiate the camera and its parameters
 
     r = HumANavRendererMulti.get_renderer(p)#get the renderer from the camera p
-
     # Get the surreal dataset for human generation
     surreal_data = r.d
 
@@ -197,38 +197,15 @@ def test_socnav(num_humans):
     # Create planner parameters
     # planner_params = create_planner_params()
     sim_params = create_sim_params()
-    simulator = CentralSimulator(sim_params)
+    simulator = CentralSimulator(sim_params, r)
  
-    # Spline trajectory params
-    n = 1
-    dt = 0.1
-
-    # Goal states and initial speeds
-    goal_pos_n11 = tf.constant([[[12., 18.75]]]) # Goal position (must be 1x1x2 array)
-    goal_heading_n11 = tf.constant([[[-np.pi/2.]]])
-    # Start states and initial speeds
-    start_pos_n11 = tf.constant([[[10., 15.]]]) # Goal position (must be 1x1x2 array)
-    start_heading_n11 = tf.constant([[[np.pi]]])
-    start_speed_nk1 = tf.ones((1, 1, 1), dtype=tf.float32)
-    # Define start and goal configurations
-    start_config = SystemConfig(dt, n,
-                               k=1,
-                               position_nk2=start_pos_n11,
-                               heading_nk1=start_heading_n11,
-                               speed_nk1=start_speed_nk1,
-                               variable=False)
-    goal_config = SystemConfig(dt, n,
-                               k=1,
-                               position_nk2=goal_pos_n11,
-                               heading_nk1=goal_heading_n11,
-                               variable=True)
     """
     Generate the humans and run the simulation on every human
     """
-    fixed_start_goal = HumanConfigs(start_config, goal_config)
     for i in range(num_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=5)
+        # Or specify a human's initial configs with a HumanConfig instance
         # new_human_i = Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
         human_list.append(new_human_i)
 
@@ -240,11 +217,10 @@ def test_socnav(num_humans):
         simulator.add_agent(Agent.human_to_agent(Agent, new_human_i))
     
     # run simulation
-    # splanner.simulator.reset_with_start_and_goal(new_human_i.get_start_config(), new_human_i.get_goal_config())
-    # splanner.optimize(new_human_i.get_start_config())
     simulator.simulate()
-    for i, human_i in enumerate(human_list):
-        human_i.update_trajectory(simulator.agents[i].vehicle_trajectory)
+    for i in range(len(human_list)):
+        human_list[i].update_trajectory(simulator.agents[i].vehicle_trajectory)
+        human_list[i].update_termination(simulator.agents[i].termination_cause)
 
     # Get information about which mesh was loaded
     # human_mesh_info = r.human_mesh_params

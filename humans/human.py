@@ -16,6 +16,7 @@ class Human():
     appearance = None
     configs = None
     trajectory = None
+    termination = None
     def __init__(self, name, appearance, configs, trajectory=None):
         self.name = name
         self.appearance = appearance
@@ -23,6 +24,7 @@ class Human():
         self.identity = (name, appearance.gender, appearance.shape)
         self.configs = configs
         self.trajectory = trajectory
+        self.termination = None
 
 
     # Getters for the Human class
@@ -40,6 +42,10 @@ class Human():
         self.trajectory = trajectory
     def get_trajectory(self):
         return self.trajectory
+    def update_termination(self, cause):
+        self.termination = cause
+    def get_termination(self):
+        return self.termination
 
     def _generate_name(self, max_chars):
         return "".join([random.choice(string.ascii_letters + string.digits) for n in range(max_chars)])

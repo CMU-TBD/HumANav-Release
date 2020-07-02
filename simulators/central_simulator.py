@@ -11,10 +11,9 @@ import matplotlib
 
 class CentralSimulator(SimulatorHelper):
 
-    def __init__(self, params):
+    def __init__(self, params, renderer = None):
         self.params = params.simulator.parse_params(params)
-        self.obstacle_map = self._init_obstacle_map()
-        # self.obj_fn = self._init_obj_fn()
+        self.obstacle_map = self._init_obstacle_map(renderer)
         self.system_dynamics = self._init_system_dynamics()
         self.agents = []
 
@@ -59,12 +58,13 @@ class CentralSimulator(SimulatorHelper):
         i = 0
         while self.exists_running_agent():
             for a in self.agents:
-                if(i == 0):
+                if(i == 0 and self.params.verbose_printing):
                     print("start: ", a.start_config.position_nk2().numpy())
                     print("goal: ", a.goal_config.position_nk2().numpy())
                 # vehicle_data = a.planner.empty_data_dict()
                 if(not a.end_episode):
-                    print(a.current_config.position_nk2().numpy())
+                    if(self.params.verbose_printing):
+                        print(a.current_config.position_nk2().numpy())
                     trajectory_segment, next_config, trajectory_data, commanded_actions_1kf = self._iterate(a)
                     # Append to Vehicle Data
                     for key in a.vehicle_data.keys():
@@ -148,10 +148,10 @@ class CentralSimulator(SimulatorHelper):
     def _reset_obstacle_map(self, rng):
         raise NotImplementedError
 
-    def _init_obstacle_map(self):
+    def _init_obstacle_map(self, renderer = None):
         """ Initializes the sbpd map."""
         p = self.params.obstacle_map_params
-        return p.obstacle_map(p)
+        return p.obstacle_map(p, renderer)
 
     def _init_system_dynamics(self):
         """

@@ -30,7 +30,7 @@ class Agent():
         self.fmm_map = None
 
         self.end_episode = False
-
+        self.termination_cause = None
         self.episode_data = None
         self.vehicle_trajectory = None
         self.vehicle_data = None
@@ -143,6 +143,7 @@ class Agent():
                         color= "blue"
                     elif(condition is "Collision"):
                         color= "red"
+                    self.termination_cause = color
                     print(print_colors()[color], "Terminated due to", condition, print_colors()["reset"])
                     if(condition is "Timeout"):
                         print(print_colors()["blue"], "Max time:", p.episode_horizon, print_colors()["reset"])
