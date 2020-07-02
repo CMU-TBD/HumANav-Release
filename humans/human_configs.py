@@ -4,11 +4,12 @@ import numpy as np
 import sys, os, pickle
 import tensorflow as tf
 # tf.enable_eager_execution()
-from humanav.render import swiftshader_renderer as sr
-from humanav import sbpd, map_utils as mu
+from humanav import sbpd
 from humanav import depth_utils as du
 from humanav import utils
 from humanav.renderer_params import get_surreal_texture_dir
+from mp_env import map_utils as mu
+from mp_env.render import swiftshader_renderer as sr
 
 from trajectory.trajectory import SystemConfig
 

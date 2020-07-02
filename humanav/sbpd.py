@@ -27,9 +27,9 @@ if sys.version_info[0] == 2:
     import utils
     import mp_env
 else:
-    from humanav.render import swiftshader_renderer as renderer 
+    from mp_env.render import swiftshader_renderer as renderer 
     from humanav import utils
-    from humanav import mp_env
+    from mp_env import mp_env
 
 def get_dataset(dataset_name, imset, data_dir, surreal_params = None):
   if dataset_name == 'sbpd':

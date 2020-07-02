@@ -9,9 +9,9 @@ tf.enable_eager_execution()
 from humanav import sbpd
 from humans.human import Human
 from humans.human_configs import HumanConfigs
-from simulators.agent import Agent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
+from simulators.agent import Agent
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner

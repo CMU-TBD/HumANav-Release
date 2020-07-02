@@ -22,7 +22,7 @@ import PIL
 import cv2
 import sys
 if sys.version_info[0] == 2:
-    from humanav import utils
+    from . import utils
 else:
     from humanav import utils #py3
 
@@ -74,6 +74,62 @@ def _fill_holes(img, thresh):
   img_[l == -1] = True
   return img_
 
+def add_human_to_traversible(map, robot_base, robot_height, robot_radius,
+  valid_min, valid_max, num_point_threshold, shapess, sc=100.,
+  n_samples_per_face=200, human_xy_center_2=None):
+  
+  """
+  Update map.traversible to include the space occupied by the human(s)
+  whose meshes are held in shapess.
+  """
+
+  # Compute the space occupied by the human only
+  num_obstcale_points = np.zeros((map.size[1], map.size[0]))
+  num_points = np.zeros((map.size[1], map.size[0]))
+
+  # One Shape
+  assert(len(shapess) == 1)
+  shapes = shapess[0]
+
+  # One Mesh
+  assert(shapes.get_number_of_meshes() == 1)
+  j = 0
+
+  p, face_areas, face_idx = shapes.sample_points_on_face_of_shape(
+      j, n_samples_per_face, sc)
+  wt = face_areas[face_idx]/n_samples_per_face
+
+  ind = np.all(np.concatenate(
+    (p[:, [2]] > robot_base,
+     p[:, [2]] < robot_base + robot_height), axis=1),axis=1)
+  num_obstcale_points += _project_to_map(map, p[ind, :], wt[ind])
+
+  ind = np.all(np.concatenate(
+    (p[:, [2]] > valid_min,
+     p[:, [2]] < valid_max), axis=1),axis=1)
+  num_points += _project_to_map(map, p[ind, :], wt[ind])
+
+  # Compute the radius of the human footprint (without augmenting by the robot base)
+  human_footprint_coordinates_n3 = p[ind, :]/sc
+  human_xy_footprint_coordinates_n2 = (human_footprint_coordinates_n3[:, :2] -  human_xy_center_2[None])
+  human_radius = np.linalg.norm(human_xy_footprint_coordinates_n2, axis=1).max()
+
+  # Expand the occupied space to account for the robot base
+  selem = morphology.disk(robot_radius / map.resolution)
+  obstacle_free = morphology.binary_dilation(
+      _fill_holes(num_obstcale_points > num_point_threshold, 20), selem) != True
+
+  # Combine the occupancy information from the static map
+  # and the human
+  traversible = np.stack([map._traversible, obstacle_free], axis=2)
+  traversible = np.all(traversible, axis=2)
+
+  map.traversible = traversible
+  map._human_traversible = obstacle_free*1.
+  map._human_radius = human_radius
+  map.human_xy_footprint_coordinates_n2 = human_xy_footprint_coordinates_n2
+  return map
+
 def compute_traversibility(map, robot_base, robot_height, robot_radius,
   valid_min, valid_max, num_point_threshold, shapess, sc=100.,
   n_samples_per_face=200):
@@ -112,9 +168,12 @@ def compute_traversibility(map, robot_base, robot_height, robot_radius,
   map_out.num_obstcale_points = num_obstcale_points
   map_out.num_points = num_points
   map_out.traversible = traversible
+  map_out._traversible = traversible*1.
+  map_out._human_traversible = np.ones_like(traversible*1.)
   map_out.obstacle_free = obstacle_free
   map_out.valid_space = valid_space
-  return map_out
+  print('\033[31m', "Computing Traversible", '\033[0m')
+  return map_out  
 
 def resize_maps(map, map_scales, resize_method):
   scaled_maps = []
@@ -163,7 +222,6 @@ def get_graph_origin_loc(rng, traversible):
   locs = np.array([x[ind], y[ind]])
   locs = locs + rng.rand(*(locs.shape)) - 0.5
   return locs
-
 
 def generate_egocentric_maps(scaled_maps, map_scales, map_crop_sizes, loc,
                              x_axis, y_axis, dst_theta=np.pi/2.0, dst_loc=None):
@@ -254,7 +312,6 @@ def walk_on_map(traversable, start, end):
   idx_ = np.ravel_multi_index((idx[:,1],idx[:,0]), traversable.shape)
   vals = traversable.ravel()[idx_]
   return pts, vals
-
 
 def sample_positions_on_map(seed, traversible, resolution, n):
   rng = np.random.RandomState(seed)

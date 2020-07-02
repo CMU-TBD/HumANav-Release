@@ -77,7 +77,7 @@ class CentralSimulator(SimulatorHelper):
                     # vehicle_data_last = copy.copy(vehicle_data) #making a hardcopy
                     a._enforce_episode_termination_conditions(self.params, self.obstacle_map)
             i = i + 1
-        print("Took",i,"iterations")
+        print(" Took",i,"iterations")
         for a in self.agents:
             a.vehicle_trajectory = a.episode_data['vehicle_trajectory']
             a.vehicle_data = a.episode_data['vehicle_data']

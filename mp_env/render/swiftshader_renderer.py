@@ -24,13 +24,13 @@ r"""Implements loading and rendering of meshes. Contains 2 classes:
     here. 
 """
 
-import numpy as np, os, sys
-import cv2, ctypes, logging, os, glob, numpy as np
+import numpy as np, os
+import cv2, ctypes, logging, os, glob, sys, numpy as np
 import pyassimp as assimp
 from OpenGL.GLES2 import *
 from OpenGL.EGL import *
-from mp_env.render import rotation_utils
 from humanav import utils
+from mp_env.render import rotation_utils
 
 __version__ = 'swiftshader_renderer'
 
@@ -52,6 +52,7 @@ def sample_points_on_faces(vs, fs, rng, n_samples_per_face):
   ar = 0.5*np.sqrt(np.sum(np.cross(v1-v3, v2-v3)**2, 1))
   
   return pts, ar, idx
+
 
 class Shape():
   def get_pyassimp_load_options(self):
@@ -78,41 +79,47 @@ class Shape():
     self.meshes = [scene.meshes[i] for i in filter_ind]
     for i, m in enumerate(self.meshes):
       m.name = name_prefix + m.name + '_{:05d}'.format(i) + name_suffix
-    # logging.error('#Meshes: %d', len(self.meshes))
+    #logging.error('#Meshes: %d', len(self.meshes))
     print('\033[35m', "Number of Meshes:", len(self.meshes), '\033[0m')
-
     dir_name = os.path.dirname(obj_file)
     # Load materials
     materials = None
+    print('\033[33m', "Loading meshes from", dir_name, '\033[00m')
     if load_materials:
       materials = []
+      i = 0
       for m in self.meshes:
-        #file_name = os.path.join(dir_name, m.material.properties[('file', 1)])
+        #file_name = os.path.join(dir_name, m.material.properties[('file', 0)])
         file_name = os.path.join(dir_name, sorted(glob.glob1(dir_name, '*.jpg'))[i])
-        # assert(os.path.exists(file_name)), 'Texture file {:s} foes not exist.'.format(file_name)
+        i = i + 1
+        #assert(os.path.exists(file_name)), 'Texture file {:s} foes not exist.'.format(file_name)
         if(not(os.path.exists(file_name))):
           print('\033[31m', "Texture file", file_name, "does not exist.", '\033[0m')
           sys.exit(1)
-        img_rgb = cv2.imread(file_name)[::-1,:,::-1]
-        if img_rgb.shape[0] != img_rgb.shape[1]:
-          logging.warn('Texture image not square.')
-          sz = np.maximum(img_rgb.shape[0], img_rgb.shape[1])
-          sz = int(np.power(2., np.ceil(np.log2(sz)))) 
-          sz = int(sz * materials_scale)
-          img_rgb = cv2.resize(img_rgb, (sz,sz), interpolation=cv2.INTER_LINEAR)
-        else:
-          sz = img_rgb.shape[0]
-          sz_ = int(np.power(2., np.ceil(np.log2(sz))))
-          if sz != sz_ or materials_scale != 1.:
-            logging.warn('Texture image not square of power of 2 size or ' + 
-              'materials_scale is not 1.0. Changing size from %d to %d.', 
-              sz, int(sz_*materials_scale))
-            sz = int(sz_*materials_scale)
-            img_rgb = cv2.resize(img_rgb, (sz,sz), interpolation=cv2.INTER_LINEAR)
-        materials.append((file_name, img_rgb))
+        materials.append(self._load_materials_from_file(file_name, materials_scale))
     self.scene = scene
     print('\033[32m', "All meshes successfully loaded", '\033[0m')
     self.materials = materials
+
+  @staticmethod
+  def _load_materials_from_file(file_name, materials_scale):
+    img_rgb = cv2.imread(file_name)[::-1,:,::-1]
+    if img_rgb.shape[0] != img_rgb.shape[1]:
+      logging.warning('Texture image not square.')
+      sz = np.maximum(img_rgb.shape[0], img_rgb.shape[1])
+      sz = int(np.power(2., np.ceil(np.log2(sz)))) 
+      sz = int(sz * materials_scale)
+      img_rgb = cv2.resize(img_rgb, (sz,sz), interpolation=cv2.INTER_LINEAR)
+    else:
+      sz = img_rgb.shape[0]
+      sz_ = int(np.power(2., np.ceil(np.log2(sz))))
+      if sz != sz_ or materials_scale != 1.:
+        logging.warning('Texture image not square of power of 2 size or ' + 
+          'materials_scale is not 1.0. Changing size from %d to %d.', 
+          sz, int(sz_*materials_scale))
+        sz = int(sz_*materials_scale)
+        img_rgb = cv2.resize(img_rgb, (sz,sz), interpolation=cv2.INTER_LINEAR)
+    return (file_name, img_rgb)
 
   def _filter_triangles(self, meshes):
     select = []
@@ -157,12 +164,51 @@ class Shape():
         v, f, np.random.RandomState(0), n_samples_per_face)
     return p, face_areas, face_idx
   
-  def __del__(self):
-    # These caused several error mesages that would be much neater to 
-    # simply comment out. For readibility's sake
-    placeholder=1
+  def __del__(self): #cause lots of errors and no benefit?
+    dummy = 1
     #scene = self.scene
     #assimp.release(scene)
+
+class HumanShape(Shape):
+    def __init__(self, obj_file, human_materials, name_prefix='', name_suffix=''):
+
+        load_flags = self.get_pyassimp_load_options()
+        scene = assimp.load(obj_file, processing=load_flags)
+        filter_ind = self._filter_triangles(scene.meshes)
+        self.meshes = [scene.meshes[i] for i in filter_ind]
+        for i, m in enumerate(self.meshes):
+          m.name = name_prefix + m.name + '_{:05d}'.format(i) + name_suffix
+        #logging.error('#Meshes: %d', len(self.meshes))
+
+        self.materials = human_materials
+        self.scene = scene
+ 
+    @staticmethod
+    def get_random_materials(texture_dir, dataset_mode, gender, rng, materials_scale=1.0, load_materials=True):
+        """
+        For a fixed gender, sample a random set of human materials (i.e. skin and
+        clothing.). This is useful upstream as it allows for fixing a human look (texture)
+        regardless of pose.
+        """
+        if dataset_mode == 'train':
+            texture_dir = os.path.join(texture_dir, 'train')
+        elif dataset_mode == 'test':
+            texture_dir = os.path.join(texture_dir, 'test')
+        else:
+            raise NotImplementedError
+
+        gender_dir = os.path.join(texture_dir, gender)
+        file_names = os.listdir(gender_dir)
+        # Remove extraneous files (hidden system files mostly)
+        file_names = list(filter(lambda x: 'jpg' in x and not x.startswith('.'), file_names))
+        file_names.sort()
+        file_name = os.path.join(gender_dir, rng.choice(file_names))
+
+        if load_materials:
+            materials = [HumanShape._load_materials_from_file(file_name, materials_scale)]
+        else:
+            materials = [file_name]
+        return materials
 
 class SwiftshaderRenderer():
   def __init__(self):
@@ -172,22 +218,26 @@ class SwiftshaderRenderer():
     z_far, rgb_shader, d_shader, im_resize):
     self.init_renderer_egl(width, height)
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    if d_shader is not None and rgb_shader is not None:
-      logging.fatal('Does not support setting both rgb_shader and d_shader.')
-    
+    #if d_shader is not None and rgb_shader is not None:
+    #  logging.fatal('Does not support setting both rgb_shader and d_shader.')
+  
+    self.egl_program = {'rgb': None, 'disparity': None}
+    self.modalities = []
     if d_shader is not None:
-      assert rgb_shader is None
-      shader = d_shader
-      self.modality = 'disparity'
-    
+      self.modalities.append('disparity')
+      self.create_shaders(os.path.join(dir_path, d_shader+'.vp'),
+                          os.path.join(dir_path, d_shader + '.fp'),
+                          shader=d_shader)
+
     if rgb_shader is not None:
-      assert d_shader is None
-      shader = rgb_shader
-      self.modality = 'rgb'
+      self.modalities.append('rgb')
+      self.create_shaders(os.path.join(dir_path, rgb_shader+'.vp'),
+                          os.path.join(dir_path, rgb_shader + '.fp'),
+                          shader=rgb_shader)
+
     
-    self.create_shaders(os.path.join(dir_path, shader+'.vp'),
-                        os.path.join(dir_path, shader + '.fp'))
     aspect = width*1./(height*1.)
+    self.z_near, self.z_far = z_near, z_far
     self.set_camera(fov_vertical=fov_vertical, fov_horizontal=fov_horizontal,
       z_near=z_near, z_far=z_far, aspect=aspect)
     self.im_resize = im_resize 
@@ -195,9 +245,11 @@ class SwiftshaderRenderer():
     self.height = height # renderer height
     self.fov_horizontal = fov_horizontal
     self.fov_vertical = fov_vertical
+    self.viewport = np.array([0, 0, self.width, self.height], dtype=np.int32)
 
   def get_salt_string(self):
     """Returns a string that uniquely identifies the camera properties."""
+    import pdb; pdb.set_trace()
     str_ = '{:s}-sz{:d}x{:d}-fov{:03d}x{:03d}-r{:04d}'.format(self.modality,
       self.height, self.width, int(self.fov_vertical), int(self.fov_horizontal),
       int(np.round(self.im_resize*1000)))
@@ -252,7 +304,7 @@ class SwiftshaderRenderer():
     self.height = height
     self.width = width
 
-  def create_shaders(self, v_shader_file, f_shader_file):
+  def create_shaders(self, v_shader_file, f_shader_file, shader):
     v_shader = glCreateShader(GL_VERTEX_SHADER)
     with open(v_shader_file, 'r') as f:
       ls = ''
@@ -282,10 +334,16 @@ class SwiftshaderRenderer():
     glBindAttribLocation(egl_program, 0, "aPosition")
     glBindAttribLocation(egl_program, 1, "aTextureCoord")
 
-    self.egl_program = egl_program
     self.egl_mapping['vertexs'] = 0
     self.egl_mapping['vertexs_tc'] = 1
-    
+
+    if shader == 'rgb_flat_color':
+      self.egl_program['rgb'] = egl_program
+    elif shader == 'depth_rgb_encoded':
+      self.egl_program['disparity'] = egl_program
+    else:
+      assert(False)
+
     glClearColor(0.0, 0.0, 0.0, 1.0);
     # Before enabling culling check if the triangles are oriented consistnetly or not.
     # glEnable(GL_CULL_FACE);  
@@ -297,7 +355,6 @@ class SwiftshaderRenderer():
   def set_camera(self, fov_vertical, fov_horizontal, z_near, z_far, aspect):
     width = 2*np.tan(np.deg2rad(fov_horizontal)/2.0)*z_near*aspect;
     height = 2*np.tan(np.deg2rad(fov_vertical)/2.0)*z_near;
-    egl_program = self.egl_program
     c = np.eye(4, dtype=np.float32)
     c[3,3] = 0
     c[3,2] = -1
@@ -306,12 +363,22 @@ class SwiftshaderRenderer():
     c[0,0] = 2.0*z_near/width
     c[1,1] = 2.0*z_near/height
     c = c.T
-    
-    projection_matrix_o = glGetUniformLocation(egl_program, 'uProjectionMatrix')
+   
     projection_matrix = np.eye(4, dtype=np.float32)
     projection_matrix[...] = c
     projection_matrix = np.reshape(projection_matrix, (-1))
-    glUniformMatrix4fv(projection_matrix_o, 1, GL_FALSE, projection_matrix)
+    
+    if self.egl_program['rgb'] is not None:
+      glUseProgram(self.egl_program['rgb'])
+      projection_matrix_o = glGetUniformLocation(self.egl_program['rgb'], 'uProjectionMatrix')
+      glUniformMatrix4fv(projection_matrix_o, 1, GL_FALSE, projection_matrix)
+    
+    if self.egl_program['disparity'] is not None:
+      glUseProgram(self.egl_program['disparity'])
+      projection_matrix_o = glGetUniformLocation(self.egl_program['disparity'], 'uProjectionMatrix')
+      glUniformMatrix4fv(projection_matrix_o, 1, GL_FALSE, projection_matrix)
+    
+    self.projection_matrix = projection_matrix.astype(np.double)
 
   def load_default_object(self):
     v = np.array([[0.0, 0.5, 0.0, 1.0, 1.0, 0.0, 1.0],
@@ -330,12 +397,16 @@ class SwiftshaderRenderer():
 
     self.num_to_render = 6;
 
-  def _actual_render(self):
+  def _actual_render(self, mode):
+    assert(mode in self.egl_program.keys())
+    glUseProgram(self.egl_program[mode])
+
     for entity in self.entities.values():
       if entity['visible']:
         vbo = entity['vbo']
         tbo = entity['tbo']
         num = entity['num']
+
 
         glBindBuffer(GL_ARRAY_BUFFER, vbo)
         glVertexAttribPointer(self.egl_mapping['vertexs'], 3, GL_FLOAT, GL_FALSE, 20, ctypes.c_void_p(0))
@@ -348,19 +419,20 @@ class SwiftshaderRenderer():
         # glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glDrawArrays(GL_TRIANGLES, 0, num)
 
-  def render(self, take_screenshot=False, output_type=0):
+  def render(self, modality, take_screenshot=False, output_type=0):
     with self.render_timer.record():
-      self._actual_render()
+      self._actual_render(modality)
     self.render_timer.display(log_at=100, log_str='render timer: ', type='time')
 
     np_rgb_img = None
     np_d_img = None
     c = 1000.
     if take_screenshot:
-      if self.modality == 'rgb':
+      if modality == 'rgb':
         # Even though we dont want the alpha channel, opengl crashes if you
         # dont read it. Bad OpenGL.
         screenshot_rgba = np.zeros((self.height, self.width, 4), dtype=np.uint8)
+        
         glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE, screenshot_rgba)
         np_rgb_img = screenshot_rgba[::-1,:,:3]
         
@@ -372,7 +444,7 @@ class SwiftshaderRenderer():
           np_rgb_img = cv2.resize(np_rgb_img, None, None, fx=self.im_resize, 
             fy=self.im_resize, interpolation=cv2.INTER_AREA)
 
-      if self.modality == 'disparity': 
+      if modality == 'disparity': 
         screenshot_d = np.zeros((self.height, self.width, 4), dtype=np.uint8)
         glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE, screenshot_d)
         np_d_img = screenshot_d[::-1,:,:3];
@@ -385,7 +457,7 @@ class SwiftshaderRenderer():
         d = 100./d; d[isnan] = 0.;
         d = np.concatenate((d, isnan), axis=2)
         np_d_img = d
-       
+        
         # Resize here if necessary.
         if self.im_resize < 1.:
           np_d_img_0 = cv2.resize(np_d_img[...,0], None, None,
@@ -403,11 +475,34 @@ class SwiftshaderRenderer():
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
     return np_rgb_img, np_d_img
 
-  def _load_mesh_into_gl(self, mesh, material=None, tbo=None):
+  def _mesh_to_vvt(self, mesh):
     vvt = np.concatenate((mesh.vertices, mesh.texturecoords[0,:,:2]), axis=1)
     vvt = np.ascontiguousarray(vvt[mesh.faces.reshape((-1)),:], dtype=np.float32)
     num = vvt.shape[0]
     vvt = np.reshape(vvt, (-1))
+    return vvt, num
+
+  def update_human_mesh(self, mesh):
+    """
+    Update the human mesh used by OpenGL.
+    """
+    human_keys = list(filter(lambda x: 'human' in x, self.entities.keys()))
+
+    # Currently only 1 human is supported, for now
+    assert(len(human_keys) <= 1)
+
+    if len(human_keys) == 1:
+        # Get the Vertex Buffer Object Index for the Human (vbo)
+        vbo = self.entities[human_keys[0]]['vbo']
+
+        # Bind the new vertex, texture, and face data (vvt) to the old memory location
+        vvt, num = self._mesh_to_vvt(mesh)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBufferData(GL_ARRAY_BUFFER, vvt.dtype.itemsize*vvt.size, vvt, GL_STATIC_DRAW)
+        assert(glGetError() == GL_NO_ERROR)
+
+  def _load_mesh_into_gl(self, mesh, material=None, tbo=None):
+    vvt, num = self._mesh_to_vvt(mesh)
 
     vbo = glGenBuffers(1)
     glBindBuffer(GL_ARRAY_BUFFER, vbo)
@@ -442,14 +537,15 @@ class SwiftshaderRenderer():
     
     return num, vbo, tbo
 
-  def load_shapes(self, shapes, dedup_tbo=False):
+  def load_shapes(self, shapes, dedup_tbo=False, allow_repeat_humans=False):
     entities = self.entities
     entity_ids = []
     dedup_dict = {}
     for i, shape in enumerate(shapes):
       for j in range(len(shape.meshes)):
-        name = shape.meshes[j].name
-        assert name not in entities, '{:s} entity already exists.'.format(name)
+        name = shape.meshes[j].name + str(i) #add i for indication of which human
+        #if not (allow_repeat_humans and 'human' in name):
+        #    assert name not in entities, '{:s} entity already exists.'.format(name)
         if shape.materials[j][0] in dedup_dict and dedup_tbo:
           tbo = dedup_dict[shape.materials[j][0]]
           # logging.error('dedup: %s', shape.materials[j][0])
@@ -459,6 +555,7 @@ class SwiftshaderRenderer():
           dedup_dict[shape.materials[j][0]] = tbo
         entities[name] = {'num': num, 'vbo': vbo, 'tbo': tbo, 'visible': False}
         entity_ids.append(name)
+        #print(shape.meshes)
     return entity_ids
 
   def set_entity_visible(self, entity_ids, visibility):
@@ -489,8 +586,18 @@ class SwiftshaderRenderer():
     view_matrix = view_matrix.T
     # print np.concatenate((R, t, view_matrix), axis=1)
     view_matrix = np.reshape(view_matrix, (-1))
-    view_matrix_o = glGetUniformLocation(self.egl_program, 'uViewMatrix')
-    glUniformMatrix4fv(view_matrix_o, 1, GL_FALSE, view_matrix)
+    
+    if self.egl_program['rgb'] is not None:
+      glUseProgram(self.egl_program['rgb'])
+      view_matrix_o = glGetUniformLocation(self.egl_program['rgb'], 'uViewMatrix')
+      glUniformMatrix4fv(view_matrix_o, 1, GL_FALSE, view_matrix)
+
+    if self.egl_program['disparity'] is not None:
+      glUseProgram(self.egl_program['disparity'])
+      view_matrix_o = glGetUniformLocation(self.egl_program['disparity'], 'uViewMatrix')
+      glUniformMatrix4fv(view_matrix_o, 1, GL_FALSE, view_matrix)
+
+    self.modelview_matrix = view_matrix.astype(np.double)
     return None, None #camera_xyz, q
 
   def clear_scene(self):
@@ -503,11 +610,27 @@ class SwiftshaderRenderer():
       glDeleteBuffers(1, [vbo])
       glDeleteTextures(1, [tbo])
 
+  def remove_human(self, ID):
+      """
+      Delete the mesh information for the loaded human (vertices, faces, textures)
+      with specified identification, ID
+      """
+      human_keys = list(filter(lambda x: 'human' in x, self.entities.keys()))
+      name = ID[0]
+      for i in range(len(human_keys)):
+          if name in human_keys[i]:
+            entity = self.entities.pop(human_keys[i], None)
+            vbo = entity['vbo']
+            tbo = entity['tbo']
+            num = entity['num']
+            glDeleteBuffers(1, [vbo])
+            glDeleteTextures(1, [tbo])
+
   def __del__(self):
-    self.clear_scene()
+    #self.clear_scene()
     eglMakeCurrent(self.egl_display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)
-    eglDestroySurface(self.egl_display, self.egl_surface)
-    eglTerminate(self.egl_display)
+    #eglDestroySurface(self.egl_display, self.egl_surface)
+    #eglTerminate(self.egl_display)
 
 def get_r_obj(camera_param):
   cp = camera_param
@@ -535,7 +658,8 @@ def _test_renderer(modality, N=16):
   r = 3;
   out_dir = os.path.join('tmp', 'test-renderer', modality + '-' + utils.get_time_str())
   utils.mkdir_if_missing(out_dir)
-  logging.error('Logging to directory: %s', out_dir)
+  #logging.error('Logging to directory: %s', out_dir)
+  print('\033[36m', "Logging to the directory:", out_dir, '\033[0m')
   for i in range(N):
     angle = i*(2.*np.pi)/N
     camera_xyz = [r*np.sin(angle), r*np.cos(angle), 1.]
@@ -554,7 +678,8 @@ def _test_renderer(modality, N=16):
         cv2.imwrite('{:s}/depth_{:04d}.png'.format(out_dir, i), (_[...,0]).astype(np.uint8))
       assert(np.mean(_[...,0]) > 4 and np.mean(_[...,0]) < 4.6)
       assert(np.mean(_[...,1]) > 0.85 and np.mean(_[...,1]) < 0.91)
-  logging.error('Finished logging to directory: %s', out_dir)
+  #logging.error('Finished logging to directory: %s', out_dir)
+  print('\033[36m', "Finished logging to directory:", out_dir, '\033[0m')
   print(r_obj.render_timer.display(log_at=1, log_str='render timer', type='calls'))
 
 def test_rgb():
