@@ -91,10 +91,10 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, c
     # Plot the 5x5 meter occupancy grid centered around the camera 
     zoom = 5.5 # zoom in by a constant amount
     ax = fig.add_subplot(1, 4, 1)
-    ax.legend()
     ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
     ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
     plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans, plot_quiver=True)
+    ax.legend()
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title('Topview (zoomed)')
@@ -102,10 +102,10 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, c
     # Render entire map-view from the top
     outer_zoom = min(traversible.shape[0], traversible.shape[1]) * map_scale # to keep square plot
     ax = fig.add_subplot(1, 4, 2)
-    ax.legend()
     ax.set_xlim(0., outer_zoom)
     ax.set_ylim(0., outer_zoom)
     plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans)
+    ax.legend()
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title('Topview')
