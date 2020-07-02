@@ -228,8 +228,8 @@ def test_socnav(num_humans):
     fixed_start_goal = HumanConfigs(start_config, goal_config)
     for i in range(num_humans):
         # Generates a random human from the environment
-        # new_human_i = Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=6)
-        new_human_i = Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
+        new_human_i = Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=6)
+        # new_human_i = Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
         human_list.append(new_human_i)
 
         # Load a random human at a specified state and speed

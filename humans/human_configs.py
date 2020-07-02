@@ -3,7 +3,7 @@ import random, string, math
 import numpy as np
 import sys, os, pickle
 import tensorflow as tf
-tf.enable_eager_execution()
+# tf.enable_eager_execution()
 from humanav.render import swiftshader_renderer as sr
 from humanav import sbpd, map_utils as mu
 from humanav import depth_utils as du

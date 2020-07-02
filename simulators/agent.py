@@ -137,8 +137,8 @@ class Agent():
         else:
             end_episode = False
             episode_data = {}
-
-        return end_episode, episode_data
+        self.end_episode = end_episode
+        self.episode_data = episode_data
 
 
     def _compute_time_idx_for_termination_condition(self, params, obstacle_map, condition):
@@ -190,11 +190,11 @@ class Agent():
         for objective in self.obj_fn.objectives:
             if isinstance(objective, GoalDistance):
                 euclidean = 0
+                # also compute euclidean distance as a heuristic
                 if use_euclidean:
                     diff_x = self.vehicle_trajectory.position_nk2()[0][-1][0] - self.goal_config.position_nk2()[0][0][0]
                     diff_y = self.vehicle_trajectory.position_nk2()[0][-1][1] - self.goal_config.position_nk2()[0][0][1]
                     euclidean = np.sqrt(diff_x**2 + diff_y**2)
-                # also compute euclidean distance as a heuristic
                 dist_to_goal_nk = objective.compute_dist_to_goal_nk(self.vehicle_trajectory) + euclidean
         return dist_to_goal_nk
 

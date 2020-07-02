@@ -71,7 +71,7 @@ class CentralSimulator(SimulatorHelper):
                     a.current_config = next_config
                     # overwrites vehicle data with last instance before termination
                     # vehicle_data_last = copy.copy(vehicle_data) #making a hardcopy
-                    a.end_episode, a.episode_data = a._enforce_episode_termination_conditions(self.params, self.obstacle_map)
+                    a._enforce_episode_termination_conditions(self.params, self.obstacle_map)
         print("Took",i,"iterations")
         for a in self.agents:
             a.vehicle_trajectory = a.episode_data['vehicle_trajectory']
