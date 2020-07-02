@@ -29,43 +29,49 @@ class FmmMap(object):
         self.map_origin_2 = map_origin_2
         self.dx = dx
 
-        #generate blank distance/angle voxel (3d pixel) maps
+        # generate blank distance/angle voxel (3d pixel) maps
         self.fmm_distance_map = VoxelMap(scale=dx,
                                          origin_2=map_origin_2,
-                                         map_size_2=tf.constant([n, m], dtype=tf.float32),
+                                         map_size_2=tf.constant(
+                                             [n, m], dtype=tf.float32),
                                          function_array_mn=None)
         self.fmm_angle_map = VoxelMap(scale=dx,
                                       origin_2=map_origin_2,
-                                      map_size_2=tf.constant([n, m], dtype=tf.float32),
+                                      map_size_2=tf.constant(
+                                          [n, m], dtype=tf.float32),
                                       function_array_mn=None)
         self.compute_fmm_distance_and_angle()
 
     def compute_fmm_distance_and_angle(self, mask_value=1000):
         """
         Compute the fmm distance based on the goal array and mask array.
-
         """
         # Mask the goal array
         # If the mask grid was given, mask the goal grid to flip the 1's and 0's
-        if False: #self.mask_grid_mn is not None: (goal_grid_mn seems to be the best here)
+        # (goal_grid_mn seems to be the best here)
+        if self.mask_grid_mn is not None:
             phi = np.ma.MaskedArray(self.goal_grid_mn, self.mask_grid_mn)
         else:
             phi = self.goal_grid_mn
 
         # Compute the fmm distance
-        fmm_distance = skfmm.distance(phi, dx=self.fmm_distance_map.map_scale*np.ones(2))
+        fmm_distance = skfmm.distance(
+            phi, dx=self.fmm_distance_map.map_scale*np.ones(2))
 
         # Assign some distance at the mask
-        if False: #self.mask_grid_mn is not None: # Dont think I want to do this
+        if self.mask_grid_mn is not None:  # Dont think I want to do this
             fmm_distance = fmm_distance.filled(mask_value)
 
         # Compute the fmm angle
-        gradient_y, gradient_x = np.gradient(fmm_distance, self.fmm_distance_map.map_scale)
+        gradient_y, gradient_x = np.gradient(
+            fmm_distance, self.fmm_distance_map.map_scale)
         fmm_angle = np.arctan2(-gradient_y, -gradient_x)
 
         # Assign fmm distance map and angle
-        self.fmm_distance_map.voxel_function_mn = tf.constant(fmm_distance, dtype=tf.float32)
-        self.fmm_angle_map.voxel_function_mn = tf.constant(fmm_angle, dtype=tf.float32)
+        self.fmm_distance_map.voxel_function_mn = tf.constant(
+            fmm_distance, dtype=tf.float32)
+        self.fmm_angle_map.voxel_function_mn = tf.constant(
+            fmm_angle, dtype=tf.float32)
 
     def change_goal(self, goal_positions_n2, mask_value=1000):
         """
@@ -95,8 +101,10 @@ class FmmMap(object):
         mask_grid_mn is kept although unused. 
         """
         goal_array_mn = np.ones((map_size_2[1], map_size_2[0]))
-        goal_index_x = np.floor((goal_positions_n2[:, 0] / dx) - map_origin_2[0]).astype(np.int32)
-        goal_index_y = np.floor((goal_positions_n2[:, 1] / dx) - map_origin_2[1]).astype(np.int32)
+        goal_index_x = np.floor(
+            (goal_positions_n2[:, 0] / dx) - map_origin_2[0]).astype(np.int32)
+        goal_index_y = np.floor(
+            (goal_positions_n2[:, 1] / dx) - map_origin_2[1]).astype(np.int32)
         goal_array_mn[goal_index_y, goal_index_x] = -1.
         return goal_array_mn
 

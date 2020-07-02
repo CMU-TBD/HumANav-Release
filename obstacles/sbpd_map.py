@@ -9,7 +9,7 @@ from systems.dubins_car import DubinsCar
 class SBPDMap(ObstacleMap):
     name = 'SBPDMap'
 
-    def __init__(self, params, renderer = None):
+    def __init__(self, params, renderer=None):
         """
         Initialize a map for Stanford Building Parser Dataset (SBPD)
         """
@@ -38,7 +38,7 @@ class SBPDMap(ObstacleMap):
 
         free_xy = np.array(np.where(traversible)).T
         self.free_xy_map_m2 = free_xy[:, ::-1]
-        #Swap the traversible to have 1's where the building is traversable
+        # Swap the traversible to have 1's where the building is traversable
         self.occupancy_grid_map = np.logical_not(traversible)*1.
 
     def _initialize_fmm_map(self):
@@ -52,11 +52,11 @@ class SBPDMap(ObstacleMap):
         occupied_xy_m2 = occupied_xy_m2[:, ::-1]
         occupied_xy_m2_world = self._map_to_point(occupied_xy_m2)
         self.fmm_map = FmmMap.create_fmm_map_based_on_goal_position(
-                                goal_positions_n2=occupied_xy_m2_world,
-                                map_size_2=p.map_size_2,
-                                dx=p.dx,
-                                map_origin_2=p.map_origin_2,
-                                mask_grid_mn=None)
+            goal_positions_n2=occupied_xy_m2_world,
+            map_size_2=p.map_size_2,
+            dx=p.dx,
+            map_origin_2=p.map_origin_2,
+            mask_grid_mn=None)
 
     def dist_to_nearest_obs(self, pos_nk2):
         """
@@ -64,7 +64,8 @@ class SBPDMap(ObstacleMap):
         from a given position to return just that. 
         """
         with tf.name_scope('dist_to_obs'):
-            distance_nk = self.fmm_map.fmm_distance_map.compute_voxel_function(pos_nk2)
+            distance_nk = self.fmm_map.fmm_distance_map.compute_voxel_function(
+                pos_nk2)
             return distance_nk
 
     def sample_point_112(self, rng, free_xy_map_m2=None):
@@ -100,8 +101,9 @@ class SBPDMap(ObstacleMap):
         if 'occupancy_grid' in self.p.renderer_params.camera_params.modalities:
             occupancy_grid_world_1mk12 = kwargs['occupancy_grid_positions_ego_1mk12']
             _, m, k, _, _ = [x.value for x in occupancy_grid_world_1mk12.shape]
-            occupancy_grid_nk2 = tf.reshape(occupancy_grid_world_1mk12, (1, -1, 2))
-           
+            occupancy_grid_nk2 = tf.reshape(
+                occupancy_grid_world_1mk12, (1, -1, 2))
+
             # Broadcast the occupancy grid to batch size n if needed
             n = pos_n3.shape[0]
             if n != 1:
@@ -110,8 +112,10 @@ class SBPDMap(ObstacleMap):
                                                                           2))
             occupancy_grid_world_nk2 = DubinsCar.convert_position_and_heading_to_world_coordinates(pos_n3[:, None, :],
                                                                                                    occupancy_grid_nk2.numpy())
-            dist_to_nearest_obs_nk2 = self.dist_to_nearest_obs(occupancy_grid_world_nk2)
-            dist_to_nearest_obs_nmk1 = tf.reshape(dist_to_nearest_obs_nk2, (n, m, k, 1))
+            dist_to_nearest_obs_nk2 = self.dist_to_nearest_obs(
+                occupancy_grid_world_nk2)
+            dist_to_nearest_obs_nmk1 = tf.reshape(
+                dist_to_nearest_obs_nk2, (n, m, k, 1))
             imgs = 0.5 * (1. - tf.sign(dist_to_nearest_obs_nmk1)).numpy()
         else:
             starts_n2 = self._point_to_map(pos_n3[:, :2])
@@ -150,7 +154,7 @@ class SBPDMap(ObstacleMap):
 
         self._render_margin(ax, margin=margin0, alpha=.5)
         self._render_margin(ax, margin=margin1, alpha=.35)
-        
+
         if start_config is not None:
             if(zoom is not 0):
                 # Render map around the start by a certain amount

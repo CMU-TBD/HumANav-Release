@@ -39,6 +39,9 @@ def create_params():
                             camera_elevation_degree=-45,  # camera tilt
                             delta_theta=1.0)
 
+    # HumANav dir
+    p.humanav_dir = get_path_to_humanav()
+
     # Traversible dir
     p.traversible_dir = get_traversible_dir()
 
@@ -58,7 +61,7 @@ def create_params():
     return p
 
 def get_path_to_humanav():
-    PATH_TO_HUMANAV = '/PATH/TO/HUMANAV/'
+    PATH_TO_HUMANAV = '/home/gustavo/Documents/tbd_SocNavBenchmark/'
     if(not os.path.exists(PATH_TO_HUMANAV)):
         print('\033[31m', "ERROR: Failed to find HumANav installation at", PATH_TO_HUMANAV, '\033[0m')
         os._exit(1) # Failure condition

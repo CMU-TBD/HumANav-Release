@@ -8,7 +8,6 @@ from utils.fmm_map import FmmMap
 from utils.utils import print_colors
 import matplotlib
 
-
 class CentralSimulator(SimulatorHelper):
 
     def __init__(self, params, renderer=None):
@@ -25,9 +24,9 @@ class CentralSimulator(SimulatorHelper):
         # Parse the dependencies
         p.planner_params.planner.parse_params(p.planner_params)
         p.obstacle_map_params.obstacle_map.parse_params(p.obstacle_map_params)
-
+        # Time discretization step
         dt = p.planner_params.control_pipeline_params.system_dynamics_params.dt
-
+        # Updating horizons
         p.episode_horizon = int(np.ceil(p.episode_horizon_s / dt))
         p.control_horizon = int(np.ceil(p.control_horizon_s / dt))
         p.dt = dt
@@ -64,24 +63,7 @@ class CentralSimulator(SimulatorHelper):
                 if(i == 0 and self.params.verbose_printing):
                     print("start: ", a.start_config.position_nk2().numpy())
                     print("goal: ", a.goal_config.position_nk2().numpy())
-                # vehicle_data = a.planner.empty_data_dict()
-                if(not a.end_episode):
-                    if(self.params.verbose_printing):
-                        print(a.current_config.position_nk2().numpy())
-                    trajectory_segment, next_config, trajectory_data, commanded_actions_1kf = self._iterate(
-                        a)
-                    # Append to Vehicle Data
-                    for key in a.vehicle_data.keys():
-                        a.vehicle_data[key].append(trajectory_data[key])
-                    a.vehicle_trajectory.append_along_time_axis(
-                        trajectory_segment)
-                    a.commanded_actions_nkf.append(commanded_actions_1kf)
-                    # update config
-                    a.current_config = next_config
-                    # overwrites vehicle data with last instance before termination
-                    # vehicle_data_last = copy.copy(vehicle_data) #making a hardcopy
-                    a._enforce_episode_termination_conditions(
-                        self.params, self.obstacle_map)
+                a.update(self.params, self.system_dynamics, self.obstacle_map)
             i = i + 1
         print(" Took", i, "iterations")
         for a in self.agents:
@@ -93,54 +75,6 @@ class CentralSimulator(SimulatorHelper):
             a.valid_episode = a.episode_data['valid_episode']
             a.commanded_actions_1kf = a.episode_data['commanded_actions_1kf']
             a.obj_val = a._compute_objective_value(self.params)
-
-    def _iterate(self, agent):
-        """ Runs the planner for one step from config to generate a
-        subtrajectory, the resulting robot config after the robot executes
-        the subtrajectory, and relevant planner data"""
-        agent.planner_data = agent.planner.optimize(
-            agent.current_config, agent.goal_config)
-        trajectory_segment, trajectory_data, commanded_actions_nkf = self._process_planner_data(
-            agent, agent.planner_data)
-        next_config = SystemConfig.init_config_from_trajectory_time_index(
-            trajectory_segment, t=-1)
-        return trajectory_segment, next_config, trajectory_data, commanded_actions_nkf
-
-    def _process_planner_data(self, agent, planner_data):
-        """
-        Process the planners current plan. This could mean applying
-        open loop control or LQR feedback control on a system.
-        """
-        start_config = agent.current_config
-        # The 'plan' is open loop control
-        if 'trajectory' not in planner_data.keys():
-            trajectory, commanded_actions_nkf = self.apply_control_open_loop(start_config,
-                                                                             planner_data['optimal_control_nk2'],
-                                                                             T=self.params.control_horizon-1,
-                                                                             sim_mode=self.system_dynamics.simulation_params.simulation_mode)
-        # The 'plan' is LQR feedback control
-        else:
-            # If we are using ideal system dynamics the planned trajectory
-            # is already dynamically feasible. Clip it to the control horizon
-            if self.system_dynamics.simulation_params.simulation_mode == 'ideal':
-                trajectory = Trajectory.new_traj_clip_along_time_axis(planner_data['trajectory'],
-                                                                      self.params.control_horizon,
-                                                                      repeat_second_to_last_speed=True)
-                _, commanded_actions_nkf = self.system_dynamics.parse_trajectory(
-                    trajectory)
-            elif self.system_dynamics.simulation_params.simulation_mode == 'realistic':
-                trajectory, commanded_actions_nkf = self.apply_control_closed_loop(start_config,
-                                                                                   planner_data['spline_trajectory'],
-                                                                                   planner_data['k_nkf1'],
-                                                                                   planner_data['K_nkfd'],
-                                                                                   T=self.params.control_horizon-1,
-                                                                                   sim_mode='realistic')
-            else:
-                assert(False)
-
-        agent.planner.clip_data_along_time_axis(
-            planner_data, self.params.control_horizon)
-        return trajectory, planner_data, commanded_actions_nkf
 
     def get_observation(self, config=None, pos_n3=None, **kwargs):
         """
