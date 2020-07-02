@@ -7,6 +7,7 @@ from objectives.goal_distance import GoalDistance
 from objectives.obstacle_avoidance import ObstacleAvoidance
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
+from planners.sampling_planner import SamplingPlanner
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors
 import matplotlib
@@ -14,7 +15,7 @@ import matplotlib
 
 class Simulator(SimulatorHelper):
 
-    def __init__(self, params, obstacle_map = None):
+    def __init__(self, params, obstacle_map = None, planner=None):
         self.params = params.simulator.parse_params(params)
         self.rng = np.random.RandomState(params.seed)
         if obstacle_map is None:
@@ -460,8 +461,10 @@ class Simulator(SimulatorHelper):
 
     def _init_planner(self):
         p = self.params
-        return p.planner_params.planner(simulator=self,
-                                        params=p.planner_params)
+        return SamplingPlanner(self.obj_fn, params=p.planner_params)
+        # return p.planner_params.planner(obj_fn=self.obj_fn, params=p.planner_params)
+        # return p.planner_params.planner(simulator=self,
+        #                                 params=p.planner_params)
 
     # Functions for computing relevant metrics
     # on robot trajectories

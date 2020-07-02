@@ -8,7 +8,7 @@ from dotmap import DotMap
 from random import seed, random, randint
 
 from humanav import sbpd
-from humanav.human import Human
+from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
 
@@ -16,7 +16,6 @@ from simulators.sbpd_simulator import SBPDSimulator
 from trajectory.trajectory import SystemConfig
 from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
-from planners.sampling_planner import SamplingPlanner
 from utils.utils import touch
 
 def create_params():
@@ -32,7 +31,6 @@ def test_planner():
     planner_params = create_planner_params()
     sim_params = create_sim_params()
     sim = SBPDSimulator(sim_params)
-    splanner = SamplingPlanner(sim, planner_params)
 
     # Spline trajectory params
     n = 1
@@ -57,19 +55,18 @@ def test_planner():
                                position_nk2=goal_pos_n11,
                                heading_nk1=goal_heading_n11,
                                variable=True)
-    splanner.simulator.reset_with_start_and_goal(start_config, goal_config)
-    splanner.optimize(start_config)
-    splanner.simulator.simulate()
+    sim.reset_with_start_and_goal(start_config, goal_config)
+    sim.simulate()
     # Visualization
     fig = plt.figure(figsize=(30, 10))
     plt.rcParams.update({'font.size': 22})
     ax = fig.add_subplot(1,3,1)
-    splanner.simulator.render(ax, markersize=10)
+    sim.render(ax, markersize=10)
     ax = fig.add_subplot(1,3,2)
-    splanner.simulator.render(ax, zoom=4, markersize=20)
+    sim.render(ax, zoom=4, markersize=20)
     ax = fig.add_subplot(1,3,3)
-    splanner.simulator.vehicle_trajectory.render(ax, freq=1, plot_quiver=False)
-    splanner.simulator._render_waypoints(ax,plot_quiver=True, plot_text=False, text_offset=(0, 0), markersize=20)
+    sim.vehicle_trajectory.render(ax, freq=1, plot_quiver=False)
+    sim._render_waypoints(ax,plot_quiver=True, plot_text=False, text_offset=(0, 0), markersize=20)
     file_name = os.path.join(p.humanav_dir, 'tests/visual-nav/test_simulator.png')
     if(not os.path.exists(file_name)):
         print('\033[31m', "Failed to find:", file_name, '\033[33m', "and therefore it will be created", '\033[0m')
