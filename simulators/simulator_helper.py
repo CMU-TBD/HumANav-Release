@@ -17,7 +17,8 @@ class SimulatorHelper(object):
         x_next_n1d = x0_n1d*1.
         for t in range(T):
             u_n1f = control_nk2[:, t:t+1]
-            x_next_n1d = self.system_dynamics.simulate(x_next_n1d, u_n1f, mode=sim_mode)
+            x_next_n1d = self.system_dynamics.simulate(
+                x_next_n1d, u_n1f, mode=sim_mode)
 
             # Append the applied action to the action list
             if sim_mode == 'ideal':
@@ -27,7 +28,8 @@ class SimulatorHelper(object):
                 # If running this code on a real robot the user will need to
                 # implement hardware.state_dx such that it reflects the current
                 # sensor reading of the robot's applied actions
-                applied_actions.append(np.array(self.system_dynamics.hardware.state_dx*1.)[None, None])
+                applied_actions.append(
+                    np.array(self.system_dynamics.hardware.state_dx*1.)[None, None])
             else:
                 assert(False)
 
@@ -56,7 +58,8 @@ class SimulatorHelper(object):
             commanded_actions_nkf = []
             applied_actions = []
             states = [x0_n1d*1.]
-            x_ref_nkd, u_ref_nkf = self.system_dynamics.parse_trajectory(trajectory_ref)
+            x_ref_nkd, u_ref_nkf = self.system_dynamics.parse_trajectory(
+                trajectory_ref)
             x_next_n1d = x0_n1d*1.
             for t in range(T):
                 x_ref_n1d, u_ref_n1f = x_ref_nkd[:, t:t+1], u_ref_nkf[:, t:t+1]
@@ -66,7 +69,8 @@ class SimulatorHelper(object):
                 # is not working to place non-gpu ops (i.e. mod) on the cpu
                 # turning tensors into numpy arrays is a hack around this.
                 error_t_n1d = tf.concat([error_t_n1d[:, :, :angle_dims],
-                                         angle_normalize(error_t_n1d[:, :, angle_dims:angle_dims+1].numpy()),
+                                         angle_normalize(
+                                             error_t_n1d[:, :, angle_dims:angle_dims+1].numpy()),
                                          error_t_n1d[:, :, angle_dims+1:]],
                                         axis=2)
                 fdback_nf1 = tf.matmul(K_array_nTfd[:, t],
@@ -74,7 +78,8 @@ class SimulatorHelper(object):
                 u_n1f = u_ref_n1f + tf.transpose(k_array_nTf1[:, t] + fdback_nf1,
                                                  perm=[0, 2, 1])
 
-                x_next_n1d = self.system_dynamics.simulate(x_next_n1d, u_n1f, mode=sim_mode)
+                x_next_n1d = self.system_dynamics.simulate(
+                    x_next_n1d, u_n1f, mode=sim_mode)
 
                 commanded_actions_nkf.append(u_n1f)
                 # Append the applied action to the action list
@@ -85,7 +90,8 @@ class SimulatorHelper(object):
                     # If running this code on a real robot the user will need to
                     # implement hardware.state_dx such that it reflects the current
                     # sensor reading of the robot's applied actions
-                    applied_actions.append(np.array(self.system_dynamics.hardware.state_dx*1.)[None, None])
+                    applied_actions.append(
+                        np.array(self.system_dynamics.hardware.state_dx*1.)[None, None])
                 else:
                     assert(False)
 

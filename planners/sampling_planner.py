@@ -18,7 +18,8 @@ class SamplingPlanner(Planner):
         Parse the parameters to add some additional helpful parameters.
         """
         # Parse the dependencies
-        p.control_pipeline_params.pipeline.parse_params(p.control_pipeline_params)
+        p.control_pipeline_params.pipeline.parse_params(
+            p.control_pipeline_params)
 
         p.system_dynamics = p.control_pipeline_params.system_dynamics_params.system
         p.dt = p.control_pipeline_params.system_dynamics_params.dt
@@ -38,10 +39,12 @@ class SamplingPlanner(Planner):
         waypts, horizons_s, trajectories_lqr, trajectories_spline, controllers = data
 
         self.opt_waypt.assign_from_config_batch_idx(waypts, min_idx)
-        self.opt_traj.assign_from_trajectory_batch_idx(trajectories_lqr, min_idx)
+        self.opt_traj.assign_from_trajectory_batch_idx(
+            trajectories_lqr, min_idx)
 
         # Convert horizon in seconds to horizon in # of steps
-        min_horizon = int(tf.ceil(horizons_s[min_idx, 0] / self.params.dt).numpy())
+        min_horizon = int(
+            tf.ceil(horizons_s[min_idx, 0] / self.params.dt).numpy())
 
         # If the real LQR data has been discarded just take the first element
         # since it will be all zeros
@@ -59,6 +62,6 @@ class SamplingPlanner(Planner):
                 'planning_horizon': min_horizon,
                 'K_nkfd': K_nkfd,
                 'k_nkf1': k_nkf1,
-                'img_nmkd': []} # Dont think we need for our purposes
+                'img_nmkd': []}  # Dont think we need for our purposes
 
         return data

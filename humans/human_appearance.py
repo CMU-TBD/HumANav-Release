@@ -1,5 +1,7 @@
 from random import seed, random, randint
-import random, string, math
+import random
+import string
+import math
 import numpy as np
 
 
@@ -18,10 +20,13 @@ class HumanAppearance():
     # Getters for the HumanAppearance class
     def get_shape(self):
         return self.shape
+
     def get_gender(self):
         return self.gender
+
     def get_texture(self):
         return self.texture
+
     def get_mesh_rng(self):
         return self.mesh_rng
 
@@ -38,10 +43,11 @@ class HumanAppearance():
         """
         # Set the identity seed. this is used to sample the indentity that generates
         # the human gender, texture, and body shape
-        identity_rng = np.random.RandomState(randint(1,1000))
+        identity_rng = np.random.RandomState(randint(1, 1000))
         # Using the SBPD dataset to generate a random gender, texture, and body shape
         human_gender, human_texture, body_shape = \
-            dataset.get_random_human_gender_texture_and_body_shape(identity_rng)
+            dataset.get_random_human_gender_texture_and_body_shape(
+                identity_rng)
         return human_gender, human_texture, body_shape
 
     def generate_random_human_appearance(self, dataset):

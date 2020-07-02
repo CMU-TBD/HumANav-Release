@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys, math
+import os
+import sys
+import math
 from dotmap import DotMap
 from random import seed, random, randint
 from humanav import sbpd
@@ -9,10 +11,11 @@ from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humanav.renderer_params import create_params as create_base_params
 from utils.utils import touch
 
+
 def create_params():
     p = create_base_params()
 
-	# Set any custom parameters
+    # Set any custom parameters
     p.building_name = 'area3'
 
     p.camera_params.width = 1024
@@ -28,11 +31,13 @@ def create_params():
 
     p.camera_params.modalities = ['rgb', 'disparity']
     return p
-    
+
+
 def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13, humans, filename):
 
     map_scale = environment["map_scale"]
-    traversible = environment["traversibles"][0] # Obstacles/building traversible
+    # Obstacles/building traversible
+    traversible = environment["traversibles"][0]
     human_traversible = environment["traversibles"][1]
     # Compute the real_world extent (in meters) of the traversible
     extent = [0., traversible.shape[1], 0., traversible.shape[0]]
@@ -48,16 +53,18 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
     # Plot the 5x5 meter human radius grid atop the environment traversible
     alphas = np.empty(np.shape(human_traversible))
     for y in range(human_traversible.shape[1]):
-            for x in range(human_traversible.shape[0]):
-                alphas[x][y] = not(human_traversible[x][y])
+        for x in range(human_traversible.shape[0]):
+            alphas[x][y] = not(human_traversible[x][y])
     ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
-              vmin=-.5, vmax=1.5, origin='lower', alpha = alphas)
+              vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
     alphas = np.all(np.invert(human_traversible))
 
     # Plot the camera
-    ax.plot(camera_pos_13[0, 0], camera_pos_13[0, 1], 'bo', markersize=10, label='Camera')
-    ax.quiver(camera_pos_13[0, 0], camera_pos_13[0, 1], np.cos(camera_pos_13[0, 2]), np.sin(camera_pos_13[0, 2]))
-    
+    ax.plot(camera_pos_13[0, 0], camera_pos_13[0, 1],
+            'bo', markersize=10, label='Camera')
+    ax.quiver(camera_pos_13[0, 0], camera_pos_13[0, 1], np.cos(
+        camera_pos_13[0, 2]), np.sin(camera_pos_13[0, 2]))
+
     # Plot the humans (added support for multiple humans)
     for i, human in enumerate(humans):
         human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
@@ -65,13 +72,16 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
         human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
 
         if(i == 0):
-            ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10, label='Human')
-            ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10, label='Goal')
+            ax.plot(human_pos_2[0], human_pos_2[1],
+                    'ro', markersize=10, label='Human')
+            ax.plot(human_goal_2[0], human_goal_2[1],
+                    'go', markersize=10, label='Goal')
         else:
             ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10)
             ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10)
-        ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(human_heading), scale=2, scale_units='inches')
-    
+        ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(
+            human_heading), scale=2, scale_units='inches')
+
     ax.legend()
     ax.set_xlim([camera_pos_13[0, 0]-5., camera_pos_13[0, 0]+5.])
     ax.set_ylim([camera_pos_13[0, 1]-5., camera_pos_13[0, 1]+5.])
@@ -95,10 +105,12 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
 
     full_file_name = os.path.join(p.humanav_dir, 'tests/humanav', filename)
     if(not os.path.exists(full_file_name)):
-        print('\033[31m', "Failed to find:", full_file_name, '\033[33m', "and therefore it will be created", '\033[0m')
-        touch(full_file_name) # Just as the bash command
+        print('\033[31m', "Failed to find:", full_file_name,
+              '\033[33m', "and therefore it will be created", '\033[0m')
+        touch(full_file_name)  # Just as the bash command
     fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
     print('\033[32m', "Successfully rendered:", full_file_name, '\033[0m')
+
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
     # Convert from real world units to grid world units
@@ -106,27 +118,38 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
 
     # Render RGB and Depth Images. The shape of the resulting
     # image is (1 (batch), m (width), k (height), c (number channels))
-    rgb_image_1mk3 = r._get_rgb_image(camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
+    rgb_image_1mk3 = r._get_rgb_image(
+        camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
 
-    depth_image_1mk1, _, _ = r._get_depth_image(camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05, map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
+    depth_image_1mk1, _, _ = r._get_depth_image(
+        camera_grid_world_pos_12,
+        camera_pos_13[:, 2:3],
+        xy_resolution=.05,
+        map_size=1500,
+        pos_3=camera_pos_13[0, :3],
+        human_visible=True
+    )
 
     return rgb_image_1mk3, depth_image_1mk1
+
 
 def test_1(num_humans):
     """
     Code for loading a random human into the environment
     and rendering topview, rgb, and depth images.
     """
-    p = create_params() # used to instantiate the camera and its parameters
+    p = create_params()  # used to instantiate the camera and its parameters
 
-    r = HumANavRendererMulti.get_renderer(p)#get the renderer from the camera p
+    # get the renderer from the camera p
+    r = HumANavRendererMulti.get_renderer(p)
 
     # Get the surreal dataset for human generation
     surreal_data = r.d
 
-    dx_cm, traversible = r.get_config()#obtain "resolution and traversible of building"
+    # obtain "resolution and traversible of building"
+    dx_cm, traversible = r.get_config()
     human_traversible = np.empty(traversible.shape)
-    human_traversible.fill(True) #initially all good
+    human_traversible.fill(True)  # initially all good
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm/100.
 
@@ -134,8 +157,8 @@ def test_1(num_humans):
     # Multiple entries yield multiple shots
     camera_pos_13 = np.array([
         [9., 22., -np.pi/4],
-        [16.,17., -np.pi],
-        [9.,15., np.pi/2.],
+        [16., 17., -np.pi],
+        [9., 15., np.pi/2.],
 
     ])
 
@@ -147,17 +170,19 @@ def test_1(num_humans):
         for j in range(num_dots):
             for k in range(num_dots):
                 if (j == 0 or j == num_dots - 1 or k == 0 or k == num_dots - 1):
-                    camera_x = int(camera_pos_13[i][0]/dx_m) - int(skip/2.*num_dots) + skip*j
-                    camera_y = int(camera_pos_13[i][1]/dx_m) - int(skip/2.*num_dots) + skip*k
+                    camera_x = int(
+                        camera_pos_13[i][0]/dx_m) - int(skip/2.*num_dots) + skip*j
+                    camera_y = int(
+                        camera_pos_13[i][1]/dx_m) - int(skip/2.*num_dots) + skip*k
                     traversible[camera_y][camera_x] = False
 
     # In order to print more readable arrays
-    np.set_printoptions(precision = 2)
+    np.set_printoptions(precision=2)
 
     # Output position of new camera renders
     for i in range(num_cameras):
         print("Rendering camera (robot) at", camera_pos_13[i])
-        
+
     humans = []
 
     # Create default environment which is a dictionary
@@ -166,28 +191,39 @@ def test_1(num_humans):
     environment = {}
     environment["map_scale"] = dx_m
     # obstacle traversible / human traversible
-    environment["traversibles"] = (traversible, human_traversible) 
-    room_center = np.array([12., 17., 0.]) #of area 3 (scaled up 50%)
+    environment["traversibles"] = (traversible, human_traversible)
+    room_center = np.array([12., 17., 0.])  # of area 3 (scaled up 50%)
     for i in range(num_humans):
         # Generates a random human from the environment
-        humans.append(Human.generate_random_human_from_environment(Human, surreal_data, environment, room_center, radius=8))
+        humans.append(Human.generate_random_human_from_environment(
+            Human,
+            surreal_data,
+            environment,
+            room_center,
+            radius=8)
+        )
 
         # Load a random human at a specified state and speed
         r.add_human_at_position_with_speed(humans[i])
-        environment["traversibles"] = (traversible, r.get_human_traversible()) #update human traversible
+        environment["traversibles"] = (
+            traversible, r.get_human_traversible()
+        )  # update human traversible
 
     # Get information about which mesh was loaded
     human_mesh_info = r.human_mesh_params
-    
+
     # Plotting an image for each camera location
     for i in range(num_cameras):
-        rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
+        rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(
+            r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
 
         # Plot the rendered images
-        plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, np.array([camera_pos_13[i]]), humans, "example1_v" + str(i) + ".png")
+        plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, np.array(
+            [camera_pos_13[i]]), humans, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
     r.remove_all_humans()
 
+
 if __name__ == '__main__':
-    test_1(5) # run basic room test with 5 humans
+    test_1(5)  # run basic room test with 5 humans

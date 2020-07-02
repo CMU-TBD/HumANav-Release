@@ -11,7 +11,7 @@ import matplotlib
 
 class CentralSimulator(SimulatorHelper):
 
-    def __init__(self, params, renderer = None):
+    def __init__(self, params, renderer=None):
         self.params = params.simulator.parse_params(params)
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.system_dynamics = self._init_system_dynamics()
@@ -31,7 +31,7 @@ class CentralSimulator(SimulatorHelper):
         p.episode_horizon = int(np.ceil(p.episode_horizon_s / dt))
         p.control_horizon = int(np.ceil(p.control_horizon_s / dt))
         p.dt = dt
- 
+
         return p
 
     def add_agent(self, agent):
@@ -42,7 +42,7 @@ class CentralSimulator(SimulatorHelper):
         agent.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         agent._update_fmm_map(self.params, self.obstacle_map)
         self.agents.append(agent)
- 
+
     def exists_running_agent(self):
         for x in self.agents:
             # if there is even just a single agent running
@@ -51,10 +51,13 @@ class CentralSimulator(SimulatorHelper):
         return False
 
     def simulate(self):
-        """ A function that simulates an entire episode. The agent starts at self.start_config, repeatedly
-        calling _iterate to generate subtrajectories. Generates a vehicle_trajectory for the episode, calculates its
-        objective value, and sets the episode_type (timeout, collision, success)"""
-        print(print_colors()["blue"], "Running simulation on", len(self.agents), "agents", print_colors()["reset"])
+        """ A function that simulates an entire episode. The agent starts
+        at self.start_config, repeatedly calling _iterate to generate 
+        subtrajectories. Generates a vehicle_trajectory for the episode, 
+        calculates its objective value, and sets the episode_type 
+        (timeout, collision, success) """
+        print(print_colors()["blue"], "Running simulation on", len(
+            self.agents), "agents", print_colors()["reset"])
         i = 0
         while self.exists_running_agent():
             for a in self.agents:
@@ -65,19 +68,22 @@ class CentralSimulator(SimulatorHelper):
                 if(not a.end_episode):
                     if(self.params.verbose_printing):
                         print(a.current_config.position_nk2().numpy())
-                    trajectory_segment, next_config, trajectory_data, commanded_actions_1kf = self._iterate(a)
+                    trajectory_segment, next_config, trajectory_data, commanded_actions_1kf = self._iterate(
+                        a)
                     # Append to Vehicle Data
                     for key in a.vehicle_data.keys():
                         a.vehicle_data[key].append(trajectory_data[key])
-                    a.vehicle_trajectory.append_along_time_axis(trajectory_segment)
+                    a.vehicle_trajectory.append_along_time_axis(
+                        trajectory_segment)
                     a.commanded_actions_nkf.append(commanded_actions_1kf)
                     # update config
                     a.current_config = next_config
                     # overwrites vehicle data with last instance before termination
                     # vehicle_data_last = copy.copy(vehicle_data) #making a hardcopy
-                    a._enforce_episode_termination_conditions(self.params, self.obstacle_map)
+                    a._enforce_episode_termination_conditions(
+                        self.params, self.obstacle_map)
             i = i + 1
-        print(" Took",i,"iterations")
+        print(" Took", i, "iterations")
         for a in self.agents:
             a.vehicle_trajectory = a.episode_data['vehicle_trajectory']
             a.vehicle_data = a.episode_data['vehicle_data']
@@ -92,9 +98,12 @@ class CentralSimulator(SimulatorHelper):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
         the subtrajectory, and relevant planner data"""
-        agent.planner_data = agent.planner.optimize(agent.current_config, agent.goal_config)
-        trajectory_segment, trajectory_data, commanded_actions_nkf = self._process_planner_data(agent, agent.planner_data)
-        next_config = SystemConfig.init_config_from_trajectory_time_index(trajectory_segment, t=-1)
+        agent.planner_data = agent.planner.optimize(
+            agent.current_config, agent.goal_config)
+        trajectory_segment, trajectory_data, commanded_actions_nkf = self._process_planner_data(
+            agent, agent.planner_data)
+        next_config = SystemConfig.init_config_from_trajectory_time_index(
+            trajectory_segment, t=-1)
         return trajectory_segment, next_config, trajectory_data, commanded_actions_nkf
 
     def _process_planner_data(self, agent, planner_data):
@@ -117,7 +126,8 @@ class CentralSimulator(SimulatorHelper):
                 trajectory = Trajectory.new_traj_clip_along_time_axis(planner_data['trajectory'],
                                                                       self.params.control_horizon,
                                                                       repeat_second_to_last_speed=True)
-                _, commanded_actions_nkf = self.system_dynamics.parse_trajectory(trajectory)
+                _, commanded_actions_nkf = self.system_dynamics.parse_trajectory(
+                    trajectory)
             elif self.system_dynamics.simulation_params.simulation_mode == 'realistic':
                 trajectory, commanded_actions_nkf = self.apply_control_closed_loop(start_config,
                                                                                    planner_data['spline_trajectory'],
@@ -128,7 +138,8 @@ class CentralSimulator(SimulatorHelper):
             else:
                 assert(False)
 
-        agent.planner.clip_data_along_time_axis(planner_data, self.params.control_horizon)
+        agent.planner.clip_data_along_time_axis(
+            planner_data, self.params.control_horizon)
         return trajectory, planner_data, commanded_actions_nkf
 
     def get_observation(self, config=None, pos_n3=None, **kwargs):
@@ -148,7 +159,7 @@ class CentralSimulator(SimulatorHelper):
     def _reset_obstacle_map(self, rng):
         raise NotImplementedError
 
-    def _init_obstacle_map(self, renderer = None):
+    def _init_obstacle_map(self, renderer=None):
         """ Initializes the sbpd map."""
         p = self.params.obstacle_map_params
         return p.obstacle_map(p, renderer)
