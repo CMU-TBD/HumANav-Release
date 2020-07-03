@@ -97,7 +97,7 @@ class Agent():
                 self.apply_control_open_loop(start_config,
                                              self.planner_data['optimal_control_nk2'],
                                              T=params.control_horizon-1,
-                                             sim_mode=self.system_dynamics.simulation_params.simulation_mode)
+                                             sim_mode=system_dynamics.simulation_params.simulation_mode)
         # The 'plan' is LQR feedback control
         else:
             # If we are using ideal system dynamics the planned trajectory
@@ -111,9 +111,9 @@ class Agent():
             elif system_dynamics.simulation_params.simulation_mode == 'realistic':
                 trajectory, commanded_actions_nkf = \
                     self.apply_control_closed_loop(start_config,
-                                                   planner_data['spline_trajectory'],
-                                                   planner_data['k_nkf1'],
-                                                   planner_data['K_nkfd'],
+                                                   self.planner_data['spline_trajectory'],
+                                                   self.planner_data['k_nkf1'],
+                                                   self.planner_data['K_nkfd'],
                                                    T=params.control_horizon-1,
                                                    sim_mode='realistic')
             else:

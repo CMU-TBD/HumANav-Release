@@ -39,8 +39,8 @@ def create_params():
     # Tilt the camera 10 degree down from the horizontal axis
     p.robot_params.camera_elevation_degree = -10
 
-    p.camera_params.modalities = ['occupancy_grid']
-    # p.camera_params.modalities = ['rgb', 'disparity'] # when pc has a display
+    # p.camera_params.modalities = ['occupancy_grid']
+    p.camera_params.modalities = ['rgb', 'disparity'] # when pc has a display
     return p
 
 
@@ -238,8 +238,13 @@ def test_socnav(num_humans):
     room_center = np.array([12., 17., 0.])
     for i in range(num_humans):
         # Generates a random human from the environment
+        generate_appearance = True
+        if 'occupancy_grid' in p.camera_params.modalities:
+            generate_appearance = False
         new_human_i = Human.generate_random_human_from_environment(
-            Human, surreal_data, environment, room_center, generate_appearance=False, radius=6)
+            Human, surreal_data, environment, room_center, 
+            generate_appearance=generate_appearance, radius=6
+            )
         # Or specify a human's initial configs with a HumanConfig instance
         # Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
         human_list.append(new_human_i)
