@@ -57,7 +57,7 @@ class Agent():
         self.episode_type = self.episode_data['episode_type']
         self.valid_episode = self.episode_data['valid_episode']
         self.commanded_actions_1kf = self.episode_data['commanded_actions_1kf']
-        self.obj_val = self._compute_objective_value(self.params)
+        self.obj_val = self._compute_objective_value(params)
 
     def update(self, params, system_dynamics, obstacle_map):
         if(not self.end_episode):
