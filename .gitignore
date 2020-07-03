@@ -1,4 +1,4 @@
-tbd_humanav.egg-info/
+tbd_socnavbench.egg-info/
 *.pyc
 server/outdir
 tmp/
@@ -19,3 +19,4 @@ params/renderer_params.py
 tests/humanav/
 tests/visual-nav/
 tests/socnav/
+params/renderer_params.py

@@ -23,7 +23,10 @@ class Human():
         self.name = name
         self.appearance = appearance
         # Identity is a hashable tuple of a human's name, gender, and shape
-        self.identity = (name, appearance.gender, appearance.shape)
+        if appearance is None:
+            self.identity = (name)
+        else:
+            self.identity = (name, appearance.gender, appearance.shape)
         self.configs = configs
         self.trajectory = trajectory
         self.termination = None
@@ -100,14 +103,17 @@ class Human():
                                                dataset,
                                                environment,
                                                center=np.array([0., 0., 0.]),
-                                               radius=5.):
+                                               radius=5.,
+                                               generate_appearance=False):
         """
         Sample a new human without knowing any configs or appearance fields
         NOTE: needs environment to produce valid configs, and needs a dataset
         to produce an appearance
         """
-        appearance = HumanAppearance.generate_random_human_appearance(
-            HumanAppearance, dataset)
+        appearance = None
+        if generate_appearance:
+            appearance = HumanAppearance.generate_random_human_appearance(
+                         HumanAppearance, dataset)
         configs = HumanConfigs.generate_random_human_config(HumanConfigs,
                                                             environment,
                                                             center,

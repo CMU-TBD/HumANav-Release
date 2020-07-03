@@ -1,3 +1,5 @@
+import matplotlib as mpl
+mpl.use('Agg') # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
 import os, sys, math
@@ -37,7 +39,8 @@ def create_params():
     # Tilt the camera 10 degree down from the horizontal axis
     p.robot_params.camera_elevation_degree = -10
 
-    p.camera_params.modalities = ['rgb', 'disparity']
+    p.camera_params.modalities = ['occupancy_grid']
+    # p.camera_params.modalities = ['rgb', 'disparity'] # when pc has a display
     return p
 
 
@@ -45,14 +48,15 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, huma
     ax.imshow(traversible, extent=extent, cmap='gray',
               vmin=-.5, vmax=1.5, origin='lower')
 
-    # Plot the 5x5 meter human radius grid atop the environment traversible
-    alphas = np.empty(np.shape(human_traversible))
-    for y in range(human_traversible.shape[1]):
-        for x in range(human_traversible.shape[0]):
-            alphas[x][y] = not(human_traversible[x][y])
-    ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
-              vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
-    alphas = np.all(np.invert(human_traversible))
+    if human_traversible is not None:
+        # Plot the 5x5 meter human radius grid atop the environment traversible
+        alphas = np.empty(np.shape(human_traversible))
+        for y in range(human_traversible.shape[1]):
+            for x in range(human_traversible.shape[0]):
+                alphas[x][y] = not(human_traversible[x][y])
+        ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
+                vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
+        alphas = np.all(np.invert(human_traversible))
 
     # Plot the camera
     ax.plot(camera_pos_13[0], camera_pos_13[1],
@@ -87,16 +91,25 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, c
     map_scale = environment["map_scale"]
     # Obstacles/building traversible
     traversible = environment["traversibles"][0]
-    human_traversible = environment["traversibles"][1]
+    human_traversible = None
+    if len(environment["traversibles"]) > 1:
+        human_traversible = environment["traversibles"][1]
     # Compute the real_world extent (in meters) of the traversible
     extent = [0., traversible.shape[1], 0., traversible.shape[0]]
     extent = np.array(extent) * map_scale
 
-    fig = plt.figure(figsize=(40, 10))
+    num_frames = 2
+    if rgb_image_1mk3 is not None:
+        num_frames = num_frames + 1
+    if depth_image_1mk1 is not None:
+        num_frames = num_frames + 1
+    
+    img_size = 10
+    fig = plt.figure(figsize=(num_frames * img_size, img_size))
 
     # Plot the 5x5 meter occupancy grid centered around the camera
     zoom = 5.5  # zoom in by a constant amount
-    ax = fig.add_subplot(1, 4, 1)
+    ax = fig.add_subplot(1, num_frames, 1)
     ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
     ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
     plot_topview(ax, extent, traversible, human_traversible,
@@ -109,7 +122,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, c
     # Render entire map-view from the top
     # to keep square plot
     outer_zoom = min(traversible.shape[0], traversible.shape[1]) * map_scale
-    ax = fig.add_subplot(1, 4, 2)
+    ax = fig.add_subplot(1, num_frames, 2)
     ax.set_xlim(0., outer_zoom)
     ax.set_ylim(0., outer_zoom)
     plot_topview(ax, extent, traversible,
@@ -119,19 +132,21 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, c
     ax.set_yticks([])
     ax.set_title('Topview')
 
-    # Plot the RGB Image
-    ax = fig.add_subplot(1, 4, 3)
-    ax.imshow(rgb_image_1mk3[0].astype(np.uint8))
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title('RGB')
+    if rgb_image_1mk3 is not None:
+        # Plot the RGB Image
+        ax = fig.add_subplot(1, num_frames, 3)
+        ax.imshow(rgb_image_1mk3[0].astype(np.uint8))
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title('RGB')
 
-    # Plot the Depth Image
-    ax = fig.add_subplot(1, 4, 4)
-    ax.imshow(depth_image_1mk1[0, :, :, 0].astype(np.uint8), cmap='gray')
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title('Depth')
+    if depth_image_1mk1 is not None:
+        # Plot the Depth Image
+        ax = fig.add_subplot(1, num_frames, 4)
+        ax.imshow(depth_image_1mk1[0, :, :, 0].astype(np.uint8), cmap='gray')
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title('Depth')
 
     full_file_name = os.path.join(p.humanav_dir, 'tests/socnav', filename)
     if(not os.path.exists(full_file_name)):
@@ -202,8 +217,10 @@ def test_socnav(num_humans):
     environment = {}
     environment["map_scale"] = dx_m
     # obstacle traversible / human traversible
-    environment["traversibles"] = (traversible, human_traversible)
-
+    if 'occupancy_grid' not in p.camera_params.modalities:
+        environment["traversibles"] = [traversible, human_traversible]
+    else:
+        environment["traversibles"] = np.array([traversible])
     """
     Creating planner, simulator, and control pipelines for the framework
     of a human trajectory and pathfinding. 
@@ -222,16 +239,17 @@ def test_socnav(num_humans):
     for i in range(num_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment(
-            Human, surreal_data, environment, room_center, radius=6)
+            Human, surreal_data, environment, room_center, generate_appearance=False, radius=6)
         # Or specify a human's initial configs with a HumanConfig instance
         # Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
         human_list.append(new_human_i)
 
         # Load a random human at a specified state and speed
-        r.add_human_at_position_with_speed(human_list[i])
-        environment["traversibles"] = (
-            traversible, r.get_human_traversible())  # update human traversible
-
+        if 'occupancy_grid' not in p.camera_params.modalities:
+            r.add_human_at_position_with_speed(human_list[i])
+            environment["traversibles"] = np.array([traversible, r.get_human_traversible()])  # update human traversible
+        else:
+            environment["traversibles"] = np.array([traversible])  # update human traversible
         # Input human fields into simulator
         simulator.add_agent(Agent.human_to_agent(Agent, new_human_i))
 
@@ -243,15 +261,18 @@ def test_socnav(num_humans):
 
     # Plotting an image for each camera location
     for i in range(num_cameras):
-        rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(
-            r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
-
+        rgb_image_1mk3 = None
+        depth_image_1mk1 = None
+        if 'occupancy_grid' not in p.camera_params.modalities: # only when rendering with opengl
+            rgb_image_1mk3, depth_image_1mk1 = \
+                render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
         # Plot the rendered images
         plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
                     camera_pos_13[i], human_list, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
-    r.remove_all_humans()
+    if 'occupancy_grid' not in p.camera_params.modalities: # only when rendering with opengl
+        r.remove_all_humans()
 
 
 if __name__ == '__main__':

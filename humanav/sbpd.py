@@ -21,15 +21,9 @@ import sys
 import pickle
 import numpy  as np
 
-# Py27 vs Py3 imports
-if sys.version_info[0] == 2:
-    from render import swiftshader_renderer as renderer
-    import utils
-    import mp_env
-else:
-    from mp_env.render import swiftshader_renderer as renderer 
-    from humanav import utils
-    from mp_env import mp_env
+from mp_env.render import swiftshader_renderer as renderer 
+from humanav import utils
+from mp_env import mp_env
 
 def get_dataset(dataset_name, imset, data_dir, surreal_params = None):
   if dataset_name == 'sbpd':

@@ -133,11 +133,14 @@ class HumanConfigs():
         # and the human
         global_traversible = np.empty(environment["traversibles"][0].shape)
         global_traversible.fill(True)
-        for t in environment["traversibles"]:
-            # add 0th and all others that match shape
-            if(t.shape == environment["traversibles"][0].shape):
-                global_traversible = np.stack([global_traversible, t], axis=2)
-                global_traversible = np.all(global_traversible, axis=2)
+        if len(environment["traversibles"]) > 1:
+            for t in environment["traversibles"]:
+                # add 0th and all others that match shape
+                if(t.shape == environment["traversibles"][0].shape):
+                    global_traversible = np.stack([global_traversible, t], axis=2)
+                    global_traversible = np.all(global_traversible, axis=2)
+        else:
+            global_traversible = environment["traversibles"][0]
 
         # Generating new position as human's position
         pos_3 = np.array([-1, -1, 0])  # start far out of the traversible
