@@ -1,4 +1,3 @@
-from humanav.renderer_params import get_surreal_texture_dir
 from humans.human_appearance import HumanAppearance
 from humans.human_configs import HumanConfigs
 from random import seed, random, randint

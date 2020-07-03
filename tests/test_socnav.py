@@ -10,13 +10,13 @@ from humanav import sbpd
 from humans.human import Human
 from humans.human_configs import HumanConfigs
 from humanav.humanav_renderer_multi import HumANavRendererMulti
-from humanav.renderer_params import create_params as create_base_params
 from simulators.agent import Agent
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
 from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
+from params.renderer_params import create_params as create_base_params
 # Other
 from utils.utils import touch, print_colors
 

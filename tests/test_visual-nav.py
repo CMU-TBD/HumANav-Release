@@ -1,14 +1,3 @@
-from utils.utils import touch
-from params.simulator.sbpd_simulator_params import create_params as create_sim_params
-from params.planner_params import create_params as create_planner_params
-from trajectory.trajectory import SystemConfig
-from simulators.sbpd_simulator import SBPDSimulator
-from humanav.renderer_params import create_params as create_base_params
-from humanav.humanav_renderer_multi import HumANavRendererMulti
-from humans.human import Human
-from humanav import sbpd
-from random import seed, random, randint
-from dotmap import DotMap
 import numpy as np
 import os
 import sys
@@ -16,6 +5,17 @@ import math
 import matplotlib.pyplot as plt
 import tensorflow as tf
 tf.enable_eager_execution()
+
+from params.simulator.sbpd_simulator_params import create_params as create_sim_params
+from trajectory.trajectory import SystemConfig
+from simulators.sbpd_simulator import SBPDSimulator
+from humanav.humanav_renderer_multi import HumANavRendererMulti
+from humans.human import Human
+from humanav import sbpd
+from params.renderer_params import create_params as create_base_params
+from random import seed, random, randint
+from dotmap import DotMap
+from utils.utils import touch
 
 
 def create_params():
@@ -28,7 +28,6 @@ def create_params():
 def test_planner():
     p = create_params()
     # Create planner parameters
-    planner_params = create_planner_params()
     sim_params = create_sim_params()
     sim = SBPDSimulator(sim_params)
 
