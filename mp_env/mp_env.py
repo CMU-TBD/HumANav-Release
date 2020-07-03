@@ -225,7 +225,7 @@ class Building():
           # Remove the human that matches the ID
           name = ID[0]
           if name in human_entitiy_ids[i]:
-            print('\033[35m', "Deleted Human: " + name, '\033[0m')
+            print(" Deleted Human: " + name)
             self.renderer_entitiy_ids.remove(human_entitiy_ids[i])
 
       # Update the traversible to be human free

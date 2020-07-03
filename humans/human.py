@@ -72,9 +72,7 @@ class Human():
         np.set_printoptions(precision=2)
         pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
         goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
-        print(print_colors()["yellow"], "Human", name, "at", pos_2,
-              "with goal", goal_2,
-              print_colors()["reset"])
+        print(" Human", name, "at", pos_2, "with goal", goal_2)
         return Human(name, appearance, configs)
 
     def generate_human_with_appearance(self,
