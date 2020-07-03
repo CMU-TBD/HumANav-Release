@@ -13,6 +13,7 @@ class CentralSimulator(SimulatorHelper):
     def __init__(self, params, renderer=None):
         self.params = params.simulator.parse_params(params)
         self.obstacle_map = self._init_obstacle_map(renderer)
+        # theoretially all the agents can have their own system dynamics as well
         self.system_dynamics = self._init_system_dynamics()
         self.agents = []
 
@@ -67,31 +68,36 @@ class CentralSimulator(SimulatorHelper):
             i = i + 1
         print(" Took", i, "iterations")
         for a in self.agents:
-            a.vehicle_trajectory = a.episode_data['vehicle_trajectory']
-            a.vehicle_data = a.episode_data['vehicle_data']
-            a.vehicle_data_last_step = a.episode_data['vehicle_data_last_step']
-            a.last_step_data_valid = a.episode_data['last_step_data_valid']
-            a.episode_type = a.episode_data['episode_type']
-            a.valid_episode = a.episode_data['valid_episode']
-            a.commanded_actions_1kf = a.episode_data['commanded_actions_1kf']
-            a.obj_val = a._compute_objective_value(self.params)
+            a.update_final(self.params)
 
     def get_observation(self, config=None, pos_n3=None, **kwargs):
         """
-        Return the robot's observation from configuration config or
-        pos_nk3.
+        Return the robot's observation from configuration config
+        or pos_nk3.
         """
-        return [None]*config.n
+        return self.obstacle_map.get_observation(config=config, pos_n3=pos_n3, **kwargs)
 
     def get_observation_from_data_dict_and_model(self, data_dict, model):
         """
         Returns the robot's observation from the data inside data_dict,
         using parameters specified by the model.
         """
-        raise NotImplementedError
+        if hasattr(model, 'occupancy_grid_positions_ego_1mk12'):
+            kwargs = {'occupancy_grid_positions_ego_1mk12':
+                      model.occupancy_grid_positions_ego_1mk12}
+        else:
+            kwargs = {}
+
+        img_nmkd = self.get_observation(pos_n3=data_dict['vehicle_state_nk3'][:, 0],
+                                        **kwargs)
+        return img_nmkd
 
     def _reset_obstacle_map(self, rng):
-        raise NotImplementedError
+        """
+        For SBPD the obstacle map does not change
+        between episodes.
+        """
+        return False
 
     def _init_obstacle_map(self, renderer=None):
         """ Initializes the sbpd map."""
@@ -109,3 +115,11 @@ class CentralSimulator(SimulatorHelper):
         except AttributeError:
             p = self.params.planner_params.control_pipeline_params.system_dynamics_params
             return p.system(dt=p.dt, params=p)
+
+    def _render_obstacle_map(self, ax, zoom=0):
+        p = self.params
+        self.obstacle_map.render_with_obstacle_margins(
+                ax, start_config=self.start_config,
+                margin0=p.avoid_obstacle_objective.obstacle_margin0,
+                margin1=p.avoid_obstacle_objective.obstacle_margin1,
+                zoom=zoom)

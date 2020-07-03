@@ -49,6 +49,16 @@ class Agent():
         """
         return Agent(human.get_start_config(), human.get_goal_config())
 
+    def update_final(self, params):
+        self.vehicle_trajectory = self.episode_data['vehicle_trajectory']
+        self.vehicle_data = self.episode_data['vehicle_data']
+        self.vehicle_data_last_step = self.episode_data['vehicle_data_last_step']
+        self.last_step_data_valid = self.episode_data['last_step_data_valid']
+        self.episode_type = self.episode_data['episode_type']
+        self.valid_episode = self.episode_data['valid_episode']
+        self.commanded_actions_1kf = self.episode_data['commanded_actions_1kf']
+        self.obj_val = self._compute_objective_value(self.params)
+
     def update(self, params, system_dynamics, obstacle_map):
         if(not self.end_episode):
             if(params.verbose_printing):
