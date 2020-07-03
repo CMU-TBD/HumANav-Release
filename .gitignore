@@ -10,15 +10,12 @@ surreal/code/human_meshes/
 surreal/code/human_textures/
 surreal/code/test_human_mesh_generation/
 surreal/download/SURREAL/
-examples/*.png
 surreal/code/get-pip.py
-humanav/renderer_params.py
 surreal/code/config
-tests/*.png
 .vscode/
-base_data/
+LB_WatPtNav_Data/
 surreal/code/config
-params/base_data_directory.py
+params/renderer_params.py
 tests/humanav/
 tests/visual-nav/
 tests/socnav/

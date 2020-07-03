@@ -60,7 +60,7 @@ def create_params():
 
     return p
 
-    # NOTE: this must be the ABSOLUTE path
+# NOTE: this must be the ABSOLUTE path
 def get_path_to_humanav():
     PATH_TO_HUMANAV = '/PATH/TO/tbd_SocNavBenchmark/'
     if(not os.path.exists(PATH_TO_HUMANAV)):
@@ -69,25 +69,25 @@ def get_path_to_humanav():
     return PATH_TO_HUMANAV
 
 def base_data_dir():
-    PATH_TO_BASE_DIR = '/PATH/TO/base_data/LB_WayPtNav_Data'
+    PATH_TO_BASE_DIR = os.path.join(get_path_to_humanav(), 'LB_WayPtNav_Data')
     if(not os.path.exists(PATH_TO_BASE_DIR)):
-        print('\033[31m', "ERROR: Failed to find the Base Data Directory at", PATH_TO_BASE_DIR, '\033[0m')
+        print('\033[31m', "ERROR: Failed to find the LB_WayPtNav_Data dir at", PATH_TO_BASE_DIR, '\033[0m')
         os._exit(1) # Failure condition
     return PATH_TO_BASE_DIR
 
-def get_traversible_dir():
-    PATH_TO_TRAVERSIBLES = os.path.join(get_path_to_humanav(), 'base_data/LB_WayPtNav_Data/stanford_building_parser_dataset/traversibles')
-    if(not os.path.exists(PATH_TO_TRAVERSIBLES)):
-        print('\033[31m', "ERROR: Failed to find traversible directory at", PATH_TO_TRAVERSIBLES, '\033[0m')
-        os._exit(1) # Failure condition
-    return PATH_TO_TRAVERSIBLES
-
 def get_sbpd_data_dir():
-    PATH_TO_SBPD = os.path.join(get_path_to_humanav(),'base_data/LB_WayPtNav_Data/stanford_building_parser_dataset')
+    PATH_TO_SBPD = os.path.join(get_path_to_humanav(),'sd3dis/stanford_building_parser_dataset')
     if(not os.path.exists(PATH_TO_SBPD)):
         print('\033[31m', "ERROR: Failed to find SBPD installation at", PATH_TO_SBPD, '\033[0m')
         os._exit(1) # Failure condition
     return PATH_TO_SBPD
+
+def get_traversible_dir():
+    PATH_TO_TRAVERSIBLES = os.path.join(get_sbpd_data_dir(), 'traversibles')
+    if(not os.path.exists(PATH_TO_TRAVERSIBLES)):
+        print('\033[31m', "ERROR: Failed to find traversible directory at", PATH_TO_TRAVERSIBLES, '\033[0m')
+        os._exit(1) # Failure condition
+    return PATH_TO_TRAVERSIBLES
 
 def get_surreal_mesh_dir():
     PATH_TO_SURREAL_MESH = os.path.join(get_path_to_humanav(), 'surreal/code/human_meshes')
