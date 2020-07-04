@@ -39,8 +39,17 @@ def create_params():
     # Tilt the camera 10 degree down from the horizontal axis
     p.robot_params.camera_elevation_degree = -10
 
-    # p.camera_params.modalities = ['occupancy_grid']
-    p.camera_params.modalities = ['rgb', 'disparity'] # when pc has a display
+    # Depending on pc, those equipped with an X graphical instance (or other display)
+    # can set this to True to use the openGL renderer and render the 3D humans/scene
+    p.render_with_display = False 
+    # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
+
+    if p.render_with_display:
+        # Can only render rgb and depth then host pc has an available display
+        p.camera_params.modalities = ['rgb', 'disparity']
+    else:
+        p.camera_params.modalities = ['occupancy_grid']
+
     return p
 
 
@@ -49,6 +58,8 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, huma
               vmin=-.5, vmax=1.5, origin='lower')
 
     if human_traversible is not None:
+        # NOTE: the human radius is only available given the openGL human modeling
+        # and rendering, thus p.render_with_display must be True
         # Plot the 5x5 meter human radius grid atop the environment traversible
         alphas = np.empty(np.shape(human_traversible))
         for y in range(human_traversible.shape[1]):
@@ -92,6 +103,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, c
     # Obstacles/building traversible
     traversible = environment["traversibles"][0]
     human_traversible = None
+
     if len(environment["traversibles"]) > 1:
         human_traversible = environment["traversibles"][1]
     # Compute the real_world extent (in meters) of the traversible
@@ -217,7 +229,7 @@ def test_socnav(num_humans):
     environment = {}
     environment["map_scale"] = dx_m
     # obstacle traversible / human traversible
-    if 'occupancy_grid' not in p.camera_params.modalities:
+    if p.render_with_display:
         environment["traversibles"] = [traversible, human_traversible]
     else:
         environment["traversibles"] = np.array([traversible])
@@ -239,7 +251,7 @@ def test_socnav(num_humans):
     for i in range(num_humans):
         # Generates a random human from the environment
         generate_appearance = True
-        if 'occupancy_grid' in p.camera_params.modalities:
+        if not p.render_with_display:
             generate_appearance = False
         new_human_i = Human.generate_random_human_from_environment(
             Human, surreal_data, environment, room_center, 
@@ -250,11 +262,12 @@ def test_socnav(num_humans):
         human_list.append(new_human_i)
 
         # Load a random human at a specified state and speed
-        if 'occupancy_grid' not in p.camera_params.modalities:
+        # update human traversible
+        if p.render_with_display:
             r.add_human_at_position_with_speed(human_list[i])
-            environment["traversibles"] = np.array([traversible, r.get_human_traversible()])  # update human traversible
+            environment["traversibles"] = np.array([traversible, r.get_human_traversible()])  
         else:
-            environment["traversibles"] = np.array([traversible])  # update human traversible
+            environment["traversibles"] = np.array([traversible]) 
         # Input human fields into simulator
         simulator.add_agent(Agent.human_to_agent(Agent, new_human_i))
 
@@ -268,7 +281,7 @@ def test_socnav(num_humans):
     for i in range(num_cameras):
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
-        if 'occupancy_grid' not in p.camera_params.modalities: # only when rendering with opengl
+        if p.render_with_display: # only when rendering with opengl
             rgb_image_1mk3, depth_image_1mk1 = \
                 render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
         # Plot the rendered images
@@ -276,7 +289,7 @@ def test_socnav(num_humans):
                     camera_pos_13[i], human_list, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
-    if 'occupancy_grid' not in p.camera_params.modalities: # only when rendering with opengl
+    if p.render_with_display: # only when rendering with opengl
         r.remove_all_humans()
 
 
