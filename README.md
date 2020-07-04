@@ -19,7 +19,7 @@ Follow the instructions in [`surreal/README.md`](https://github.com/CMU-TBD/tbd_
 Follow the instructions in [`sd3dis/README.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/sd3dis/README.md) to correctly install the building/area meshes. 
 
 ### Configure HumANav to look for your data.
-In `./humanav/renderer_params.py` change the following line to your installation of `tbd_SocNavBenchmark`
+In `./params/renderer_params.py` change the following line to your installation of `tbd_SocNavBenchmark`
 ```
 def get_path_to_humanav():
     return '/PATH/TO/tbd_SocNavBenchmark'
@@ -42,16 +42,8 @@ sudo apt-get install g++
 ### Setup A Virtual Environment
 ```
 conda env create -f environment.yml
-conda activate tbd_humanav
+conda activate tbd_socnavbench
 ```
-
-#### Patch the OpenGL Installation
-In the terminal run the following commands.
-```
-1. /PATH/TO/HumANav/humanav
-2. bash patches/apply_patches_3.sh
-```
-If the script fails there are instructions in apply_patches_3.sh describing how to manually apply the patch. Additionally, the failure may be due to a bug in this version of `pyassimp` which can be fixed by following [this commit](https://github.com/assimp/assimp/commit/b6d3cbcb61f4cc4c42678d5f183351f95c97c8d4) and simply changing `isinstance(obj,int)` to `isinstance(obj, (int, str, bytes))` on line 96 of `anaconda3/envs/tbd_humanav/lib/python3.6/site-packages/pyassimp/core.py`. Then try running the patches again, or manually (not recommended).
 
 #### Install Libassimp-dev
 In the terminal run:
@@ -65,7 +57,17 @@ In the terminal (and in the virtual environment from above [`tbd_lab`]) run:
 chmod a+x get_packages.sh
 ./get_packages.sh
 ```
-The script should inform you of all packages being installed and their status, to install manually just look inside
+The script will inform you of all packages being installed and their status, to install manually just look inside
+
+
+#### Patch the OpenGL Installation
+In the terminal run the following commands.
+```
+1. /PATH/TO/HumANav/humanav
+2. bash patches/apply_patches_3.sh
+```
+If the script fails there are instructions in apply_patches_3.sh describing how to manually apply the patch. Additionally, the failure may be due to a bug in this version of `pyassimp` which can be fixed by following [this commit](https://github.com/assimp/assimp/commit/b6d3cbcb61f4cc4c42678d5f183351f95c97c8d4) and simply changing `isinstance(obj,int)` to `isinstance(obj, (int, str, bytes))` on line 96 of `anaconda3/envs/tbd_humanav/lib/python3.6/site-packages/pyassimp/core.py`. Then try running the patches again, or manually (not recommended).
+
 
 #### Install tbd_SocNavBenchmark as a pip package
 Follow the steps below to install HumANav as a pip package, so it can be easily integrated with any other codebase.
@@ -75,10 +77,10 @@ pip install -e .
 ```
 
 ## Test the tbd_SocNavBenchmark installation
-To get you started we've included examples.py, which contains 2 code examples for rendering different image modalities (topview, RGB, Depth) from HumANav.
+To get you started we've included `tests`, which contains 2 code examples for rendering different image modalities (topview, RGB, Depth) from HumANav.
 ```
-cd /PATH/TO/tbd_SocNavBenchmark/examples
-PYOPENGL_PLATFORM=egl PYTHONPATH='.' python examples.py
+cd /PATH/TO/tbd_SocNavBenchmark/tests
+PYOPENGL_PLATFORM=egl PYTHONPATH='.' python3 test_socnav.py
 ```
 The output of examples.py is example1.png and example2.png, both of which are expected to match the image below. If the images match, you have successfully installed & configured HumANav!
 
