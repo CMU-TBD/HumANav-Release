@@ -1,26 +1,29 @@
-import matplotlib as mpl
-mpl.use('Agg') # for rendering without a display
-import matplotlib.pyplot as plt
-import numpy as np
-import os, sys, math
-from dotmap import DotMap
-from random import seed, random, randint
+import math
+import sys
+import os
+from utils.utils import touch, print_colors
+from params.renderer_params import create_params as create_base_params
+from params.simulator.sbpd_simulator_params import create_params as create_sim_params
+from params.planner_params import create_params as create_planner_params
+from planners.sampling_planner import SamplingPlanner
+from simulators.central_simulator import CentralSimulator
+from simulators.agent import Agent
+from humanav.humanav_renderer_multi import HumANavRendererMulti
+from humans.human_configs import HumanConfigs
+from humans.human import Human
+from humanav import sbpd
 import tensorflow as tf
+from random import seed, random, randint
+from dotmap import DotMap
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+mpl.use('Agg')  # for rendering without a display
 tf.enable_eager_execution()
 # Humanav
-from humanav import sbpd
-from humans.human import Human
-from humans.human_configs import HumanConfigs
-from humanav.humanav_renderer_multi import HumANavRendererMulti
-from simulators.agent import Agent
 # Planner + Simulator:
-from simulators.central_simulator import CentralSimulator
-from planners.sampling_planner import SamplingPlanner
-from params.planner_params import create_params as create_planner_params
-from params.simulator.sbpd_simulator_params import create_params as create_sim_params
-from params.renderer_params import create_params as create_base_params
 # Other
-from utils.utils import touch, print_colors
+
 
 def create_params():
     p = create_base_params()
@@ -41,7 +44,7 @@ def create_params():
 
     # Depending on pc, those equipped with an X graphical instance (or other display)
     # can set this to True to use the openGL renderer and render the 3D humans/scene
-    p.render_with_display = False 
+    p.render_with_display = False
     # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
 
     if p.render_with_display:
@@ -53,7 +56,8 @@ def create_params():
     return p
 
 
-def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, humans, plot_quiver=False):
+def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
+                 humans, plot_quiver=False):
     ax.imshow(traversible, extent=extent, cmap='gray',
               vmin=-.5, vmax=1.5, origin='lower')
 
@@ -66,7 +70,7 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, huma
             for x in range(human_traversible.shape[0]):
                 alphas[x][y] = not(human_traversible[x][y])
         ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
-                vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
+                  vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
         alphas = np.all(np.invert(human_traversible))
 
     # Plot the camera
@@ -97,7 +101,8 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, huma
                 human_heading), scale=2, scale_units='inches')
 
 
-def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, camera_pos_13, humans, filename):
+def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
+                camera_pos_13, humans, filename):
 
     map_scale = environment["map_scale"]
     # Obstacles/building traversible
@@ -115,7 +120,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center, c
         num_frames = num_frames + 1
     if depth_image_1mk1 is not None:
         num_frames = num_frames + 1
-    
+
     img_size = 10
     fig = plt.figure(figsize=(num_frames * img_size, img_size))
 
@@ -179,7 +184,7 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
         camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
 
     depth_image_1mk1, _, _ = r._get_depth_image(
-        camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05, 
+        camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05,
         map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
 
     return rgb_image_1mk3, depth_image_1mk1
@@ -250,13 +255,9 @@ def test_socnav(num_humans):
     room_center = np.array([12., 17., 0.])
     for i in range(num_humans):
         # Generates a random human from the environment
-        generate_appearance = True
-        if not p.render_with_display:
-            generate_appearance = False
         new_human_i = Human.generate_random_human_from_environment(
-            Human, surreal_data, environment, room_center, 
-            generate_appearance=generate_appearance, radius=6
-            )
+            Human, surreal_data, environment, room_center,
+            generate_appearance=p.render_with_display, radius=8)
         # Or specify a human's initial configs with a HumanConfig instance
         # Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
         human_list.append(new_human_i)
@@ -265,9 +266,10 @@ def test_socnav(num_humans):
         # update human traversible
         if p.render_with_display:
             r.add_human_at_position_with_speed(human_list[i])
-            environment["traversibles"] = np.array([traversible, r.get_human_traversible()])  
+            environment["traversibles"] = np.array(
+                [traversible, r.get_human_traversible()])
         else:
-            environment["traversibles"] = np.array([traversible]) 
+            environment["traversibles"] = np.array([traversible])
         # Input human fields into simulator
         simulator.add_agent(Agent.human_to_agent(Agent, new_human_i))
 
@@ -281,17 +283,18 @@ def test_socnav(num_humans):
     for i in range(num_cameras):
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
-        if p.render_with_display: # only when rendering with opengl
+        if p.render_with_display:  # only when rendering with opengl
             rgb_image_1mk3, depth_image_1mk1 = \
-                render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
+                render_rgb_and_depth(r, np.array(
+                    [camera_pos_13[i]]), dx_m, human_visible=True)
         # Plot the rendered images
         plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
                     camera_pos_13[i], human_list, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
-    if p.render_with_display: # only when rendering with opengl
+    if p.render_with_display:  # only when rendering with opengl
         r.remove_all_humans()
 
 
 if __name__ == '__main__':
-    test_socnav(5)  # run basic room test with 1 human
+    test_socnav(10)  # run basic room test with variable # of human

@@ -22,7 +22,9 @@ class Agent():
     def __init__(self, start, goal, planner=None):
         self.start_config = start
         self.current_config = copy.copy(start)
+        self.planned_config = copy.copy(self.current_config)
         self.goal_config = goal
+        self.system_dynamics = None
 
         self.planner = planner
 
@@ -40,7 +42,7 @@ class Agent():
         self.last_step_data_valid = None
         self.episode_type = None
         self.valid_episode = None
-        self.commanded_actions_1kf = None
+        # self.commanded_actions_1kf = None
         self.commanded_actions_nkf = []
 
     def human_to_agent(self, human):
@@ -59,33 +61,50 @@ class Agent():
         self.commanded_actions_1kf = self.episode_data['commanded_actions_1kf']
         self.obj_val = self._compute_objective_value(params)
 
-    def update(self, params, system_dynamics, obstacle_map):
+    def update(self, params, obstacle_map):
+        """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         if(not self.end_episode):
-            if(params.verbose_printing):
-                print(self.current_config.position_nk2().numpy())
             # Generate the next trajectory segment, update next config, update actions/data
-            traj_segment, trajectory_data, commands_1kf = self._iterate(params, system_dynamics)
-            # Append to Vehicle Data
-            for key in self.vehicle_data.keys():
-                self.vehicle_data[key].append(trajectory_data[key])
-            self.vehicle_trajectory.append_along_time_axis(traj_segment)
-            self.commanded_actions_nkf.append(commands_1kf)
-            # overwrites vehicle data with last instance before termination
-            # vehicle_data_last = copy.copy(vehicle_data) #making a hardcopy
-            self._enforce_episode_termination_conditions(params, obstacle_map)
+            self.plan(params, obstacle_map)
+        else:
+            self.act(params, instant_act=True)
 
-    def _iterate(self, params, system_dynamics):
+    def plan(self, params, obstacle_map):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
         the subtrajectory, and relevant planner data"""
-        self.planner_data = self.planner.optimize(self.current_config, self.goal_config)
-        traj_segment, trajectory_data, commands_1kf = \
-            self._process_planner_data(params, system_dynamics)
-        self.current_config = \
-            SystemConfig.init_config_from_trajectory_time_index( traj_segment, t=-1 )
-        return traj_segment, trajectory_data, commands_1kf
+        if(params.verbose_printing):
+            print(self.current_config.position_nk2().numpy())
+        self.planner_data = self.planner.optimize(
+            self.planned_config, self.goal_config)
+        traj_segment, trajectory_data, commands_1kf = self._process_planner_data(
+            params)
+        self.planned_config = \
+            SystemConfig.init_config_from_trajectory_time_index(
+                traj_segment, t=-1)
+        # Append to Vehicle Data
+        for key in self.vehicle_data.keys():
+            self.vehicle_data[key].append(trajectory_data[key])
+        self.vehicle_trajectory.append_along_time_axis(traj_segment)
+        self.commanded_actions_nkf.append(commands_1kf)
+        self._enforce_episode_termination_conditions(params, obstacle_map)
 
-    def _process_planner_data(self, params, system_dynamics):
+    def act(self, params, instant_act=True):
+        """ A utility method to initialize a config object
+        from a particular timestep of a given trajectory object"""
+        if instant_act:
+            # Complete the entire update of the current_config in one go
+            self.current_config = \
+                SystemConfig.init_config_from_trajectory_time_index(
+                    self.vehicle_trajectory, t=-1)
+        else:
+            for step in range(100):  # dependent on trajectory
+                self.current_config = \
+                    SystemConfig.init_config_from_trajectory_time_index(
+                        self.vehicle_trajectory, t=step)
+        self.update_final(params)
+
+    def _process_planner_data(self, params):
         """
         Process the planners current plan. This could mean applying
         open loop control or LQR feedback control on a system.
@@ -97,18 +116,19 @@ class Agent():
                 self.apply_control_open_loop(start_config,
                                              self.planner_data['optimal_control_nk2'],
                                              T=params.control_horizon-1,
-                                             sim_mode=system_dynamics.simulation_params.simulation_mode)
+                                             sim_mode=self.system_dynamics.simulation_params.simulation_mode)
         # The 'plan' is LQR feedback control
         else:
             # If we are using ideal system dynamics the planned trajectory
             # is already dynamically feasible. Clip it to the control horizon
-            if system_dynamics.simulation_params.simulation_mode == 'ideal':
+            if self.system_dynamics.simulation_params.simulation_mode == 'ideal':
                 trajectory = \
                     Trajectory.new_traj_clip_along_time_axis(self.planner_data['trajectory'],
                                                              params.control_horizon,
                                                              repeat_second_to_last_speed=True)
-                _, commanded_actions_nkf = system_dynamics.parse_trajectory(trajectory)
-            elif system_dynamics.simulation_params.simulation_mode == 'realistic':
+                _, commanded_actions_nkf = self.system_dynamics.parse_trajectory(
+                    trajectory)
+            elif self.system_dynamics.simulation_params.simulation_mode == 'realistic':
                 trajectory, commanded_actions_nkf = \
                     self.apply_control_closed_loop(start_config,
                                                    self.planner_data['spline_trajectory'],
@@ -119,7 +139,8 @@ class Agent():
             else:
                 assert(False)
 
-        self.planner.clip_data_along_time_axis(self.planner_data, params.control_horizon)
+        self.planner.clip_data_along_time_axis(
+            self.planner_data, params.control_horizon)
         return trajectory, self.planner_data, commanded_actions_nkf
 
     def _compute_objective_value(self, params):
@@ -199,6 +220,18 @@ class Agent():
                 objective.fmm_map = self.fmm_map
             else:
                 assert (False)
+
+    def _init_system_dynamics(self, params):
+        """
+        If there is a control pipeline (i.e. model based method)
+        return its system_dynamics. Else create a new system_dynamics
+        instance.
+        """
+        try:
+            return self.planner.control_pipeline.system_dynamics
+        except AttributeError:
+            p = params.planner_params.control_pipeline_params.system_dynamics_params
+            return p.system(dt=p.dt, params=p)
 
     def _enforce_episode_termination_conditions(self, params, obstacle_map):
         p = params

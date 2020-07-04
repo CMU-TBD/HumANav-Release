@@ -8,13 +8,13 @@ from utils.fmm_map import FmmMap
 from utils.utils import print_colors
 import matplotlib
 
+
 class CentralSimulator(SimulatorHelper):
 
     def __init__(self, params, renderer=None):
         self.params = params.simulator.parse_params(params)
         self.obstacle_map = self._init_obstacle_map(renderer)
         # theoretially all the agents can have their own system dynamics as well
-        self.system_dynamics = self._init_system_dynamics()
         self.agents = []
 
     @staticmethod
@@ -40,6 +40,7 @@ class CentralSimulator(SimulatorHelper):
         agent.planner = agent._init_planner(self.params)
         agent.vehicle_data = agent.planner.empty_data_dict()
         agent.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        agent.system_dynamics = agent._init_system_dynamics(self.params)
         agent._update_fmm_map(self.params, self.obstacle_map)
         self.agents.append(agent)
 
@@ -64,11 +65,9 @@ class CentralSimulator(SimulatorHelper):
                 if(i == 0 and self.params.verbose_printing):
                     print("start: ", a.start_config.position_nk2().numpy())
                     print("goal: ", a.goal_config.position_nk2().numpy())
-                a.update(self.params, self.system_dynamics, self.obstacle_map)
+                a.update(self.params, self.obstacle_map)
             i = i + 1
         print(" Took", i, "iterations")
-        for a in self.agents:
-            a.update_final(self.params)
 
     def get_observation(self, config=None, pos_n3=None, **kwargs):
         """
@@ -104,22 +103,10 @@ class CentralSimulator(SimulatorHelper):
         p = self.params.obstacle_map_params
         return p.obstacle_map(p, renderer)
 
-    def _init_system_dynamics(self):
-        """
-        If there is a control pipeline (i.e. model based method)
-        return its system_dynamics. Else create a new system_dynamics
-        instance.
-        """
-        try:
-            return self.planner.control_pipeline.system_dynamics
-        except AttributeError:
-            p = self.params.planner_params.control_pipeline_params.system_dynamics_params
-            return p.system(dt=p.dt, params=p)
-
     def _render_obstacle_map(self, ax, zoom=0):
         p = self.params
         self.obstacle_map.render_with_obstacle_margins(
-                ax,
-                margin0=p.avoid_obstacle_objective.obstacle_margin0,
-                margin1=p.avoid_obstacle_objective.obstacle_margin1,
-                zoom=zoom)
+            ax,
+            margin0=p.avoid_obstacle_objective.obstacle_margin0,
+            margin1=p.avoid_obstacle_objective.obstacle_margin1,
+            zoom=zoom)

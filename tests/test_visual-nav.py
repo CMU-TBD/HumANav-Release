@@ -24,7 +24,6 @@ def create_params():
     # Set any custom parameters
     return p
 
-
 def test_planner():
     p = create_params()
     # Create planner parameters
