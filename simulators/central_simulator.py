@@ -71,10 +71,10 @@ class CentralSimulator(SimulatorHelper):
                     print("start: ", a.start_config.position_nk2().numpy())
                     print("goal: ", a.goal_config.position_nk2().numpy())
                 a.update(self.params, self.obstacle_map)
-                if(not a.end_acting):
-                    # TODO: FIX THIS its gross
-                    self.take_snapshot(np.array([9., 22., -np.pi/4]), 
-                                       "simulate_obs" + str(i) + ".png")
+            # Takes screenshot of the simulation state as long as the update is still going
+            self.take_snapshot(np.array([9., 22., -np.pi/4]), 
+                                "simulate_obs" + str(i) + ".png")
+            # print("Progress: %d\r" %i, end="")
             i = i + 1
         print(" Took", i, "iterations")
         self.save_to_gif()
@@ -166,8 +166,8 @@ class CentralSimulator(SimulatorHelper):
             camera_pos_13[2]), np.sin(camera_pos_13[2]))
 
         for i, human in enumerate(humans):
-            human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
-            human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
+            # human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
+            # human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
             human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
             goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
 
@@ -175,18 +175,18 @@ class CentralSimulator(SimulatorHelper):
             human.get_trajectory().render(ax, freq=1, color=color, plot_quiver=False)
             if(i == 0):
                 # Only add label on the first humans
-                ax.plot(human_pos_2[0], human_pos_2[1],
-                        'ro', markersize=10, label='Human')
+                # ax.plot(human_pos_2[0], human_pos_2[1],
+                #         'ro', markersize=10, label='Human')
                 ax.plot(human_goal_2[0], human_goal_2[1], markerfacecolor="#FF7C00",
                         marker='o', markersize=10, label='Goal')
             else:
-                ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10)
+                # ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10)
                 ax.plot(human_goal_2[0], human_goal_2[1],
                         markerfacecolor="#FF7C00", marker='o', markersize=10)
             if(plot_quiver):
                 # human start quiver
-                ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(
-                    human_heading), scale=2, scale_units='inches')
+                # ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(
+                #     human_heading), scale=2, scale_units='inches')
                 # goal quiver
                 ax.quiver(human_goal_2[0], human_goal_2[1], np.cos(goal_heading), np.sin(
                     goal_heading), scale=2, scale_units='inches')
