@@ -39,11 +39,6 @@ def create_params():
     # Tilt the camera 10 degree down from the horizontal axis
     p.robot_params.camera_elevation_degree = -10
 
-    # Depending on pc, those equipped with an X graphical instance (or other display)
-    # can set this to True to use the openGL renderer and render the 3D humans/scene
-    p.render_with_display = False 
-    # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
-
     if p.render_with_display:
         # Can only render rgb and depth then host pc has an available display
         p.camera_params.modalities = ['rgb', 'disparity']
