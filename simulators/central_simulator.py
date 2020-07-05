@@ -10,15 +10,16 @@ from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors, natural_sort
+from params.renderer_params import get_path_to_humanav
 import matplotlib
 
 class CentralSimulator(SimulatorHelper):
 
-    def __init__(self, params, environment, humanav_dir, renderer=None):
+    def __init__(self, params, environment, renderer=None):
         self.params = params.simulator.parse_params(params)
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
-        self.humanav_dir = humanav_dir
+        self.humanav_dir = get_path_to_humanav()
         # theoretially all the agents can have their own system dynamics as well
         self.agents = []
 
@@ -40,7 +41,6 @@ class CentralSimulator(SimulatorHelper):
         return p
 
     def add_agent(self, agent):
-        # have each agent potentially have their own planners
         agent.obj_fn = agent._init_obj_fn(self.params, self.obstacle_map)
         agent.planner = agent._init_planner(self.params)
         agent.vehicle_data = agent.planner.empty_data_dict()
@@ -165,7 +165,6 @@ class CentralSimulator(SimulatorHelper):
         ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
             camera_pos_13[2]), np.sin(camera_pos_13[2]))
 
-        # Plot the humans (added support for multiple humans) and their trajectories
         for i, human in enumerate(humans):
             human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
             human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]

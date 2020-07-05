@@ -247,7 +247,7 @@ def test_socnav(num_humans):
     # Create planner parameters
     # planner_params = create_planner_params()
     sim_params = create_sim_params()
-    simulator = CentralSimulator(sim_params, environment, p.humanav_dir, renderer=r)
+    simulator = CentralSimulator(sim_params, environment, renderer=r)
 
     """
     Generate the humans and run the simulation on every human
@@ -301,4 +301,4 @@ def test_socnav(num_humans):
 
 
 if __name__ == '__main__':
-    test_socnav(2)  # run basic room test with variable # of human
+    test_socnav(20)  # run basic room test with variable # of human

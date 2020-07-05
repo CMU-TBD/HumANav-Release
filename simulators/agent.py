@@ -95,7 +95,7 @@ class Agent():
         else:
             # action_dt = -1 does not simulate the actions of stepping through the trajectory at
             # designated timestep, instead it instantly takes the current config to the end 
-            num_frames_act = 15 # number of frames captured in the update
+            num_frames_act = 20 # number of frames captured in the update
             self.act(params, action_dt = int(self.vehicle_trajectory.k/num_frames_act))
 
     def plan(self, params, obstacle_map):
