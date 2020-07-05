@@ -6,14 +6,17 @@ from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors
+from tests.socnav import plot_images
 import matplotlib
 
 
 class CentralSimulator(SimulatorHelper):
 
-    def __init__(self, params, renderer=None):
+    def __init__(self, params, environment, renderer=None):
         self.params = params.simulator.parse_params(params)
         self.obstacle_map = self._init_obstacle_map(renderer)
+        self.environment = environment
+        self.dataaset = dataset
         # theoretially all the agents can have their own system dynamics as well
         self.agents = []
 
@@ -66,36 +69,17 @@ class CentralSimulator(SimulatorHelper):
                     print("start: ", a.start_config.position_nk2().numpy())
                     print("goal: ", a.goal_config.position_nk2().numpy())
                 a.update(self.params, self.obstacle_map)
+                if(not a.end_acting):
+                    # TODO: FIX THIS its gross
+                    np.array([
+                        [9., 22., -np.pi/4]
+                    ])
+                    self.get_observation(
+                        np.array([9., 22., -np.pi/4]),
+                        "simulate_obs" + str(i) + ".png"
+                    )
             i = i + 1
         print(" Took", i, "iterations")
-
-    def get_observation(self, config=None, pos_n3=None, **kwargs):
-        """
-        Return the robot's observation from configuration config
-        or pos_nk3.
-        """
-        return self.obstacle_map.get_observation(config=config, pos_n3=pos_n3, **kwargs)
-
-    def take_snapshot(self):
-        """
-        takes screenshot
-        """
-        return 0
-
-    def get_observation_from_data_dict_and_model(self, data_dict, model):
-        """
-        Returns the robot's observation from the data inside data_dict,
-        using parameters specified by the model.
-        """
-        if hasattr(model, 'occupancy_grid_positions_ego_1mk12'):
-            kwargs = {'occupancy_grid_positions_ego_1mk12':
-                      model.occupancy_grid_positions_ego_1mk12}
-        else:
-            kwargs = {}
-
-        img_nmkd = self.get_observation(pos_n3=data_dict['vehicle_state_nk3'][:, 0],
-                                        **kwargs)
-        return img_nmkd
 
     def _reset_obstacle_map(self, rng):
         """
@@ -116,3 +100,39 @@ class CentralSimulator(SimulatorHelper):
             margin0=p.avoid_obstacle_objective.obstacle_margin0,
             margin1=p.avoid_obstacle_objective.obstacle_margin1,
             zoom=zoom)
+
+    def get_observation(self, config=None, pos_n3=None, **kwargs):
+        """
+        Return the robot's observation from configuration config
+        or pos_nk3.
+        """
+        return self.obstacle_map.get_observation(config=config, pos_n3=pos_n3, **kwargs)
+
+    def get_observation_from_data_dict_and_model(self, data_dict, model):
+        """
+        Returns the robot's observation from the data inside data_dict,
+        using parameters specified by the model.
+        """
+        if hasattr(model, 'occupancy_grid_positions_ego_1mk12'):
+            kwargs = {'occupancy_grid_positions_ego_1mk12':
+                      model.occupancy_grid_positions_ego_1mk12}
+        else:
+            kwargs = {}
+
+        img_nmkd = self.get_observation(pos_n3=data_dict['vehicle_state_nk3'][:, 0],
+                                        **kwargs)
+        return img_nmkd
+
+    def take_snapshot(self, camera_pos_13, filename):
+        """
+        takes screenshot
+        """
+        humans = []
+        for a in self.agents:
+            humans.append(Agent.agent_to_human(Agent, a, self.dataset))
+
+        room_center = np.array([12., 17., 0.])
+
+        plot_images(self.params, None, None, self.environment, room_center,
+                    camera_pos_13, humans, filename)
+        return True

@@ -81,6 +81,8 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
         human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
         human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
         human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
+        goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
+
         color = human.get_termination()
         human.get_trajectory().render(ax, freq=1, color=color, plot_quiver=False)
         if(i == 0):
@@ -94,8 +96,12 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
             ax.plot(human_goal_2[0], human_goal_2[1],
                     markerfacecolor="#FF7C00", marker='o', markersize=10)
         if(plot_quiver):
+            # human start quiver
             ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(
                 human_heading), scale=2, scale_units='inches')
+            # goal quiver
+            ax.quiver(human_goal_2[0], human_goal_2[1], np.cos(goal_heading), np.sin(
+                goal_heading), scale=2, scale_units='inches')
 
 
 def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
@@ -243,7 +249,7 @@ def test_socnav(num_humans):
     # Create planner parameters
     # planner_params = create_planner_params()
     sim_params = create_sim_params()
-    simulator = CentralSimulator(sim_params, r)
+    simulator = CentralSimulator(sim_params, environment, surreal_data, renderer=r)
 
     """
     Generate the humans and run the simulation on every human
@@ -272,7 +278,9 @@ def test_socnav(num_humans):
     # run simulation
     wall_clock_pre_sim = time.clock()
     simulator.simulate()
+    # get wall clock time
     wall_clock_time = time.clock() - wall_clock_pre_sim
+
     print("Simulation took", wall_clock_time, "seconds of wall clock time")
     for i in range(len(human_list)):
         human_list[i].update_trajectory(simulator.agents[i].vehicle_trajectory)

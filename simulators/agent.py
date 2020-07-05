@@ -6,6 +6,7 @@ from objectives.goal_distance import GoalDistance
 from objectives.obstacle_avoidance import ObstacleAvoidance
 
 from humans.human import Human
+from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig, Trajectory
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors
@@ -48,11 +49,30 @@ class Agent():
         # self.commanded_actions_1kf = None
         self.commanded_actions_nkf = []
 
+    # Getters for the Agent class
+    def get_start_config(self):
+        return self.start_config
+
+    def get_goal_config(self):
+        return self.goal_config
+
+    def get_current_config(self):
+        return self.current_config
+
     def human_to_agent(self, human):
         """
         Sample a new agent from a human with configs
         """
         return Agent(human.get_start_config(), human.get_goal_config())
+
+    def agent_to_human(self, agent, dataset):
+        """
+        Sample a new agent from a human with configs
+        """
+        start = agent.get_start_config()
+        current = agent.get_current_config()
+        configs = HumanConfigs.generate_human_config(HumanConfigs, start, current)
+        return Human.generate_human_with_configs(Human, configs, dataset)
 
     def update_final(self, params):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']
@@ -72,7 +92,7 @@ class Agent():
         else:
             # Instant act does not simulate the actions of stepping through the trajectory at
             # every timestep, instead it instantly takes the current config to the end 
-            self.act(params, instant_act=False)
+            self.act(params, instant_act=True)
 
     def plan(self, params, obstacle_map):
         """ Runs the planner for one step from config to generate a
@@ -112,7 +132,7 @@ class Agent():
                     SystemConfig.init_config_from_trajectory_time_index(
                         self.vehicle_trajectory, t=self.path_step)
                 self.path_step = self.path_step + 1
-                if(self.path_step >= self.vehicle_trajectory.k - 1):
+                if(self.path_step >= self.vehicle_trajectory.k):
                     self.end_acting = True
             self.update_final(params)
 
@@ -218,11 +238,9 @@ class Agent():
             mask_grid_mn=self.obstacle_occupancy_grid)
 
     def _update_obj_fn(self, obstacle_map):
-
-        # Update the objective function to use a new
-        # obstacle_map and fmm map
-        # PROBABLY never going to use this
-
+        """ 
+        Update the objective function to use a new obstacle_map and fmm map
+        """
         for objective in self.obj_fn.objectives:
             if isinstance(objective, ObstacleAvoidance):
                 objective.obstacle_map = obstacle_map
