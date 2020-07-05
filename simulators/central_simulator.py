@@ -76,6 +76,12 @@ class CentralSimulator(SimulatorHelper):
         """
         return self.obstacle_map.get_observation(config=config, pos_n3=pos_n3, **kwargs)
 
+    def take_snapshot(self):
+        """
+        takes screenshot
+        """
+        return 0
+
     def get_observation_from_data_dict_and_model(self, data_dict, model):
         """
         Returns the robot's observation from the data inside data_dict,

@@ -70,6 +70,8 @@ class Agent():
             # Generate the next trajectory segment, update next config, update actions/data
             self.plan(params, obstacle_map)
         else:
+            # Instant act does not simulate the actions of stepping through the trajectory at
+            # every timestep, instead it instantly takes the current config to the end 
             self.act(params, instant_act=False)
 
     def plan(self, params, obstacle_map):
@@ -97,21 +99,22 @@ class Agent():
     def act(self, params, instant_act=True):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
-        if instant_act:
-            # Complete the entire update of the current_config in one go
-            self.current_config = \
-                SystemConfig.init_config_from_trajectory_time_index(
-                    self.vehicle_trajectory, t=-1)
-            # Automatically finished trajectory
-            self.end_acting = True
-        else:
-            self.current_config = \
-                SystemConfig.init_config_from_trajectory_time_index(
-                    self.vehicle_trajectory, t=self.path_step)
-            self.path_step = self.path_step + 1
-            if(self.path_step == self.vehicle_trajectory.k):
+        if(not self.end_acting):
+            if instant_act:
+                # Complete the entire update of the current_config in one go
+                self.current_config = \
+                    SystemConfig.init_config_from_trajectory_time_index(
+                        self.vehicle_trajectory, t=-1)
+                # Automatically finished trajectory
                 self.end_acting = True
-        self.update_final(params)
+            else:
+                self.current_config = \
+                    SystemConfig.init_config_from_trajectory_time_index(
+                        self.vehicle_trajectory, t=self.path_step)
+                self.path_step = self.path_step + 1
+                if(self.path_step >= self.vehicle_trajectory.k - 1):
+                    self.end_acting = True
+            self.update_final(params)
 
     def _process_planner_data(self, params):
         """

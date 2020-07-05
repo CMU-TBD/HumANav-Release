@@ -2,7 +2,7 @@ import matplotlib as mpl
 mpl.use('Agg') # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys, math
+import os, sys, math, time
 from dotmap import DotMap
 from random import seed, random, randint
 import tensorflow as tf
@@ -270,7 +270,10 @@ def test_socnav(num_humans):
         simulator.add_agent(Agent.human_to_agent(Agent, new_human_i))
 
     # run simulation
+    wall_clock_pre_sim = time.clock()
     simulator.simulate()
+    wall_clock_time = time.clock() - wall_clock_pre_sim
+    print("Simulation took", wall_clock_time, "seconds of wall clock time")
     for i in range(len(human_list)):
         human_list[i].update_trajectory(simulator.agents[i].vehicle_trajectory)
         human_list[i].update_termination(simulator.agents[i].termination_cause)
@@ -292,4 +295,4 @@ def test_socnav(num_humans):
 
 
 if __name__ == '__main__':
-    test_socnav(1)  # run basic room test with variable # of human
+    test_socnav(10)  # run basic room test with variable # of human
