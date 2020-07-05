@@ -65,7 +65,7 @@ class Agent():
         """
         return Agent(human.get_start_config(), human.get_goal_config())
 
-    def agent_to_human(self, agent, dataset):
+    def agent_to_human(self, agent):
         """
         Sample a new agent from a human with configs
         """
@@ -73,7 +73,7 @@ class Agent():
         current = agent.get_current_config()
         configs = HumanConfigs.generate_human_config(HumanConfigs, start, current)
         trajectory = agent.vehicle_trajectory
-        new_human = Human.generate_human_with_configs(Human, configs, dataset, verbose=False)
+        new_human = Human.generate_human_with_configs(Human, configs, verbose=False)
         new_human.update_trajectory(trajectory)
         return new_human
 
@@ -95,7 +95,7 @@ class Agent():
         else:
             # action_dt = -1 does not simulate the actions of stepping through the trajectory at
             # designated timestep, instead it instantly takes the current config to the end 
-            num_frames_act = 30 # number of frames captured in the update
+            num_frames_act = 15 # number of frames captured in the update
             self.act(params, action_dt = int(self.vehicle_trajectory.k/num_frames_act))
 
     def plan(self, params, obstacle_map):

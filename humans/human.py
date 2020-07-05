@@ -12,12 +12,6 @@ import pickle
 
 
 class Human():
-    name = None
-    identity = None
-    appearance = None
-    configs = None
-    trajectory = None
-    termination = None
 
     def __init__(self, name, appearance, configs, trajectory=None):
         self.name = name
@@ -91,30 +85,26 @@ class Human():
             HumanConfigs, environment, center)
         return self.generate_human(self, appearance, configs)
 
-    def generate_human_with_configs(self, configs, dataset, verbose=True):
+    def generate_human_with_configs(self, configs, verbose=True):
         """
         Sample a new random from known configs and a randomized
         appearance, if any of the configs are None they will be generated
         """
-        appearance = HumanAppearance.generate_random_human_appearance(
-            HumanAppearance, dataset)
+        appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
         return self.generate_human(self, appearance, configs, verbose=verbose)
 
     def generate_random_human_from_environment(self,
-                                               dataset,
                                                environment,
                                                center=np.array([0., 0., 0.]),
                                                radius=5.,
                                                generate_appearance=False):
         """
         Sample a new human without knowing any configs or appearance fields
-        NOTE: needs environment to produce valid configs, and needs a dataset
-        to produce an appearance
+        NOTE: needs environment to produce valid configs
         """
         appearance = None
         if generate_appearance:
-            appearance = HumanAppearance.generate_random_human_appearance(
-                         HumanAppearance, dataset)
+            appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
         configs = HumanConfigs.generate_random_human_config(HumanConfigs,
                                                             environment,
                                                             center,

@@ -11,6 +11,7 @@ tf.enable_eager_execution()
 from humanav import sbpd
 from humans.human import Human
 from humans.human_configs import HumanConfigs
+from humans.human_appearance import HumanAppearance
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.agent import Agent
 # Planner + Simulator:
@@ -199,6 +200,9 @@ def test_socnav(num_humans):
     # Get the surreal dataset for human generation
     surreal_data = r.d
 
+    # Update the Human's appearance classes to contain the dataset
+    HumanAppearance.dataset = surreal_data
+
     # obtain "resolution and traversible of building"
     dx_cm, traversible = r.get_config()
     human_traversible = np.empty(traversible.shape)
@@ -243,7 +247,7 @@ def test_socnav(num_humans):
     # Create planner parameters
     # planner_params = create_planner_params()
     sim_params = create_sim_params()
-    simulator = CentralSimulator(sim_params, environment, surreal_data, p.humanav_dir, renderer=r)
+    simulator = CentralSimulator(sim_params, environment, p.humanav_dir, renderer=r)
 
     """
     Generate the humans and run the simulation on every human
@@ -253,10 +257,10 @@ def test_socnav(num_humans):
     for i in range(num_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment(
-            Human, surreal_data, environment, room_center, 
+            Human, environment, room_center, 
             generate_appearance=p.render_with_display, radius=4)
         # Or specify a human's initial configs with a HumanConfig instance
-        # Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
+        # Human.generate_human_with_configs(Human, fixed_start_goal)
         human_list.append(new_human_i)
 
         # Load a random human at a specified state and speed
@@ -297,4 +301,4 @@ def test_socnav(num_humans):
 
 
 if __name__ == '__main__':
-    test_socnav(20)  # run basic room test with variable # of human
+    test_socnav(2)  # run basic room test with variable # of human

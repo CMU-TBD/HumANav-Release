@@ -6,11 +6,9 @@ import numpy as np
 
 
 class HumanAppearance():
-    shape = None
-    gender = None
-    texture = None
-    mesh_rng = None
-
+    # Static variable shared amongst all human appearances
+    # This dataset holds all the SURREAL human textures and meshes
+    dataset = None 
     def __init__(self, gender, texture, shape, mesh_rng):
         self.gender = gender
         self.shape = shape
@@ -36,7 +34,7 @@ class HumanAppearance():
         """
         return HumanAppearance(gender, texture, shape, mesh_rng)
 
-    def create_random_human_identity_from_dataset(self, dataset):
+    def create_random_human_identity_from_dataset(self):
         """
         Sample a new human identity, but don't load it into
         memory
@@ -44,13 +42,18 @@ class HumanAppearance():
         # Set the identity seed. this is used to sample the indentity that generates
         # the human gender, texture, and body shape
         identity_rng = np.random.RandomState(randint(1, 1000))
+        # Collecting Humanav dataset
+        dataset = HumanAppearance.dataset
+        if(dataset is None):
+            print('\033[31m', "ERROR: can't find Surreal Dataset", '\033[0m')
+            os._exit(1) # Failure condition
         # Using the SBPD dataset to generate a random gender, texture, and body shape
         human_gender, human_texture, body_shape = \
             dataset.get_random_human_gender_texture_and_body_shape(
                 identity_rng)
         return human_gender, human_texture, body_shape
 
-    def generate_random_human_appearance(self, dataset):
+    def generate_random_human_appearance(self):
         """
         Sample a new human from known identity features, but unknown 
         positional/speed arguments (and mesh rng)
@@ -60,6 +63,6 @@ class HumanAppearance():
         mesh_rng = np.random.RandomState(randint(1, 1000))
 
         gender, texture, shape = \
-            self.create_random_human_identity_from_dataset(self, dataset)
+            self.create_random_human_identity_from_dataset(self)
 
         return self.generate_human_appearance(self, gender, texture, shape, mesh_rng)

@@ -14,11 +14,10 @@ import matplotlib
 
 class CentralSimulator(SimulatorHelper):
 
-    def __init__(self, params, environment, dataset, humanav_dir, renderer=None):
+    def __init__(self, params, environment, humanav_dir, renderer=None):
         self.params = params.simulator.parse_params(params)
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
-        self.dataset = dataset
         self.humanav_dir = humanav_dir
         # theoretially all the agents can have their own system dynamics as well
         self.agents = []
@@ -139,6 +138,9 @@ class CentralSimulator(SimulatorHelper):
         output_location = os.path.join(IMAGES_DIR, 'movie.gif')
         imageio.mimsave(output_location, images)
         print('\033[32m', "SUCCESS: rendered gif at", output_location, '\033[0m')
+        # Clearing remaining files to not affect next render
+        for f in files:
+            os.remove(f)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
                     humans, plot_quiver=False):
@@ -275,7 +277,7 @@ class CentralSimulator(SimulatorHelper):
         """
         humans = []
         for a in self.agents:
-            humans.append(Agent.agent_to_human(Agent, a, self.dataset))
+            humans.append(Agent.agent_to_human(Agent, a))
 
         room_center = np.array([12., 17., 0.])
 

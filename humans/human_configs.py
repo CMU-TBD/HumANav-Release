@@ -19,8 +19,6 @@ from trajectory.trajectory import SystemConfig
 
 
 class HumanConfigs():
-    start_config = None
-    goal_config = None
 
     def __init__(self, start_config, goal_config):
         self.start_config = start_config
@@ -53,12 +51,16 @@ class HumanConfigs():
                             speed_nk1=speed_nk1,
                             variable=False)
 
-    def generate_random_config(self, environment, dt=0.1, center=np.array([0., 0., 0.]), max_vel=0.6, radius=5.):
+    def generate_random_config(self, environment, dt=0.1, 
+                               center=np.array([0., 0., 0.]), 
+                               max_vel=0.6, radius=5.):
         pos_3 = self.generate_random_pos_in_environment(
             self, center, environment, radius)
-        return self.generate_config_from_pos_3(self, pos_3, dt, max_vel)
+        return self.generate_config_from_pos_3(self, pos_3, dt=dt, speed=max_vel)
 
-    def generate_random_human_config_from_start(self, start_config, environment, center=np.array([0, 0, 0])):
+    def generate_random_human_config_from_start(self, start_config, 
+                                                environment, 
+                                                center=np.array([0, 0, 0])):
         """
         Generate a human with a random goal config given a known start
         config. The generated start config will be near center by a threshold
@@ -67,7 +69,9 @@ class HumanConfigs():
             self, environment, center=center)
         return self.generate_human_config(self, start_config, goal_config)
 
-    def generate_random_human_config_with_goal(self, goal_config, environment, center=np.array([0, 0, 0])):
+    def generate_random_human_config_with_goal(self, goal_config, 
+                                               environment, 
+                                               center=np.array([0, 0, 0])):
         """
         Generate a human with a random start config given a known goal
         config. The generated start config will be near center by a threshold
@@ -76,7 +80,8 @@ class HumanConfigs():
             self, environment, center=center)
         return self.generate_human_config(self, start_config, goal_config)
 
-    def generate_random_human_config(self, environment, center=np.array([0, 0, 0]), radius=5.):
+    def generate_random_human_config(self, environment, 
+                                     center=np.array([0, 0, 0]), radius=5.):
         """
         Generate a random human config (both start and goal configs) from
         the given environment
