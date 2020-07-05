@@ -72,7 +72,10 @@ class Agent():
         start = agent.get_start_config()
         current = agent.get_current_config()
         configs = HumanConfigs.generate_human_config(HumanConfigs, start, current)
-        return Human.generate_human_with_configs(Human, configs, dataset)
+        trajectory = agent.vehicle_trajectory
+        new_human = Human.generate_human_with_configs(Human, configs, dataset)
+        new_human.update_trajectory(trajectory)
+        return new_human
 
     def update_final(self, params):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']

@@ -244,7 +244,7 @@ def test_socnav(num_humans):
     # Create planner parameters
     # planner_params = create_planner_params()
     sim_params = create_sim_params()
-    simulator = CentralSimulator(sim_params, environment, surreal_data, renderer=r)
+    simulator = CentralSimulator(sim_params, environment, surreal_data, p.humanav_dir, renderer=r)
 
     """
     Generate the humans and run the simulation on every human
@@ -255,7 +255,7 @@ def test_socnav(num_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment(
             Human, surreal_data, environment, room_center, 
-            generate_appearance=p.render_with_display, radius=8)
+            generate_appearance=p.render_with_display, radius=4)
         # Or specify a human's initial configs with a HumanConfig instance
         # Human.generate_human_with_configs(Human, fixed_start_goal, surreal_data)
         human_list.append(new_human_i)
@@ -298,4 +298,4 @@ def test_socnav(num_humans):
 
 
 if __name__ == '__main__':
-    test_socnav(10)  # run basic room test with variable # of human
+    test_socnav(1)  # run basic room test with variable # of human

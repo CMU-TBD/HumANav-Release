@@ -1,22 +1,26 @@
 import tensorflow as tf
+import matplotlib as mpl
+mpl.use('Agg') # for rendering without a display
+import matplotlib.pyplot as plt
+from utils.utils import touch, print_colors
 import numpy as np
-import copy
+import copy, os
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors
-from tests.socnav import plot_images
 import matplotlib
 
 
 class CentralSimulator(SimulatorHelper):
 
-    def __init__(self, params, environment, renderer=None):
+    def __init__(self, params, environment, dataset, humanav_dir, renderer=None):
         self.params = params.simulator.parse_params(params)
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
-        self.dataaset = dataset
+        self.dataset = dataset
+        self.humanav_dir = humanav_dir
         # theoretially all the agents can have their own system dynamics as well
         self.agents = []
 
@@ -74,10 +78,7 @@ class CentralSimulator(SimulatorHelper):
                     np.array([
                         [9., 22., -np.pi/4]
                     ])
-                    self.get_observation(
-                        np.array([9., 22., -np.pi/4]),
-                        "simulate_obs" + str(i) + ".png"
-                    )
+                    self.take_snapshot(np.array([9., 22., -np.pi/4]), "simulate_obs" + str(i) + ".png")
             i = i + 1
         print(" Took", i, "iterations")
 
@@ -123,6 +124,130 @@ class CentralSimulator(SimulatorHelper):
                                         **kwargs)
         return img_nmkd
 
+
+    def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
+                    humans, plot_quiver=False):
+        ax.imshow(traversible, extent=extent, cmap='gray',
+                vmin=-.5, vmax=1.5, origin='lower')
+
+        if human_traversible is not None:
+            # NOTE: the human radius is only available given the openGL human modeling
+            # and rendering, thus p.render_with_display must be True
+            # Plot the 5x5 meter human radius grid atop the environment traversible
+            alphas = np.empty(np.shape(human_traversible))
+            for y in range(human_traversible.shape[1]):
+                for x in range(human_traversible.shape[0]):
+                    alphas[x][y] = not(human_traversible[x][y])
+            ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
+                    vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
+            alphas = np.all(np.invert(human_traversible))
+
+        # Plot the camera
+        ax.plot(camera_pos_13[0], camera_pos_13[1],
+                'bo', markersize=10, label='Camera')
+        ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
+            camera_pos_13[2]), np.sin(camera_pos_13[2]))
+
+        # Plot the humans (added support for multiple humans) and their trajectories
+        for i, human in enumerate(humans):
+            human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
+            human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
+            human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
+            goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
+
+            color = human.get_termination()
+            human.get_trajectory().render(ax, freq=1, color=color, plot_quiver=False)
+            if(i == 0):
+                # Only add label on the first humans
+                ax.plot(human_pos_2[0], human_pos_2[1],
+                        'ro', markersize=10, label='Human')
+                ax.plot(human_goal_2[0], human_goal_2[1], markerfacecolor="#FF7C00",
+                        marker='o', markersize=10, label='Goal')
+            else:
+                ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10)
+                ax.plot(human_goal_2[0], human_goal_2[1],
+                        markerfacecolor="#FF7C00", marker='o', markersize=10)
+            if(plot_quiver):
+                # human start quiver
+                ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(
+                    human_heading), scale=2, scale_units='inches')
+                # goal quiver
+                ax.quiver(human_goal_2[0], human_goal_2[1], np.cos(goal_heading), np.sin(
+                    goal_heading), scale=2, scale_units='inches')
+
+
+    def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
+                    camera_pos_13, humans, filename):
+
+        map_scale = environment["map_scale"]
+        # Obstacles/building traversible
+        traversible = environment["traversibles"][0]
+        human_traversible = None
+
+        if len(environment["traversibles"]) > 1:
+            human_traversible = environment["traversibles"][1]
+        # Compute the real_world extent (in meters) of the traversible
+        extent = [0., traversible.shape[1], 0., traversible.shape[0]]
+        extent = np.array(extent) * map_scale
+
+        num_frames = 2
+        if rgb_image_1mk3 is not None:
+            num_frames = num_frames + 1
+        if depth_image_1mk1 is not None:
+            num_frames = num_frames + 1
+        
+        img_size = 10
+        fig = plt.figure(figsize=(num_frames * img_size, img_size))
+
+        # Plot the 5x5 meter occupancy grid centered around the camera
+        zoom = 5.5  # zoom in by a constant amount
+        ax = fig.add_subplot(1, num_frames, 1)
+        ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
+        ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
+        self.plot_topview(ax, extent, traversible, human_traversible,
+                    camera_pos_13, humans, plot_quiver=True)
+        ax.legend()
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title('Topview (zoomed)')
+
+        # Render entire map-view from the top
+        # to keep square plot
+        outer_zoom = min(traversible.shape[0], traversible.shape[1]) * map_scale
+        ax = fig.add_subplot(1, num_frames, 2)
+        ax.set_xlim(0., outer_zoom)
+        ax.set_ylim(0., outer_zoom)
+        self.plot_topview(ax, extent, traversible,
+                    human_traversible, camera_pos_13, humans)
+        ax.legend()
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title('Topview')
+
+        if rgb_image_1mk3 is not None:
+            # Plot the RGB Image
+            ax = fig.add_subplot(1, num_frames, 3)
+            ax.imshow(rgb_image_1mk3[0].astype(np.uint8))
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_title('RGB')
+
+        if depth_image_1mk1 is not None:
+            # Plot the Depth Image
+            ax = fig.add_subplot(1, num_frames, 4)
+            ax.imshow(depth_image_1mk1[0, :, :, 0].astype(np.uint8), cmap='gray')
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_title('Depth')
+
+        full_file_name = os.path.join(self.humanav_dir, 'tests/socnav', filename)
+        if(not os.path.exists(full_file_name)):
+            print('\033[31m', "Failed to find:", full_file_name,
+                '\033[33m', "and therefore it will be created", '\033[0m')
+            touch(full_file_name)  # Just as the bash command
+        fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
+        print('\033[32m', "Successfully rendered:", full_file_name, '\033[0m')
+
     def take_snapshot(self, camera_pos_13, filename):
         """
         takes screenshot
@@ -133,6 +258,5 @@ class CentralSimulator(SimulatorHelper):
 
         room_center = np.array([12., 17., 0.])
 
-        plot_images(self.params, None, None, self.environment, room_center,
+        self.plot_images(self.params, None, None, self.environment, room_center,
                     camera_pos_13, humans, filename)
-        return True
