@@ -142,58 +142,35 @@ class CentralSimulator(SimulatorHelper):
         for f in files:
             os.remove(f)
 
-    def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
-                    humans, plot_quiver=False):
+    def plot_topview(self, ax, extent, traversible, camera_pos_13, 
+                    agents, plot_quiver=False):
         ax.imshow(traversible, extent=extent, cmap='gray',
                 vmin=-.5, vmax=1.5, origin='lower')
 
-        if human_traversible is not None:
-            # NOTE: the human radius is only available given the openGL human modeling
-            # and rendering, thus p.render_with_display must be True
-            # Plot the 5x5 meter human radius grid atop the environment traversible
-            alphas = np.empty(np.shape(human_traversible))
-            for y in range(human_traversible.shape[1]):
-                for x in range(human_traversible.shape[0]):
-                    alphas[x][y] = not(human_traversible[x][y])
-            ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
-                    vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
-            alphas = np.all(np.invert(human_traversible))
-
         # Plot the camera
         ax.plot(camera_pos_13[0], camera_pos_13[1],
-                'bo', markersize=10, label='Camera')
+                'bo', markersize=10, label='Robot')
         ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
             camera_pos_13[2]), np.sin(camera_pos_13[2]))
 
-        for i, human in enumerate(humans):
-            # human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
-            # human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
-            human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
-            goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
-
-            color = human.get_termination()
-            human.get_trajectory().render(ax, freq=1, color=color, plot_quiver=False)
+        for i, a in enumerate(agents):
+            pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
+            heading= (a.get_current_config().heading_nk1().numpy())[0][0]
+            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             if(i == 0):
                 # Only add label on the first humans
-                # ax.plot(human_pos_2[0], human_pos_2[1],
-                #         'ro', markersize=10, label='Human')
-                ax.plot(human_goal_2[0], human_goal_2[1], markerfacecolor="#FF7C00",
-                        marker='o', markersize=10, label='Goal')
+                ax.plot(pos_2[0], pos_2[1],
+                        'ro', markersize=10, label='Agent')
             else:
-                # ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10)
-                ax.plot(human_goal_2[0], human_goal_2[1],
-                        markerfacecolor="#FF7C00", marker='o', markersize=10)
+                ax.plot(pos_2[0], pos_2[1], 'ro', markersize=10)
             if(plot_quiver):
-                # human start quiver
-                # ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(
-                #     human_heading), scale=2, scale_units='inches')
-                # goal quiver
-                ax.quiver(human_goal_2[0], human_goal_2[1], np.cos(goal_heading), np.sin(
-                    goal_heading), scale=2, scale_units='inches')
+                # Agent heading
+                ax.quiver(pos_2[0], pos_2[1], np.cos(heading), np.sin(heading), 
+                          scale=2, scale_units='inches')
 
 
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
-                    camera_pos_13, humans, filename):
+                    camera_pos_13, agents, filename):
 
         map_scale = environment["map_scale"]
         # Obstacles/building traversible
@@ -220,8 +197,8 @@ class CentralSimulator(SimulatorHelper):
         ax = fig.add_subplot(1, num_frames, 1)
         ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
         ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
-        self.plot_topview(ax, extent, traversible, human_traversible,
-                    camera_pos_13, humans, plot_quiver=True)
+        self.plot_topview(ax, extent, traversible,
+                    camera_pos_13, agents, plot_quiver=True)
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
@@ -233,8 +210,7 @@ class CentralSimulator(SimulatorHelper):
         ax = fig.add_subplot(1, num_frames, 2)
         ax.set_xlim(0., outer_zoom)
         ax.set_ylim(0., outer_zoom)
-        self.plot_topview(ax, extent, traversible,
-                    human_traversible, camera_pos_13, humans)
+        self.plot_topview(ax, extent, traversible, camera_pos_13, agents)
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
@@ -274,13 +250,9 @@ class CentralSimulator(SimulatorHelper):
         """
         takes screenshot
         """
-        humans = []
-        for a in self.agents:
-            humans.append(Agent.agent_to_human(Agent, a))
-
         room_center = np.array([12., 17., 0.])
 
         self.plot_images(self.params, None, None, self.environment, room_center,
-                    camera_pos_13, humans, filename)
+                    camera_pos_13, self.agents, filename)
 
 

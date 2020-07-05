@@ -59,6 +59,9 @@ class Agent():
     def get_current_config(self):
         return self.current_config
 
+    def get_trajectory(self):
+        return self.vehicle_trajectory
+
     def human_to_agent(self, human):
         """
         Sample a new agent from a human with configs
