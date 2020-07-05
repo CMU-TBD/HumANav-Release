@@ -22,7 +22,7 @@ class Agent():
     def __init__(self, start, goal, planner=None):
         self.start_config = start
         self.current_config = copy.copy(start)
-        self.planned_config = copy.copy(self.current_config)
+        self.planned_next_config = copy.copy(self.current_config)
         self.goal_config = goal
         self.system_dynamics = None
 
@@ -34,6 +34,9 @@ class Agent():
         self.fmm_map = None
 
         self.end_episode = False
+        self.end_acting = False
+        self.path_step = 0
+
         self.termination_cause = None
         self.episode_data = None
         self.vehicle_trajectory = None
@@ -67,21 +70,23 @@ class Agent():
             # Generate the next trajectory segment, update next config, update actions/data
             self.plan(params, obstacle_map)
         else:
-            self.act(params, instant_act=True)
+            self.act(params, instant_act=False)
 
     def plan(self, params, obstacle_map):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
         the subtrajectory, and relevant planner data"""
         if(params.verbose_printing):
-            print(self.current_config.position_nk2().numpy())
-        self.planner_data = self.planner.optimize(
-            self.planned_config, self.goal_config)
-        traj_segment, trajectory_data, commands_1kf = self._process_planner_data(
-            params)
-        self.planned_config = \
-            SystemConfig.init_config_from_trajectory_time_index(
-                traj_segment, t=-1)
+            print(self.planned_next_config.position_nk2().numpy())
+        self.planner_data = \
+            self.planner.optimize(self.planned_next_config, self.goal_config)
+        traj_segment, trajectory_data, commands_1kf = \
+            self._process_planner_data(params)
+        self.planned_next_config = \
+            SystemConfig.init_config_from_trajectory_time_index( 
+                traj_segment,
+                t=-1
+            )
         # Append to Vehicle Data
         for key in self.vehicle_data.keys():
             self.vehicle_data[key].append(trajectory_data[key])
@@ -97,11 +102,15 @@ class Agent():
             self.current_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
                     self.vehicle_trajectory, t=-1)
+            # Automatically finished trajectory
+            self.end_acting = True
         else:
-            for step in range(100):  # dependent on trajectory
-                self.current_config = \
-                    SystemConfig.init_config_from_trajectory_time_index(
-                        self.vehicle_trajectory, t=step)
+            self.current_config = \
+                SystemConfig.init_config_from_trajectory_time_index(
+                    self.vehicle_trajectory, t=self.path_step)
+            self.path_step = self.path_step + 1
+            if(self.path_step == self.vehicle_trajectory.k):
+                self.end_acting = True
         self.update_final(params)
 
     def _process_planner_data(self, params):

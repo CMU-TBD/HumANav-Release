@@ -46,8 +46,8 @@ class CentralSimulator(SimulatorHelper):
 
     def exists_running_agent(self):
         for x in self.agents:
-            # if there is even just a single agent running
-            if (x.end_episode == False):
+            # if there is even just a single agent acting 
+            if (x.end_acting == False):
                 return True
         return False
 

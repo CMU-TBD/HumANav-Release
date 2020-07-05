@@ -292,4 +292,4 @@ def test_socnav(num_humans):
 
 
 if __name__ == '__main__':
-    test_socnav(10)  # run basic room test with variable # of human
+    test_socnav(1)  # run basic room test with variable # of human
