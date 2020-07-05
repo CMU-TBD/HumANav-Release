@@ -47,7 +47,6 @@ def create_params():
 
     return p
 
-
 def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, 
                  humans, plot_quiver=False):
     ax.imshow(traversible, extent=extent, cmap='gray',

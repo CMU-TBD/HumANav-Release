@@ -70,6 +70,13 @@ def touch(path):
     with open(path, 'a'):
         os.utime(path, None)
 
+def natural_sort(l): 
+    import re
+    convert = lambda text: int(text) if text.isdigit() else text.lower() 
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
+    return sorted(l, key = alphanum_key)
+
+
 def mkdir_if_missing(dirname):
     if not os.path.exists(dirname):
         os.makedirs(dirname)

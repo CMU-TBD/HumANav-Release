@@ -93,9 +93,9 @@ class Agent():
             # Generate the next trajectory segment, update next config, update actions/data
             self.plan(params, obstacle_map)
         else:
-            # Instant act does not simulate the actions of stepping through the trajectory at
-            # every timestep, instead it instantly takes the current config to the end 
-            self.act(params, instant_act=True)
+            # action_dt = -1 does not simulate the actions of stepping through the trajectory at
+            # designated timestep, instead it instantly takes the current config to the end 
+            self.act(params, action_dt = int(self.vehicle_trajectory.k/10))
 
     def plan(self, params, obstacle_map):
         """ Runs the planner for one step from config to generate a
@@ -119,11 +119,11 @@ class Agent():
         self.commanded_actions_nkf.append(commands_1kf)
         self._enforce_episode_termination_conditions(params, obstacle_map)
 
-    def act(self, params, instant_act=True):
+    def act(self, params, action_dt=-1):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
         if(not self.end_acting):
-            if instant_act:
+            if action_dt <= 0:
                 # Complete the entire update of the current_config in one go
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
@@ -134,7 +134,7 @@ class Agent():
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
                         self.vehicle_trajectory, t=self.path_step)
-                self.path_step = self.path_step + 1
+                self.path_step = self.path_step + action_dt
                 if(self.path_step >= self.vehicle_trajectory.k):
                     self.end_acting = True
             self.update_final(params)

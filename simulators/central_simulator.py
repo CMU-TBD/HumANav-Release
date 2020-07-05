@@ -4,14 +4,13 @@ mpl.use('Agg') # for rendering without a display
 import matplotlib.pyplot as plt
 from utils.utils import touch, print_colors
 import numpy as np
-import copy, os
+import copy, os, glob, imageio
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
 from utils.fmm_map import FmmMap
-from utils.utils import print_colors
+from utils.utils import print_colors, natural_sort
 import matplotlib
-
 
 class CentralSimulator(SimulatorHelper):
 
@@ -75,12 +74,13 @@ class CentralSimulator(SimulatorHelper):
                 a.update(self.params, self.obstacle_map)
                 if(not a.end_acting):
                     # TODO: FIX THIS its gross
-                    np.array([
-                        [9., 22., -np.pi/4]
-                    ])
-                    self.take_snapshot(np.array([9., 22., -np.pi/4]), "simulate_obs" + str(i) + ".png")
+                    self.take_snapshot(np.array([9., 22., -np.pi/4]), 
+                                       "simulate_obs" + str(i) + ".png")
             i = i + 1
         print(" Took", i, "iterations")
+        self.save_to_gif()
+        # Can also save to mp4 using imageio-ffmpeg or this bash script:
+        # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
 
     def _reset_obstacle_map(self, rng):
         """
@@ -119,11 +119,25 @@ class CentralSimulator(SimulatorHelper):
                       model.occupancy_grid_positions_ego_1mk12}
         else:
             kwargs = {}
-
-        img_nmkd = self.get_observation(pos_n3=data_dict['vehicle_state_nk3'][:, 0],
-                                        **kwargs)
+        img_nmkd = self.get_observation(
+            pos_n3=data_dict['vehicle_state_nk3'][:, 0],
+            **kwargs)
         return img_nmkd
 
+    def save_to_gif(self):
+        """Takes the image directory and naturally sorts the images into a singular movie.gif"""
+        images = []
+        IMAGES_DIR = os.path.join(self.humanav_dir, "tests/socnav/images")
+        if(not os.path.exists(IMAGES_DIR)):
+            print('\033[31m', "ERROR: Failed to image directory at", IMAGES_DIR, '\033[0m')
+            os._exit(1) # Failure condition
+        files = natural_sort(glob.glob(os.path.join(IMAGES_DIR, '*.png')))
+        for filename in files:
+            if(self.params.verbose_printing):
+                print("appending", filename)
+            images.append(imageio.imread(filename))
+        output_location = os.path.join(IMAGES_DIR, 'movie.gif')
+        imageio.mimsave(output_location, images)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
                     humans, plot_quiver=False):
@@ -240,7 +254,7 @@ class CentralSimulator(SimulatorHelper):
             ax.set_yticks([])
             ax.set_title('Depth')
 
-        full_file_name = os.path.join(self.humanav_dir, 'tests/socnav', filename)
+        full_file_name = os.path.join(self.humanav_dir, 'tests/socnav/images', filename)
         if(not os.path.exists(full_file_name)):
             print('\033[31m', "Failed to find:", full_file_name,
                 '\033[33m', "and therefore it will be created", '\033[0m')
@@ -260,3 +274,5 @@ class CentralSimulator(SimulatorHelper):
 
         self.plot_images(self.params, None, None, self.environment, room_center,
                     camera_pos_13, humans, filename)
+
+
