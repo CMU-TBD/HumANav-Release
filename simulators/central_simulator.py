@@ -138,6 +138,7 @@ class CentralSimulator(SimulatorHelper):
             images.append(imageio.imread(filename))
         output_location = os.path.join(IMAGES_DIR, 'movie.gif')
         imageio.mimsave(output_location, images)
+        print('\033[32m', "SUCCESS: rendered gif at", output_location, '\033[0m')
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
                     humans, plot_quiver=False):
@@ -256,11 +257,17 @@ class CentralSimulator(SimulatorHelper):
 
         full_file_name = os.path.join(self.humanav_dir, 'tests/socnav/images', filename)
         if(not os.path.exists(full_file_name)):
-            print('\033[31m', "Failed to find:", full_file_name,
-                '\033[33m', "and therefore it will be created", '\033[0m')
+            if(self.params.verbose_printing):
+                print('\033[31m', "Failed to find:", full_file_name,
+                    '\033[33m', "and therefore it will be created", '\033[0m')
             touch(full_file_name)  # Just as the bash command
         fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
-        print('\033[32m', "Successfully rendered:", full_file_name, '\033[0m')
+        fig.clear()
+        plt.close(fig)
+        del fig
+        plt.clf()
+        if(self.params.verbose_printing):
+            print('\033[32m', "Successfully rendered:", full_file_name, '\033[0m')
 
     def take_snapshot(self, camera_pos_13, filename):
         """

@@ -66,7 +66,7 @@ class Human():
             for n in range(max_chars)
         ])
 
-    def generate_human(self, appearance, configs, max_chars=20):
+    def generate_human(self, appearance, configs, max_chars=20, verbose=True):
         """
         Sample a new random human from all required features
         """
@@ -75,7 +75,8 @@ class Human():
         np.set_printoptions(precision=2)
         pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
         goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
-        print(" Human", name, "at", pos_2, "with goal", goal_2)
+        if(verbose):
+            print(" Human", name, "at", pos_2, "with goal", goal_2)
         return Human(name, appearance, configs)
 
     def generate_human_with_appearance(self,
@@ -90,14 +91,14 @@ class Human():
             HumanConfigs, environment, center)
         return self.generate_human(self, appearance, configs)
 
-    def generate_human_with_configs(self, configs, dataset):
+    def generate_human_with_configs(self, configs, dataset, verbose=True):
         """
         Sample a new random from known configs and a randomized
         appearance, if any of the configs are None they will be generated
         """
         appearance = HumanAppearance.generate_random_human_appearance(
             HumanAppearance, dataset)
-        return self.generate_human(self, appearance, configs)
+        return self.generate_human(self, appearance, configs, verbose=verbose)
 
     def generate_random_human_from_environment(self,
                                                dataset,
