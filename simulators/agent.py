@@ -23,7 +23,9 @@ class Agent():
         self.planned_next_config = copy.copy(self.current_config)
         self.goal_config = goal
         self.system_dynamics = None
-        self.radius = 0.25 # meters
+        self.update_freq = 100 # updating at 100hz
+        self.time = 0 # tie to track progress during an update
+        self.radius = 0.2 # meters
         if name is None:
             self.name = generate_name(20)
         else:
@@ -95,17 +97,19 @@ class Agent():
         self.commanded_actions_1kf = self.episode_data['commanded_actions_1kf']
         self.obj_val = self._compute_objective_value(params)
 
+    def init_time(self, t):
+        self.time = t
+
     def update(self, params, obstacle_map):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
+
+        # Generate the next trajectory segment, update next config, update actions/data
         self.plan(params, obstacle_map)
+        # action_dt = -1 does not simulate the actions of stepping through the trajectory at
+        # designated timestep, instead it instantly takes the current config to the end 
         num_frames_act = 20 # number of frames captured in the update
         self.act(params, action_dt = int(self.vehicle_trajectory.k/num_frames_act))
-        # if(not self.end_episode):
-        #     # Generate the next trajectory segment, update next config, update actions/data
-        # else:
-        #     # action_dt = -1 does not simulate the actions of stepping through the trajectory at
-        #     # designated timestep, instead it instantly takes the current config to the end 
-
+        
     def plan(self, params, obstacle_map):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes

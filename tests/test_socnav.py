@@ -2,7 +2,7 @@ import matplotlib as mpl
 mpl.use('Agg') # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys, math, time
+import os, sys, math
 from dotmap import DotMap
 from random import seed, random, randint
 import tensorflow as tf
@@ -274,12 +274,8 @@ def test_socnav(num_humans):
         simulator.add_agent(Agent.human_to_agent(Agent, new_human_i))
 
     # run simulation
-    wall_clock_pre_sim = time.clock()
     simulator.simulate()
-    # get wall clock time
-    wall_clock_time = time.clock() - wall_clock_pre_sim
 
-    print("Simulation took", wall_clock_time, "seconds of wall clock time")
     for human in human_list:
         name = human.get_name()
         human.update_trajectory(simulator.agents[name].get_trajectory())

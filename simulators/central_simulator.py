@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from utils.utils import touch, print_colors
 import numpy as np
 import copy, os, glob, imageio
+import time
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
@@ -21,6 +22,7 @@ class CentralSimulator(SimulatorHelper):
         self.humanav_dir = get_path_to_humanav()
         # theoretially all the agents can have their own system dynamics as well
         self.agents = {}
+        self.wall_clock_time = 0
 
     @staticmethod
     def parse_params(p):
@@ -74,8 +76,10 @@ class CentralSimulator(SimulatorHelper):
         print(print_colors()["blue"], "Running simulation on", len(
             self.agents), "agents", print_colors()["reset"])
         i = 0
+        start_time = time.clock()
         while self.exists_running_agent():
             for a in self.agents.values():
+                a.init_time(time.clock())
                 if(i == 0 and self.params.verbose_printing):
                     print("start: ", a.start_config.position_nk2().numpy())
                     print("goal: ", a.goal_config.position_nk2().numpy())
@@ -86,8 +90,8 @@ class CentralSimulator(SimulatorHelper):
             self.print_progress(i)
             # print("Generated Frames: %d\r" %i, end="")
             i = i + 1
-
-        print("\n")
+        self.wall_clock_time = time.clock() - start_time
+        print("Simulation completed in", self.wall_clock_time, "seconds")
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
