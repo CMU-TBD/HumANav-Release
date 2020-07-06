@@ -23,6 +23,7 @@ class Agent():
         self.planned_next_config = copy.copy(self.current_config)
         self.goal_config = goal
         self.system_dynamics = None
+        self.radius = 0.25 # meters
         if name is None:
             self.name = generate_name(20)
         else:
@@ -149,8 +150,8 @@ class Agent():
                 # Update through the path traversal incrementally
                 # first check for collisions with any other agents
                 for a in Agent.all_agents.values():
-                    thresh = 0.25 # All units presumably in m
-                    if(a.name is not self.name and self.dist_to_agent(a) < thresh):
+                    thresh = self.radius # All units presumably in m
+                    if(a.name is not self.name and self.dist_to_agent(a) < 2*thresh):
                         self.collided = True
                 # then update the current config 
                 self.current_config = \
@@ -315,13 +316,6 @@ class Agent():
                     elif (condition is "Collision"):
                         color = "red"
                     self.termination_cause = color
-                    print(print_colors()[color], "Terminated due to",
-                          condition,
-                          print_colors()["reset"])
-                    if (condition is "Timeout"):
-                        print(print_colors()["blue"], "Max time:",
-                              p.episode_horizon,
-                              print_colors()["reset"])
             # clipping the trajectory only ends it early, we want it to actually reach the goal
             # vehicle_trajectory.clip_along_time_axis(termination_time)
             self.planner_data, planner_data_last_step, last_step_data_valid = \

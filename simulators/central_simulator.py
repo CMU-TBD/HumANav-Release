@@ -83,13 +83,35 @@ class CentralSimulator(SimulatorHelper):
             # Takes screenshot of the simulation state as long as the update is still going
             self.take_snapshot(np.array([9., 22., -np.pi/4]), 
                                 "simulate_obs" + str(i) + ".png")
+            self.print_progress(i)
             # print("Generated Frames: %d\r" %i, end="")
             i = i + 1
-        print(" Took", i, "iterations")
+
+        print("\nTook", i, "iterations")
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
 
+    def num_conditions_in_agents(self, condition):
+        num = 0
+        for a in self.agents.values():
+            if(a.termination_cause is condition):
+                num = num + 1
+        return num
+
+    def print_progress(self, rendered_frames):
+        print("A:", len(self.agents), 
+            print_colors()["green"],
+            "Success:", 
+            self.num_conditions_in_agents("green"), 
+            print_colors()["red"],
+            "Collide:", 
+            self.num_conditions_in_agents("red"), 
+            print_colors()["blue"],
+            "Time:", 
+            self.num_conditions_in_agents("blue"), 
+            print_colors()["reset"],
+            "\r", end="")
     def _reset_obstacle_map(self, rng):
         """
         For SBPD the obstacle map does not change
@@ -175,12 +197,13 @@ class CentralSimulator(SimulatorHelper):
                         color, markersize=10, label='Agent')
             else:
                 ax.plot(pos_2[0], pos_2[1], color, markersize=10)
+            # TODO: use agent radius instead of hardcode
+            ax.plot(pos_2[0], pos_2[1], color, alpha=0.2, markersize=25)
             if(plot_quiver):
                 # Agent heading
                 ax.quiver(pos_2[0], pos_2[1], np.cos(heading), np.sin(heading), 
                           scale=2, scale_units='inches')
-
-
+                          
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
                     camera_pos_13, agents, filename):
 
