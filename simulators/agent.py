@@ -20,6 +20,8 @@ import pickle
 
 
 class Agent():
+    # static field for agents to keep track of ALL other agents 
+    all_agents = None
     def __init__(self, start, goal, name = None, planner=None):
         self.start_config = start
         self.current_config = copy.copy(start)
@@ -38,6 +40,7 @@ class Agent():
         self.fmm_map = None
         # path planning and acting fields
         self.end_episode = False
+        self.collided = False # for collisions with other agents
         self.end_acting = False
         self.path_step = 0
 
@@ -129,6 +132,13 @@ class Agent():
         self.commanded_actions_nkf.append(commands_1kf)
         self._enforce_episode_termination_conditions(params, obstacle_map)
 
+    def dist_to_agent(self, other):
+        self_pos = self.get_current_config().position_nk2()[0][0]
+        other_pos = other.get_current_config().position_nk2()[0][0]
+        diff_x = self_pos[0] - other_pos[0]
+        diff_y = self_pos[1] - other_pos[1]
+        return np.sqrt(diff_x**2 + diff_y**2)
+        
     def act(self, params, action_dt=-1):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
@@ -142,11 +152,17 @@ class Agent():
                 self.end_acting = True
             else:
                 # Update through the path traversal incrementally
+                # first check for collisions with any other agents
+                for a in Agent.all_agents.values():
+                    thresh = 0.15 # All units presumably in m
+                    if(a.name is not self.name and self.dist_to_agent(a) < thresh):
+                        self.collided = True
+                # then update the current config 
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
                         self.vehicle_trajectory, t=self.path_step)
                 self.path_step = self.path_step + action_dt
-                if(self.path_step >= self.vehicle_trajectory.k):
+                if(self.path_step >= self.vehicle_trajectory.k or self.collided):
                     self.end_acting = True
             self.update_final(params)
 
@@ -394,10 +410,10 @@ class Agent():
                 euclidean = 0
                 # also compute euclidean distance as a heuristic
                 if use_euclidean:
-                    diff_x = self.vehicle_trajectory.position_nk2(
-                    )[0][-1][0] - self.goal_config.position_nk2()[0][0][0]
-                    diff_y = self.vehicle_trajectory.position_nk2(
-                    )[0][-1][1] - self.goal_config.position_nk2()[0][0][1]
+                    diff_x = self.vehicle_trajectory.position_nk2()[0][-1][0]
+                    - self.goal_config.position_nk2()[0][0][0]
+                    diff_y = self.vehicle_trajectory.position_nk2()[0][-1][1] 
+                    - self.goal_config.position_nk2()[0][0][1]
                     euclidean = np.sqrt(diff_x**2 + diff_y**2)
                 dist_to_goal_nk = objective.compute_dist_to_goal_nk(
                     self.vehicle_trajectory) + euclidean

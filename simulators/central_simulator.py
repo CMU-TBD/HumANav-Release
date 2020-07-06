@@ -49,6 +49,8 @@ class CentralSimulator(SimulatorHelper):
         a.system_dynamics = a._init_system_dynamics(self.params)
         a._update_fmm_map(self.params, self.obstacle_map)
         self.agents[name] = a
+        # update all agents' knowledge of other agents
+        Agent.all_agents = self.agents
 
     def exists_running_agent(self):
         for a in self.agents.values():
