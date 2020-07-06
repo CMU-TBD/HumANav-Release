@@ -9,7 +9,7 @@ from humans.human import Human
 from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig, Trajectory
 from utils.fmm_map import FmmMap
-from utils.utils import print_colors
+from utils.utils import print_colors, generate_name
 import random
 import string
 import math
@@ -20,20 +20,23 @@ import pickle
 
 
 class Agent():
-    def __init__(self, start, goal, planner=None):
+    def __init__(self, start, goal, name = None, planner=None):
         self.start_config = start
         self.current_config = copy.copy(start)
         self.planned_next_config = copy.copy(self.current_config)
         self.goal_config = goal
         self.system_dynamics = None
-
+        if name is None:
+            self.name = generate_name(20)
+        else:
+            self.name = name
         self.planner = planner
-
+        # objective values and function
         self.obj_fn = None  # Until called by simulator
         self.obj_val = None
 
         self.fmm_map = None
-
+        # path planning and acting fields
         self.end_episode = False
         self.end_acting = False
         self.path_step = 0
@@ -50,6 +53,9 @@ class Agent():
         self.commanded_actions_nkf = []
 
     # Getters for the Agent class
+    def get_name(self):
+        return self.name
+
     def get_start_config(self):
         return self.start_config
 
@@ -66,17 +72,17 @@ class Agent():
         """
         Sample a new agent from a human with configs
         """
-        return Agent(human.get_start_config(), human.get_goal_config())
+        return Agent(human.get_start_config(), human.get_goal_config(), name=human.get_name())
 
     def agent_to_human(self, agent):
         """
-        Sample a new agent from a human with configs
+        Sample a new human from an agent by passing over name, configs, and trajectory
         """
         start = agent.get_start_config()
         current = agent.get_current_config()
         configs = HumanConfigs.generate_human_config(HumanConfigs, start, current)
         trajectory = agent.vehicle_trajectory
-        new_human = Human.generate_human_with_configs(Human, configs, verbose=False)
+        new_human = Human.generate_human_with_configs(Human, configs, name=self.name, verbose=False)
         new_human.update_trajectory(trajectory)
         return new_human
 
@@ -135,6 +141,7 @@ class Agent():
                 # Automatically finished trajectory
                 self.end_acting = True
             else:
+                # Update through the path traversal incrementally
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
                         self.vehicle_trajectory, t=self.path_step)

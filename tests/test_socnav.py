@@ -280,9 +280,10 @@ def test_socnav(num_humans):
     wall_clock_time = time.clock() - wall_clock_pre_sim
 
     print("Simulation took", wall_clock_time, "seconds of wall clock time")
-    for i in range(len(human_list)):
-        human_list[i].update_trajectory(simulator.agents[i].vehicle_trajectory)
-        human_list[i].update_termination(simulator.agents[i].termination_cause)
+    for human in human_list:
+        name = human.get_name()
+        human.update_trajectory(simulator.agents[name].get_trajectory())
+        human.update_termination(simulator.agents[name].termination_cause)
 
     # Plotting an image for each camera location
     for i in range(num_cameras):

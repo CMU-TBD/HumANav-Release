@@ -21,7 +21,7 @@ class CentralSimulator(SimulatorHelper):
         self.environment = environment
         self.humanav_dir = get_path_to_humanav()
         # theoretially all the agents can have their own system dynamics as well
-        self.agents = []
+        self.agents = {}
 
     @staticmethod
     def parse_params(p):
@@ -40,19 +40,20 @@ class CentralSimulator(SimulatorHelper):
 
         return p
 
-    def add_agent(self, agent):
-        agent.obj_fn = agent._init_obj_fn(self.params, self.obstacle_map)
-        agent.planner = agent._init_planner(self.params)
-        agent.vehicle_data = agent.planner.empty_data_dict()
-        agent.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
-        agent.system_dynamics = agent._init_system_dynamics(self.params)
-        agent._update_fmm_map(self.params, self.obstacle_map)
-        self.agents.append(agent)
+    def add_agent(self, a):
+        name = a.get_name()
+        a.obj_fn = a._init_obj_fn(self.params, self.obstacle_map)
+        a.planner = a._init_planner(self.params)
+        a.vehicle_data = a.planner.empty_data_dict()
+        a.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        a.system_dynamics = a._init_system_dynamics(self.params)
+        a._update_fmm_map(self.params, self.obstacle_map)
+        self.agents[name] = a
 
     def exists_running_agent(self):
-        for x in self.agents:
+        for a in self.agents.values():
             # if there is even just a single agent acting 
-            if (x.end_acting == False):
+            if (not a.end_acting):
                 return True
         return False
 
@@ -66,7 +67,7 @@ class CentralSimulator(SimulatorHelper):
             self.agents), "agents", print_colors()["reset"])
         i = 0
         while self.exists_running_agent():
-            for a in self.agents:
+            for a in self.agents.values():
                 if(i == 0 and self.params.verbose_printing):
                     print("start: ", a.start_config.position_nk2().numpy())
                     print("goal: ", a.goal_config.position_nk2().numpy())
@@ -153,7 +154,7 @@ class CentralSimulator(SimulatorHelper):
         ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
             camera_pos_13[2]), np.sin(camera_pos_13[2]))
 
-        for i, a in enumerate(agents):
+        for i, a in enumerate(agents.values()):
             pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
             heading= (a.get_current_config().heading_nk1().numpy())[0][0]
             a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)

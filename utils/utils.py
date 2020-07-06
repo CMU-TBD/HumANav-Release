@@ -6,6 +6,8 @@ import tensorflow as tf
 import dotmap
 import shutil
 from dotmap import DotMap
+from random import seed, random, randint
+import string, random
 
 
 def tf_session_config():
@@ -76,6 +78,12 @@ def natural_sort(l):
     alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
     return sorted(l, key = alphanum_key)
 
+
+def generate_name(max_chars):
+    return "".join([
+        random.choice(string.ascii_letters + string.digits)
+        for n in range(max_chars)
+    ])
 
 def mkdir_if_missing(dirname):
     if not os.path.exists(dirname):

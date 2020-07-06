@@ -1,14 +1,8 @@
 from humans.human_appearance import HumanAppearance
 from humans.human_configs import HumanConfigs
-from random import seed, random, randint
-from utils.utils import print_colors
-import random
-import string
-import math
+from utils.utils import print_colors, generate_name
+import math, sys, os, pickle
 import numpy as np
-import sys
-import os
-import pickle
 
 
 class Human():
@@ -54,24 +48,22 @@ class Human():
     def get_termination(self):
         return self.termination
 
-    def _generate_name(self, max_chars):
-        return "".join([
-            random.choice(string.ascii_letters + string.digits)
-            for n in range(max_chars)
-        ])
-
-    def generate_human(self, appearance, configs, max_chars=20, verbose=True):
+    def generate_human(self, appearance, configs, name=None, max_chars=20, verbose=True):
         """
         Sample a new random human from all required features
         """
+        human_name = None
+        if(name is None):
+            human_name = generate_name(max_chars)
+        else:
+            human_name = name
         # In order to print more readable arrays
-        name = self._generate_name(self, max_chars)
         np.set_printoptions(precision=2)
         pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
         goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
         if(verbose):
-            print(" Human", name, "at", pos_2, "with goal", goal_2)
-        return Human(name, appearance, configs)
+            print(" Human", human_name, "at", pos_2, "with goal", goal_2)
+        return Human(human_name, appearance, configs)
 
     def generate_human_with_appearance(self,
                                        appearance,
@@ -85,13 +77,13 @@ class Human():
             HumanConfigs, environment, center)
         return self.generate_human(self, appearance, configs)
 
-    def generate_human_with_configs(self, configs, verbose=True):
+    def generate_human_with_configs(self, configs, name=None, verbose=True):
         """
         Sample a new random from known configs and a randomized
         appearance, if any of the configs are None they will be generated
         """
         appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
-        return self.generate_human(self, appearance, configs, verbose=verbose)
+        return self.generate_human(self, appearance, configs, verbose=verbose, name=name)
 
     def generate_random_human_from_environment(self,
                                                environment,
