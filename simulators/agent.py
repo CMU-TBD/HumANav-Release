@@ -1,5 +1,7 @@
 import tensorflow as tf
-import copy
+import numpy as np
+import sys, os, copy
+
 from objectives.objective_function import ObjectiveFunction
 from objectives.angle_distance import AngleDistance
 from objectives.goal_distance import GoalDistance
@@ -10,13 +12,6 @@ from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig, Trajectory
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors, generate_name
-import random
-import string
-import math
-import numpy as np
-import sys
-import os
-import pickle
 
 
 class Agent():
@@ -154,7 +149,7 @@ class Agent():
                 # Update through the path traversal incrementally
                 # first check for collisions with any other agents
                 for a in Agent.all_agents.values():
-                    thresh = 0.15 # All units presumably in m
+                    thresh = 0.25 # All units presumably in m
                     if(a.name is not self.name and self.dist_to_agent(a) < thresh):
                         self.collided = True
                 # then update the current config 

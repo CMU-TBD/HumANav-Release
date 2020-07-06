@@ -11,7 +11,6 @@ from simulators.agent import Agent
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors, natural_sort
 from params.renderer_params import get_path_to_humanav
-import matplotlib
 
 class CentralSimulator(SimulatorHelper):
 
@@ -59,6 +58,13 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
+    def exists_planning_agent(self):
+        for a in self.agents.values():
+            # if there is even just a single agent acting 
+            if (not a.end_episode):
+                return True
+        return False
+
     def simulate(self):
         """ A function that simulates an entire episode. The agent starts
         at self.start_config, repeatedly calling _iterate to generate 
@@ -77,7 +83,7 @@ class CentralSimulator(SimulatorHelper):
             # Takes screenshot of the simulation state as long as the update is still going
             self.take_snapshot(np.array([9., 22., -np.pi/4]), 
                                 "simulate_obs" + str(i) + ".png")
-            # print("Progress: %d\r" %i, end="")
+            # print("Generated Frames: %d\r" %i, end="")
             i = i + 1
         print(" Took", i, "iterations")
         self.save_to_gif()
