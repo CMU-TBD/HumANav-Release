@@ -160,12 +160,15 @@ class CentralSimulator(SimulatorHelper):
             pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
             heading= (a.get_current_config().heading_nk1().numpy())[0][0]
             a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+            color = 'go' # agents are green and solid unless collided
+            if(a.collided):
+                color='ro' # collided agents are drawn red
             if(i == 0):
                 # Only add label on the first humans
                 ax.plot(pos_2[0], pos_2[1],
-                        'ro', markersize=10, label='Agent')
+                        color, markersize=10, label='Agent')
             else:
-                ax.plot(pos_2[0], pos_2[1], 'ro', markersize=10)
+                ax.plot(pos_2[0], pos_2[1], color, markersize=10)
             if(plot_quiver):
                 # Agent heading
                 ax.quiver(pos_2[0], pos_2[1], np.cos(heading), np.sin(heading), 
