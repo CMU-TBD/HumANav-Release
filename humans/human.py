@@ -48,7 +48,7 @@ class Human():
     def get_termination(self):
         return self.termination
 
-    def generate_human(self, appearance, configs, name=None, max_chars=20, verbose=True):
+    def generate_human(self, appearance, configs, name=None, max_chars=20, verbose=False):
         """
         Sample a new random human from all required features
         """
@@ -77,7 +77,7 @@ class Human():
             HumanConfigs, environment, center)
         return self.generate_human(self, appearance, configs)
 
-    def generate_human_with_configs(self, configs, name=None, verbose=True):
+    def generate_human_with_configs(self, configs, name=None, verbose=False):
         """
         Sample a new random from known configs and a randomized
         appearance, if any of the configs are None they will be generated

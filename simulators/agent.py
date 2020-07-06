@@ -97,36 +97,37 @@ class Agent():
 
     def update(self, params, obstacle_map):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
-        if(not self.end_episode):
-            # Generate the next trajectory segment, update next config, update actions/data
-            self.plan(params, obstacle_map)
-        else:
-            # action_dt = -1 does not simulate the actions of stepping through the trajectory at
-            # designated timestep, instead it instantly takes the current config to the end 
-            num_frames_act = 20 # number of frames captured in the update
-            self.act(params, action_dt = int(self.vehicle_trajectory.k/num_frames_act))
+        self.plan(params, obstacle_map)
+        num_frames_act = 20 # number of frames captured in the update
+        self.act(params, action_dt = int(self.vehicle_trajectory.k/num_frames_act))
+        # if(not self.end_episode):
+        #     # Generate the next trajectory segment, update next config, update actions/data
+        # else:
+        #     # action_dt = -1 does not simulate the actions of stepping through the trajectory at
+        #     # designated timestep, instead it instantly takes the current config to the end 
 
     def plan(self, params, obstacle_map):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
         the subtrajectory, and relevant planner data"""
-        if(params.verbose_printing):
-            print(self.planned_next_config.position_nk2().numpy())
-        self.planner_data = \
-            self.planner.optimize(self.planned_next_config, self.goal_config)
-        traj_segment, trajectory_data, commands_1kf = \
-            self._process_planner_data(params)
-        self.planned_next_config = \
-            SystemConfig.init_config_from_trajectory_time_index( 
-                traj_segment,
-                t=-1
-            )
-        # Append to Vehicle Data
-        for key in self.vehicle_data.keys():
-            self.vehicle_data[key].append(trajectory_data[key])
-        self.vehicle_trajectory.append_along_time_axis(traj_segment)
-        self.commanded_actions_nkf.append(commands_1kf)
-        self._enforce_episode_termination_conditions(params, obstacle_map)
+        if(not self.end_episode):
+            if(params.verbose_printing):
+                print(self.planned_next_config.position_nk2().numpy())
+            self.planner_data = \
+                self.planner.optimize(self.planned_next_config, self.goal_config)
+            traj_segment, trajectory_data, commands_1kf = \
+                self._process_planner_data(params)
+            self.planned_next_config = \
+                SystemConfig.init_config_from_trajectory_time_index( 
+                    traj_segment,
+                    t=-1
+                )
+            # Append to Vehicle Data
+            for key in self.vehicle_data.keys():
+                self.vehicle_data[key].append(trajectory_data[key])
+            self.vehicle_trajectory.append_along_time_axis(traj_segment)
+            self.commanded_actions_nkf.append(commands_1kf)
+            self._enforce_episode_termination_conditions(params, obstacle_map)
 
     def dist_to_agent(self, other):
         self_pos = self.get_current_config().position_nk2()[0][0]
@@ -160,7 +161,7 @@ class Agent():
                 self.path_step = self.path_step + action_dt
                 if(self.path_step >= self.vehicle_trajectory.k or self.collided):
                     self.end_acting = True
-            self.update_final(params)
+            # self.update_final(params)
 
     def _process_planner_data(self, params):
         """

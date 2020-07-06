@@ -87,7 +87,7 @@ class CentralSimulator(SimulatorHelper):
             # print("Generated Frames: %d\r" %i, end="")
             i = i + 1
 
-        print("\nTook", i, "iterations")
+        print("\n")
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
@@ -111,7 +111,9 @@ class CentralSimulator(SimulatorHelper):
             "Time:", 
             self.num_conditions_in_agents("blue"), 
             print_colors()["reset"],
+            "Frames:", rendered_frames,
             "\r", end="")
+        
     def _reset_obstacle_map(self, rng):
         """
         For SBPD the obstacle map does not change
@@ -168,7 +170,7 @@ class CentralSimulator(SimulatorHelper):
             images.append(imageio.imread(filename))
         output_location = os.path.join(IMAGES_DIR, 'movie.gif')
         imageio.mimsave(output_location, images)
-        print('\033[32m', "SUCCESS: rendered gif at", output_location, '\033[0m')
+        print('\033[32m', "Rendered gif at", output_location, '\033[0m')
         # Clearing remaining files to not affect next render
         for f in files:
             os.remove(f)
