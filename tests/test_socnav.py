@@ -77,7 +77,6 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
         human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
         human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
         goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
-
         color = human.get_termination()
         human.get_trajectory().render(ax, freq=1, color=color, plot_quiver=False)
         if(i == 0):
@@ -118,7 +117,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
         num_frames = num_frames + 1
     if depth_image_1mk1 is not None:
         num_frames = num_frames + 1
-    
+
     img_size = 10
     fig = plt.figure(figsize=(num_frames * img_size, img_size))
 
@@ -169,7 +168,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
               '\033[33m', "and therefore it will be created", '\033[0m')
         touch(full_file_name)  # Just as the bash command
     fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
-    print('\033[32m', "Successfully rendered:", full_file_name, '\033[0m')
+    print('\033[32m', "Rendered png at", full_file_name, '\033[0m')
 
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):

@@ -73,8 +73,8 @@ class CentralSimulator(SimulatorHelper):
         subtrajectories. Generates a vehicle_trajectory for the episode, 
         calculates its objective value, and sets the episode_type 
         (timeout, collision, success) """
-        print(print_colors()["blue"], "Running simulation on", len(
-            self.agents), "agents", print_colors()["reset"])
+        print(print_colors()["blue"], "Running simulation on", len(self.agents),
+              "agents", print_colors()["reset"])
         i = 0
         start_time = time.clock()
         while self.exists_running_agent():
@@ -91,7 +91,7 @@ class CentralSimulator(SimulatorHelper):
             # print("Generated Frames: %d\r" %i, end="")
             i = i + 1
         self.wall_clock_time = time.clock() - start_time
-        print("Simulation completed in", self.wall_clock_time, "seconds")
+        print("\nSimulation completed in", self.wall_clock_time, "seconds")
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
