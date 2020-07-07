@@ -76,22 +76,27 @@ class CentralSimulator(SimulatorHelper):
         print(print_colors()["blue"], "Running simulation on", len(self.agents),
               "agents", print_colors()["reset"])
         i = 0
+        time_step = 0.05 # seconds for each agent to "act"
         start_time = time.clock()
+        for a in self.agents.values():
+            # All agents share the same starting time
+            a.init_time(0)
+        total_time = 0 # keep track of overall time in the simulator
         while self.exists_running_agent():
+            init_time = time.clock()
             for a in self.agents.values():
-                a.init_time(time.clock())
-                if(i == 0 and self.params.verbose_printing):
-                    print("start: ", a.start_config.position_nk2().numpy())
-                    print("goal: ", a.goal_config.position_nk2().numpy())
-                a.update(self.params, self.obstacle_map)
+                a.update(self.params, self.obstacle_map, time_step=time_step)
             # Takes screenshot of the simulation state as long as the update is still going
-            self.take_snapshot(np.array([9., 22., -np.pi/4]), 
+            fin_time = time.clock() - init_time
+            total_time = total_time + fin_time
+            self.take_snapshot(np.array([9., 22., -np.pi/4]), total_time,
                                 "simulate_obs" + str(i) + ".png")
             self.print_progress(i)
+
             # print("Generated Frames: %d\r" %i, end="")
             i = i + 1
         self.wall_clock_time = time.clock() - start_time
-        print("\nSimulation completed in", self.wall_clock_time, "seconds")
+        print("\nSimulation completed in", self.wall_clock_time, total_time, "seconds")
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
@@ -211,7 +216,7 @@ class CentralSimulator(SimulatorHelper):
                           scale=2, scale_units='inches')
                           
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
-                    camera_pos_13, agents, filename):
+                    camera_pos_13, agents, current_time, filename):
 
         map_scale = environment["map_scale"]
         # Obstacles/building traversible
@@ -243,7 +248,8 @@ class CentralSimulator(SimulatorHelper):
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title('Topview (zoomed)')
+        time_string = "T="+str(current_time)
+        ax.set_title('Topview (zoomed) '+time_string, fontsize=20)
 
         # Render entire map-view from the top
         # to keep square plot
@@ -251,11 +257,12 @@ class CentralSimulator(SimulatorHelper):
         ax = fig.add_subplot(1, num_frames, 2)
         ax.set_xlim(0., outer_zoom)
         ax.set_ylim(0., outer_zoom)
-        self.plot_topview(ax, extent, traversible, camera_pos_13, agents)
+        self.plot_topview(ax, extent, traversible, 
+                        camera_pos_13, agents)
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title('Topview')
+        ax.set_title('Topview '+time_string, fontsize=20)
 
         if rgb_image_1mk3 is not None:
             # Plot the RGB Image
@@ -287,13 +294,13 @@ class CentralSimulator(SimulatorHelper):
         if(self.params.verbose_printing):
             print('\033[32m', "Successfully rendered:", full_file_name, '\033[0m')
 
-    def take_snapshot(self, camera_pos_13, filename):
+    def take_snapshot(self, camera_pos_13, current_time, filename):
         """
         takes screenshot
         """
         room_center = np.array([12., 17., 0.])
 
         self.plot_images(self.params, None, None, self.environment, room_center,
-                    camera_pos_13, self.agents, filename)
+                    camera_pos_13, self.agents, current_time, filename)
 
 
