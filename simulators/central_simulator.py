@@ -17,7 +17,8 @@ class CentralSimulator(SimulatorHelper):
 
     def __init__(self, params, environment, renderer=None):
         self.params = params.simulator.parse_params(params)
-        self.obstacle_map = self._init_obstacle_map(renderer)
+        self.r = renderer
+        self.obstacle_map = self._init_obstacle_map(self.r)
         self.environment = environment
         self.humanav_dir = get_path_to_humanav()
         # theoretially all the agents can have their own system dynamics as well
@@ -294,13 +295,33 @@ class CentralSimulator(SimulatorHelper):
         if(self.params.verbose_printing):
             print('\033[32m', "Successfully rendered:", full_file_name, '\033[0m')
 
+    def render_rgb_and_depth(self, r, camera_pos_13, dx_m, human_visible=True):
+        # Convert from real world units to grid world units
+        camera_grid_world_pos_12 = camera_pos_13[:, :2]/dx_m
+
+        # Render RGB and Depth Images. The shape of the resulting
+        # image is (1 (batch), m (width), k (height), c (number channels))
+        rgb_image_1mk3 = r._get_rgb_image(
+            camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
+
+        depth_image_1mk1, _, _ = r._get_depth_image(
+            camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05, 
+            map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
+
+        return rgb_image_1mk3, depth_image_1mk1
+
+
     def take_snapshot(self, camera_pos_13, current_time, filename):
         """
         takes screenshot
         """
         room_center = np.array([12., 17., 0.])
-
-        self.plot_images(self.params, None, None, self.environment, room_center,
+        rgb_image_1mk3 = None
+        depth_image_1mk1 = None
+        if True: # only when rendering with opengl
+            rgb_image_1mk3, depth_image_1mk1 = \
+                self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), self.environment["map_scale"], human_visible=True)
+        self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, self.environment, room_center,
                     camera_pos_13, self.agents, current_time, filename)
 
 
