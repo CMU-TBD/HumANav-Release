@@ -5,8 +5,15 @@ import numpy as np
 import os, sys, math
 from dotmap import DotMap
 from random import seed, random, randint
-import tensorflow as tf
-tf.enable_eager_execution()
+import warnings  
+with warnings.catch_warnings():  
+    warnings.filterwarnings("ignore",category=FutureWarning)
+    import tensorflow as tf
+    from tensorflow import keras
+    from tensorflow.keras.preprocessing.text import Tokenizer
+    tf.enable_eager_execution()
+# print("Suppressed Numpy Incompatability Warnings")  
+# import tensorflow as tf
 # Humanav
 from humanav import sbpd
 from humans.human import Human
