@@ -83,7 +83,7 @@ class Agent():
         current = agent.get_current_config()
         configs = HumanConfigs.generate_human_config(HumanConfigs, start, current)
         trajectory = agent.vehicle_trajectory
-        new_human = Human.generate_human_with_configs(Human, configs, name=self.name, verbose=False)
+        new_human = Human.generate_human_with_configs(Human, configs, name=agent.get_name(), verbose=False)
         new_human.update_trajectory(trajectory)
         return new_human
 
