@@ -2,6 +2,7 @@ from __future__ import print_function
 import logging
 import numpy as np
 import sys
+from humans.human_appearance import HumanAppearance
 if sys.version_info[0] == 2:
     from . import map_utils as mu
 else:
@@ -137,19 +138,20 @@ class Building():
       pos_3 = np.array([xy_offset_map[0], xy_offset_map[1], pos_3[2]])
       return pos_3
   
-  def load_human_into_scene(self, dataset, human, dedup_tbo=False, allow_repeat_humans=False):
+  def load_human_into_scene(self, human, dedup_tbo=False, allow_repeat_humans=False):
     """
     Load a 'gendered' human mesh with 'body shape' and texture, 'human_materials',
     into a building at 'pos_3' with 'speed' in the static building.
     """
     # Add human to dictionary in building
+    dataset = HumanAppearance.dataset
     human_appearance = human.get_appearance()
-    human_start_config = human.get_start_config()
+    current_config = human.get_current_config()
     self.people[human.get_identity()] = human
-    heading = (human_start_config.heading_nk1().numpy())[0][0]
-    pos_2 = (human_start_config.position_nk2().numpy())[0][0]
+    heading = (current_config.heading_nk1().numpy())[0][0]
+    pos_2 = (current_config.position_nk2().numpy())[0][0]
     pos_3 = np.append(pos_2, heading)
-    speed = human_start_config.speed_nk1()
+    speed = current_config.speed_nk1()
     gender = human_appearance.get_gender()
     human_materials = human_appearance.get_texture()
     body_shape = human_appearance.get_shape()
@@ -225,7 +227,8 @@ class Building():
           # Remove the human that matches the ID
           name = ID[0]
           if name in human_entitiy_ids[i]:
-            print(" Deleted Human: " + name)
+            if(False): # TODO: make param for verbose printing
+              print(" Deleted Human: " + name)
             self.renderer_entitiy_ids.remove(human_entitiy_ids[i])
 
       # Update the traversible to be human free
@@ -237,18 +240,18 @@ class Building():
       # Remove from dictionary
       self.people.pop(ID)
 
-  def move_human_to_position_with_speed(self, dataset, pos_3, speed, gender,
-                                        human_materials, body_shape, rng):
+  def update_human(self, human):
       """
       Removes the previously loaded human mesh,
       and loads a new one with the same gender, texture
-      and body shape at pos_3 with speed_3.
+      and body shape at the updated position and speed
       """
       # Remove the previous human
-      self.remove_human()
+      self.remove_human(human.get_identity())
 
-      # Load a new human with the same speed, gender, texture, body shape
-      self.load_human_into_scene(dataset, pos_3, speed, gender, human_materials, body_shape, rng)
+      # Load a new human with the updated speed and position
+      # same human appearance
+      self.load_human_into_scene(human)
  
   def to_actual_xyt(self, pqr):
     """Converts from node array to location array on the map."""

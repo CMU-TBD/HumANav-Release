@@ -272,7 +272,7 @@ def test_socnav(num_humans):
         # Load a random human at a specified state and speed
         # update human traversible
         if p.render_with_display:
-            r.add_human_at_position_with_speed(human_list[i])
+            r.add_human(new_human_i)
             environment["traversibles"] = np.array([traversible, r.get_human_traversible()])  
         else:
             environment["traversibles"] = np.array([traversible]) 

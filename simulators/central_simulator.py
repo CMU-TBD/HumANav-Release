@@ -319,10 +319,8 @@ class CentralSimulator(SimulatorHelper):
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
         if True:
-            self.r.remove_all_humans()
             for a in self.agents.values():
-                # change this to simply MOVE the humans
-                self.r.add_human_at_position_with_speed(Agent.agent_to_human(Agent, a))
+                self.r.update_human(Agent.agent_to_human(Agent, a, human_exists=True))
 
         if True: # only when rendering with opengl
             rgb_image_1mk3, depth_image_1mk1 = \

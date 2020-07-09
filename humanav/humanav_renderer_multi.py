@@ -85,18 +85,7 @@ class HumANavRendererMulti():
             assert(False)
         return np.array(imgs)
 
-    def add_human_with_known_identity_at_position_with_speed(self, human, allow_repeat_humans=False):
-        # Load the human texture into memory
-        #human_texture[human.identity] = [sr.HumanShape._load_materials_from_file(human.texture[0], 1.0)]
-
-        humans[human.get_identity()] = human # might need to deepcopy this
-
-        # Load the human into the scene
-        self.building.load_human_into_scene(self.d, human, allow_repeat_humans = allow_repeat_humans)
-        #human_mesh_params = self.building.human_mesh_info
-        return human_mesh_params
-
-    def add_human_at_position_with_speed(self, human, only_sample_human_identity=False):
+    def add_human(self, human, only_sample_human_identity=False):
         """
         Inserts a human mesh where their positional
         arguments specify
@@ -104,7 +93,7 @@ class HumANavRendererMulti():
         if self.p.load_meshes:
             if not only_sample_human_identity:
                 # Load the human mesh into the scene
-                self.building.load_human_into_scene(self.d, human)
+                self.building.load_human_into_scene(human)
                 self.humans[human.get_identity()] = human
                 # Log that there is a human in the environment
                 self.human_traversible = self.building.human_traversible
@@ -138,14 +127,12 @@ class HumANavRendererMulti():
             self.remove_human(ID)
         #human_traversible.fill(True) # clear human_traversible
 
-    def move_human_to_position_with_speed(self, pos_3, speed, mesh_rng):
+    def update_human(self, human):
         """
-        Moves an existing human mesh to the pos_3 (
-        [x, y, theta]) in the mesh.
+        Updates an existing human within a building 
         """
         if self.p.load_meshes:
-            self.building.move_human_to_position_with_speed(self.d, pos_3, speed, self.human_gender,
-                                                            self.human_texture, self.body_shape, mesh_rng)
+            self.building.update_human(human)
             self.human_traversible = self.building.map._human_traversible
 
     def _get_rgb_image(self, starts_n2, thetas_n1, human_visible):

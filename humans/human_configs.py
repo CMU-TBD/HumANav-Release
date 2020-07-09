@@ -20,23 +20,32 @@ from trajectory.trajectory import SystemConfig
 
 class HumanConfigs():
 
-    def __init__(self, start_config, goal_config):
+    def __init__(self, start_config, current_config, goal_config):
         self.start_config = start_config
+        # note that for generation/initialization functions, the current
+        # config will likely be the same as the start_config
+        self.current_config = start_config
         self.goal_config = goal_config
 
     # Getters for the HumanConfigs class
     def get_start_config(self):
         return self.start_config
+    
+    def get_current_config(self):
+        return self.current_config
+
+    def set_current_config(self, current):
+        self.current_config = current
 
     def get_goal_config(self):
         return self.goal_config
 
-    def generate_human_config(self, start_config, goal_config):
+    def generate_human_config(self, start_config, current_config, goal_config):
         """
         Sample a new random human from all required features
         return HumanConfigs(start_config, goal_config)
         """
-        return HumanConfigs(start_config, goal_config)
+        return HumanConfigs(start_config, current_config, goal_config)
 
     def generate_config_from_pos_3(self, pos_3, dt=0.1, speed=0):
         pos_n11 = tf.constant([[[pos_3[0], pos_3[1]]]], dtype=tf.float32)
@@ -67,7 +76,7 @@ class HumanConfigs():
         """
         goal_config = self.generate_random_config(
             self, environment, center=center)
-        return self.generate_human_config(self, start_config, goal_config)
+        return self.generate_human_config(self, start_config, start_config, goal_config)
 
     def generate_random_human_config_with_goal(self, goal_config, 
                                                environment, 
@@ -78,7 +87,7 @@ class HumanConfigs():
         """
         start_config = self.generate_random_config(
             self, environment, center=center)
-        return self.generate_human_config(self, start_config, goal_config)
+        return self.generate_human_config(self, start_config, start_config, goal_config)
 
     def generate_random_human_config(self, environment, 
                                      center=np.array([0, 0, 0]), radius=5.):
@@ -90,7 +99,7 @@ class HumanConfigs():
             self, environment, center=center, radius=radius)
         goal_config = self.generate_random_config(
             self, environment, center=center, radius=radius)
-        return self.generate_human_config(self, start_config, goal_config)
+        return self.generate_human_config(self, start_config, start_config, goal_config)
 
     # For generating positional arguments in an environment
     def generate_random_pos_3(self, center, xdiff=3, ydiff=3):

@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Human():
-
+    all_humans = {}
     def __init__(self, name, appearance, configs, trajectory=None):
         self.name = name
         self.appearance = appearance
@@ -32,6 +32,9 @@ class Human():
 
     def get_start_config(self):
         return self.configs.get_start_config()
+
+    def get_current_config(self):
+        return self.configs.get_current_config()
 
     def get_goal_config(self):
         return self.configs.get_goal_config()
@@ -63,7 +66,10 @@ class Human():
         goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
         if(verbose):
             print(" Human", human_name, "at", pos_2, "with goal", goal_2)
-        return Human(human_name, appearance, configs)
+        new_human = Human(human_name, appearance, configs)
+        # update knowledge of all other humans in the scene
+        Human.all_humans[new_human.get_name()] = new_human
+        return new_human
 
     def generate_human_with_appearance(self,
                                        appearance,
@@ -73,8 +79,7 @@ class Human():
         Sample a new human with a known appearance at a random 
         config with a random goal config.
         """
-        configs = HumanConfigs.generate_random_human_config(
-            HumanConfigs, environment, center)
+        configs = HumanConfigs.generate_random_human_config( HumanConfigs, environment, center)
         return self.generate_human(self, appearance, configs)
 
     def generate_human_with_configs(self, configs, name=None, verbose=False):
@@ -84,6 +89,14 @@ class Human():
         """
         appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
         return self.generate_human(self, appearance, configs, verbose=verbose, name=name)
+
+    def update_human_with_name(self, name, configs):
+        """
+        Update an existing human and return them
+        """
+        updated_human = Human.all_humans[name]
+        updated_human.configs = configs
+        return updated_human
 
     def generate_random_human_from_environment(self,
                                                environment,

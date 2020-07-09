@@ -75,15 +75,22 @@ class Agent():
         """
         return Agent(human.get_start_config(), human.get_goal_config(), name=human.get_name())
 
-    def agent_to_human(self, agent):
+    def agent_to_human(self, agent, human_exists=False):
         """
         Sample a new human from an agent by passing over name, configs, and trajectory
         """
         start = agent.get_start_config()
         current = agent.get_current_config()
-        configs = HumanConfigs.generate_human_config(HumanConfigs, start, current)
+        goal = agent.get_goal_config()
+        human_name = agent.get_name()
+        new_human = None
+        configs = HumanConfigs.generate_human_config(HumanConfigs, start, current, goal)
+        if(human_exists):
+            # searches for one of the existing human appearances
+            new_human = Human.update_human_with_name(Human, human_name, configs)
+        else:
+            new_human = Human.generate_human_with_configs(Human, configs, name=human_name, verbose=False)
         trajectory = agent.vehicle_trajectory
-        new_human = Human.generate_human_with_configs(Human, configs, name=agent.get_name(), verbose=False)
         new_human.update_trajectory(trajectory)
         return new_human
 
