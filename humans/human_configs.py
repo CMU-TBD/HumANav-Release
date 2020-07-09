@@ -24,7 +24,7 @@ class HumanConfigs():
         self.start_config = start_config
         # note that for generation/initialization functions, the current
         # config will likely be the same as the start_config
-        self.current_config = start_config
+        self.current_config = current_config
         self.goal_config = goal_config
 
     # Getters for the HumanConfigs class
