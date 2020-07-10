@@ -17,9 +17,11 @@ class Agent():
     all_agents = None
     def __init__(self, start, goal, name = None, planner=None):
         self.start_config = start
+        self.goal_config = goal
+        # upon initialization, the current config of the agent is start
         self.current_config = copy.copy(start)
         self.planned_next_config = copy.copy(self.current_config)
-        self.goal_config = goal
+
         self.system_dynamics = None
         self.update_freq = 100 # updating at 100hz
         self.time = 0 # tie to track progress during an update
@@ -58,14 +60,25 @@ class Agent():
     def get_start_config(self):
         return self.start_config
 
+    def set_start_config(self, start):
+        self.start_config = start
+
     def get_goal_config(self):
         return self.goal_config
+
+    def set_goal_config(self, goal):
+        self.goal_config = goal
 
     def get_current_config(self):
         return self.current_config
 
+    def set_start_config(self, current):
+        self.current_config = current
+
     def get_trajectory(self):
         return self.vehicle_trajectory
+
+
 
     # @staticmethod
     # def human_to_agent(human):
@@ -112,8 +125,8 @@ class Agent():
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         init_time = time.clock()
         if(params.verbose_printing):
-            print("start: ", self.start_config.position_nk2().numpy())
-            print("goal: ", self.goal_config.position_nk2().numpy())
+            print("start: ", self.get_start_config().position_nk2().numpy())
+            print("goal: ", self.get_goal_config().position_nk2().numpy())
 
         # Generate the next trajectory segment, update next config, update actions/data
         self.plan(params, obstacle_map)

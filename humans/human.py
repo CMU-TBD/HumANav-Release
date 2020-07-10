@@ -9,7 +9,7 @@ import numpy as np
 
 class Human(Agent):
     all_humans = {}
-    def __init__(self, name, appearance, configs, trajectory=None):
+    def __init__(self, name, appearance, start_configs, trajectory=None):
         self.name = name
         self.appearance = appearance
         # Identity is a hashable tuple of a human's name, gender, and shape
@@ -17,8 +17,7 @@ class Human(Agent):
             self.identity = (name)
         else:
             self.identity = (name, appearance.gender, appearance.shape)
-        self.configs = configs
-        super().__init__(configs.get_start_config(), configs.get_goal_config(), name)
+        super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
         # self.trajectory = trajectory
         self.termination = None
 
@@ -32,28 +31,7 @@ class Human(Agent):
 
     def get_appearance(self):
         return self.appearance
-
-    def get_start_config(self):
-        return self.configs.get_start_config()
-
-    def get_current_config(self):
-        return self.configs.get_current_config()
-
-    def get_goal_config(self):
-        return self.configs.get_goal_config()
-
-    def set_configs(self, configs):
-        """
-        Update an existing human and return them
-        """
-        self.configs = configs
-
-    # def update_trajectory(self, trajectory):
-    #     self.trajectory = trajectory
-
-    # def get_trajectory(self):
-    #     return self.trajectory
-
+        
     def update_termination(self, cause):
         self.termination = cause
 
@@ -119,8 +97,7 @@ class Human(Agent):
         appearance = None
         if generate_appearance:
             appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
-        configs = HumanConfigs.generate_random_human_config(HumanConfigs,
-                                                            environment,
+        configs = HumanConfigs.generate_random_human_config(environment,
                                                             center,
                                                             radius=radius)
         return Human.generate_human(appearance, configs)
