@@ -145,8 +145,8 @@ class Agent():
             self.vehicle_trajectory.append_along_time_axis(traj_segment)
             self.commanded_actions_nkf.append(commands_1kf)
             self._enforce_episode_termination_conditions(params, obstacle_map)
-            if(self.end_episode):
-                print("terminated plan for agent", self.get_name(), "at t =", self.time)
+            # if(self.end_episode):
+            #     print("terminated plan for agent", self.get_name(), "at t =", self.time)
 
     def dist_to_agent(self, other):
         self_pos = self.get_current_config().position_nk2()[0][0]
@@ -180,8 +180,8 @@ class Agent():
                 self.path_step = self.path_step + action_dt
                 if(self.path_step >= self.vehicle_trajectory.k or self.collided):
                     self.end_acting = True
-            if(self.end_acting):
-                print("terminated act  for agent", self.get_name(), "at t =", self.time)
+            # if(self.end_acting):
+            #     print("terminated act  for agent", self.get_name(), "at t =", self.time)
             # self.update_final(params)
 
     def _process_planner_data(self, params):

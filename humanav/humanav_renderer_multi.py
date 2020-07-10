@@ -133,7 +133,7 @@ class HumANavRendererMulti():
         """
         if self.p.load_meshes:
             self.building.update_human(human)
-            self.human_traversible = self.building.map._human_traversible
+            self.human_traversible = self.building.human_traversible
 
     def _get_rgb_image(self, starts_n2, thetas_n1, human_visible):
         """

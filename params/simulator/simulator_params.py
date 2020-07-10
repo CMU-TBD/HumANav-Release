@@ -2,13 +2,16 @@ from dotmap import DotMap
 from utils import utils
 import numpy as np
 from params.planner_params import create_params as create_planner_params
-
+from params.renderer_params import create_params as create_humanav_params
 
 def create_params():
     p = DotMap()
 
     # Load the dependencies
     p.planner_params = create_planner_params()
+    
+    # Load HumANav dependencies
+    p.humanav_params = create_humanav_params()
 
     p.seed = 10  # seed for the simulator (different than for numpy and tf) # default 10
 

@@ -18,7 +18,7 @@ class CentralSimulator(SimulatorHelper):
     def __init__(self, params, environment, renderer=None):
         self.params = params.simulator.parse_params(params)
         self.r = renderer
-        self.obstacle_map = self._init_obstacle_map(self.r)
+        self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
         self.humanav_dir = get_path_to_humanav()
         # theoretially all the agents can have their own system dynamics as well
@@ -39,7 +39,6 @@ class CentralSimulator(SimulatorHelper):
         p.episode_horizon = int(np.ceil(p.episode_horizon_s / dt))
         p.control_horizon = int(np.ceil(p.control_horizon_s / dt))
         p.dt = dt
-
         return p
 
     def add_agent(self, a):
@@ -74,8 +73,9 @@ class CentralSimulator(SimulatorHelper):
         subtrajectories. Generates a vehicle_trajectory for the episode, 
         calculates its objective value, and sets the episode_type 
         (timeout, collision, success) """
-        print(print_colors()["blue"], "Running simulation on", len(self.agents),
-              "agents", print_colors()["reset"])
+        print(print_colors()["blue"], 
+            "Running simulation on", len(self.agents), "agents", 
+            print_colors()["reset"])
         i = 0
         time_step = 0.05 # seconds for each agent to "act"
         start_time = time.clock()
@@ -85,8 +85,13 @@ class CentralSimulator(SimulatorHelper):
         total_time = 0 # keep track of overall time in the simulator
         while self.exists_running_agent():
             init_time = time.clock()
-            for a in self.agents.values():
-                a.update(self.params, self.obstacle_map, time_step=time_step)
+            agent_threads = []
+            for i, a in enumerate(self.agents.values()):
+                # a.update(self.params, self.obstacle_map, time_step=time_step)
+                agent_threads.append(threading.Thread(target=a.update, args=(self.params, self.obstacle_map, time_step,)))
+                agent_threads[i].start()
+            
+
             # Takes screenshot of the simulation state as long as the update is still going
             fin_time = time.clock() - init_time
             total_time = total_time + fin_time
@@ -185,10 +190,22 @@ class CentralSimulator(SimulatorHelper):
         for f in files:
             os.remove(f)
 
-    def plot_topview(self, ax, extent, traversible, camera_pos_13, 
+    def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
                     agents, plot_quiver=False):
         ax.imshow(traversible, extent=extent, cmap='gray',
                 vmin=-.5, vmax=1.5, origin='lower')
+        # Plot human traversible
+        if human_traversible is not None:
+            # NOTE: the human radius is only available given the openGL human modeling
+            # and rendering, thus p.render_with_display must be True
+            # Plot the 5x5 meter human radius grid atop the environment traversible
+            alphas = np.empty(np.shape(human_traversible))
+            for y in range(human_traversible.shape[1]):
+                for x in range(human_traversible.shape[0]):
+                    alphas[x][y] = not(human_traversible[x][y])
+            ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
+                    vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
+            alphas = np.all(np.invert(human_traversible))
 
         # Plot the camera
         ax.plot(camera_pos_13[0], camera_pos_13[1],
@@ -244,7 +261,7 @@ class CentralSimulator(SimulatorHelper):
         ax = fig.add_subplot(1, num_frames, 1)
         ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
         ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
-        self.plot_topview(ax, extent, traversible,
+        self.plot_topview(ax, extent, traversible, human_traversible,
                     camera_pos_13, agents, plot_quiver=True)
         ax.legend()
         ax.set_xticks([])
@@ -258,7 +275,7 @@ class CentralSimulator(SimulatorHelper):
         ax = fig.add_subplot(1, num_frames, 2)
         ax.set_xlim(0., outer_zoom)
         ax.set_ylim(0., outer_zoom)
-        self.plot_topview(ax, extent, traversible, 
+        self.plot_topview(ax, extent, traversible, human_traversible,
                         camera_pos_13, agents)
         ax.legend()
         ax.set_xticks([])
@@ -318,14 +335,19 @@ class CentralSimulator(SimulatorHelper):
         room_center = np.array([12., 17., 0.])
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
-        if True:
+        if self.params.humanav_params.render_with_display:
+            # environment should hold building and human traversibles
+            assert(len(self.environment["traversibles"]) == 2)
+            # only when rendering with opengl
             for a in self.agents.values():
                 self.r.update_human(Agent.agent_to_human(Agent, a, human_exists=True))
-
-        if True: # only when rendering with opengl
+            # Update human traversible
+            self.environment["traversibles"][1] = self.r.get_human_traversible()
+            # compute the rgb and depth images
             rgb_image_1mk3, depth_image_1mk1 = \
                 self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), self.environment["map_scale"], human_visible=True)
-        self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, self.environment, room_center,
-                    camera_pos_13, self.agents, current_time, filename)
+        # plot the rbg, depth, and topview images if applicable
+        self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, self.environment,room_center,
+                        camera_pos_13, self.agents, current_time, filename)
 
 
