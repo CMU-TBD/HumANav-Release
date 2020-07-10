@@ -7,8 +7,6 @@ from objectives.angle_distance import AngleDistance
 from objectives.goal_distance import GoalDistance
 from objectives.obstacle_avoidance import ObstacleAvoidance
 
-from humans.human import Human
-from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig, Trajectory
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors, generate_name
@@ -69,33 +67,33 @@ class Agent():
     def get_trajectory(self):
         return self.vehicle_trajectory
 
-    @staticmethod
-    def human_to_agent(human):
-        """
-        Sample a new agent from a human with configs
-        """
-        return Agent(human.get_start_config(), human.get_goal_config(), name=human.get_name())
+    # @staticmethod
+    # def human_to_agent(human):
+    #     """
+    #     Sample a new agent from a human with configs
+    #     """
+    #     return Agent(human.get_start_config(), human.get_goal_config(), name=human.get_name())
 
-    @staticmethod
-    def agent_to_human(agent, human_exists=False):
-        """
-        Sample a new human from an agent by passing over name, configs, and trajectory
-        """
-        start = agent.get_start_config()
-        current = agent.get_current_config()
-        goal = agent.get_goal_config()
-        human_name = agent.get_name()
-        new_human = None
-        configs = HumanConfigs.generate_human_config(HumanConfigs, start, current, goal)
-        if(human_exists):
-            # searches for one of the existing human appearances
-            new_human = Human.find_human_with_name(agent.get_name())
-            new_human.set_configs(configs)
-        else:
-            new_human = Human.generate_human_with_configs(configs, name=human_name, verbose=False)
-        trajectory = agent.vehicle_trajectory
-        new_human.update_trajectory(trajectory)
-        return new_human
+    # @staticmethod
+    # def agent_to_human(agent, human_exists=False):
+    #     """
+    #     Sample a new human from an agent by passing over name, configs, and trajectory
+    #     """
+    #     start = agent.get_start_config()
+    #     current = agent.get_current_config()
+    #     goal = agent.get_goal_config()
+    #     human_name = agent.get_name()
+    #     new_human = None
+    #     configs = HumanConfigs.generate_human_config(HumanConfigs, start, current, goal)
+    #     if(human_exists):
+    #         # searches for one of the existing human appearances
+    #         new_human = Human.find_human_with_name(agent.get_name())
+    #         new_human.set_configs(configs)
+    #     else:
+    #         new_human = Human.generate_human_with_configs(configs, name=human_name, verbose=False)
+    #     trajectory = agent.vehicle_trajectory
+    #     new_human.update_trajectory(trajectory)
+    #     return new_human
 
     def update_final(self, params):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']

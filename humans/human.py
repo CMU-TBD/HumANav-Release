@@ -1,11 +1,13 @@
 from humans.human_appearance import HumanAppearance
 from humans.human_configs import HumanConfigs
 from utils.utils import print_colors, generate_name
+from simulators.agent import Agent
 import math, sys, os, pickle
 import numpy as np
 
 
-class Human():
+
+class Human(Agent):
     all_humans = {}
     def __init__(self, name, appearance, configs, trajectory=None):
         self.name = name
@@ -16,7 +18,8 @@ class Human():
         else:
             self.identity = (name, appearance.gender, appearance.shape)
         self.configs = configs
-        self.trajectory = trajectory
+        super().__init__(configs.get_start_config(), configs.get_goal_config(), name)
+        # self.trajectory = trajectory
         self.termination = None
 
     # Getters for the Human class
@@ -45,11 +48,11 @@ class Human():
         """
         self.configs = configs
 
-    def update_trajectory(self, trajectory):
-        self.trajectory = trajectory
+    # def update_trajectory(self, trajectory):
+    #     self.trajectory = trajectory
 
-    def get_trajectory(self):
-        return self.trajectory
+    # def get_trajectory(self):
+    #     return self.trajectory
 
     def update_termination(self, cause):
         self.termination = cause

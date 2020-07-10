@@ -339,7 +339,7 @@ class CentralSimulator(SimulatorHelper):
             assert(len(self.environment["traversibles"]) == 2)
             # only when rendering with opengl
             for a in self.agents.values():
-                self.r.update_human(Agent.agent_to_human(a, human_exists=True))
+                self.r.update_human(a) #Agent.agent_to_human(a, human_exists=True))
             # Update human traversible
             self.environment["traversibles"][1] = self.r.get_human_traversible()
             # compute the rgb and depth images

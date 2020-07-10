@@ -277,15 +277,16 @@ def test_socnav(num_humans):
         else:
             environment["traversibles"] = np.array([traversible]) 
         # Input human fields into simulator
-        simulator.add_agent(Agent.human_to_agent(new_human_i))
+        # simulator.add_agent(Agent.human_to_agent(new_human_i))
+        simulator.add_agent(new_human_i)
 
     # run simulation
     simulator.simulate()
 
-    for human in human_list:
-        name = human.get_name()
-        human.update_trajectory(simulator.agents[name].get_trajectory())
-        human.update_termination(simulator.agents[name].termination_cause)
+    # for human in human_list:
+    #     name = human.get_name()
+    #     human.update_trajectory(simulator.agents[name].get_trajectory())
+    #     human.update_termination(simulator.agents[name].termination_cause)
 
     # Plotting an image for each camera location
     for i in range(num_cameras):
