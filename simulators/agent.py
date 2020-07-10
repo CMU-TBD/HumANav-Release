@@ -69,13 +69,15 @@ class Agent():
     def get_trajectory(self):
         return self.vehicle_trajectory
 
-    def human_to_agent(self, human):
+    @staticmethod
+    def human_to_agent(human):
         """
         Sample a new agent from a human with configs
         """
         return Agent(human.get_start_config(), human.get_goal_config(), name=human.get_name())
 
-    def agent_to_human(self, agent, human_exists=False):
+    @staticmethod
+    def agent_to_human(agent, human_exists=False):
         """
         Sample a new human from an agent by passing over name, configs, and trajectory
         """

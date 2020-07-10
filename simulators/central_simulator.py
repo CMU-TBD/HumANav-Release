@@ -86,7 +86,7 @@ class CentralSimulator(SimulatorHelper):
         while self.exists_running_agent():
             init_time = time.clock()
             agent_threads = []
-            for i, a in enumerate(self.agents.values()):
+            for a in self.agents.values():
                 a.update(self.params, self.obstacle_map, time_step=time_step)
                 # agent_threads.append(threading.Thread(target=a.update, args=(self.params, self.obstacle_map, time_step,)))
                 # agent_threads[i].start()
@@ -338,7 +338,7 @@ class CentralSimulator(SimulatorHelper):
             assert(len(self.environment["traversibles"]) == 2)
             # only when rendering with opengl
             for a in self.agents.values():
-                self.r.update_human(Agent.agent_to_human(Agent, a, human_exists=True))
+                self.r.update_human(Agent.agent_to_human(a, human_exists=True))
             # Update human traversible
             self.environment["traversibles"][1] = self.r.get_human_traversible()
             # compute the rgb and depth images

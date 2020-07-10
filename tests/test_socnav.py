@@ -277,7 +277,7 @@ def test_socnav(num_humans):
         else:
             environment["traversibles"] = np.array([traversible]) 
         # Input human fields into simulator
-        simulator.add_agent(Agent.human_to_agent(Agent, new_human_i))
+        simulator.add_agent(Agent.human_to_agent(new_human_i))
 
     # run simulation
     simulator.simulate()
