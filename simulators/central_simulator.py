@@ -87,11 +87,9 @@ class CentralSimulator(SimulatorHelper):
             init_time = time.clock()
             agent_threads = []
             for i, a in enumerate(self.agents.values()):
-                # a.update(self.params, self.obstacle_map, time_step=time_step)
-                agent_threads.append(threading.Thread(target=a.update, args=(self.params, self.obstacle_map, time_step,)))
-                agent_threads[i].start()
-            
-
+                a.update(self.params, self.obstacle_map, time_step=time_step)
+                # agent_threads.append(threading.Thread(target=a.update, args=(self.params, self.obstacle_map, time_step,)))
+                # agent_threads[i].start()
             # Takes screenshot of the simulation state as long as the update is still going
             fin_time = time.clock() - init_time
             total_time = total_time + fin_time
