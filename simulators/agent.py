@@ -89,9 +89,10 @@ class Agent():
         configs = HumanConfigs.generate_human_config(HumanConfigs, start, current, goal)
         if(human_exists):
             # searches for one of the existing human appearances
-            new_human = Human.update_human_with_name(Human, human_name, configs)
+            new_human = Human.find_human_with_name(agent.get_name())
+            new_human.set_configs(configs)
         else:
-            new_human = Human.generate_human_with_configs(Human, configs, name=human_name, verbose=False)
+            new_human = Human.generate_human_with_configs(configs, name=human_name, verbose=False)
         trajectory = agent.vehicle_trajectory
         new_human.update_trajectory(trajectory)
         return new_human

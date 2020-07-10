@@ -39,6 +39,12 @@ class Human():
     def get_goal_config(self):
         return self.configs.get_goal_config()
 
+    def set_configs(self, configs):
+        """
+        Update an existing human and return them
+        """
+        self.configs = configs
+
     def update_trajectory(self, trajectory):
         self.trajectory = trajectory
 
@@ -51,7 +57,15 @@ class Human():
     def get_termination(self):
         return self.termination
 
-    def generate_human(self, appearance, configs, name=None, max_chars=20, verbose=False):
+    @staticmethod
+    def find_human_with_name(name):
+        for h in Human.all_humans.values():
+            if h.get_name() is name:
+                return h
+        return None
+
+    @staticmethod
+    def generate_human(appearance, configs, name=None, max_chars=20, verbose=False):
         """
         Sample a new random human from all required features
         """
@@ -67,12 +81,11 @@ class Human():
         if(verbose):
             print(" Human", human_name, "at", pos_2, "with goal", goal_2)
         new_human = Human(human_name, appearance, configs)
-        # update knowledge of all other humans in the scene
-        Human.all_humans[new_human.get_name()] = new_human
+        Human.all_humans[human_name] = new_human
         return new_human
 
-    def generate_human_with_appearance(self,
-                                       appearance,
+    @staticmethod
+    def generate_human_with_appearance(appearance,
                                        environment,
                                        center=np.array([0., 0., 0.])):
         """
@@ -80,26 +93,19 @@ class Human():
         config with a random goal config.
         """
         configs = HumanConfigs.generate_random_human_config( HumanConfigs, environment, center)
-        return self.generate_human(self, appearance, configs)
+        return Human.generate_human(appearance, configs)
 
-    def generate_human_with_configs(self, configs, name=None, verbose=False):
+    @staticmethod
+    def generate_human_with_configs(configs, name=None, verbose=False):
         """
         Sample a new random from known configs and a randomized
         appearance, if any of the configs are None they will be generated
         """
         appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
-        return self.generate_human(self, appearance, configs, verbose=verbose, name=name)
+        return Human.generate_human(appearance, configs, verbose=verbose, name=name)
 
-    def update_human_with_name(self, name, configs):
-        """
-        Update an existing human and return them
-        """
-        updated_human = Human.all_humans[name]
-        updated_human.configs = configs
-        return updated_human
-
-    def generate_random_human_from_environment(self,
-                                               environment,
+    @staticmethod
+    def generate_random_human_from_environment(environment,
                                                center=np.array([0., 0., 0.]),
                                                radius=5.,
                                                generate_appearance=False):
@@ -114,4 +120,4 @@ class Human():
                                                             environment,
                                                             center,
                                                             radius=radius)
-        return self.generate_human(self, appearance, configs)
+        return Human.generate_human(appearance, configs)

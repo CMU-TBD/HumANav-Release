@@ -85,7 +85,6 @@ class CentralSimulator(SimulatorHelper):
         total_time = 0 # keep track of overall time in the simulator
         while self.exists_running_agent():
             init_time = time.clock()
-            agent_threads = []
             for a in self.agents.values():
                 a.update(self.params, self.obstacle_map, time_step=time_step)
                 # agent_threads.append(threading.Thread(target=a.update, args=(self.params, self.obstacle_map, time_step,)))
@@ -169,7 +168,7 @@ class CentralSimulator(SimulatorHelper):
             **kwargs)
         return img_nmkd
 
-    def save_to_gif(self):
+    def save_to_gif(self, clear_old_files = False):
         """Takes the image directory and naturally sorts the images into a singular movie.gif"""
         images = []
         IMAGES_DIR = os.path.join(self.humanav_dir, "tests/socnav/images")
@@ -185,8 +184,9 @@ class CentralSimulator(SimulatorHelper):
         imageio.mimsave(output_location, images)
         print('\033[32m', "Rendered gif at", output_location, '\033[0m')
         # Clearing remaining files to not affect next render
-        for f in files:
-            os.remove(f)
+        if clear_old_files:
+            for f in files:
+                os.remove(f)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
                     agents, plot_quiver=False):
@@ -214,6 +214,7 @@ class CentralSimulator(SimulatorHelper):
         for i, a in enumerate(agents.values()):
             pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
             heading= (a.get_current_config().heading_nk1().numpy())[0][0]
+            # TODO: make colours of trajectories random rather than hardcoded
             a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             color = 'go' # agents are green and solid unless collided
             if(a.collided):
