@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from utils.utils import touch, print_colors
 import numpy as np
 import copy, os, glob, imageio
-import time
+import time, multiprocessing
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
@@ -99,9 +99,20 @@ class CentralSimulator(SimulatorHelper):
             i = i + 1
         self.wall_clock_time = time.clock() - start_time
         print("\nSimulation completed in", self.wall_clock_time, total_time, "seconds")
+        gif_processes = []
         for frame, s in enumerate(self.states.values()):
-            self.take_snapshot(s, np.array([9., 22., -np.pi/4]),
-                                "simulate_obs" + str(frame) + ".png")
+            gif_processes.append(
+                multiprocessing.Process(
+                                target=self.take_snapshot, 
+                                args=(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png")))
+        
+        for p in gif_processes:
+            p.start()
+
+        for p in gif_processes:
+            p.join()
+
+        # self.take_snapshot(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png")
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
@@ -134,9 +145,7 @@ class CentralSimulator(SimulatorHelper):
         for a in self.agents.values():
             saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
         current_state = SimState(saved_env, saved_agents, current_time)
-        # TODO: fix random bug where tf.Variables become tf.python.ops.ResourceVariables
-        # when being appended to the 'states' variable (and is unreadable/uninitialized)
-        # due to the deepcopy of the tf.Variable
+        # Save current state to a local dictionary
         self.states[current_time] = current_state
 
     def _reset_obstacle_map(self, rng):
