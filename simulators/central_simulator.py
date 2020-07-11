@@ -104,11 +104,9 @@ class CentralSimulator(SimulatorHelper):
             gif_processes.append(
                 multiprocessing.Process(
                                 target=self.take_snapshot, 
-                                args=(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png")))
-        
-        for p in gif_processes:
-            p.start()
-
+                                args=(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png"))
+                                )
+            gif_processes[frame].start()
         for p in gif_processes:
             p.join()
 
@@ -141,6 +139,7 @@ class CentralSimulator(SimulatorHelper):
     
     def save_state(self, current_time):
         saved_env = copy.deepcopy(self.environment)
+        # deepcopy all agents individually using a HumanState copy
         saved_agents = {}
         for a in self.agents.values():
             saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
@@ -190,7 +189,7 @@ class CentralSimulator(SimulatorHelper):
             **kwargs)
         return img_nmkd
 
-    def save_to_gif(self, clear_old_files = False):
+    def save_to_gif(self, clear_old_files = True):
         """Takes the image directory and naturally sorts the images into a singular movie.gif"""
         images = []
         IMAGES_DIR = os.path.join(self.humanav_dir, "tests/socnav/images")
@@ -357,19 +356,19 @@ class CentralSimulator(SimulatorHelper):
         depth_image_1mk1 = None
         if self.params.humanav_params.render_with_display:
             # environment should hold building and human traversibles
-            assert(len(state.environment["traversibles"]) == 2)
+            assert(len(state.get_environment()["traversibles"]) == 2)
             # only when rendering with opengl
-            for a in state.agents.values():
+            for a in state.get_agents().values():
                 self.r.update_human(a) #Agent.agent_to_human(a, human_exists=True))
             # Update human traversible
-            state.environment["traversibles"][1] = self.r.get_human_traversible()
+            state.get_environment()["traversibles"][1] = self.r.get_human_traversible()
             # compute the rgb and depth images
             rgb_image_1mk3, depth_image_1mk1 = \
                 self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), 
-                                          state.environment["map_scale"], human_visible=True)
+                                          state.get_environment()["map_scale"], human_visible=True)
         # plot the rbg, depth, and topview images if applicable
         self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
-                        state.environment,room_center, camera_pos_13, state.agents,
-                        state.time, filename)
+                        state.get_environment(), room_center, camera_pos_13, 
+                        state.get_agents(), state.get_time(), filename)
 
 

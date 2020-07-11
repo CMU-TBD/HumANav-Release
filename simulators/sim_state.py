@@ -47,20 +47,11 @@ class SimState():
         self.agents = agents
         self.time = time
 
-    def set_environment(self, env):
-        self.environment = env
-
-    def set_agents(self, agents):
-        self.agents = agents
-    
     def get_environment(self):
         return self.environment
 
     def get_agents(self):
         return self.agents
-
-    def set_time(self, t):
-        self.environment = t
 
     def get_time(self):
         return self.time
