@@ -11,10 +11,7 @@ from trajectory.trajectory import SystemConfig, Trajectory
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors, generate_name
 
-
-class Agent():
-    # static field for agents to keep track of ALL other agents 
-    all_agents = None
+class Agent(object):
     def __init__(self, start, goal, name = None, planner=None):
         self.start_config = start
         self.goal_config = goal
@@ -23,7 +20,6 @@ class Agent():
         self.planned_next_config = copy.copy(self.current_config)
 
         self.system_dynamics = None
-        self.update_freq = 100 # updating at 100hz
         self.time = 0 # tie to track progress during an update
         self.radius = 0.2 # meters
         if name is None:
@@ -72,41 +68,14 @@ class Agent():
     def get_current_config(self):
         return self.current_config
 
-    def set_start_config(self, current):
+    def set_current_config(self, current):
         self.current_config = current
 
     def get_trajectory(self):
         return self.vehicle_trajectory
 
-
-
-    # @staticmethod
-    # def human_to_agent(human):
-    #     """
-    #     Sample a new agent from a human with configs
-    #     """
-    #     return Agent(human.get_start_config(), human.get_goal_config(), name=human.get_name())
-
-    # @staticmethod
-    # def agent_to_human(agent, human_exists=False):
-    #     """
-    #     Sample a new human from an agent by passing over name, configs, and trajectory
-    #     """
-    #     start = agent.get_start_config()
-    #     current = agent.get_current_config()
-    #     goal = agent.get_goal_config()
-    #     human_name = agent.get_name()
-    #     new_human = None
-    #     configs = HumanConfigs.generate_human_config(HumanConfigs, start, current, goal)
-    #     if(human_exists):
-    #         # searches for one of the existing human appearances
-    #         new_human = Human.find_human_with_name(agent.get_name())
-    #         new_human.set_configs(configs)
-    #     else:
-    #         new_human = Human.generate_human_with_configs(configs, name=human_name, verbose=False)
-    #     trajectory = agent.vehicle_trajectory
-    #     new_human.update_trajectory(trajectory)
-    #     return new_human
+    def get_collided(self):
+        return self.collided
 
     def update_final(self, params):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']
@@ -183,10 +152,10 @@ class Agent():
             else:
                 # Update through the path traversal incrementally
                 # first check for collisions with any other agents
-                for a in Agent.all_agents.values():
-                    thresh = self.radius # All units presumably in m
-                    if(a.name is not self.name and self.dist_to_agent(a) < 2*thresh):
-                        self.collided = True
+                # for a in Agent.all_agents.values():
+                #     thresh = self.radius # All units presumably in m
+                #     if(a.name is not self.name and self.dist_to_agent(a) < 2*thresh):
+                #         self.collided = True
                 # then update the current config 
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(

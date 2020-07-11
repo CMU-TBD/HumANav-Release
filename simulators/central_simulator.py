@@ -1,4 +1,6 @@
 import tensorflow as tf
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
 import matplotlib as mpl
 mpl.use('Agg') # for rendering without a display
 import matplotlib.pyplot as plt
@@ -9,6 +11,7 @@ import time
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
+from simulators.sim_state import SimState, HumanState
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors, natural_sort
 from params.renderer_params import get_path_to_humanav
@@ -23,6 +26,7 @@ class CentralSimulator(SimulatorHelper):
         self.humanav_dir = get_path_to_humanav()
         # theoretially all the agents can have their own system dynamics as well
         self.agents = {}
+        self.states = {}
         self.wall_clock_time = 0
 
     @staticmethod
@@ -87,19 +91,17 @@ class CentralSimulator(SimulatorHelper):
             init_time = time.clock()
             for a in self.agents.values():
                 a.update(self.params, self.obstacle_map, time_step=time_step)
-                # agent_threads.append(threading.Thread(target=a.update, args=(self.params, self.obstacle_map, time_step,)))
-                # agent_threads[i].start()
             # Takes screenshot of the simulation state as long as the update is still going
             fin_time = time.clock() - init_time
             total_time = total_time + fin_time
-            self.take_snapshot(np.array([9., 22., -np.pi/4]), total_time,
-                                "simulate_obs" + str(i) + ".png")
+            self.save_state(total_time)
             self.print_progress(i)
-
-            # print("Generated Frames: %d\r" %i, end="")
             i = i + 1
         self.wall_clock_time = time.clock() - start_time
         print("\nSimulation completed in", self.wall_clock_time, total_time, "seconds")
+        # for frame, s in enumerate(self.states.values()):
+        #     self.take_snapshot(s, np.array([9., 22., -np.pi/4]),
+        #                         "simulate_obs" + str(frame) + ".png")
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
@@ -125,7 +127,18 @@ class CentralSimulator(SimulatorHelper):
             print_colors()["reset"],
             "Frames:", rendered_frames,
             "\r", end="")
-        
+    
+    def save_state(self, current_time):
+        saved_env = copy.deepcopy(self.environment)
+        saved_agents = {}
+        for a in self.agents.values():
+            saved_agents[a.get_name()] = copy.deepcopy(HumanState(a))
+        current_state = SimState(saved_env, saved_agents, current_time)
+
+        self.take_snapshot(current_state, np.array([9., 22., -np.pi/4]),
+                            "simulate_obs" + str(int(100.*current_time)) + ".png")
+        self.states[current_time] = current_state
+
     def _reset_obstacle_map(self, rng):
         """
         For SBPD the obstacle map does not change
@@ -217,7 +230,7 @@ class CentralSimulator(SimulatorHelper):
             # TODO: make colours of trajectories random rather than hardcoded
             a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             color = 'go' # agents are green and solid unless collided
-            if(a.collided):
+            if(a.get_collided()):
                 color='ro' # collided agents are drawn red
             if(i == 0):
                 # Only add label on the first humans
@@ -326,27 +339,28 @@ class CentralSimulator(SimulatorHelper):
 
         return rgb_image_1mk3, depth_image_1mk1
 
-
-    def take_snapshot(self, camera_pos_13, current_time, filename):
+    def take_snapshot(self, state, camera_pos_13, filename):
         """
-        takes screenshot
+        takes screenshot of a specific state of the world
         """
         room_center = np.array([12., 17., 0.])
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
         if self.params.humanav_params.render_with_display:
             # environment should hold building and human traversibles
-            assert(len(self.environment["traversibles"]) == 2)
+            assert(len(state.environment["traversibles"]) == 2)
             # only when rendering with opengl
-            for a in self.agents.values():
+            for a in state.agents.values():
                 self.r.update_human(a) #Agent.agent_to_human(a, human_exists=True))
             # Update human traversible
-            self.environment["traversibles"][1] = self.r.get_human_traversible()
+            state.environment["traversibles"][1] = self.r.get_human_traversible()
             # compute the rgb and depth images
             rgb_image_1mk3, depth_image_1mk1 = \
-                self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), self.environment["map_scale"], human_visible=True)
+                self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), 
+                                          state.environment["map_scale"], human_visible=True)
         # plot the rbg, depth, and topview images if applicable
-        self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, self.environment,room_center,
-                        camera_pos_13, self.agents, current_time, filename)
+        self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
+                        state.environment,room_center, camera_pos_13, state.agents,
+                        state.time, filename)
 
 

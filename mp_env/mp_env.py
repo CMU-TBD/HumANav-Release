@@ -147,7 +147,7 @@ class Building():
     dataset = HumanAppearance.dataset
     human_appearance = human.get_appearance()
     current_config = human.get_current_config()
-    self.people[human.get_identity()] = human
+    self.people[human.get_name()] = human
     heading = (current_config.heading_nk1().numpy())[0][0]
     pos_2 = (current_config.position_nk2().numpy())[0][0]
     pos_3 = np.append(pos_2, heading)
@@ -225,7 +225,7 @@ class Building():
 
       for i in range(len(human_entitiy_ids)):
           # Remove the human that matches the ID
-          name = ID[0]
+          name = ID
           if name in human_entitiy_ids[i]:
             if(False): # TODO: make param for verbose printing
               print(" Deleted Human: " + name)
@@ -247,7 +247,7 @@ class Building():
       and body shape at the updated position and speed
       """
       # Remove the previous human
-      self.remove_human(human.get_identity())
+      self.remove_human(human.get_name())
 
       # Load a new human with the updated speed and position
       # same human appearance

@@ -19,7 +19,8 @@ from trajectory.trajectory import SystemConfig
 
 
 class HumanConfigs():
-
+    # NOTE: these are primarily used for the "initial" configs of the Human/Agent
+    # and the generation of the configs from the environment
     def __init__(self, start_config, goal_config):
         self.start_config = start_config
         self.goal_config = goal_config

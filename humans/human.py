@@ -8,42 +8,18 @@ import numpy as np
 
 
 class Human(Agent):
-    all_humans = {}
     def __init__(self, name, appearance, start_configs, trajectory=None):
         self.name = name
         self.appearance = appearance
-        # Identity is a hashable tuple of a human's name, gender, and shape
-        if appearance is None:
-            self.identity = (name)
-        else:
-            self.identity = (name, appearance.gender, appearance.shape)
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
-        # self.trajectory = trajectory
-        self.termination = None
 
     # Getters for the Human class
-
+    # NOTE: most of the dynamics/configs implementation is in Agent.py
     def get_name(self):
         return self.name
 
-    def get_identity(self):
-        return self.identity
-
     def get_appearance(self):
         return self.appearance
-        
-    def update_termination(self, cause):
-        self.termination = cause
-
-    def get_termination(self):
-        return self.termination
-
-    @staticmethod
-    def find_human_with_name(name):
-        for h in Human.all_humans.values():
-            if h.get_name() is name:
-                return h
-        return None
 
     @staticmethod
     def generate_human(appearance, configs, name=None, max_chars=20, verbose=False):
@@ -61,9 +37,7 @@ class Human(Agent):
         goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
         if(verbose):
             print(" Human", human_name, "at", pos_2, "with goal", goal_2)
-        new_human = Human(human_name, appearance, configs)
-        Human.all_humans[human_name] = new_human
-        return new_human
+        return Human(human_name, appearance, configs)
 
     @staticmethod
     def generate_human_with_appearance(appearance,

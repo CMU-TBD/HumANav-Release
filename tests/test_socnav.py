@@ -80,22 +80,23 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
 
     # Plot the humans (added support for multiple humans) and their trajectories
     for i, human in enumerate(humans):
-        human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
-        human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
+        human_pos_2 = human.get_current_config().position_nk2().numpy()[0][0]
+        human_heading = (human.get_current_config().heading_nk1().numpy())[0][0]
         human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
         goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
-        color = human.get_termination()
-        human.get_trajectory().render(ax, freq=1, color=color, plot_quiver=False)
+        color = 'go' # humand are green and solid unless collided
+        trajectory_color = "green"
+        if(human.collided):
+            color='ro' # collided humans are drawn red
+            trajectory_color = "red"
+        human.get_trajectory().render(ax, freq=1, color=trajectory_color, plot_quiver=False)
         if(i == 0):
             # Only add label on the first humans
-            ax.plot(human_pos_2[0], human_pos_2[1],
-                    'ro', markersize=10, label='Human')
-            ax.plot(human_goal_2[0], human_goal_2[1], markerfacecolor="#FF7C00",
-                    marker='o', markersize=10, label='Goal')
+            ax.plot(human_pos_2[0], human_pos_2[1], color, markersize=10, label='Human')
+            ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10, label='Goal')
         else:
-            ax.plot(human_pos_2[0], human_pos_2[1], 'ro', markersize=10)
-            ax.plot(human_goal_2[0], human_goal_2[1],
-                    markerfacecolor="#FF7C00", marker='o', markersize=10)
+            ax.plot(human_pos_2[0], human_pos_2[1], color, markersize=10)
+            ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10)
         if(plot_quiver):
             # human start quiver
             ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(
@@ -277,17 +278,10 @@ def test_socnav(num_humans):
         else:
             environment["traversibles"] = np.array([traversible]) 
         # Input human fields into simulator
-        # simulator.add_agent(Agent.human_to_agent(new_human_i))
         simulator.add_agent(new_human_i)
 
     # run simulation
     simulator.simulate()
-
-    # for human in human_list:
-    #     name = human.get_name()
-    #     human.update_trajectory(simulator.agents[name].get_trajectory())
-    #     human.update_termination(simulator.agents[name].termination_cause)
-
     # Plotting an image for each camera location
     for i in range(num_cameras):
         rgb_image_1mk3 = None
