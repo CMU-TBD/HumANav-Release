@@ -65,13 +65,19 @@ class Agent(object):
     def set_goal_config(self, goal):
         self.goal_config = goal
 
-    def get_current_config(self):
-        return self.current_config
+    def get_current_config(self, deepcpy=False):
+        if(deepcpy):
+            # returned deep copy
+            return self.current_config.copy_config_tf()
+        else:
+            return self.current_config
 
     def set_current_config(self, current):
         self.current_config = current
 
-    def get_trajectory(self):
+    def get_trajectory(self, deepcpy=False):
+        if(deepcpy):
+            return self.vehicle_trajectory.copy_config_tf()
         return self.vehicle_trajectory
 
     def get_collided(self):

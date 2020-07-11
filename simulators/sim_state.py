@@ -10,14 +10,14 @@ NOTE: they are all READ-ONLY (only getters)
 
 
 class AgentState():
-    def __init__(self, a):
+    def __init__(self, a, deepcpy=False):
         self.name = a.get_name()
         self.start_config = a.get_start_config()
-        self.current_config = a.get_current_config()
         self.goal_config = a.get_goal_config()
-        self.vehicle_trajectory = a.get_trajectory()
-        self.end_acting = a.end_acting
+        self.current_config = a.get_current_config(deepcpy=deepcpy)
+        self.vehicle_trajectory = a.get_trajectory(deepcpy=deepcpy)
         self.collided = a.get_collided()
+        self.end_acting = a.end_acting
 
     def get_name(self):
         return self.name
@@ -33,11 +33,11 @@ class AgentState():
         return self.collided
 
 class HumanState(AgentState):
-    def __init__(self, human):
+    def __init__(self, human, deepcpy=False):
         self.name = human.get_name()
         self.appearance = human.get_appearance()
         # Initialize the agent state class
-        super().__init__(human)
+        super().__init__(human, deepcpy=deepcpy)
     def get_appearance(self):
         return self.appearance
 

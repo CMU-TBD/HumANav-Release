@@ -99,9 +99,9 @@ class CentralSimulator(SimulatorHelper):
             i = i + 1
         self.wall_clock_time = time.clock() - start_time
         print("\nSimulation completed in", self.wall_clock_time, total_time, "seconds")
-        # for frame, s in enumerate(self.states.values()):
-        #     self.take_snapshot(s, np.array([9., 22., -np.pi/4]),
-        #                         "simulate_obs" + str(frame) + ".png")
+        for frame, s in enumerate(self.states.values()):
+            self.take_snapshot(s, np.array([9., 22., -np.pi/4]),
+                                "simulate_obs" + str(frame) + ".png")
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
@@ -132,11 +132,11 @@ class CentralSimulator(SimulatorHelper):
         saved_env = copy.deepcopy(self.environment)
         saved_agents = {}
         for a in self.agents.values():
-            saved_agents[a.get_name()] = copy.deepcopy(HumanState(a))
+            saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
         current_state = SimState(saved_env, saved_agents, current_time)
-
-        self.take_snapshot(current_state, np.array([9., 22., -np.pi/4]),
-                            "simulate_obs" + str(int(100.*current_time)) + ".png")
+        # TODO: fix random bug where tf.Variables become tf.python.ops.ResourceVariables
+        # when being appended to the 'states' variable (and is unreadable/uninitialized)
+        # due to the deepcopy of the tf.Variable
         self.states[current_time] = current_state
 
     def _reset_obstacle_map(self, rng):
