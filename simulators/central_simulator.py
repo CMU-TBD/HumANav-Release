@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from utils.utils import touch, print_colors
 import numpy as np
 import copy, os, glob, imageio
-import time, multiprocessing
+import time
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
@@ -99,18 +99,7 @@ class CentralSimulator(SimulatorHelper):
             i = i + 1
         self.wall_clock_time = time.clock() - start_time
         print("\nSimulation completed in", self.wall_clock_time, total_time, "seconds")
-        gif_processes = []
-        for frame, s in enumerate(self.states.values()):
-            gif_processes.append(
-                multiprocessing.Process(
-                                target=self.take_snapshot, 
-                                args=(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png"))
-                                )
-            gif_processes[frame].start()
-        for p in gif_processes:
-            p.join()
-
-        # self.take_snapshot(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png")
+        self.generate_frames()
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
@@ -188,6 +177,23 @@ class CentralSimulator(SimulatorHelper):
             pos_n3=data_dict['vehicle_state_nk3'][:, 0],
             **kwargs)
         return img_nmkd
+
+    def generate_frames(self):
+        if(not self.params.humanav_params.render_with_display):
+            import multiprocessing
+            gif_processes = []
+            for frame, s in enumerate(self.states.values()):
+                gif_processes.append(
+                    multiprocessing.Process(
+                                    target=self.take_snapshot, 
+                                    args=(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png"))
+                                    )
+                gif_processes[frame].start()
+            for p in gif_processes:
+                p.join()
+        else:
+            for frame, s in enumerate(self.states.values()):
+                self.take_snapshot(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png")
 
     def save_to_gif(self, clear_old_files = True):
         """Takes the image directory and naturally sorts the images into a singular movie.gif"""

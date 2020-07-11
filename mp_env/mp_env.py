@@ -163,7 +163,7 @@ class Building():
     # Load the human mesh
     shapess, center_pos_3, human_mesh_info = \
             dataset.load_random_human(speed, gender, human_materials, body_shape, rng)
-
+   # TODO: not append a new human mesh on every iteration (especially when moving humans)
     self.human_mesh_info.append(human_mesh_info)
 
     # Make sure the human's feet are actually on the ground in SBPD
@@ -197,10 +197,10 @@ class Building():
             n_samples_per_face=env.n_samples_per_face, human_xy_center_2=pos_3[:2])
 
         self.traversible = map.traversible
-        self.ind_human_traversibles[human.identity] = map._human_traversible
+        self.ind_human_traversibles[human.get_name()] = map._human_traversible
         self.human_traversible = self.compute_human_traversible()
         self.map = map
-    self.human.append(shapess[0])
+    self.human.append(shapess[0]) # TODO: not add new humans when simply moving them
     self.human_ego_vertices = (human_ego_vertices)
 
   def compute_human_traversible(self):
@@ -230,6 +230,8 @@ class Building():
             if(False): # TODO: make param for verbose printing
               print(" Deleted Human: " + name)
             self.renderer_entitiy_ids.remove(human_entitiy_ids[i])
+            # only delete the one human, no need to keep traversing
+            break
 
       # Update the traversible to be human free
       self.map.traversible = self.map._traversible

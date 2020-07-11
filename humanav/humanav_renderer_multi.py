@@ -94,7 +94,7 @@ class HumANavRendererMulti():
             if not only_sample_human_identity:
                 # Load the human mesh into the scene
                 self.building.load_human_into_scene(human)
-                self.humans[human.get_identity()] = human
+                self.humans[human.get_name()] = human
                 # Log that there is a human in the environment
                 self.human_traversible = self.building.human_traversible
                 # If updating the human traversible a radius will be dynamically
@@ -122,9 +122,8 @@ class HumANavRendererMulti():
         """
         Remove all humans in the scene
         """
-        for ID, _ in list(self.humans.items()):
-            assert isinstance(ID, tuple)
-            self.remove_human(ID)
+        for name, _ in list(self.humans.items()):
+            self.remove_human(name)
         #human_traversible.fill(True) # clear human_traversible
 
     def update_human(self, human):

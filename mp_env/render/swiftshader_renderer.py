@@ -538,7 +538,6 @@ class SwiftshaderRenderer():
     return num, vbo, tbo
 
   def load_shapes(self, shapes, dedup_tbo=False, allow_repeat_humans=False):
-    entities = self.entities
     entity_ids = []
     dedup_dict = {}
     for i, shape in enumerate(shapes):
@@ -548,14 +547,12 @@ class SwiftshaderRenderer():
         #    assert name not in entities, '{:s} entity already exists.'.format(name)
         if shape.materials[j][0] in dedup_dict and dedup_tbo:
           tbo = dedup_dict[shape.materials[j][0]]
-          # logging.error('dedup: %s', shape.materials[j][0])
           num, vbo, tbo = self._load_mesh_into_gl(shape.meshes[j], material=None, tbo=tbo)
         else:
           num, vbo, tbo = self._load_mesh_into_gl(shape.meshes[j], shape.materials[j][1])
           dedup_dict[shape.materials[j][0]] = tbo
-        entities[name] = {'num': num, 'vbo': vbo, 'tbo': tbo, 'visible': False}
+        self.entities[name] = {'num': num, 'vbo': vbo, 'tbo': tbo, 'visible': False}
         entity_ids.append(name)
-        #print(shape.meshes)
     return entity_ids
 
   def set_entity_visible(self, entity_ids, visibility):
@@ -616,7 +613,7 @@ class SwiftshaderRenderer():
       with specified identification, ID
       """
       human_keys = list(filter(lambda x: 'human' in x, self.entities.keys()))
-      name = ID[0]
+      name = ID
       for i in range(len(human_keys)):
           if name in human_keys[i]:
             entity = self.entities.pop(human_keys[i], None)
