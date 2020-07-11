@@ -62,9 +62,6 @@ class Building():
       self.map.traversible = self.traversible
 
     # Instance variable for storing human information and humans
-    self.human_mesh_info = []
-    self.human_pos_3 = []
-    self.human = []
     self.people = {}
     self.ind_human_traversibles = {}
   
@@ -158,13 +155,11 @@ class Building():
     rng = human_appearance.get_mesh_rng()
     identification = human.get_name()
 
-    self.human_pos_3.append(pos_3*1.)
+    # self.human_pos_3.append(pos_3*1.)
 
     # Load the human mesh
     shapess, center_pos_3, human_mesh_info = \
             dataset.load_random_human(speed, gender, human_materials, body_shape, rng)
-   # TODO: not append a new human mesh on every iteration (especially when moving humans)
-    self.human_mesh_info.append(human_mesh_info)
 
     # Make sure the human's feet are actually on the ground in SBPD
     # (i.e. the minimum z coordinate is 0)
@@ -200,7 +195,6 @@ class Building():
         self.ind_human_traversibles[human.get_name()] = map._human_traversible
         self.human_traversible = self.compute_human_traversible()
         self.map = map
-    self.human.append(shapess[0]) # TODO: not add new humans when simply moving them
     self.human_ego_vertices = (human_ego_vertices)
 
   def compute_human_traversible(self):
@@ -211,21 +205,18 @@ class Building():
           new_human_traversible = np.all(new_human_traversible, axis=2)
       return new_human_traversible
 
-  def remove_human(self, ID):
+  def remove_human(self, name):
       """
-      Remove a human that has been loaded into the SBPD environment
-      - Note that the ID is a tuple consisting of a human's
-      (Name : string, Gender : string, Shape : int)
+      Remove a human that has been loaded into the SBPD environment by name
       """
       # Delete the human mesh from memory
-      self.r_obj.remove_human(ID)
+      self.r_obj.remove_human(name)
 
       # Remove the human from the list of loaded entities
       human_entitiy_ids = list(filter(lambda x: 'human' in x, self.renderer_entitiy_ids))
 
       for i in range(len(human_entitiy_ids)):
           # Remove the human that matches the ID
-          name = ID
           if name in human_entitiy_ids[i]:
             if(False): # TODO: make param for verbose printing
               print(" Deleted Human: " + name)
@@ -236,11 +227,11 @@ class Building():
       # Update the traversible to be human free
       self.map.traversible = self.map._traversible
       self.traversible = self.map._traversible
-      self.ind_human_traversibles.pop(ID)
+      self.ind_human_traversibles.pop(name)
       self.human_traversible = self.compute_human_traversible()
 
       # Remove from dictionary
-      self.people.pop(ID)
+      self.people.pop(name)
 
   def update_human(self, human):
       """

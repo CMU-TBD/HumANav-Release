@@ -21,9 +21,7 @@ class HumANavRendererMulti():
     def __init__(self, params):
         self.p = params
 
-        #self.human_texture = None
-        self.human_mesh_params = []
-        # Making use of a dictionary mapping Human ID's to humans
+        # Making use of a dictionary mapping Human's names to humans
         self.humans = {} # to keep track of the Humans
         self.human_traversible = []
 
@@ -103,20 +101,18 @@ class HumANavRendererMulti():
                     self.human_radius = self.building.map._human_radius
                 except AttributeError:
                     self.human_radius = self.default_human_radius
-                self.human_mesh_params = self.building.human_mesh_info
 
     def get_human_traversible(self):
         return self.human_traversible
     
-    def remove_human(self, ID):
+    def remove_human(self, name):
         """
         Remove the human with identity ID
         - Must be done from self.building and self.humans
         """
-        assert isinstance(ID, tuple)
         if self.p.load_meshes:
-            self.building.remove_human(ID)
-            self.humans.pop(ID)
+            self.building.remove_human(name)
+            self.humans.pop(name)
     
     def remove_all_humans(self):
         """
@@ -124,7 +120,6 @@ class HumANavRendererMulti():
         """
         for name, _ in list(self.humans.items()):
             self.remove_human(name)
-        #human_traversible.fill(True) # clear human_traversible
 
     def update_human(self, human):
         """
