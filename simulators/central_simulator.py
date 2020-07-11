@@ -19,7 +19,7 @@ from params.renderer_params import get_path_to_humanav
 class CentralSimulator(SimulatorHelper):
 
     def __init__(self, params, environment, renderer=None):
-        self.params = params.simulator.parse_params(params)
+        self.params = CentralSimulator.parse_params(params)
         self.r = renderer
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
@@ -43,6 +43,8 @@ class CentralSimulator(SimulatorHelper):
         p.episode_horizon = int(np.ceil(p.episode_horizon_s / dt))
         p.control_horizon = int(np.ceil(p.control_horizon_s / dt))
         p.dt = dt
+        # Much more optimized to only render topview, but can also render Humans
+        p.only_render_topview = True
         return p
 
     def add_agent(self, a):
@@ -80,23 +82,28 @@ class CentralSimulator(SimulatorHelper):
         print(print_colors()["blue"], 
             "Running simulation on", len(self.agents), "agents", 
             print_colors()["reset"])
-        i = 0
         time_step = 0.05 # seconds for each agent to "act"
-        start_time = time.clock()
+        total_time = 0 # keep track of overall time in the simulator
         for a in self.agents.values():
             # All agents share the same starting time
             a.init_time(0)
-        total_time = 0 # keep track of overall time in the simulator
+        iteration = 0
+        start_time = time.clock()
         while self.exists_running_agent():
             init_time = time.clock()
+
             for a in self.agents.values():
                 a.update(self.params, self.obstacle_map, time_step=time_step)
+            
             # Takes screenshot of the simulation state as long as the update is still going
             fin_time = time.clock() - init_time
             total_time = total_time + fin_time
+            
+            self.print_sim_progress(iteration)
+            
             self.save_state(total_time)
-            self.print_progress(i)
-            i = i + 1
+            iteration = iteration + 1
+            
         self.wall_clock_time = time.clock() - start_time
         print("\nSimulation completed in", self.wall_clock_time, total_time, "seconds")
         self.generate_frames()
@@ -111,7 +118,7 @@ class CentralSimulator(SimulatorHelper):
                 num = num + 1
         return num
 
-    def print_progress(self, rendered_frames):
+    def print_sim_progress(self, rendered_frames):
         print("A:", len(self.agents), 
             print_colors()["green"],
             "Success:", 
@@ -179,7 +186,9 @@ class CentralSimulator(SimulatorHelper):
         return img_nmkd
 
     def generate_frames(self):
-        if(not self.params.humanav_params.render_with_display):
+        num_frames = len(self.states)
+        np.set_printoptions(precision=3)
+        if(self.params.only_render_topview):
             import multiprocessing
             gif_processes = []
             for frame, s in enumerate(self.states.values()):
@@ -189,11 +198,18 @@ class CentralSimulator(SimulatorHelper):
                                     args=(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png"))
                                     )
                 gif_processes[frame].start()
+            frame = 0
             for p in gif_processes:
                 p.join()
+                frame = frame + 1
+                print("Generated Frames:", frame, "out of", num_frames, frame/num_frames, "\r", end="")
         else:
             for frame, s in enumerate(self.states.values()):
                 self.take_snapshot(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png")
+                print("Generated Frames:", frame, "out of", num_frames, frame/num_frames, "\r", end="")
+        # newline to not interfere with previous prints
+        print("\n")
+        
 
     def save_to_gif(self, clear_old_files = True):
         """Takes the image directory and naturally sorts the images into a singular movie.gif"""
@@ -267,7 +283,7 @@ class CentralSimulator(SimulatorHelper):
         traversible = environment["traversibles"][0]
         human_traversible = None
 
-        if len(environment["traversibles"]) > 1:
+        if len(environment["traversibles"]) > 1 and p.only_render_topview:
             human_traversible = environment["traversibles"][1]
         # Compute the real_world extent (in meters) of the traversible
         extent = [0., traversible.shape[1], 0., traversible.shape[0]]
@@ -360,7 +376,7 @@ class CentralSimulator(SimulatorHelper):
         room_center = np.array([12., 17., 0.])
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
-        if self.params.humanav_params.render_with_display:
+        if self.params.humanav_params.render_with_display and self.params.only_render_topview:
             # environment should hold building and human traversibles
             assert(len(state.get_environment()["traversibles"]) == 2)
             # only when rendering with opengl
