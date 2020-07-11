@@ -49,12 +49,7 @@ class CentralSimulator(SimulatorHelper):
 
     def add_agent(self, a):
         name = a.get_name()
-        a.obj_fn = a._init_obj_fn(self.params, self.obstacle_map)
-        a.planner = a._init_planner(self.params)
-        a.vehicle_data = a.planner.empty_data_dict()
-        a.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
-        a.system_dynamics = a._init_system_dynamics(self.params)
-        a._update_fmm_map(self.params, self.obstacle_map)
+        a.simulation_init(self.params, self.obstacle_map)
         self.agents[name] = a
         # update all agents' knowledge of other agents
         Agent.all_agents = self.agents
@@ -189,6 +184,7 @@ class CentralSimulator(SimulatorHelper):
         num_frames = len(self.states)
         np.set_printoptions(precision=3)
         if(self.params.only_render_topview):
+            # optimized to use multiple processesw
             import multiprocessing
             gif_processes = []
             for frame, s in enumerate(self.states.values()):
@@ -198,10 +194,8 @@ class CentralSimulator(SimulatorHelper):
                                     args=(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png"))
                                     )
                 gif_processes[frame].start()
-            frame = 0
-            for p in gif_processes:
+            for frame, p in enumerate(gif_processes):
                 p.join()
-                frame = frame + 1
                 print("Generated Frames:", frame, "out of", num_frames, frame/num_frames, "\r", end="")
         else:
             for frame, s in enumerate(self.states.values()):
@@ -283,7 +277,7 @@ class CentralSimulator(SimulatorHelper):
         traversible = environment["traversibles"][0]
         human_traversible = None
 
-        if len(environment["traversibles"]) > 1 and p.only_render_topview:
+        if len(environment["traversibles"]) > 1 and not p.only_render_topview:
             human_traversible = environment["traversibles"][1]
         # Compute the real_world extent (in meters) of the traversible
         extent = [0., traversible.shape[1], 0., traversible.shape[0]]
@@ -376,7 +370,7 @@ class CentralSimulator(SimulatorHelper):
         room_center = np.array([12., 17., 0.])
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
-        if self.params.humanav_params.render_with_display and self.params.only_render_topview:
+        if self.params.humanav_params.render_with_display and not self.params.only_render_topview:
             # environment should hold building and human traversibles
             assert(len(state.get_environment()["traversibles"]) == 2)
             # only when rendering with opengl

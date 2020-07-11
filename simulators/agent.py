@@ -12,42 +12,29 @@ from utils.fmm_map import FmmMap
 from utils.utils import print_colors, generate_name
 
 class Agent(object):
-    def __init__(self, start, goal, name = None, planner=None):
-        self.start_config = start
-        self.goal_config = goal
-        # upon initialization, the current config of the agent is start
-        self.current_config = copy.copy(start)
-        self.planned_next_config = copy.copy(self.current_config)
-
-        self.system_dynamics = None
-        self.time = 0 # tie to track progress during an update
-        self.radius = 0.2 # meters
+    def __init__(self, start, goal, name = None):
         if name is None:
             self.name = generate_name(20)
         else:
             self.name = name
-        self.planner = planner
-        # objective values and function
-        self.obj_fn = None  # Until called by simulator
-        self.obj_val = None
+        self.start_config = start
+        self.goal_config = goal
+        # upon initialization, the current config of the agent is start
+        self.current_config = copy.copy(start)
+        self.planned_next_config = copy.deepcopy(self.current_config)
 
+        self.time = 0 # tie to track progress during an update
+        self.radius = 0.2 # meters
+
+        # Dynamics and movement attributes
         self.fmm_map = None
         # path planning and acting fields
         self.end_episode = False
-        self.collided = False # for collisions with other agents
         self.end_acting = False
         self.path_step = 0
-
         self.termination_cause = None
-        self.episode_data = None
-        self.vehicle_trajectory = None
-        self.vehicle_data = None
-        self.planner_data = None
-        self.last_step_data_valid = None
-        self.episode_type = None
-        self.valid_episode = None
-        # self.commanded_actions_1kf = None
-        self.commanded_actions_nkf = []
+        # for collisions with other agents
+        self.collided = False 
 
     # Getters for the Agent class
     def get_name(self):
@@ -83,6 +70,18 @@ class Agent(object):
     def get_collided(self):
         return self.collided
 
+    def simulation_init(self, sim_params, sim_map):
+        """ Initializes important fields for the CentralSimulator
+        """
+        self.params = sim_params
+        self.obstacle_map = sim_map
+        self.obj_fn = self._init_obj_fn(self.params, self.obstacle_map)
+        self.fmm_map = self._init_fmm_map(self.params, self.obstacle_map)
+        self.system_dynamics = self._init_system_dynamics(self.params)
+        self.planner = self._init_planner(self.params)
+        self.vehicle_data = self.planner.empty_data_dict()
+        self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+
     def update_final(self, params):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']
         self.vehicle_data = self.episode_data['vehicle_data']
@@ -116,6 +115,9 @@ class Agent(object):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
         the subtrajectory, and relevant planner data"""
+        if not hasattr(self, 'commanded_actions_nkf'):
+            # initialize commanded actions
+            self.commanded_actions_nkf = []
         if(not self.end_episode):
             if(params.verbose_printing):
                 print(self.planned_next_config.position_nk2().numpy())
@@ -171,7 +173,8 @@ class Agent(object):
                     self.end_acting = True
             # if(self.end_acting):
             #     print("terminated act  for agent", self.get_name(), "at t =", self.time)
-            # self.update_final(params)
+        else:
+            self.update_final(params)
 
     def _process_planner_data(self, params):
         """
@@ -252,6 +255,7 @@ class Agent(object):
         so just update the goal position.
         """
         goal_pos_n2 = self.goal_config.position_nk2()[:, 0]
+        assert(hasattr(self, 'fmm_map'))
         if self.fmm_map is not None:
             self.fmm_map.change_goal(goal_pos_n2)
         else:
