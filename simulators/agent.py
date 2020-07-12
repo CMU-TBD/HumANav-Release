@@ -179,8 +179,10 @@ class Agent(object):
                     self.end_acting = True
                 # if(self.end_acting):
                 #     print("terminated act  for agent", self.get_name(), "at t =", self.time)
-        else:
-            self.update_final()
+        # NOTE: can use the following if want to update further tracked variables, but sometimes
+        # this is buggy when the action is not fully completed, thus this should be a TODO: fix
+        # else:
+        #     self.update_final()
 
     def _process_planner_data(self):
         """
