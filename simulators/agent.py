@@ -71,8 +71,7 @@ class Agent(object):
         return self.collided
 
     def simulation_init(self, sim_params, sim_map):
-        """ Initializes important fields for the CentralSimulator
-        """
+        """ Initializes important fields for the CentralSimulator"""
         self.params = sim_params
         self.obstacle_map = sim_map
         self.obj_fn = self._init_obj_fn()
@@ -98,7 +97,7 @@ class Agent(object):
     def init_time(self, t):
         self.time = t
 
-    def update(self, time_step=0.05):
+    def update(self, sim_state = None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         init_time = time.clock()
         if(self.params.verbose_printing):
@@ -109,9 +108,8 @@ class Agent(object):
         self.plan()
         # action_dt = -1 does not simulate the actions of stepping through the trajectory at
         # designated timestep, instead it instantly takes the current config to the end 
-        num_frames_act = int(1./time_step) # number of frames captured in the update
-        self.act(action_dt = int(self.vehicle_trajectory.k/num_frames_act))
-        update_dt = (time.clock() - init_time)
+        self.act(action_dt = int(self.params.control_horizon / 2), world_state = sim_state)
+        update_dt = time.clock() - init_time
         self.time = self.time + update_dt # update local clock
         
     def plan(self):
@@ -149,7 +147,7 @@ class Agent(object):
         diff_y = self_pos[1] - other_pos[1]
         return np.sqrt(diff_x**2 + diff_y**2)
         
-    def act(self, action_dt=-1):
+    def act(self, action_dt=-1, world_state = None):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
         if(not self.end_acting):
@@ -162,11 +160,12 @@ class Agent(object):
                 self.end_acting = True
             else:
                 # Update through the path traversal incrementally
-                # first check for collisions with any other agents
-                # for a in Agent.all_agents.values():
-                #     thresh = self.radius # All units presumably in m
-                #     if(a.name is not self.name and self.dist_to_agent(a) < 2*thresh):
-                #         self.collided = True
+                assert(action_dt < self.params.control_horizon)
+                if(world_state is not None):
+                    # first check for collisions with any other agents
+                    for a in world_state.get_agents().values():
+                        if(a.get_name() is not self.get_name() and self.dist_to_agent(a) < 2 * self.radius):
+                            self.collided = True
                 # then update the current config 
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
@@ -174,8 +173,8 @@ class Agent(object):
                 self.path_step = self.path_step + action_dt
                 if(self.path_step >= self.vehicle_trajectory.k or self.collided):
                     self.end_acting = True
-            # if(self.end_acting):
-            #     print("terminated act  for agent", self.get_name(), "at t =", self.time)
+                # if(self.end_acting):
+                #     print("terminated act  for agent", self.get_name(), "at t =", self.time)
         else:
             self.update_final()
 

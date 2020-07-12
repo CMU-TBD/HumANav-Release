@@ -40,8 +40,8 @@ class CentralSimulator(SimulatorHelper):
         # Time discretization step
         dt = p.planner_params.control_pipeline_params.system_dynamics_params.dt
         # Updating horizons
-        p.episode_horizon = int(np.ceil(p.episode_horizon_s / dt))
-        p.control_horizon = int(np.ceil(p.control_horizon_s / dt))
+        p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
+        p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
         # Much more optimized to only render topview, but can also render Humans
         p.only_render_topview = True
@@ -79,27 +79,26 @@ class CentralSimulator(SimulatorHelper):
         print(print_colors()["blue"], 
             "Running simulation on", len(self.agents), "agents", 
             print_colors()["reset"])
-        time_step = 0.05 # seconds for each agent to "act"
         total_time = 0 # keep track of overall time in the simulator
         for a in self.agents.values():
             # All agents share the same starting time
             a.init_time(0)
         iteration = 0
         start_time = time.clock()
+        total_time = 0
         while self.exists_running_agent():
-            init_time = time.clock()
-
-            for a in self.agents.values():
-                a.update(time_step=time_step)
-            
             # Takes screenshot of the simulation state as long as the update is still going
-            fin_time = time.clock() - init_time
-            total_time = total_time + fin_time
-            
-            self.print_sim_progress(iteration)
-            
+            reset_time = time.clock()
             self.save_state(total_time)
-            iteration = iteration + 1
+            current_state = list(self.states.values())[-1]
+            for a in self.agents.values():
+                a.update(sim_state = current_state)
+            # capture time after all the agents have updated
+            round_time = time.clock() - reset_time
+            total_time += round_time
+            self.print_sim_progress(iteration)
+            # Update number of iterations
+            iteration += 1
             
         self.wall_clock_time = time.clock() - start_time
         print("\nSimulation completed in", self.wall_clock_time, total_time, "seconds")
@@ -189,15 +188,17 @@ class CentralSimulator(SimulatorHelper):
             # optimized to use multiple processesw
             import multiprocessing
             # num_frames overcounts by one in this case
-            num_frames = num_frames - 1
+            num_frames -= 1
             gif_processes = []
-            for frame, s in enumerate(self.states.values()):
+            for p, s in enumerate(self.states.values()):
                 gif_processes.append(
                     multiprocessing.Process(
                                     target=self.take_snapshot, 
-                                    args=(s, camera_center, filename + str(frame) + ".png"))
+                                    args=(s, camera_center, filename + str(p) + ".png"))
                                     )
-                gif_processes[frame].start()
+                gif_processes[p].start()
+                print("Started processes:", p, "out of", num_frames, p/num_frames, "\r", end="")
+            print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
                 print("Generated Frames:", frame, "out of", num_frames, frame/num_frames, "\r", end="")
