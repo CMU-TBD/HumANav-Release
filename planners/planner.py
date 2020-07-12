@@ -2,6 +2,8 @@ import tensorflow as tf
 import numpy as np
 from trajectory.trajectory import Trajectory, SystemConfig
 
+import threading
+lock = threading.Lock()
 
 class Planner(object):
     """Plans optimal trajectories (by minimizing an objective function)
@@ -36,9 +38,11 @@ class Planner(object):
     def eval_objective(self, start_config, goal_config=None):
         """ Evaluate the objective function on a trajectory
         generated through the control pipeline from start_config (world frame)."""
-        waypts, horizons, trajectories_lqr, trajectories_spline, controllers = self.control_pipeline.plan(
-            start_config, goal_config)
-        obj_val = self.obj_fn.evaluate_function(trajectories_lqr)
+        with lock:
+            # for multithreading support since the control_pipeline is shared
+            waypts, horizons, trajectories_lqr, trajectories_spline, controllers = self.control_pipeline.plan(
+                start_config, goal_config)
+            obj_val = self.obj_fn.evaluate_function(trajectories_lqr)
         return obj_val, [
             waypts, horizons, trajectories_lqr, trajectories_spline,
             controllers

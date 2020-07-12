@@ -10,9 +10,7 @@ from objectives.obstacle_avoidance import ObstacleAvoidance
 from trajectory.trajectory import SystemConfig, Trajectory
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors, generate_name
-
-import threading
-lock = threading.Lock()
+from planners.sampling_planner import SamplingPlanner
 
 class Agent(object):
     def __init__(self, start, goal, name = None):
@@ -23,7 +21,7 @@ class Agent(object):
         self.start_config = start
         self.goal_config = goal
         # upon initialization, the current config of the agent is start
-        self.current_config = copy.copy(start)
+        self.current_config = copy.deepcopy(start)
         self.planned_next_config = copy.deepcopy(self.current_config)
 
         self.time = 0 # tie to track progress during an update
@@ -58,7 +56,7 @@ class Agent(object):
     def get_current_config(self, deepcpy=False):
         if(deepcpy):
             # returned deep copy
-            return self.current_config.copy_config_tf()
+            return SystemConfig.copy(self.current_config)
         else:
             return self.current_config
 
@@ -67,7 +65,7 @@ class Agent(object):
 
     def get_trajectory(self, deepcpy=False):
         if(deepcpy):
-            return self.vehicle_trajectory.copy_config_tf()
+            return Trajectory.copy(self.vehicle_trajectory)
         return self.vehicle_trajectory
 
     def get_collided(self):
@@ -126,9 +124,9 @@ class Agent(object):
         if(not self.end_episode):
             if(self.params.verbose_printing):
                 print("planned next:", self.planned_next_config.position_nk2().numpy())
-            with lock:
-                self.planner_data = \
-                    self.planner.optimize(self.planned_next_config, self.goal_config)
+            # with lock:
+            self.planner_data = \
+                self.planner.optimize(self.planned_next_config, self.goal_config)
             traj_segment, trajectory_data, commands_1kf = \
                 self._process_planner_data()
             self.planned_next_config = \

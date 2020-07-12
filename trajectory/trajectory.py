@@ -89,27 +89,6 @@ class Trajectory(object):
                 self._angular_acceleration_nk1 = tf.zeros([n, k, 1], dtype=dtype) if angular_acceleration_nk1 is None \
                     else tf.constant(angular_acceleration_nk1, dtype=dtype)
 
-    def copy_config_tf(self):
-        # have to manually copy each tensorflow "variable" by invoking tf.Variable to preservre the info
-        # else it gets cleared and becomes a python.ops.ResourceVariable
-        copy_dt = self.dt
-        copy_n = self.n
-        copy_k = self.k
-        copy_position_nk2 = tfe.Variable(self.position_nk2())
-        copy_speed_nk1 = tfe.Variable(self.speed_nk1())
-        copy_acceleration_nk1 = tfe.Variable(self.acceleration_nk1())
-        copy_heading_nk1 = tfe.Variable(self.heading_nk1())
-        copy_angular_speed_nk1 = tfe.Variable(self.angular_speed_nk1())
-        copy_angular_acceleration_nk1 = tfe.Variable(self.angular_acceleration_nk1())
-        return Trajectory(copy_dt, copy_n, copy_k, 
-                            position_nk2=copy_position_nk2, 
-                            speed_nk1=copy_speed_nk1, 
-                            acceleration_nk1=copy_acceleration_nk1,
-                            heading_nk1=copy_heading_nk1,
-                            angular_speed_nk1=copy_angular_speed_nk1,
-                            angular_acceleration_nk1=copy_angular_acceleration_nk1,
-                            direct_init=True)
-
     def memory_usage_bytes(self):
         """
         A function which gives the memory usage of this trajectory object
@@ -519,27 +498,6 @@ class SystemConfig(Trajectory):
                                        heading_nk1=tf.broadcast_to(config.heading_nk1(), (n, k, 1)),
                                        angular_speed_nk1=tf.broadcast_to(config.angular_speed_nk1(), (n, k, 1)),
                                        angular_acceleration_nk1=tf.broadcast_to(config.angular_acceleration_nk1(), (n, k, 1)))
-
-    def copy_config_tf(self):
-        # have to manually copy each tensorflow "variable" by invoking tf.Variable to preservre the info
-        # else it gets cleared and becomes a python.ops.ResourceVariable
-        copy_dt = self.dt
-        copy_n = self.n
-        copy_k = self.k
-        copy_position_nk2 = tfe.Variable(self.position_nk2())
-        copy_speed_nk1 = tfe.Variable(self.speed_nk1())
-        copy_acceleration_nk1 = tfe.Variable(self.acceleration_nk1())
-        copy_heading_nk1 = tfe.Variable(self.heading_nk1())
-        copy_angular_speed_nk1 = tfe.Variable(self.angular_speed_nk1())
-        copy_angular_acceleration_nk1 = tfe.Variable(self.angular_acceleration_nk1())
-        return SystemConfig(copy_dt, copy_n, copy_k, 
-                            position_nk2=copy_position_nk2, 
-                            speed_nk1=copy_speed_nk1, 
-                            acceleration_nk1=copy_acceleration_nk1,
-                            heading_nk1=copy_heading_nk1,
-                            angular_speed_nk1=copy_angular_speed_nk1,
-                            angular_acceleration_nk1=copy_angular_acceleration_nk1,
-                            direct_init=True)
 
     @classmethod
     def init_config_from_trajectory_time_index(cls, trajectory, t):
