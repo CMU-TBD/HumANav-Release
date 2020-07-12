@@ -50,6 +50,9 @@ class SimState():
     def get_environment(self):
         return self.environment
 
+    def get_map(self):
+        return self.environment["traversibles"][0]
+
     def get_agents(self):
         return self.agents
 

@@ -86,13 +86,22 @@ class CentralSimulator(SimulatorHelper):
         iteration = 0
         start_time = time.clock()
         total_time = 0
+        import threading
         while self.exists_running_agent():
             # Takes screenshot of the simulation state as long as the update is still going
             reset_time = time.clock()
             self.save_state(total_time)
             current_state = list(self.states.values())[-1]
+            threads = []
             for a in self.agents.values():
-                a.update(sim_state = current_state)
+                threads.append(threading.Thread(target=a.update, args=(current_state,)))
+            # start all the threads
+            for t in threads:
+                t.start()
+            # wait until completion of all the threads
+            for t in threads:
+                t.join()
+                del(t)
             # capture time after all the agents have updated
             round_time = time.clock() - reset_time
             total_time += round_time
