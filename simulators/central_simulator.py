@@ -45,6 +45,8 @@ class CentralSimulator(SimulatorHelper):
         p.dt = dt
         # Much more optimized to only render topview, but can also render Humans
         p.only_render_topview = True
+        if(p.only_render_topview):
+            print("Printing Topview with Multithreading")
         return p
 
     def add_agent(self, a):

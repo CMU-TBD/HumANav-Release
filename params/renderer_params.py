@@ -16,7 +16,7 @@ def create_params():
 
     # Depending on pc, those equipped with an X graphical instance (or other display)
     # can set this to True to use the openGL renderer and render the 3D humans/scene
-    p.render_with_display = True 
+    p.render_with_display = False 
     # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
 
     p.camera_params = DotMap(modalities=['rgb'],  # rgb or disparity

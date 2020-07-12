@@ -76,7 +76,10 @@ class Agent(object):
         self.params = sim_params
         self.obstacle_map = sim_map
         self.obj_fn = self._init_obj_fn(self.params, self.obstacle_map)
+        # Initialize Fast-Marching-Method map for agent's pathfinding
         self.fmm_map = self._init_fmm_map(self.params, self.obstacle_map)
+        self._update_fmm_map(self.params, self.obstacle_map)
+        # Initialize system dynamics and planner fields
         self.system_dynamics = self._init_system_dynamics(self.params)
         self.planner = self._init_planner(self.params)
         self.vehicle_data = self.planner.empty_data_dict()
