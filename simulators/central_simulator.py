@@ -90,7 +90,7 @@ class CentralSimulator(SimulatorHelper):
             init_time = time.clock()
 
             for a in self.agents.values():
-                a.update(self.params, self.obstacle_map, time_step=time_step)
+                a.update(time_step=time_step)
             
             # Takes screenshot of the simulation state as long as the update is still going
             fin_time = time.clock() - init_time
@@ -182,18 +182,20 @@ class CentralSimulator(SimulatorHelper):
             **kwargs)
         return img_nmkd
 
-    def generate_frames(self):
+    def generate_frames(self, camera_center = np.array([9., 22., -np.pi/4]), filename="simulate_obs"):
         num_frames = len(self.states)
         np.set_printoptions(precision=3)
         if(self.params.only_render_topview):
             # optimized to use multiple processesw
             import multiprocessing
+            # num_frames overcounts by one in this case
+            num_frames = num_frames - 1
             gif_processes = []
             for frame, s in enumerate(self.states.values()):
                 gif_processes.append(
                     multiprocessing.Process(
                                     target=self.take_snapshot, 
-                                    args=(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png"))
+                                    args=(s, camera_center, filename + str(frame) + ".png"))
                                     )
                 gif_processes[frame].start()
             for frame, p in enumerate(gif_processes):
@@ -201,7 +203,7 @@ class CentralSimulator(SimulatorHelper):
                 print("Generated Frames:", frame, "out of", num_frames, frame/num_frames, "\r", end="")
         else:
             for frame, s in enumerate(self.states.values()):
-                self.take_snapshot(s, np.array([9., 22., -np.pi/4]),"simulate_obs" + str(frame) + ".png")
+                self.take_snapshot(s, camera_center, filename + str(frame) + ".png")
                 print("Generated Frames:", frame, "out of", num_frames, frame/num_frames, "\r", end="")
         # newline to not interfere with previous prints
         print("\n")
