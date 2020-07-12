@@ -102,19 +102,19 @@ class Agent(object):
 
     def update(self, sim_state = None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
-        with lock:
-            init_time = time.clock()
-            if(self.params.verbose_printing):
-                print("start: ", self.get_start_config().position_nk2().numpy())
-                print("goal: ", self.get_goal_config().position_nk2().numpy())
+        # with lock:
+        init_time = time.clock()
+        if(self.params.verbose_printing):
+            print("start: ", self.get_start_config().position_nk2().numpy())
+            print("goal: ", self.get_goal_config().position_nk2().numpy())
 
-            # Generate the next trajectory segment, update next config, update actions/data
-            self.plan()
-            # action_dt = -1 does not simulate the actions of stepping through the trajectory at
-            # designated timestep, instead it instantly takes the current config to the end 
-            self.act(action_dt = int(self.params.control_horizon / 2), world_state = sim_state)
-            update_dt = time.clock() - init_time
-            self.time = self.time + update_dt # update local clock
+        # Generate the next trajectory segment, update next config, update actions/data
+        self.plan()
+        # action_dt = -1 does not simulate the actions of stepping through the trajectory at
+        # designated timestep, instead it instantly takes the current config to the end 
+        self.act(action_dt = int(self.params.control_horizon / 2), world_state = sim_state)
+        update_dt = time.clock() - init_time
+        self.time = self.time + update_dt # update local clock
         
     def plan(self):
         """ Runs the planner for one step from config to generate a
@@ -126,8 +126,9 @@ class Agent(object):
         if(not self.end_episode):
             if(self.params.verbose_printing):
                 print("planned next:", self.planned_next_config.position_nk2().numpy())
-            self.planner_data = \
-                self.planner.optimize(self.planned_next_config, self.goal_config)
+            with lock:
+                self.planner_data = \
+                    self.planner.optimize(self.planned_next_config, self.goal_config)
             traj_segment, trajectory_data, commands_1kf = \
                 self._process_planner_data()
             self.planned_next_config = \
