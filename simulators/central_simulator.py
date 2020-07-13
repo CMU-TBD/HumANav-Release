@@ -206,15 +206,15 @@ class CentralSimulator(SimulatorHelper):
                                     args=(s, camera_center, filename + str(p) + ".png"))
                                     )
                 gif_processes[p].start()
-                print("Started processes:", p, "out of", num_frames, p/num_frames, "\r", end="")
+                print("Started processes:", p, "out of", num_frames, "%.3f" % (p/num_frames), "\r", end="")
             print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
-                print("Generated Frames:", frame, "out of", num_frames, frame/num_frames, "\r", end="")
+                print("Generated Frames:", frame, "out of", num_frames, "%.3f" % (frame/num_frames), "\r", end="")
         else:
             for frame, s in enumerate(self.states.values()):
                 self.take_snapshot(s, camera_center, filename + str(frame) + ".png")
-                print("Generated Frames:", frame, "out of", num_frames, frame/num_frames, "\r", end="")
+                print("Generated Frames:", frame, "out of", num_frames, "%.3f" % (frame/num_frames), "\r", end="")
         # newline to not interfere with previous prints
         print("\n")
         
@@ -316,8 +316,8 @@ class CentralSimulator(SimulatorHelper):
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
-        time_string = "T="+str(current_time)
-        ax.set_title('Topview (zoomed) '+time_string, fontsize=20)
+        time_string = "T="+ "%.3f" % current_time
+        ax.set_title('Topview (zoomed) '+ time_string, fontsize=20)
 
         # Render entire map-view from the top
         # to keep square plot
@@ -330,7 +330,7 @@ class CentralSimulator(SimulatorHelper):
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title('Topview '+time_string, fontsize=20)
+        ax.set_title('Topview '+ time_string, fontsize=20)
 
         if rgb_image_1mk3 is not None:
             # Plot the RGB Image

@@ -108,12 +108,14 @@ class Agent(object):
 
         # Generate the next trajectory segment, update next config, update actions/data
         self.plan()
+        max_v = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[1]
+        max_w = self.params.planner_params.control_pipeline_params.system_dynamics_params.w_bounds[1]
+        lin_speed = min(max_v, self.get_current_config().speed_nk1().numpy()[0][0][0])
+        ang_speed = min(max_w, self.get_current_config().angular_speed_nk1().numpy()[0][0][0])
+        norm_speed = max(lin_speed, abs(ang_speed))
         # action_dt = -1 does not simulate the actions of stepping through the trajectory at
         # designated timestep, instead it instantly takes the current config to the end 
-        max_speed = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[1]
-        agent_speed = min(max_speed, self.get_current_config().speed_nk1().numpy()[0][0][0])
-        norm_speed = agent_speed / max_speed
-        self.act(action_dt = int((self.params.control_horizon - 1) * norm_speed), world_state = sim_state)
+        self.act(action_dt = int(min(self.params.control_horizon - 1, (self.params.control_horizon * norm_speed))), world_state = sim_state)
         update_dt = time.clock() - init_time
         self.time = self.time + update_dt # update local clock
         
