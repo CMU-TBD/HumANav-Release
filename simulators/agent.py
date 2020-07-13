@@ -110,7 +110,10 @@ class Agent(object):
         self.plan()
         # action_dt = -1 does not simulate the actions of stepping through the trajectory at
         # designated timestep, instead it instantly takes the current config to the end 
-        self.act(action_dt = int(self.params.control_horizon / 2), world_state = sim_state)
+        max_speed = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[1]
+        agent_speed = min(max_speed, self.get_current_config().speed_nk1().numpy()[0][0][0])
+        norm_speed = agent_speed / max_speed
+        self.act(action_dt = int((self.params.control_horizon - 1) * norm_speed), world_state = sim_state)
         update_dt = time.clock() - init_time
         self.time = self.time + update_dt # update local clock
         
@@ -140,8 +143,8 @@ class Agent(object):
             self.vehicle_trajectory.append_along_time_axis(traj_segment)
             self.commanded_actions_nkf.append(commands_1kf)
             self._enforce_episode_termination_conditions()
-            # if(self.end_episode):
-            #     print("terminated plan for agent", self.get_name(), "at t =", self.time)
+            if(self.end_episode):
+                print("terminated plan for agent", self.get_name(), "at t =", self.time, "k=", self.vehicle_trajectory.k, "total time=", self.vehicle_trajectory.k*self.vehicle_trajectory.dt)
 
     def dist_to_agent(self, other):
         self_pos = self.get_current_config().position_nk2()[0][0]
@@ -164,7 +167,7 @@ class Agent(object):
             else:
                 # Update through the path traversal incrementally
                 assert(action_dt < self.params.control_horizon)
-                if(world_state is not None):
+                if(False and world_state is not None):
                     # first check for collisions with any other agents
                     for a in world_state.get_agents().values():
                         if(a.get_name() is not self.get_name() and self.dist_to_agent(a) < 2 * self.radius):

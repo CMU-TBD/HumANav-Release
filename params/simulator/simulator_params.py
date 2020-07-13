@@ -17,7 +17,7 @@ def create_params():
 
     # Horizons in seconds
     p.episode_horizon_s = 200 # more time to simulate a feasable path # default 200
-    p.control_horizon_s = 1.5 # default 1.5, 5 is faster pathfinding due to more movement
+    p.control_horizon_s = 0.5 # time used on every iteration of the controller
 
     # Whether to log videos taken during trajectories
     p.record_video = False
