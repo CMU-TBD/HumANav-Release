@@ -88,6 +88,7 @@ class CentralSimulator(SimulatorHelper):
         total_time = 0
         import threading
         while self.exists_running_agent():
+        # while iteration < 80:
             # Takes screenshot of the simulation state as long as the update is still going
             reset_time = time.clock()
             self.save_state(total_time)

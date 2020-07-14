@@ -1,6 +1,7 @@
 from utils import utils
 import os
 import sys
+import copy
 import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.eager as tfe
@@ -34,7 +35,7 @@ class ControlPipelineV0(ControlPipelineBase):
             cls.pipeline = cls(params)
         else:
             assert(utils.check_dotmap_equality(cls.pipeline.params, params))
-        return cls.pipeline
+        return copy.deepcopy(cls.pipeline)
 
     def plan(self, start_config, goal_config=None):
         """Computes which velocity bin start_config belongs to and returns the corresponding waypoints, horizons,

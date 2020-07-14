@@ -84,6 +84,9 @@ class Agent(object):
         self.planner = self._init_planner()
         self.vehicle_data = self.planner.empty_data_dict()
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        # Motion fields
+        self.max_v = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[1]
+        self.max_w = self.params.planner_params.control_pipeline_params.system_dynamics_params.w_bounds[1]
 
     def update_final(self):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']
@@ -108,14 +111,8 @@ class Agent(object):
 
         # Generate the next trajectory segment, update next config, update actions/data
         self.plan()
-        max_v = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[1]
-        max_w = self.params.planner_params.control_pipeline_params.system_dynamics_params.w_bounds[1]
-        lin_speed = min(max_v, self.get_current_config().speed_nk1().numpy()[0][0][0])
-        ang_speed = min(max_w, self.get_current_config().angular_speed_nk1().numpy()[0][0][0])
-        norm_speed = max(lin_speed, abs(ang_speed))
-        # action_dt = -1 does not simulate the actions of stepping through the trajectory at
-        # designated timestep, instead it instantly takes the current config to the end 
-        self.act(action_dt = int(min(self.params.control_horizon - 1, (self.params.control_horizon * norm_speed))), world_state = sim_state)
+        # NOTE: instant_complete discards any anymations and finishes the trajectory segment instantly
+        self.act(instant_complete = False, world_state = sim_state)
         update_dt = time.clock() - init_time
         self.time = self.time + update_dt # update local clock
         
@@ -155,11 +152,11 @@ class Agent(object):
         diff_y = self_pos[1] - other_pos[1]
         return np.sqrt(diff_x**2 + diff_y**2)
         
-    def act(self, action_dt=-1, world_state = None):
+    def act(self, instant_complete = False, world_state = None):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
         if(not self.end_acting):
-            if action_dt <= 0:
+            if instant_complete:
                 # Complete the entire update of the current_config in one go
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
@@ -167,8 +164,15 @@ class Agent(object):
                 # Automatically finished trajectory
                 self.end_acting = True
             else:
+                lin_speed = min(self.max_v, self.get_current_config().speed_nk1().numpy()[0][0][0])
+                ang_speed = min(self.max_w, self.get_current_config().angular_speed_nk1().numpy()[0][0][0])
+                # NOTE: typically the current planner will have a large difference between lin/ang speed, thus 
+                # there are very few situations where both are at a high point
+                norm_speed = max(lin_speed, abs(ang_speed))
+                action_dt = int(min(self.params.control_horizon, (self.params.control_horizon * norm_speed)))
+                # to not skip all the way to the end:
+                assert(action_dt <= self.params.control_horizon)
                 # Update through the path traversal incrementally
-                assert(action_dt < self.params.control_horizon)
                 if(False and world_state is not None):
                     # first check for collisions with any other agents
                     for a in world_state.get_agents().values():
