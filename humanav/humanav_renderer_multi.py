@@ -5,8 +5,7 @@ from humanav import utils
 from mp_env import map_utils as mu
 from mp_env.render import swiftshader_renderer as sr
 import numpy as np
-import sys
-import os
+import sys, os, copy
 import pickle
 
 
@@ -48,7 +47,7 @@ class HumANavRendererMulti():
             self.human_radius = self.default_human_radius
 
     @classmethod
-    def get_renderer(cls, params):
+    def get_renderer(cls, params, deepcpy = False):
         """
         Used to instantiate a renderer object. Ensures that only one renderer
         object ever exists as they are very memory intensive.
@@ -62,7 +61,9 @@ class HumANavRendererMulti():
                 assert False, "Renderer settings are different than previously instantiated renderer"
 
         cls.renderer = cls(params)
-        return cls.renderer
+        if(not deepcpy):
+            return cls.renderer
+        return copy.deepcopy(cls.renderer)
 
     def render_images(self, starts_n2, thetas_n1, crop_size=None, human_visible=True):
         """

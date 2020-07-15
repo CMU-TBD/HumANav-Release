@@ -9,6 +9,7 @@ import numpy as np
 import copy, os, glob, imageio
 import time
 from humans.human import Human
+from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.robot_agent import RoboAgent
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
@@ -18,11 +19,15 @@ from utils.fmm_map import FmmMap
 from utils.utils import print_colors, natural_sort
 from params.renderer_params import get_path_to_humanav
 
+import multiprocessing
+lock = multiprocessing.Lock()
+
 class CentralSimulator(SimulatorHelper):
 
-    def __init__(self, params, environment, renderer=None):
+    def __init__(self, params, environment, renderer_params = None, renderer=None):
         self.params = CentralSimulator.parse_params(params)
         self.r = renderer
+        self.renderer_params = renderer_params
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
         self.humanav_dir = get_path_to_humanav()
@@ -47,11 +52,15 @@ class CentralSimulator(SimulatorHelper):
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
         # Much more optimized to only render topview, but can also render Humans
-        p.only_render_topview = True
+        p.only_render_topview = False
         if(p.only_render_topview):
-            print("Printing Topview with Multithreading")
+            print("Printing Topview with multithreading")
+        else:
+            print("Printing whole image sequentially")
         # verbose printing
         p.verbose_printing = False
+        # Save memory by updating renderer rather than deepcopying it, but very slow & sequential
+        p.use_one_renderer = True
         return p
 
     def add_agent(self, a):
@@ -85,8 +94,9 @@ class CentralSimulator(SimulatorHelper):
         subtrajectories. Generates a vehicle_trajectory for the episode, 
         calculates its objective value, and sets the episode_type 
         (timeout, collision, success) """
+        num_agents = len(self.agents)
         print(print_colors()["blue"], 
-            "Running simulation on", len(self.agents), "agents", 
+            "Running simulation on", num_agents, "agents", 
             print_colors()["reset"])
         total_time = 0 # keep track of overall time in the simulator
         for a in self.agents.values():
@@ -96,8 +106,7 @@ class CentralSimulator(SimulatorHelper):
         start_time = time.clock()
         total_time = 0
         import threading
-        while self.exists_running_agent():
-        # while iteration < 120:
+        while self.exists_running_agent() and iteration < 20 * num_agents: # added hard limit
             # Takes screenshot of the simulation state as long as the update is still going
             reset_time = time.clock()
             self.save_state(total_time)
@@ -210,9 +219,8 @@ class CentralSimulator(SimulatorHelper):
     def generate_frames(self, filename="simulate_obs"):
         num_frames = len(self.states)
         np.set_printoptions(precision=3)
-        if(self.params.only_render_topview):
-            # optimized to use multiple processesw
-            import multiprocessing
+        if(self.params.only_render_topview or not self.params.use_one_renderer):
+            # optimized to use multiple processes
             # num_frames overcounts by one in this case
             num_frames -= 1
             gif_processes = []
@@ -229,9 +237,11 @@ class CentralSimulator(SimulatorHelper):
                 p.join()
                 print("Generated Frames:", frame, "out of", num_frames, "%.3f" % (frame/num_frames), "\r", end="")
         else:
+            # generate frames sequentially (non multiproceses)
             for frame, s in enumerate(self.states.values()):
                 self.take_snapshot(s, filename + str(frame) + ".png")
                 print("Generated Frames:", frame, "out of", num_frames, "%.3f" % (frame/num_frames), "\r", end="")
+            
         # newline to not interfere with previous prints
         print("\n")
         
@@ -398,26 +408,47 @@ class CentralSimulator(SimulatorHelper):
         """
         takes screenshot of a specific state of the world
         """
-        for i, r in enumerate(state.get_robots().values()):
+        # TODO: add several folders for different robot perspectives
+        room_center = np.array([12., 17., 0.]) # to focus on in the zoomed image
+        for r in state.get_robots().values():
             camera_pos_13 = r.get_current_config().to_3D_numpy()
-            room_center = np.array([12., 17., 0.]) # to focus on in the zoomed image
             rgb_image_1mk3 = None
             depth_image_1mk1 = None
+            tmp_r = None
             if self.params.humanav_params.render_with_display and not self.params.only_render_topview:
                 # environment should hold building and human traversibles
                 assert(len(state.get_environment()["traversibles"]) == 2)
-                # only when rendering with opengl
-                for a in state.get_agents().values():
-                    self.r.update_human(a) #Agent.agent_to_human(a, human_exists=True))
-                # Update human traversible
-                state.get_environment()["traversibles"][1] = self.r.get_human_traversible()
-                # compute the rgb and depth images
-                rgb_image_1mk3, depth_image_1mk1 = \
-                    self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), 
-                                            state.get_environment()["map_scale"], human_visible=True)
+                if(self.params.use_one_renderer):
+                    # only when rendering with opengl
+                    for a in state.get_agents().values():
+                        self.r.update_human(a) #Agent.agent_to_human(a, human_exists=True))
+                    # Update human traversible
+                    state.get_environment()["traversibles"][1] = self.r.get_human_traversible()
+                    # compute the rgb and depth images
+                    rgb_image_1mk3, depth_image_1mk1 = \
+                        self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), 
+                                                state.get_environment()["map_scale"], human_visible=True)
+                else:
+                    # TODO: Fix multiprocessing for properly deepcopied renderers 
+                    # generate new renderer (deepcopied) to mitigate race condition
+                    tmp_r = HumANavRendererMulti.get_renderer(self.renderer_params, deepcpy = True)
+                    for a in state.get_agents().values():
+                        tmp_r.add_human(a)
+                    # Update human traversible
+                    state.get_environment()["traversibles"][1] = tmp_r.get_human_traversible()
+                    # compute the rgb and depth images
+                    rgb_image_1mk3, depth_image_1mk1 = \
+                        self.render_rgb_and_depth(tmp_r, np.array([camera_pos_13]), 
+                                                state.get_environment()["map_scale"], human_visible=True)
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
                             state.get_environment(), room_center, camera_pos_13, 
                             state.get_agents(), state.get_time(), filename)
+            # Delete renderer once done to save on memory
+            if(not self.params.use_one_renderer):
+                del(tmp_r)
+            # Delete state to save memory
+            del(state)
+            
 
 

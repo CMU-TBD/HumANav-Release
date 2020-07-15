@@ -204,7 +204,7 @@ def test_socnav(num_humans):
     p = create_params()  # used to instantiate the camera and its parameters
 
     # get the renderer from the camera p
-    r = HumANavRendererMulti.get_renderer(p)
+    r = HumANavRendererMulti.get_renderer(p, deepcpy = False)
     # Get the surreal dataset for human generation
     surreal_data = r.d
 
@@ -232,7 +232,7 @@ def test_socnav(num_humans):
 
     # Output position of new camera renders
     for i in range(num_cameras):
-        print(" Rendering camera (robot) at", camera_pos_13[i])
+        print("Rendering camera (robot) at", camera_pos_13[i])
 
     # Creating list of to-be humans that will partake in the scene
     human_list = []
@@ -255,7 +255,7 @@ def test_socnav(num_humans):
     # Create planner parameters
     # planner_params = create_planner_params()
     sim_params = create_sim_params()
-    simulator = CentralSimulator(sim_params, environment, renderer=r)
+    simulator = CentralSimulator(sim_params, environment, p, renderer=r)
 
     """
     Generate the humans and run the simulation on every human

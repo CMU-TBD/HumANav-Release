@@ -153,7 +153,7 @@ class Building():
     rng = human_appearance.get_mesh_rng()
     identification = human.get_name()
 
-    # self.human_pos_3.append(pos_3*1.)
+
 
     # Load the human mesh
     shapess, center_pos_3, human_mesh_info = \

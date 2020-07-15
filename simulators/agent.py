@@ -186,8 +186,11 @@ class Agent(object):
                 self.path_step = self.path_step + action_dt
                 if(self.path_step >= self.vehicle_trajectory.k or self.collided):
                     self.end_acting = True
-                # if(self.end_acting):
-                #     print("terminated act  for agent", self.get_name(), "at t =", self.time)
+                if(self.end_acting):
+                    if(self.params.verbose):
+                        print("terminated act  for agent", self.get_name(), "at t =", self.time)
+                    # save memory by deleting control pipeline (very memory intensive)
+                    del(self.planner)
         # NOTE: can use the following if want to update further tracked variables, but sometimes
         # this is buggy when the action is not fully completed, thus this should be a TODO: fix
         # else:
