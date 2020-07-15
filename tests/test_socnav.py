@@ -19,6 +19,7 @@ from humanav import sbpd
 from humans.human import Human
 from humans.human_configs import HumanConfigs
 from humans.human_appearance import HumanAppearance
+from simulators.robot_agent import RoboAgent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.agent import Agent
 # Planner + Simulator:
@@ -261,6 +262,12 @@ def test_socnav(num_humans):
     """
     # Generate the ~center~ of area3 when scaled up 50%
     room_center = np.array([12., 17., 0.])
+    robot_agent = RoboAgent.generate_random_robot_from_environment(
+                                                                environment, 
+                                                                room_center, 
+                                                                radius=5
+                                                                )
+    simulator.add_agent(robot_agent)
     for i in range(num_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment( 

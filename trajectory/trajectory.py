@@ -240,6 +240,11 @@ class Trajectory(object):
     def angular_speed_nk1(self):
         return self._angular_speed_nk1
 
+    def to_3D_numpy(self):
+        pos_2 = self.position_nk2().numpy()[0][0]
+        heading = self.heading_nk1().numpy()[0][0]
+        return np.append(pos_2, heading)
+
     def angular_acceleration_nk1(self):
         return self._angular_acceleration_nk1
 

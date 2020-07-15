@@ -8,10 +8,12 @@ from utils.utils import touch, print_colors
 import numpy as np
 import copy, os, glob, imageio
 import time
+from humans.human import Human
+from simulators.robot_agent import RoboAgent
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
-from simulators.sim_state import SimState, HumanState
+from simulators.sim_state import SimState, HumanState, AgentState
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors, natural_sort
 from params.renderer_params import get_path_to_humanav
@@ -26,6 +28,7 @@ class CentralSimulator(SimulatorHelper):
         self.humanav_dir = get_path_to_humanav()
         # theoretially all the agents can have their own system dynamics as well
         self.agents = {}
+        self.robots = {}
         self.states = {}
         self.wall_clock_time = 0
 
@@ -47,14 +50,20 @@ class CentralSimulator(SimulatorHelper):
         p.only_render_topview = True
         if(p.only_render_topview):
             print("Printing Topview with Multithreading")
+        # verbose printing
+        p.verbose_printing = False
         return p
 
     def add_agent(self, a):
         name = a.get_name()
-        a.simulation_init(self.params, self.obstacle_map)
-        self.agents[name] = a
-        # update all agents' knowledge of other agents
-        Agent.all_agents = self.agents
+        if(isinstance(a, RoboAgent)):
+            a.simulation_init(self.params, self.obstacle_map, with_planner=True)
+            self.robots[name] = a
+        else:
+            a.simulation_init(self.params, self.obstacle_map)
+            self.agents[name] = a
+            # update all agents' knowledge of other agents
+            Agent.all_agents = self.agents
 
     def exists_running_agent(self):
         for a in self.agents.values():
@@ -88,7 +97,7 @@ class CentralSimulator(SimulatorHelper):
         total_time = 0
         import threading
         while self.exists_running_agent():
-        # while iteration < 80:
+        # while iteration < 120:
             # Takes screenshot of the simulation state as long as the update is still going
             reset_time = time.clock()
             self.save_state(total_time)
@@ -96,6 +105,8 @@ class CentralSimulator(SimulatorHelper):
             threads = []
             for a in self.agents.values():
                 threads.append(threading.Thread(target=a.update, args=(current_state,)))
+            for r in self.robots.values():
+                threads.append(threading.Thread(target=r.update, args=(current_state,)))
             # start all the threads
             for t in threads:
                 t.start()
@@ -140,12 +151,17 @@ class CentralSimulator(SimulatorHelper):
             "\r", end="")
     
     def save_state(self, current_time):
-        saved_env = copy.deepcopy(self.environment)
+        #TODO: when using a modular environment, make saved_env a deepcopy
+        saved_env = self.environment
         # deepcopy all agents individually using a HumanState copy
         saved_agents = {}
         for a in self.agents.values():
             saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
-        current_state = SimState(saved_env, saved_agents, current_time)
+        # Save all the robots
+        saved_robots = {}
+        for r in self.robots.values():
+            saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
+        current_state = SimState(saved_env, saved_agents, saved_robots, current_time)
         # Save current state to a local dictionary
         self.states[current_time] = current_state
 
@@ -191,7 +207,7 @@ class CentralSimulator(SimulatorHelper):
             **kwargs)
         return img_nmkd
 
-    def generate_frames(self, camera_center = np.array([9., 22., -np.pi/4]), filename="simulate_obs"):
+    def generate_frames(self, filename="simulate_obs"):
         num_frames = len(self.states)
         np.set_printoptions(precision=3)
         if(self.params.only_render_topview):
@@ -204,7 +220,7 @@ class CentralSimulator(SimulatorHelper):
                 gif_processes.append(
                     multiprocessing.Process(
                                     target=self.take_snapshot, 
-                                    args=(s, camera_center, filename + str(p) + ".png"))
+                                    args=(s, filename + str(p) + ".png"))
                                     )
                 gif_processes[p].start()
                 print("Started processes:", p, "out of", num_frames, "%.3f" % (p/num_frames), "\r", end="")
@@ -214,7 +230,7 @@ class CentralSimulator(SimulatorHelper):
                 print("Generated Frames:", frame, "out of", num_frames, "%.3f" % (frame/num_frames), "\r", end="")
         else:
             for frame, s in enumerate(self.states.values()):
-                self.take_snapshot(s, camera_center, filename + str(frame) + ".png")
+                self.take_snapshot(s, filename + str(frame) + ".png")
                 print("Generated Frames:", frame, "out of", num_frames, "%.3f" % (frame/num_frames), "\r", end="")
         # newline to not interfere with previous prints
         print("\n")
@@ -378,28 +394,30 @@ class CentralSimulator(SimulatorHelper):
 
         return rgb_image_1mk3, depth_image_1mk1
 
-    def take_snapshot(self, state, camera_pos_13, filename):
+    def take_snapshot(self, state, filename):
         """
         takes screenshot of a specific state of the world
         """
-        room_center = np.array([12., 17., 0.])
-        rgb_image_1mk3 = None
-        depth_image_1mk1 = None
-        if self.params.humanav_params.render_with_display and not self.params.only_render_topview:
-            # environment should hold building and human traversibles
-            assert(len(state.get_environment()["traversibles"]) == 2)
-            # only when rendering with opengl
-            for a in state.get_agents().values():
-                self.r.update_human(a) #Agent.agent_to_human(a, human_exists=True))
-            # Update human traversible
-            state.get_environment()["traversibles"][1] = self.r.get_human_traversible()
-            # compute the rgb and depth images
-            rgb_image_1mk3, depth_image_1mk1 = \
-                self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), 
-                                          state.get_environment()["map_scale"], human_visible=True)
-        # plot the rbg, depth, and topview images if applicable
-        self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
-                        state.get_environment(), room_center, camera_pos_13, 
-                        state.get_agents(), state.get_time(), filename)
+        for i, r in enumerate(state.get_robots().values()):
+            camera_pos_13 = r.get_current_config().to_3D_numpy()
+            room_center = np.array([12., 17., 0.]) # to focus on in the zoomed image
+            rgb_image_1mk3 = None
+            depth_image_1mk1 = None
+            if self.params.humanav_params.render_with_display and not self.params.only_render_topview:
+                # environment should hold building and human traversibles
+                assert(len(state.get_environment()["traversibles"]) == 2)
+                # only when rendering with opengl
+                for a in state.get_agents().values():
+                    self.r.update_human(a) #Agent.agent_to_human(a, human_exists=True))
+                # Update human traversible
+                state.get_environment()["traversibles"][1] = self.r.get_human_traversible()
+                # compute the rgb and depth images
+                rgb_image_1mk3, depth_image_1mk1 = \
+                    self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), 
+                                            state.get_environment()["map_scale"], human_visible=True)
+            # plot the rbg, depth, and topview images if applicable
+            self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
+                            state.get_environment(), room_center, camera_pos_13, 
+                            state.get_agents(), state.get_time(), filename)
 
 

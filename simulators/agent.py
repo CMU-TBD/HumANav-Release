@@ -71,7 +71,7 @@ class Agent(object):
     def get_collided(self):
         return self.collided
 
-    def simulation_init(self, sim_params, sim_map):
+    def simulation_init(self, sim_params, sim_map, with_planner=True):
         """ Initializes important fields for the CentralSimulator"""
         self.params = sim_params
         self.obstacle_map = sim_map
@@ -81,8 +81,9 @@ class Agent(object):
         self._update_fmm_map()
         # Initialize system dynamics and planner fields
         self.system_dynamics = self._init_system_dynamics()
-        self.planner = self._init_planner()
-        self.vehicle_data = self.planner.empty_data_dict()
+        if(with_planner):
+            self.planner = self._init_planner()
+            self.vehicle_data = self.planner.empty_data_dict()
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         # Motion fields
         self.max_v = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[1]
