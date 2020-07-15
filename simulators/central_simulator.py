@@ -69,6 +69,7 @@ class CentralSimulator(SimulatorHelper):
             a.simulation_init(self.params, self.obstacle_map, with_planner=True)
             self.robots[name] = a
         else:
+            assert(isinstance(a, Human))
             a.simulation_init(self.params, self.obstacle_map)
             self.agents[name] = a
             # update all agents' knowledge of other agents
@@ -156,7 +157,7 @@ class CentralSimulator(SimulatorHelper):
             "Time:", 
             self.num_conditions_in_agents("blue"), 
             print_colors()["reset"],
-            "Frames:", rendered_frames,
+            "Frames:", rendered_frames+1,
             "\r", end="")
     
     def save_state(self, current_time):
@@ -248,10 +249,20 @@ class CentralSimulator(SimulatorHelper):
         
     def save_to_gif(self, clear_old_files = True):
         num_robots = len(self.robots)
+        rendering_processes = []
         for i in range(num_robots):
             dirname = "tests/socnav/sim_movie" + str(i)
             IMAGES_DIR = os.path.join(self.humanav_dir, dirname)
-            self._save_to_gif(IMAGES_DIR, clear_old_files=clear_old_files)
+            # self._save_to_gif(IMAGES_DIR, clear_old_files=clear_old_files) # sequentially
+            rendering_processes.append(multiprocessing.Process(
+                                       target=self._save_to_gif, 
+                                       args=(IMAGES_DIR, clear_old_files))
+                                       )
+            rendering_processes[i].start()
+        
+        for p in rendering_processes:
+            p.join()
+
 
     def _save_to_gif(self, IMAGES_DIR, clear_old_files = True):
         """Takes the image directory and naturally sorts the images into a singular movie.gif"""
@@ -273,7 +284,7 @@ class CentralSimulator(SimulatorHelper):
                 os.remove(f)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
-                    agents, plot_quiver=False):
+                    agents, robots, plot_quiver=False):
         ax.imshow(traversible, extent=extent, cmap='gray',
                 vmin=-.5, vmax=1.5, origin='lower')
         # Plot human traversible
@@ -289,11 +300,18 @@ class CentralSimulator(SimulatorHelper):
                     vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
             alphas = np.all(np.invert(human_traversible))
 
-        # Plot the camera
-        ax.plot(camera_pos_13[0], camera_pos_13[1],
-                'bo', markersize=10, label='Robot')
-        ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
-            camera_pos_13[2]), np.sin(camera_pos_13[2]))
+        # Plot the camera (robots)
+        for i, r in enumerate(robots.values()):
+            r_pos_3 = r.get_current_config().to_3D_numpy()
+            if i == 0:
+                # only add label on first robot
+                ax.plot(r_pos_3[0], r_pos_3[1], 'bo', markersize=10, label='Robot')
+            else:
+                ax.plot(r_pos_3[0], r_pos_3[1], 'bo', markersize=10)
+            if np.array_equal(camera_pos_13, pos_3):
+                # this is the "camera" robot (add quiver) 
+                ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
+                    camera_pos_13[2]), np.sin(camera_pos_13[2]))
 
         for i, a in enumerate(agents.values()):
             pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
@@ -317,7 +335,7 @@ class CentralSimulator(SimulatorHelper):
                           scale=2, scale_units='inches')
                           
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
-                    camera_pos_13, agents, current_time, filename, img_dir):
+                    camera_pos_13, agents, robots, current_time, filename, img_dir):
 
         map_scale = environment["map_scale"]
         # Obstacles/building traversible
@@ -345,7 +363,7 @@ class CentralSimulator(SimulatorHelper):
         ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
         ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
         self.plot_topview(ax, extent, traversible, human_traversible,
-                    camera_pos_13, agents, plot_quiver=True)
+                    camera_pos_13, agents, robots, plot_quiver=True)
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
@@ -359,7 +377,7 @@ class CentralSimulator(SimulatorHelper):
         ax.set_xlim(0., outer_zoom)
         ax.set_ylim(0., outer_zoom)
         self.plot_topview(ax, extent, traversible, human_traversible,
-                        camera_pos_13, agents)
+                        camera_pos_13, agents, robots)
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
@@ -415,6 +433,8 @@ class CentralSimulator(SimulatorHelper):
         """
         takes screenshot of a specific state of the world
         """
+        # TODO: find a way to plot something in teh openGL 3D human view representing the robots
+        # as right now they are invisible in all but the topview
         room_center = np.array([12., 17., 0.]) # to focus on in the zoomed image
         for i, r in enumerate(state.get_robots().values()):
             camera_pos_13 = r.get_current_config().to_3D_numpy()
@@ -449,7 +469,7 @@ class CentralSimulator(SimulatorHelper):
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
                             state.get_environment(), room_center, camera_pos_13, 
-                            state.get_agents(), state.get_time(), "rob" + str(i) + filename, i)
+                            state.get_agents(), state.get_robots(), state.get_time(), "rob" + str(i) + filename, i)
             # Delete renderer once done to save on memory
             if(not self.params.use_one_renderer):
                 del(tmp_r)

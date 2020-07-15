@@ -127,7 +127,7 @@ class Agent(object):
         if(not self.end_episode):
             if(self.params.verbose_printing):
                 print("planned next:", self.planned_next_config.position_nk2().numpy())
-            # with lock:
+            assert(hasattr(self, 'planner'))
             self.planner_data = \
                 self.planner.optimize(self.planned_next_config, self.goal_config)
             traj_segment, trajectory_data, commands_1kf = \
