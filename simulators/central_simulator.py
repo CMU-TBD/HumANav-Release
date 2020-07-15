@@ -52,7 +52,7 @@ class CentralSimulator(SimulatorHelper):
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
         # Much more optimized to only render topview, but can also render Humans
-        p.only_render_topview = False
+        p.only_render_topview = True
         if(p.only_render_topview):
             print("Printing Topview with multithreading")
         else:
@@ -216,13 +216,11 @@ class CentralSimulator(SimulatorHelper):
             **kwargs)
         return img_nmkd
 
-    def generate_frames(self, filename="simulate_obs"):
+    def generate_frames(self, filename="obs"):
         num_frames = len(self.states)
         np.set_printoptions(precision=3)
         if(self.params.only_render_topview or not self.params.use_one_renderer):
             # optimized to use multiple processes
-            # num_frames overcounts by one in this case
-            num_frames -= 1
             gif_processes = []
             for p, s in enumerate(self.states.values()):
                 gif_processes.append(
@@ -231,25 +229,33 @@ class CentralSimulator(SimulatorHelper):
                                     args=(s, filename + str(p) + ".png"))
                                     )
                 gif_processes[p].start()
+                p += 1
                 print("Started processes:", p, "out of", num_frames, "%.3f" % (p/num_frames), "\r", end="")
             print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
+                frame += 1
                 print("Generated Frames:", frame, "out of", num_frames, "%.3f" % (frame/num_frames), "\r", end="")
         else:
             # generate frames sequentially (non multiproceses)
             for frame, s in enumerate(self.states.values()):
                 self.take_snapshot(s, filename + str(frame) + ".png")
+                frame += 1
                 print("Generated Frames:", frame, "out of", num_frames, "%.3f" % (frame/num_frames), "\r", end="")
             
         # newline to not interfere with previous prints
         print("\n")
         
-
     def save_to_gif(self, clear_old_files = True):
+        num_robots = len(self.robots)
+        for i in range(num_robots):
+            dirname = "tests/socnav/sim_movie" + str(i)
+            IMAGES_DIR = os.path.join(self.humanav_dir, dirname)
+            self._save_to_gif(IMAGES_DIR, clear_old_files=clear_old_files)
+
+    def _save_to_gif(self, IMAGES_DIR, clear_old_files = True):
         """Takes the image directory and naturally sorts the images into a singular movie.gif"""
         images = []
-        IMAGES_DIR = os.path.join(self.humanav_dir, "tests/socnav/images")
         if(not os.path.exists(IMAGES_DIR)):
             print('\033[31m', "ERROR: Failed to image directory at", IMAGES_DIR, '\033[0m')
             os._exit(1) # Failure condition
@@ -311,7 +317,7 @@ class CentralSimulator(SimulatorHelper):
                           scale=2, scale_units='inches')
                           
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
-                    camera_pos_13, agents, current_time, filename):
+                    camera_pos_13, agents, current_time, filename, img_dir):
 
         map_scale = environment["map_scale"]
         # Obstacles/building traversible
@@ -375,7 +381,8 @@ class CentralSimulator(SimulatorHelper):
             ax.set_yticks([])
             ax.set_title('Depth')
 
-        full_file_name = os.path.join(self.humanav_dir, 'tests/socnav/images', filename)
+        dirname = 'tests/socnav/sim_movie' + str(img_dir)
+        full_file_name = os.path.join(self.humanav_dir, dirname, filename)
         if(not os.path.exists(full_file_name)):
             if(self.params.verbose_printing):
                 print('\033[31m', "Failed to find:", full_file_name,
@@ -408,9 +415,8 @@ class CentralSimulator(SimulatorHelper):
         """
         takes screenshot of a specific state of the world
         """
-        # TODO: add several folders for different robot perspectives
         room_center = np.array([12., 17., 0.]) # to focus on in the zoomed image
-        for r in state.get_robots().values():
+        for i, r in enumerate(state.get_robots().values()):
             camera_pos_13 = r.get_current_config().to_3D_numpy()
             rgb_image_1mk3 = None
             depth_image_1mk1 = None
@@ -443,12 +449,12 @@ class CentralSimulator(SimulatorHelper):
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
                             state.get_environment(), room_center, camera_pos_13, 
-                            state.get_agents(), state.get_time(), filename)
+                            state.get_agents(), state.get_time(), "rob" + str(i) + filename, i)
             # Delete renderer once done to save on memory
             if(not self.params.use_one_renderer):
                 del(tmp_r)
-            # Delete state to save memory
-            del(state)
+        # Delete state to save memory after frames are generated
+        del(state)
             
 
 

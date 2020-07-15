@@ -144,7 +144,10 @@ class Agent(object):
             self.commanded_actions_nkf.append(commands_1kf)
             self._enforce_episode_termination_conditions()
             if(self.end_episode):
-                print("terminated plan for agent", self.get_name(), "at t =", self.time, "k=", self.vehicle_trajectory.k, "total time=", self.vehicle_trajectory.k*self.vehicle_trajectory.dt)
+                if(self.params.verbose):
+                    print("terminated plan for agent", self.get_name(), 
+                          "at t =", self.time, "k=", self.vehicle_trajectory.k, 
+                          "total time=", self.vehicle_trajectory.k*self.vehicle_trajectory.dt)
 
     def dist_to_agent(self, other):
         self_pos = self.get_current_config().position_nk2()[0][0]
@@ -174,7 +177,7 @@ class Agent(object):
                 # to not skip all the way to the end:
                 assert(action_dt <= self.params.control_horizon)
                 # Update through the path traversal incrementally
-                if(False and world_state is not None):
+                if(world_state is not None):
                     # first check for collisions with any other agents
                     for a in world_state.get_agents().values():
                         if(a.get_name() is not self.get_name() and self.dist_to_agent(a) < 2 * self.radius):
