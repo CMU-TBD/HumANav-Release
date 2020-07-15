@@ -308,7 +308,7 @@ class CentralSimulator(SimulatorHelper):
                 ax.plot(r_pos_3[0], r_pos_3[1], 'bo', markersize=10, label='Robot')
             else:
                 ax.plot(r_pos_3[0], r_pos_3[1], 'bo', markersize=10)
-            if np.array_equal(camera_pos_13, pos_3):
+            if np.array_equal(camera_pos_13, r_pos_3):
                 # this is the "camera" robot (add quiver) 
                 ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
                     camera_pos_13[2]), np.sin(camera_pos_13[2]))
