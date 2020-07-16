@@ -2,6 +2,7 @@ from utils.utils import print_colors, generate_name
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
 import numpy as np
+import socket
 
 class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
@@ -43,3 +44,64 @@ class RoboAgent(Agent):
                                                             center,
                                                             radius=radius)
         return RoboAgent.generate_robot(configs)
+
+    def listen_for_commands(self, host=None, port=None):
+        # Create a TCP/IP socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
+        # Define host
+        if(host is None):
+            host = 'localhost'
+        
+        # define the communication port
+        if (port is None):
+            port = 8080
+        
+        # Bind the socket to the port
+        sock.bind((host, port))
+        # Listen for incoming connections
+        sock.listen(1)
+        
+        # Wait for a connection
+        print('waiting for a connection')
+        connection, client = sock.accept()
+        
+        print(client, 'connected')
+        
+        # Receive the data in small chunks and retransmit it
+        
+        data = connection.recv(16)
+        print ('received "%s"' % data)
+        if data:
+            connection.sendall(data)
+        else:
+            print ('no data from', client)
+        
+        # Close the connection
+        connection.close()
+    
+    @staticmethod
+    def send_commands(commands, host = None, port = None):
+        # Create a TCP/IP socket
+        stream_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
+        # Define host
+        if(host is None):
+            host = 'localhost'
+        
+        # define the communication port
+        if (port is None):
+            port = 8080
+
+        # Connect the socket to the port where the server is listening
+        server_address = ((host, port))
+        
+        print("connecting")
+        stream_socket.connect(server_address)
+        # Send data
+        stream_socket.sendall(commands)
+        # # response (in robot listen() method)
+        # data = stream_socket.recv(10)
+        # print (data)
+        print('socket closed')
+        stream_socket.close()

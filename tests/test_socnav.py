@@ -267,13 +267,13 @@ def test_socnav(num_humans):
                                                                 room_center, 
                                                                 radius=5
                                                                 )
-    robot_agent2 = RoboAgent.generate_random_robot_from_environment(
-                                                                environment, 
-                                                                room_center, 
-                                                                radius=5
-                                                                )
+    # robot_agent2 = RoboAgent.generate_random_robot_from_environment(
+    #                                                             environment, 
+    #                                                             room_center, 
+    #                                                             radius=5
+    #                                                             )
     simulator.add_agent(robot_agent)
-    simulator.add_agent(robot_agent2)
+    # simulator.add_agent(robot_agent2) # can add arbitrary agents
     for i in range(num_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment( 
