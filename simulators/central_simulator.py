@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from utils.utils import touch, print_colors
 import numpy as np
 import copy, os, glob, imageio
-import time
+import time, multiprocessing
 from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.robot_agent import RoboAgent
@@ -18,9 +18,6 @@ from simulators.sim_state import SimState, HumanState, AgentState
 from utils.fmm_map import FmmMap
 from utils.utils import print_colors, natural_sort
 from params.renderer_params import get_path_to_humanav
-
-import multiprocessing
-lock = multiprocessing.Lock()
 
 class CentralSimulator(SimulatorHelper):
 
@@ -66,7 +63,8 @@ class CentralSimulator(SimulatorHelper):
     def add_agent(self, a):
         name = a.get_name()
         if(isinstance(a, RoboAgent)):
-            a.simulation_init(self.params, self.obstacle_map, with_planner=True)
+            # Same simulation init for agents *however* the robot wont include a planner
+            a.simulation_init(self.params, self.obstacle_map, with_planner=False)
             self.robots[name] = a
         else:
             assert(isinstance(a, Human))
@@ -95,18 +93,26 @@ class CentralSimulator(SimulatorHelper):
         subtrajectories. Generates a vehicle_trajectory for the episode, 
         calculates its objective value, and sets the episode_type 
         (timeout, collision, success) """
+        import threading
         num_agents = len(self.agents)
         print(print_colors()["blue"], 
             "Running simulation on", num_agents, "agents", 
             print_colors()["reset"])
-        total_time = 0 # keep track of overall time in the simulator
+        total_time = 0 
+        # keep track of overall time in the simulator
+        robot_threads = []
+        for r in self.robots.values():
+            # start robot listener
+            r.init_time(0)
+            robot_threads.append(threading.Thread(target=r.listen, args=(None,None,)))
+            robot_threads[-1].start()
+            # robot_threads.append(threading.Thread(target=r.update, args=(,)))
+        # Initialize time for agents
         for a in self.agents.values():
-            # All agents share the same starting time
             a.init_time(0)
         iteration = 0
         start_time = time.clock()
         total_time = 0
-        import threading
         while self.exists_running_agent() and iteration < 20 * num_agents: # added hard limit
             # Takes screenshot of the simulation state as long as the update is still going
             reset_time = time.clock()
@@ -115,8 +121,6 @@ class CentralSimulator(SimulatorHelper):
             threads = []
             for a in self.agents.values():
                 threads.append(threading.Thread(target=a.update, args=(current_state,)))
-            for r in self.robots.values():
-                threads.append(threading.Thread(target=r.update, args=(current_state,)))
             # start all the threads
             for t in threads:
                 t.start()
@@ -130,7 +134,11 @@ class CentralSimulator(SimulatorHelper):
             self.print_sim_progress(iteration)
             # Update number of iterations
             iteration += 1
-            
+        
+        for rt in robot_threads:
+            rt.join()
+            del(rt)
+        
         self.wall_clock_time = time.clock() - start_time
         print("\nSimulation completed in", self.wall_clock_time, total_time, "seconds")
         self.generate_frames()

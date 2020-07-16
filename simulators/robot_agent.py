@@ -2,11 +2,13 @@ from utils.utils import print_colors, generate_name
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
 import numpy as np
-import socket
+import socket, time
 
 class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
+        self.commanded_actions_nkf = []
+        self.time_intervals = [0]
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
 
     # Getters for the Human class
@@ -45,7 +47,15 @@ class RoboAgent(Agent):
                                                             radius=radius)
         return RoboAgent.generate_robot(configs)
 
-    def listen_for_commands(self, host=None, port=None):
+    def listen(self, host=None, port=None):
+        """Loop through and update commanded actions as new data 
+        comes from a listening socket"""
+        while(self.time_intervals[-1] > 60):
+            t, action = self._listen_for_commands(host, port)
+            self.time_intervals.append(t)
+            self.commanded_actions_nkf.append(action)
+
+    def _listen_for_commands(self, host=None, port=None):
         # Create a TCP/IP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         
@@ -79,6 +89,8 @@ class RoboAgent(Agent):
         
         # Close the connection
         connection.close()
+        # return time of retrieving data as well as the data itself
+        return time.clock(), data
     
     @staticmethod
     def send_commands(commands, host = None, port = None):
