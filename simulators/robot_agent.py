@@ -54,6 +54,10 @@ class RoboAgent(Agent):
             t, action = self._listen_for_commands(host, port)
             self.time_intervals.append(t)
             self.commanded_actions_nkf.append(action)
+            # TODO: make it so that the robot will update its current 
+            # trajectory based off the commanded actions (ie. action)
+            # possibly at a set interval (update freq), and figure out
+            # how the transmitting of actions works exactly to test it
 
     def _listen_for_commands(self, host=None, port=None):
         # Create a TCP/IP socket

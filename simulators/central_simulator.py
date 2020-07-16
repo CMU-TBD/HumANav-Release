@@ -4,7 +4,6 @@ with tf.Session() as sess:
 import matplotlib as mpl
 mpl.use('Agg') # for rendering without a display
 import matplotlib.pyplot as plt
-from utils.utils import touch, print_colors
 import numpy as np
 import copy, os, glob, imageio
 import time, multiprocessing
@@ -16,7 +15,7 @@ from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
 from simulators.sim_state import SimState, HumanState, AgentState
 from utils.fmm_map import FmmMap
-from utils.utils import print_colors, natural_sort
+from utils.utils import touch, print_colors, natural_sort
 from params.renderer_params import get_path_to_humanav
 
 class CentralSimulator(SimulatorHelper):
