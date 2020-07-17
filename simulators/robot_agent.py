@@ -50,12 +50,17 @@ class RoboAgent(Agent):
     def listen(self, host=None, port=None):
         """Loop through and update commanded actions as new data 
         comes from a listening socket"""
-        while(len(self.time_intervals) < 10):
+        while(len(self.time_intervals) < 10):  # TODO: make a SIM_DONE flag
             t, action = self._listen_for_commands(host, port)
             self.time_intervals.append(t)
+            # TODO: shouldn't use commanded_actions_nkf, rather use a control scheme that
+            # simply takes the control commands (without doing any fancy tf stuff) and runs them
+            # through the open feedback loop in agents.py (generating control stuff and trajectory)
             self.commanded_actions_nkf.append(action)
-            print(len(self.commanded_actions_nkf))
-            print(self.time_intervals)
+            # self.apply_control_open_loop(self.get_current_config(),
+            #                             self.commanded_actions_nkf,
+            #                             T=self.params.control_horizon-1,
+            #                             sim_mode=self.system_dynamics.simulation_params.simulation_mode)
             # TODO: make it so that the robot will update its current 
             # trajectory based off the commanded actions (ie. action)
             # possibly at a set interval (update freq), and figure out
@@ -80,6 +85,7 @@ class RoboAgent(Agent):
         # NOTE: the #bytes is the MAX length of the string
         data = connection.recv(128)
         data = data.decode('utf-8')
+        print(data)
         # Close the connection
         sock.close()
         # return time of retrieving data as well as the data itself

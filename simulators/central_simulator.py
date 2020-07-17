@@ -86,10 +86,9 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
-    def sim_controller(self, num_commands = None):
+    def random_robot_controller(self, num_commands = None):
         from random import randint
         for _ in range(num_commands):
-
             lin_vel = 0.6 * (randint(0, 100) / 100.)
             ang_vel = 1.1 * (randint(0, 100) / 100.)
             tf_lin_vel = tf.constant([[[lin_vel]]], dtype=tf.float32)
@@ -115,7 +114,7 @@ class CentralSimulator(SimulatorHelper):
         total_time = 0 
         # keep track of overall time in the simulator
         robot_threads = []
-        monkey = multiprocessing.Process(target=self.sim_controller, args=(10,))
+        monkey = multiprocessing.Process(target=self.random_robot_controller, args=(10,))
         for r in self.robots.values():
             # start robot listener
             r.init_time(0)
