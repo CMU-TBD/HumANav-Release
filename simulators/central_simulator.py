@@ -86,6 +86,18 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
+    def sim_controller(self, num_commands = None):
+        from random import randint
+        for _ in range(num_commands):
+
+            lin_vel = 0.6 * (randint(0, 100) / 100.)
+            ang_vel = 1.1 * (randint(0, 100) / 100.)
+            tf_lin_vel = tf.constant([[[lin_vel]]], dtype=tf.float32)
+            tf_ang_vel = tf.constant([[[ang_vel]]], dtype=tf.float32)
+            message = tf.concat([tf_lin_vel, tf_ang_vel], 2)
+            time.sleep(2)
+            RoboAgent.send_commands(message)
+
     def simulate(self):
         """ A function that simulates an entire episode. The agent starts
         at self.start_config, repeatedly calling _iterate to generate 
@@ -100,12 +112,13 @@ class CentralSimulator(SimulatorHelper):
         total_time = 0 
         # keep track of overall time in the simulator
         robot_threads = []
+        monkey = threading.Thread(target=self.sim_controller, args=(10,))
         for r in self.robots.values():
             # start robot listener
             r.init_time(0)
             robot_threads.append(threading.Thread(target=r.listen, args=(None,None,)))
             robot_threads[-1].start()
-            # robot_threads.append(threading.Thread(target=r.update, args=(,)))
+        monkey.start()
         # Initialize time for agents
         for a in self.agents.values():
             a.init_time(0)

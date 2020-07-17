@@ -50,10 +50,11 @@ class RoboAgent(Agent):
     def listen(self, host=None, port=None):
         """Loop through and update commanded actions as new data 
         comes from a listening socket"""
-        while(self.time_intervals[-1] > 60):
+        while(self.time_intervals[-1] < 60):
             t, action = self._listen_for_commands(host, port)
             self.time_intervals.append(t)
             self.commanded_actions_nkf.append(action)
+            print(self.commanded_actions_nkf)
             # TODO: make it so that the robot will update its current 
             # trajectory based off the commanded actions (ie. action)
             # possibly at a set interval (update freq), and figure out
@@ -65,11 +66,11 @@ class RoboAgent(Agent):
         
         # Define host
         if(host is None):
-            host = 'localhost'
+            host = socket.gethostname()
         
         # define the communication port
         if (port is None):
-            port = 8080
+            port = 5010
         
         # Bind the socket to the port
         sock.bind((host, port))
@@ -84,15 +85,16 @@ class RoboAgent(Agent):
         
         # Receive the data in small chunks and retransmit it
         
-        data = connection.recv(16)
+        data = connection.recv(64)
+        data = data.decode('utf-8')
         print ('received "%s"' % data)
-        if data:
-            connection.sendall(data)
-        else:
-            print ('no data from', client)
+        # if data:
+        #     connection.sendall(data)
+        # else:
+        #     print ('no data from', client)
         
         # Close the connection
-        connection.close()
+        # connection.close()
         # return time of retrieving data as well as the data itself
         return time.clock(), data
     
@@ -103,19 +105,19 @@ class RoboAgent(Agent):
         
         # Define host
         if(host is None):
-            host = 'localhost'
+            host = socket.gethostname()
         
         # define the communication port
         if (port is None):
-            port = 8080
+            port = 5010
 
         # Connect the socket to the port where the server is listening
         server_address = ((host, port))
         
-        print("connecting")
+        print("connecting to ", server_address)
         stream_socket.connect(server_address)
         # Send data
-        stream_socket.sendall(commands)
+        stream_socket.sendall(bytes(str(commands), "utf-8"))
         # # response (in robot listen() method)
         # data = stream_socket.recv(10)
         # print (data)
