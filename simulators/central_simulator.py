@@ -95,7 +95,6 @@ class CentralSimulator(SimulatorHelper):
             tf_lin_vel = tf.constant([[[lin_vel]]], dtype=tf.float32)
             tf_ang_vel = tf.constant([[[ang_vel]]], dtype=tf.float32)
             message = tf.concat([tf_lin_vel, tf_ang_vel], 2)
-            time.sleep(1)
             try:
                 RoboAgent.send_commands(message)
             except:
@@ -116,11 +115,11 @@ class CentralSimulator(SimulatorHelper):
         total_time = 0 
         # keep track of overall time in the simulator
         robot_threads = []
-        monkey = threading.Thread(target=self.sim_controller, args=(10,))
+        monkey = multiprocessing.Process(target=self.sim_controller, args=(10,))
         for r in self.robots.values():
             # start robot listener
             r.init_time(0)
-            robot_threads.append(threading.Thread(target=r.listen, args=(None,None,)))
+            robot_threads.append(multiprocessing.Process(target=r.listen, args=(None,None,)))
             robot_threads[-1].start()
         monkey.start()
         # Initialize time for agents

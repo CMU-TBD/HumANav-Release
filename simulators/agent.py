@@ -124,10 +124,12 @@ class Agent(object):
         if not hasattr(self, 'commanded_actions_nkf'):
             # initialize commanded actions
             self.commanded_actions_nkf = []
+        if(not hasattr(self, 'planner')):
+            # create planner if none exists
+            self.planner = self._init_planner()
         if(not self.end_episode):
             if(self.params.verbose_printing):
                 print("planned next:", self.planned_next_config.position_nk2().numpy())
-            assert(hasattr(self, 'planner'))
             self.planner_data = \
                 self.planner.optimize(self.planned_next_config, self.goal_config)
             traj_segment, trajectory_data, commands_1kf = \

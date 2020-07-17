@@ -76,11 +76,12 @@ class RoboAgent(Agent):
         sock.listen(10)
         # Wait for a connection
         connection, client = sock.accept()
-        # Receive the data in small chunks        
-        data = connection.recv(1024)
+        # Receive the data in small chunks (bytes)
+        # NOTE: the #bytes is the MAX length of the string
+        data = connection.recv(128)
         data = data.decode('utf-8')
         # Close the connection
-        connection.close()
+        sock.close()
         # return time of retrieving data as well as the data itself
         return time.clock(), data
     
