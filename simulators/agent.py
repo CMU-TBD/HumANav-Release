@@ -182,6 +182,7 @@ class Agent(object):
                     for a in world_state.get_agents().values():
                         if(a.get_name() is not self.get_name() and self.dist_to_agent(a) < 2 * self.radius):
                             self.collided = True
+                            self.end_acting = True
                 # then update the current config 
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
@@ -189,7 +190,7 @@ class Agent(object):
                 self.path_step = self.path_step + action_dt
                 if(self.path_step >= self.vehicle_trajectory.k or self.collided):
                     self.end_acting = True
-                if(self.end_acting):
+                if(self.end_acting or self.collided):
                     if(self.params.verbose):
                         print("terminated act  for agent", self.get_name(), "at t =", self.time)
                     # save memory by deleting control pipeline (very memory intensive)

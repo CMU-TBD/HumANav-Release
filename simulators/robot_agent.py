@@ -8,7 +8,7 @@ class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
         self.commanded_actions_nkf = []
-        self.time_intervals = [0]
+        self.time_intervals = []
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
 
     # Getters for the Human class
@@ -50,11 +50,12 @@ class RoboAgent(Agent):
     def listen(self, host=None, port=None):
         """Loop through and update commanded actions as new data 
         comes from a listening socket"""
-        while(self.time_intervals[-1] < 60):
+        while(len(self.time_intervals) < 10):
             t, action = self._listen_for_commands(host, port)
             self.time_intervals.append(t)
             self.commanded_actions_nkf.append(action)
-            print(self.commanded_actions_nkf)
+            print(len(self.commanded_actions_nkf))
+            print(self.time_intervals)
             # TODO: make it so that the robot will update its current 
             # trajectory based off the commanded actions (ie. action)
             # possibly at a set interval (update freq), and figure out
@@ -63,63 +64,40 @@ class RoboAgent(Agent):
     def _listen_for_commands(self, host=None, port=None):
         # Create a TCP/IP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
         # Define host
         if(host is None):
             host = socket.gethostname()
-        
         # define the communication port
         if (port is None):
             port = 5010
-        
         # Bind the socket to the port
         sock.bind((host, port))
         # Listen for incoming connections
-        sock.listen(1)
-        
+        sock.listen(10)
         # Wait for a connection
-        print('waiting for a connection')
         connection, client = sock.accept()
-        
-        print(client, 'connected')
-        
-        # Receive the data in small chunks and retransmit it
-        
-        data = connection.recv(64)
+        # Receive the data in small chunks        
+        data = connection.recv(1024)
         data = data.decode('utf-8')
-        print ('received "%s"' % data)
-        # if data:
-        #     connection.sendall(data)
-        # else:
-        #     print ('no data from', client)
-        
         # Close the connection
-        # connection.close()
+        connection.close()
         # return time of retrieving data as well as the data itself
         return time.clock(), data
     
     @staticmethod
     def send_commands(commands, host = None, port = None):
         # Create a TCP/IP socket
-        stream_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Define host
         if(host is None):
             host = socket.gethostname()
-        
         # define the communication port
         if (port is None):
             port = 5010
-
         # Connect the socket to the port where the server is listening
         server_address = ((host, port))
-        
-        print("connecting to ", server_address)
-        stream_socket.connect(server_address)
+        client_socket.connect(server_address)
         # Send data
-        stream_socket.sendall(bytes(str(commands), "utf-8"))
-        # # response (in robot listen() method)
-        # data = stream_socket.recv(10)
-        # print (data)
-        print('socket closed')
-        stream_socket.close()
+        client_socket.sendall(bytes(str(commands), "utf-8"))
+        # Close communication channel
+        client_socket.close()

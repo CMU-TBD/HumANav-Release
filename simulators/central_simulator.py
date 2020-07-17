@@ -95,8 +95,12 @@ class CentralSimulator(SimulatorHelper):
             tf_lin_vel = tf.constant([[[lin_vel]]], dtype=tf.float32)
             tf_ang_vel = tf.constant([[[ang_vel]]], dtype=tf.float32)
             message = tf.concat([tf_lin_vel, tf_ang_vel], 2)
-            time.sleep(2)
-            RoboAgent.send_commands(message)
+            time.sleep(1)
+            try:
+                RoboAgent.send_commands(message)
+            except:
+                time.sleep(1)
+                RoboAgent.send_commands(message)
 
     def simulate(self):
         """ A function that simulates an entire episode. The agent starts
