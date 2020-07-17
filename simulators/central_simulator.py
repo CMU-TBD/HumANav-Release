@@ -6,7 +6,7 @@ mpl.use('Agg') # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
 import copy, os, glob, imageio
-import time, multiprocessing
+import time, threading, multiprocessing
 from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.robot_agent import RoboAgent
@@ -32,6 +32,7 @@ class CentralSimulator(SimulatorHelper):
         self.robots = {}
         self.states = {}
         self.wall_clock_time = 0
+        self.t = 0
 
     @staticmethod
     def parse_params(p):
@@ -88,7 +89,9 @@ class CentralSimulator(SimulatorHelper):
 
     def random_robot_controller(self, num_commands = None):
         from random import randint
-        for _ in range(num_commands):
+        while(self.exists_running_agent()):
+            latest_state = self.states[self.t]
+            print(self.t)
             lin_vel = 0.6 * (randint(0, 100) / 100.)
             ang_vel = 1.1 * (randint(0, 100) / 100.)
             tf_lin_vel = tf.constant([[[lin_vel]]], dtype=tf.float32)
@@ -99,6 +102,7 @@ class CentralSimulator(SimulatorHelper):
             except:
                 time.sleep(1)
                 RoboAgent.send_commands(message)
+            time.sleep(2*randint(0,100)/100.)
 
     def simulate(self):
         """ A function that simulates an entire episode. The agent starts
@@ -106,55 +110,50 @@ class CentralSimulator(SimulatorHelper):
         subtrajectories. Generates a vehicle_trajectory for the episode, 
         calculates its objective value, and sets the episode_type 
         (timeout, collision, success) """
-        import threading
         num_agents = len(self.agents)
         print(print_colors()["blue"], 
             "Running simulation on", num_agents, "agents", 
             print_colors()["reset"])
-        total_time = 0 
-        # keep track of overall time in the simulator
         robot_threads = []
-        monkey = multiprocessing.Process(target=self.random_robot_controller, args=(10,))
         for r in self.robots.values():
             # start robot listener
             r.init_time(0)
-            robot_threads.append(multiprocessing.Process(target=r.listen, args=(None,None,)))
+            robot_threads.append(threading.Thread(target=r.listen, args=(None,None,)))
             robot_threads[-1].start()
-        monkey.start()
         # Initialize time for agents
         for a in self.agents.values():
             a.init_time(0)
         iteration = 0
+        # keep track of overall time in the simulator
         start_time = time.clock()
-        total_time = 0
+        self.t = 0
+        self.save_state(self.t)
+        # starting a "monkey" process that sends random commands to the robot socket
+        monkey = threading.Thread(target=self.random_robot_controller, args=(10,))
+        monkey.start()
         while self.exists_running_agent() and iteration < 20 * num_agents: # added hard limit
             # Takes screenshot of the simulation state as long as the update is still going
-            reset_time = time.clock()
-            self.save_state(total_time)
+            self.save_state(self.t)
             current_state = list(self.states.values())[-1]
             threads = []
             for a in self.agents.values():
                 threads.append(threading.Thread(target=a.update, args=(current_state,)))
-            # start all the threads
-            for t in threads:
-                t.start()
+                threads[-1].start()
             # wait until completion of all the threads
             for t in threads:
                 t.join()
                 del(t)
             # capture time after all the agents have updated
-            round_time = time.clock() - reset_time
-            total_time += round_time
+            self.t = time.clock() - start_time # update "simulaiton time"
             self.print_sim_progress(iteration)
             # Update number of iterations
             iteration += 1
-        
+        # close robot agent threads
+        monkey.join()
         for rt in robot_threads:
             rt.join()
             del(rt)
-        
-        self.wall_clock_time = time.clock() - start_time
-        print("\nSimulation completed in", self.wall_clock_time, total_time, "seconds")
+        print("\nSimulation completed in", self.t, "seconds")
         self.generate_frames()
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
@@ -179,7 +178,10 @@ class CentralSimulator(SimulatorHelper):
             "Time:", 
             self.num_conditions_in_agents("blue"), 
             print_colors()["reset"],
-            "Frames:", rendered_frames+1,
+            "Frames:", 
+            rendered_frames+1,
+            "T =",
+            self.t,
             "\r", end="")
     
     def save_state(self, current_time):
