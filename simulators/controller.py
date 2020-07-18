@@ -11,7 +11,7 @@ class Controller():
         self.robot = robot
         self.t = 0
         self.latest_state = None
-        self.state = False
+        self.world_state = (False, 0, 0)
         print("Initiated controller at", self.host, self.port)
 
     def set_robot(self, r):
@@ -25,55 +25,54 @@ class Controller():
 
     def serialize(self, data):
         """Serialize a data object into something that can be pickled."""
-        return dill.dumps(data)
+        return str(data)
         
-    def unpickle(self, data):
-        return dill.loads(data)
-
+    def unserialize(self, data):
+        # TODO: use ast.literal_eval instead
+        return eval(data)
 
     def send(self, simulation_info):
         # Create a TCP/IP socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
-        print(self.host, self.port)
+        # print(self.host, self.port)
         server_address = ((self.host, self.port))
         client_socket.connect(server_address)
         # Send data
-        client_socket.sendall(self.serialize(simulation_info))
+        client_socket.sendall(bytes(self.serialize(simulation_info), "utf-8"))
         # Close communication channel
         client_socket.close()
         # TODO: needs better synchronization
 
-    def listen(self):
+    def listen(self, host=None, port=None):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind((self.host, self.port))
         s.listen(10)
-        running = True
-        while(running):
+        self.world_state = (True, 0, 0) # initialize listener
+        while(self.world_state[0] is True):
             connection, client = s.accept()
             while(True): # constantly taking in information until breaks
                 # TODO: allow for buffered data, thus no limit
                 data = connection.recv(128)
-                data = self.unpickle(data)
-                print(data)
+                # quickly close connection to open up for the next input
                 connection.close()
-                if(data[0] is False):
-                    running = False
+                self.world_state = self.unserialize(data)
                 break
         s.close()
 
     def random_robot_controller(self):
         from random import randint
-        self.state = True
-        while(self.state):
-            # latest_state = self.states[self.t]
-            # print(self.states)
-            # print(self.t)
+        self.world_state = (True, 0, 0)
+        while(self.world_state[0] is True):
             lin_vel = 0.6 * (randint(0, 100) / 100.)
             ang_vel = 1.1 * (randint(0, 100) / 100.)
-            tf_lin_vel = tf.constant([[[lin_vel]]], dtype=tf.float32)
-            tf_ang_vel = tf.constant([[[ang_vel]]], dtype=tf.float32)
-            message = tf.concat([tf_lin_vel, tf_ang_vel], 2)
-            self.robot.send_commands(message)
+            self.robot.send_commands((self.world_state[0], self.world_state[1], lin_vel, ang_vel))
             # random delay
             time.sleep(randint(0,100)/100.)
+    
+    def update(self):
+        listen_thread = threading.Thread(target=self.listen, args=(None,None))
+        listen_thread.start()
+        self.random_robot_controller()
+        self.robot.send_commands((False, time.clock(), 0, 0))
+        listen_thread.join()

@@ -107,7 +107,7 @@ class CentralSimulator(SimulatorHelper):
             # start robot listener
             r.init_time(0)
             robot_threads.append(multiprocessing.Process(target=r.update))
-            # robot_threads[-1].start()
+            robot_threads[-1].start()
         # Initialize time for agents
         for a in self.agents.values():
             a.init_time(0)
@@ -118,11 +118,9 @@ class CentralSimulator(SimulatorHelper):
         self.save_state(self.t)
         # Create random controller
         C = Controller(self.robot)
-        controller_listen = multiprocessing.Process(target=C.listen)
-        controller_listen.start()
         # starting a "monkey" process that sends random commands to the robot socket
-        # monkey = multiprocessing.Process(target=C.random_robot_controller, args=())
-        # monkey.start()
+        monkey = multiprocessing.Process(target=C.update)
+        monkey.start()
         while self.exists_running_agent() and iteration < 20 * num_agents: # added hard limit
             # Takes screenshot of the simulation state as long as the update is still going
             self.save_state(self.t)
@@ -136,18 +134,18 @@ class CentralSimulator(SimulatorHelper):
                 t.join()
                 del(t)
             # Update controller with simulation information
-            C.send((True, self.t, self.states[self.t]))
+            C.send((True, self.t, 0)) #self.states[self.t]))
             # capture time after all the agents have updated
             self.t = time.clock() - start_time # update "simulaiton time"
             self.print_sim_progress(iteration)
             # Update number of iterations
             iteration += 1
         # close robot agent threads
-        C.send((False, self.t, None))
-        # monkey.join()
-        # for rt in robot_threads:
-        #     rt.join()
-        #     del(rt)
+        C.send((False, self.t, 1))
+        monkey.join()
+        for rt in robot_threads:
+            rt.join()
+            del(rt)
         print("\nSimulation completed in", self.t, "seconds")
         self.generate_frames()
         self.save_to_gif()

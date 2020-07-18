@@ -7,9 +7,7 @@ import socket, time, threading
 class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
-        self.commanded_actions_nkf = []
-        self.time_intervals = []
-        self.listening = False
+        self.commands = {}
         self.running = False
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
 
@@ -49,7 +47,7 @@ class RoboAgent(Agent):
                                                             radius=radius)
         return RoboAgent.generate_robot(configs)
 
-    def listen(self, host=None, port=None):
+    def old_listen(self, host=None, port=None):
         """Loop through and update commanded actions as new data 
         comes from a listening socket"""
         self.listening = True
@@ -68,46 +66,52 @@ class RoboAgent(Agent):
             # trajectory based off the commanded actions (ie. action)
             # possibly at a set interval (update freq), and figure out
             # how the transmitting of actions works exactly to test it
+            """
+            tf_lin_vel = tf.constant([[[lin_vel]]], dtype=tf.float32)
+            tf_ang_vel = tf.constant([[[ang_vel]]], dtype=tf.float32)
+            message = tf.concat([tf_lin_vel, tf_ang_vel], 2)
+            """
 
     def update(self):
         listen_thread = threading.Thread(target=self.listen, args=(None,None))
         listen_thread.start()
         self.running = True
         while(self.running):
+            print(self.commands)
             pass
             # self.execute(self.commanded_actions_nkf)
         listen_thread.join()
-
-    def stop_running(self):
-        self.running = False
-        self.listening = False
-
-    def _listen_for_commands(self, host=None, port=None):
-        # Create a TCP/IP socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ 
+    def listen(self, host=None, port=None):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Define host
         if(host is None):
             host = socket.gethostname()
         # define the communication port
         if (port is None):
             port = 5010
-        # Bind the socket to the port
-        sock.bind((host, port))
-        # Listen for incoming connections
-        sock.listen(10)
-        # Wait for a connection
-        connection, client = sock.accept()
-        # Receive the data in small chunks (bytes)
-        # NOTE: the #bytes is the MAX length of the string
-        data = connection.recv(128)
-        data = data.decode('utf-8')
-        # print(data)
-        # Close the connection
-        sock.close()
-        # return time of retrieving data as well as the data itself
-        return time.clock(), data
-    
-    def send_commands(self, commands, host = None, port = None):
+        s.bind((host, port))
+        s.listen(10)
+        self.running = True # initialize listener
+        while(self.running):
+            connection, client = s.accept()
+            while(True): # constantly taking in information until breaks
+                # TODO: allow for buffered data, thus no limit
+                data = connection.recv(128)
+                # quickly close connection to open up for the next input
+                connection.close()
+                # NOTE: data is in the form (running, time, lin_command, ang_command)
+                # TODO: use ast.literal_eval instead of eval to
+                data = eval(data)
+                # print(data)
+                self.commands[data[1]] = data[2:] # add to dict indexed by time
+                if(data[0] is False):
+                    self.running = False
+                break
+        s.close()
+
+
+    def send_commands(self, commands, host=None, port=None):
         # Create a TCP/IP socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Define host
