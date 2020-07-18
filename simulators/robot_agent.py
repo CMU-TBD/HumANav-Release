@@ -32,7 +32,7 @@ class RoboAgent(Agent):
         pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
         goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
         if(verbose):
-            print(" robot", robot_name, "at", pos_2, "with goal", goal_2)
+            print("Robot", robot_name, "at", pos_2, "with goal", goal_2)
         return RoboAgent(robot_name, configs)
 
     @staticmethod
@@ -75,13 +75,11 @@ class RoboAgent(Agent):
 
     def execute(self):
         current_config = self.get_current_config()
-
-        # print(np.ones((1, 1, 2), dtype=np.float32))
-
+        # NOTE: the format for the acceleration commands to the open loop for the robot is:
+        # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
         t_seg, actions_nk2 = self.apply_control_open_loop(current_config,   
                                                         np.array([[self.commands[-1]]], dtype=np.float32), 
-                                                        1,
-                                                        sim_mode='ideal'
+                                                        1, sim_mode='ideal'
                                                         )
         # act trajectory segment
         self.current_config = \
@@ -89,19 +87,22 @@ class RoboAgent(Agent):
                     t_seg,
                     t=-1
                 )
-        print(self.get_current_config().to_3D_numpy())
+        if (self.params.verbose):
+            print(self.get_current_config().to_3D_numpy())
 
     def update(self):
+        print("Robot powering on")
         listen_thread = threading.Thread(target=self.listen, args=(None,None))
         listen_thread.start()
         self.running = True
         self.last_command = None
         while(self.running):
-            # if(len(self.commands) > 0):
-            #     print(len(self.commands), self.commands[-1])
+            # only execute command if it was different than last one (new)
             if(len(self.commands) > 0 and self.commands[-1] is not self.last_command):
                 self.execute()
                 self.last_command = self.commands[-1]
+            # TODO: better synchronization with robot update
+            time.sleep(0.01)
         listen_thread.join()
  
     def listen(self, host=None, port=None):

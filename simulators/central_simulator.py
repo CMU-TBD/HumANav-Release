@@ -102,12 +102,13 @@ class CentralSimulator(SimulatorHelper):
         print(print_colors()["blue"], 
             "Running simulation on", num_agents, "agents", 
             print_colors()["reset"])
+        
+        # initialize robot and its thread
         robot_threads = []
-        for r in self.robots.values():
-            # start robot listener
-            r.init_time(0)
-            robot_threads.append(threading.Thread(target=r.update))
-            robot_threads[-1].start()
+        self.robot.init_time(0)
+        robot_thread = threading.Thread(target=self.robot.update)
+        robot_thread.start()
+
         # Initialize time for agents
         for a in self.agents.values():
             a.init_time(0)
@@ -143,9 +144,9 @@ class CentralSimulator(SimulatorHelper):
         # close robot agent threads
         C.send((False, self.t, 1))
         monkey.join()
-        for rt in robot_threads:
-            rt.join()
-            del(rt)
+        del(monkey)
+        robot_thread.join()
+        del(robot_thread)
         print("\nSimulation completed in", self.t, "seconds")
         self.generate_frames()
         self.save_to_gif()

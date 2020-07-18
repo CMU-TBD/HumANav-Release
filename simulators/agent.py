@@ -175,7 +175,9 @@ class Agent(object):
                 # NOTE: typically the current planner will have a large difference between lin/ang speed, thus 
                 # there are very few situations where both are at a high point
                 norm_speed = max(lin_speed, abs(ang_speed))
-                action_dt = int(min(self.params.control_horizon, (self.params.control_horizon * norm_speed)))
+                # action_dt = int(min(self.params.control_horizon, (self.params.control_horizon * norm_speed)))
+                # DEBUG:
+                action_dt = int(self.params.control_horizon * 0.8)
                 # to not skip all the way to the end:
                 assert(action_dt <= self.params.control_horizon)
                 # Update through the path traversal incrementally

@@ -1,13 +1,11 @@
 import tensorflow as tf
 import socket, threading, multiprocessing
-import time, dill
+import time
 
 class Controller():
     def __init__(self, robot = None, host=None, port=None):
-        if(host is None):
-            self.host = socket.gethostname()
-        if(port is None):
-            self.port = 6000 
+        self.default_port = 6000 # can change this to be whatever you want
+        self.update_host_port(host, port) # defines class' host and port
         self.robot = robot
         self.t = 0
         self.latest_state = None
@@ -23,17 +21,32 @@ class Controller():
     def set_port(self, p):
         self.port = p
 
+    def update_host_port(self, host, port):
+        # Define host
+        if(host is None):
+            self.host = socket.gethostname()
+        else:
+            self.host = host
+        # Define the communication port
+        if (port is None):
+            self.port = self.default_port
+        else:
+            self.port = port
+
     def serialize(self, data):
         """Serialize a data object into something that can be pickled."""
+        # TODO: find a way to serialize tf objects (JSON?)
         return str(data)
 
     def unserialize(self, data):
         # TODO: use ast.literal_eval instead
         return eval(data)
 
-    def send(self, simulation_info):
+    def send(self, simulation_info, host=None, port=None):
         # Create a TCP/IP socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # update self's host and port
+        self.update_host_port(host, port)
         # Connect the socket to the port where the server is listening
         server_address = ((self.host, self.port))
         # print(self.host, self.port)
@@ -46,6 +59,7 @@ class Controller():
 
     def listen(self, host=None, port=None):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.update_host_port(host, port)
         s.bind((self.host, self.port))
         s.listen(10)
         self.world_state = (True, 0, 0) # initialize listener
@@ -65,13 +79,16 @@ class Controller():
         self.world_state = (True, 0, 0)
         while(self.world_state[0] is True):
             # TODO: not really velocity, this is acceleration
-            lin_vel = 10 * 0.6 * (randint(0, 100) / 100.)
-            ang_vel = 10 * 1.1 * (randint(0, 100) / 100.)
-            self.robot.send_commands((self.world_state[0], self.world_state[1], lin_vel, ang_vel))
-            # random delay
+            lin_command = 100 * 0.6 * (randint(-100, 100) / 100.)
+            ang_command = 100 * 1.1 * (randint(-100, 100) / 100.)
+            # print(lin_command, ang_command)
+            self.robot.send_commands((self.world_state[0], self.world_state[1], lin_command, ang_command))
+            # random delay for the monkey to input commands
             time.sleep(0.5*randint(0,100)/100.)
 
     def update(self):
+        """ Independent process for a user (at a designated host:port) to recieve 
+        information from the simulation while also sending commands to the robot """
         listen_thread = threading.Thread(target=self.listen, args=(None,None))
         listen_thread.start()
         self.random_robot_controller()
