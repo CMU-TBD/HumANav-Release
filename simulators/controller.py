@@ -64,8 +64,9 @@ class Controller():
         from random import randint
         self.world_state = (True, 0, 0)
         while(self.world_state[0] is True):
-            lin_vel = 0.6 * (randint(0, 100) / 100.)
-            ang_vel = 1.1 * (randint(0, 100) / 100.)
+            # TODO: not really velocity, this is acceleration
+            lin_vel = 10 * 0.6 * (randint(0, 100) / 100.)
+            ang_vel = 10 * 1.1 * (randint(0, 100) / 100.)
             self.robot.send_commands((self.world_state[0], self.world_state[1], lin_vel, ang_vel))
             # random delay
             time.sleep(0.5*randint(0,100)/100.)

@@ -74,31 +74,34 @@ class RoboAgent(Agent):
             """
 
     def execute(self):
-        if(len(self.commands) > 0):
-            current_config = self.get_current_config()
+        current_config = self.get_current_config()
 
-            # print(np.ones((1, 1, 2), dtype=np.float32))
+        # print(np.ones((1, 1, 2), dtype=np.float32))
 
-            t_seg, actions_nk2 = self.apply_control_open_loop(current_config,   
-                                                            np.array([[self.commands[-1]]], dtype=np.float32), 
-                                                            1,
-                                                            sim_mode='ideal'
-                                                            )
-            # act trajectory segment
-            self.current_config = \
-                        SystemConfig.init_config_from_trajectory_time_index(
-                        t_seg,
-                        t=-1
-                    )
+        t_seg, actions_nk2 = self.apply_control_open_loop(current_config,   
+                                                        np.array([[self.commands[-1]]], dtype=np.float32), 
+                                                        1,
+                                                        sim_mode='ideal'
+                                                        )
+        # act trajectory segment
+        self.current_config = \
+                    SystemConfig.init_config_from_trajectory_time_index(
+                    t_seg,
+                    t=-1
+                )
+        print(self.get_current_config().to_3D_numpy())
 
     def update(self):
         listen_thread = threading.Thread(target=self.listen, args=(None,None))
         listen_thread.start()
         self.running = True
+        self.last_command = None
         while(self.running):
             # if(len(self.commands) > 0):
             #     print(len(self.commands), self.commands[-1])
-            self.execute()
+            if(len(self.commands) > 0 and self.commands[-1] is not self.last_command):
+                self.execute()
+                self.last_command = self.commands[-1]
         listen_thread.join()
  
     def listen(self, host=None, port=None):

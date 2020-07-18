@@ -106,7 +106,7 @@ class CentralSimulator(SimulatorHelper):
         for r in self.robots.values():
             # start robot listener
             r.init_time(0)
-            robot_threads.append(multiprocessing.Process(target=r.update))
+            robot_threads.append(threading.Thread(target=r.update))
             robot_threads[-1].start()
         # Initialize time for agents
         for a in self.agents.values():
