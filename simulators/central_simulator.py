@@ -1,6 +1,6 @@
 import tensorflow as tf
-with tf.Session() as sess:
-    sess.run(tf.global_variables_initializer())
+# with tf.Session() as sess:
+#     sess.run(tf.global_variables_initializer())
 import matplotlib as mpl
 mpl.use('Agg') # for rendering without a display
 import matplotlib.pyplot as plt
@@ -10,6 +10,7 @@ import time, threading, multiprocessing
 from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.robot_agent import RoboAgent
+from simulators.controller import Controller
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
@@ -27,9 +28,12 @@ class CentralSimulator(SimulatorHelper):
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
         self.humanav_dir = get_path_to_humanav()
-        # theoretially all the agents can have their own system dynamics as well
+        # keep track of all agents in dictionary with names as the key
         self.agents = {}
+        # keep track of all robots in dictionary with names as the key
         self.robots = {}
+        # keep a single (important) robot as a value
+        self.robot = None
         self.states = {}
         self.wall_clock_time = 0
         self.t = 0
@@ -66,6 +70,7 @@ class CentralSimulator(SimulatorHelper):
             # Same simulation init for agents *however* the robot wont include a planner
             a.simulation_init(self.params, self.obstacle_map, with_planner=False)
             self.robots[name] = a
+            self.robot = a
         else:
             assert(isinstance(a, Human))
             a.simulation_init(self.params, self.obstacle_map)
@@ -87,23 +92,6 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
-    def random_robot_controller(self, num_commands = None):
-        from random import randint
-        while(self.exists_running_agent()):
-            latest_state = self.states[self.t]
-            print(self.t)
-            lin_vel = 0.6 * (randint(0, 100) / 100.)
-            ang_vel = 1.1 * (randint(0, 100) / 100.)
-            tf_lin_vel = tf.constant([[[lin_vel]]], dtype=tf.float32)
-            tf_ang_vel = tf.constant([[[ang_vel]]], dtype=tf.float32)
-            message = tf.concat([tf_lin_vel, tf_ang_vel], 2)
-            try:
-                RoboAgent.send_commands(message)
-            except:
-                time.sleep(1)
-                RoboAgent.send_commands(message)
-            time.sleep(2*randint(0,100)/100.)
-
     def simulate(self):
         """ A function that simulates an entire episode. The agent starts
         at self.start_config, repeatedly calling _iterate to generate 
@@ -118,8 +106,8 @@ class CentralSimulator(SimulatorHelper):
         for r in self.robots.values():
             # start robot listener
             r.init_time(0)
-            robot_threads.append(threading.Thread(target=r.listen, args=(None,None,)))
-            robot_threads[-1].start()
+            robot_threads.append(multiprocessing.Process(target=r.update))
+            # robot_threads[-1].start()
         # Initialize time for agents
         for a in self.agents.values():
             a.init_time(0)
@@ -128,9 +116,13 @@ class CentralSimulator(SimulatorHelper):
         start_time = time.clock()
         self.t = 0
         self.save_state(self.t)
+        # Create random controller
+        C = Controller(self.robot)
+        controller_listen = multiprocessing.Process(target=C.listen)
+        controller_listen.start()
         # starting a "monkey" process that sends random commands to the robot socket
-        monkey = threading.Thread(target=self.random_robot_controller, args=(10,))
-        monkey.start()
+        # monkey = multiprocessing.Process(target=C.random_robot_controller, args=())
+        # monkey.start()
         while self.exists_running_agent() and iteration < 20 * num_agents: # added hard limit
             # Takes screenshot of the simulation state as long as the update is still going
             self.save_state(self.t)
@@ -143,16 +135,19 @@ class CentralSimulator(SimulatorHelper):
             for t in threads:
                 t.join()
                 del(t)
+            # Update controller with simulation information
+            C.send((True, self.t, 0))
             # capture time after all the agents have updated
             self.t = time.clock() - start_time # update "simulaiton time"
             self.print_sim_progress(iteration)
             # Update number of iterations
             iteration += 1
         # close robot agent threads
-        monkey.join()
-        for rt in robot_threads:
-            rt.join()
-            del(rt)
+        C.send((False, self.t, 1))
+        # monkey.join()
+        # for rt in robot_threads:
+        #     rt.join()
+        #     del(rt)
         print("\nSimulation completed in", self.t, "seconds")
         self.generate_frames()
         self.save_to_gif()

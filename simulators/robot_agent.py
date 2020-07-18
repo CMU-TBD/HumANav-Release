@@ -2,13 +2,15 @@ from utils.utils import print_colors, generate_name
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
 import numpy as np
-import socket, time
+import socket, time, threading
 
 class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
         self.commanded_actions_nkf = []
         self.time_intervals = []
+        self.listening = False
+        self.running = False
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
 
     # Getters for the Human class
@@ -50,7 +52,8 @@ class RoboAgent(Agent):
     def listen(self, host=None, port=None):
         """Loop through and update commanded actions as new data 
         comes from a listening socket"""
-        while(len(self.time_intervals) < 10):  # TODO: make a SIM_DONE flag
+        self.listening = True
+        while(len(self.time_intervals) < 100):# self.listening):
             t, action = self._listen_for_commands(host, port)
             self.time_intervals.append(t)
             # TODO: shouldn't use commanded_actions_nkf, rather use a control scheme that
@@ -65,6 +68,19 @@ class RoboAgent(Agent):
             # trajectory based off the commanded actions (ie. action)
             # possibly at a set interval (update freq), and figure out
             # how the transmitting of actions works exactly to test it
+
+    def update(self):
+        listen_thread = threading.Thread(target=self.listen, args=(None,None))
+        listen_thread.start()
+        self.running = True
+        while(self.running):
+            pass
+            # self.execute(self.commanded_actions_nkf)
+        listen_thread.join()
+
+    def stop_running(self):
+        self.running = False
+        self.listening = False
 
     def _listen_for_commands(self, host=None, port=None):
         # Create a TCP/IP socket
@@ -85,14 +101,13 @@ class RoboAgent(Agent):
         # NOTE: the #bytes is the MAX length of the string
         data = connection.recv(128)
         data = data.decode('utf-8')
-        print(data)
+        # print(data)
         # Close the connection
         sock.close()
         # return time of retrieving data as well as the data itself
         return time.clock(), data
     
-    @staticmethod
-    def send_commands(commands, host = None, port = None):
+    def send_commands(self, commands, host = None, port = None):
         # Create a TCP/IP socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Define host
