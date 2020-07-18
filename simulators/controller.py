@@ -47,10 +47,10 @@ class Controller():
                 data = connection.recv(128)
                 data = data.decode('utf-8')
                 print(data)
-                if(self.state is False):
-                    connection.close()
+                connection.close()
+                if(data is 0):
                     running = False
-                    break
+                break
         s.close()
 
     def random_robot_controller(self):
