@@ -49,7 +49,7 @@ class Controller():
                 assert(isinstance(data, str))
                 print(data)
                 connection.close()
-                if(data[1] is 0):
+                if(int(data[1]) is 0):
                     running = False
                 break
         s.close()
