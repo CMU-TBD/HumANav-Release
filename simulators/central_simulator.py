@@ -136,14 +136,14 @@ class CentralSimulator(SimulatorHelper):
                 t.join()
                 del(t)
             # Update controller with simulation information
-            C.send((True, self.t, 0))
+            C.send((1, self.t, 0))
             # capture time after all the agents have updated
             self.t = time.clock() - start_time # update "simulaiton time"
             self.print_sim_progress(iteration)
             # Update number of iterations
             iteration += 1
         # close robot agent threads
-        C.send((False, self.t, 1))
+        C.send((0, self.t, 1))
         # monkey.join()
         # for rt in robot_threads:
         #     rt.join()

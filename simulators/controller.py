@@ -21,30 +21,7 @@ class Controller():
         self.host = h
 
     def set_port(self, p):
-        self.port = p
-    
-    def encode(self, data):
-        assert(isinstance(data, tuple))
-        return str(data)
-
-    def decode(self, message):
-        assert(isinstance(message, str))
-        assert(message[0] is '(')
-        results = ()
-        value = ""
-        for c in message[1:]: # skipping first char '('
-            if(c is ',' or c is ')'):
-                if value is "True" or value is "False":
-                    value = bool(value)
-                else:
-                    value = float(value)
-                results = (*results, value)
-                value = ""
-            else:
-                # append character
-                value += c
-        return results
-    
+        self.port = p    
 
     def send(self, simulation_info):
         # Create a TCP/IP socket
@@ -54,7 +31,7 @@ class Controller():
         server_address = ((self.host, self.port))
         client_socket.connect(server_address)
         # Send data
-        client_socket.sendall(bytes(self.encode(simulation_info), "utf-8"))
+        client_socket.sendall(bytes(str(simulation_info), "utf-8"))
         # Close communication channel
         client_socket.close()
         # TODO: needs better synchronization
@@ -68,10 +45,11 @@ class Controller():
             connection, client = s.accept()
             while(True): # constantly taking in information until breaks
                 data = connection.recv(128)
-                data = self.decode(data.decode('utf-8'))
-                print(data, data[0], data[1], data[2])
+                data = data.decode('utf-8')
+                assert(isinstance(data, str))
+                print(data)
                 connection.close()
-                if(data[0] is False):
+                if(data[1] is 0):
                     running = False
                 break
         s.close()
