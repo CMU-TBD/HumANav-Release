@@ -1,6 +1,6 @@
 import tensorflow as tf
 import socket, threading, multiprocessing
-import time
+import time, dill
 
 class Controller():
     def __init__(self, robot = None, host=None, port=None):
@@ -23,6 +23,14 @@ class Controller():
     def set_port(self, p):
         self.port = p    
 
+    def serialize(self, data):
+        """Serialize a data object into something that can be pickled."""
+        return dill.dumps(data)
+        
+    def unpickle(self, data):
+        return dill.loads(data)
+
+
     def send(self, simulation_info):
         # Create a TCP/IP socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -31,7 +39,7 @@ class Controller():
         server_address = ((self.host, self.port))
         client_socket.connect(server_address)
         # Send data
-        client_socket.sendall(bytes(str(simulation_info), "utf-8"))
+        client_socket.sendall(self.serialize(simulation_info))
         # Close communication channel
         client_socket.close()
         # TODO: needs better synchronization
@@ -44,12 +52,12 @@ class Controller():
         while(running):
             connection, client = s.accept()
             while(True): # constantly taking in information until breaks
+                # TODO: allow for buffered data, thus no limit
                 data = connection.recv(128)
-                data = data.decode('utf-8')
-                assert(isinstance(data, str))
+                data = self.unpickle(data)
                 print(data)
                 connection.close()
-                if(int(data[1]) is 0):
+                if(data[0] is False):
                     running = False
                 break
         s.close()
