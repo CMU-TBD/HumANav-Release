@@ -67,7 +67,7 @@ def create_params():
 
 # NOTE: this must be the ABSOLUTE path
 def get_path_to_humanav():
-    PATH_TO_HUMANAV = '/home/gsilvera/Documents/tbd_SocNavBenchmark'
+    PATH_TO_HUMANAV = '/home/gustavo/Documents/tbd_SocNavBenchmark'
     if(not os.path.exists(PATH_TO_HUMANAV)):
         print('\033[31m', "ERROR: Failed to find HumANav installation at", PATH_TO_HUMANAV, '\033[0m')
         os._exit(1) # Failure condition

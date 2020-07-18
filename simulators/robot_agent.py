@@ -1,13 +1,14 @@
 from utils.utils import print_colors, generate_name
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
+from trajectory.trajectory import SystemConfig
 import numpy as np
 import socket, time, threading
 
 class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
-        self.commands = {}
+        self.commands = []
         self.running = False
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
 
@@ -72,14 +73,32 @@ class RoboAgent(Agent):
             message = tf.concat([tf_lin_vel, tf_ang_vel], 2)
             """
 
+    def execute(self):
+        if(len(self.commands) > 0):
+            current_config = self.get_current_config()
+
+            # print(np.ones((1, 1, 2), dtype=np.float32))
+
+            t_seg, actions_nk2 = self.apply_control_open_loop(current_config,   
+                                                            np.array([[self.commands[-1]]], dtype=np.float32), 
+                                                            1,
+                                                            sim_mode='ideal'
+                                                            )
+            # act trajectory segment
+            self.current_config = \
+                        SystemConfig.init_config_from_trajectory_time_index(
+                        t_seg,
+                        t=-1
+                    )
+
     def update(self):
         listen_thread = threading.Thread(target=self.listen, args=(None,None))
         listen_thread.start()
         self.running = True
         while(self.running):
-            print(self.commands)
-            pass
-            # self.execute(self.commanded_actions_nkf)
+            # if(len(self.commands) > 0):
+            #     print(len(self.commands), self.commands[-1])
+            self.execute()
         listen_thread.join()
  
     def listen(self, host=None, port=None):
@@ -103,13 +122,13 @@ class RoboAgent(Agent):
                 # NOTE: data is in the form (running, time, lin_command, ang_command)
                 # TODO: use ast.literal_eval instead of eval to
                 data = eval(data)
-                # print(data)
-                self.commands[data[1]] = data[2:] # add to dict indexed by time
+                np_data = np.array([data[2], data[3]], dtype=np.float32)
+                # NOTE: commands can also be a dictionary indexed by time
+                self.commands.append(np_data)
                 if(data[0] is False):
                     self.running = False
                 break
         s.close()
-
 
     def send_commands(self, commands, host=None, port=None):
         # Create a TCP/IP socket

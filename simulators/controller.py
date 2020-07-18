@@ -21,12 +21,12 @@ class Controller():
         self.host = h
 
     def set_port(self, p):
-        self.port = p    
+        self.port = p
 
     def serialize(self, data):
         """Serialize a data object into something that can be pickled."""
         return str(data)
-        
+
     def unserialize(self, data):
         # TODO: use ast.literal_eval instead
         return eval(data)
@@ -35,8 +35,8 @@ class Controller():
         # Create a TCP/IP socket
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
-        # print(self.host, self.port)
         server_address = ((self.host, self.port))
+        # print(self.host, self.port)
         client_socket.connect(server_address)
         # Send data
         client_socket.sendall(bytes(self.serialize(simulation_info), "utf-8"))
@@ -68,8 +68,8 @@ class Controller():
             ang_vel = 1.1 * (randint(0, 100) / 100.)
             self.robot.send_commands((self.world_state[0], self.world_state[1], lin_vel, ang_vel))
             # random delay
-            time.sleep(randint(0,100)/100.)
-    
+            time.sleep(0.5*randint(0,100)/100.)
+
     def update(self):
         listen_thread = threading.Thread(target=self.listen, args=(None,None))
         listen_thread.start()
