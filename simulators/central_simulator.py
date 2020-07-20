@@ -135,7 +135,7 @@ class CentralSimulator(SimulatorHelper):
                 t.join()
                 del(t)
             # Update controller with simulation information
-            C.send((True, self.t, 0)) #self.states[self.t]))
+            C.send((True, self.t, 0))
             # capture time after all the agents have updated
             self.t = time.clock() - start_time # update "simulaiton time"
             self.print_sim_progress(iteration)

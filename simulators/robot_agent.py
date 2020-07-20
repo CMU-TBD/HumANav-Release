@@ -10,6 +10,7 @@ class RoboAgent(Agent):
         self.name = name
         self.commands = []
         self.running = False
+        self.freq = 100. # update frequency
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
 
     # Getters for the Human class
@@ -48,38 +49,14 @@ class RoboAgent(Agent):
                                                             radius=radius)
         return RoboAgent.generate_robot(configs)
 
-    def old_listen(self, host=None, port=None):
-        """Loop through and update commanded actions as new data 
-        comes from a listening socket"""
-        self.listening = True
-        while(len(self.time_intervals) < 100):# self.listening):
-            t, action = self._listen_for_commands(host, port)
-            self.time_intervals.append(t)
-            # TODO: shouldn't use commanded_actions_nkf, rather use a control scheme that
-            # simply takes the control commands (without doing any fancy tf stuff) and runs them
-            # through the open feedback loop in agents.py (generating control stuff and trajectory)
-            self.commanded_actions_nkf.append(action)
-            # self.apply_control_open_loop(self.get_current_config(),
-            #                             self.commanded_actions_nkf,
-            #                             T=self.params.control_horizon-1,
-            #                             sim_mode=self.system_dynamics.simulation_params.simulation_mode)
-            # TODO: make it so that the robot will update its current 
-            # trajectory based off the commanded actions (ie. action)
-            # possibly at a set interval (update freq), and figure out
-            # how the transmitting of actions works exactly to test it
-            """
-            tf_lin_vel = tf.constant([[[lin_vel]]], dtype=tf.float32)
-            tf_ang_vel = tf.constant([[[ang_vel]]], dtype=tf.float32)
-            message = tf.concat([tf_lin_vel, tf_ang_vel], 2)
-            """
-
-    def execute(self):
+    def execute(self, command_indx):
         current_config = self.get_current_config()
+        # TODO: perhaps make the control loop run multiple commands rather than one
+        command = np.array([[self.commands[command_indx]]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
         t_seg, actions_nk2 = self.apply_control_open_loop(current_config,   
-                                                        np.array([[self.commands[-1]]], dtype=np.float32), 
-                                                        1, sim_mode='ideal'
+                                                        command, 1, sim_mode='ideal'
                                                         )
         # act trajectory segment
         self.current_config = \
@@ -96,13 +73,15 @@ class RoboAgent(Agent):
         listen_thread.start()
         self.running = True
         self.last_command = None
+        num_executed = 0 # keeps track of the latest command that is to be executed
         while(self.running):
-            # only execute command if it was different than last one (new)
-            if(len(self.commands) > 0 and self.commands[-1] is not self.last_command):
-                self.execute()
-                self.last_command = self.commands[-1]
+            # only execute the most recent commands
+            if(num_executed < len(self.commands)):
+                self.execute(num_executed)
+                num_executed += 1
             # TODO: better synchronization with robot update
-            time.sleep(0.01)
+            time.sleep(1./self.freq)
+        print("\nRobot powering off")
         listen_thread.join()
  
     def listen(self, host=None, port=None):
