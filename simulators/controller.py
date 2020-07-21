@@ -78,16 +78,15 @@ class Controller():
         from random import randint
         self.world_state = (True, 0, 0)
         accel_scale = 100 # scale to multiply the raw acceleration values by 
-        repeat = 1 # number of times to send the same command to the robot
+        repeat = 2 # number of times to send the same command to the robot
         while(self.world_state[0] is True):
-            # TODO: not really velocity, this is acceleration
-            lin_command = accel_scale * 0.6 * (randint(-100, 100) / 100.)
-            ang_command = accel_scale * 1.1 * (randint(-100, 100) / 100.)
+            lin_command = (randint(10, 100) / 100.) # robot can only more forwards
+            ang_command = (randint(-100, 100) / 100.)
             # print(lin_command, ang_command)
-            # for _ in range(repeat):
-            self.robot.send_commands((self.world_state[0], self.world_state[1], lin_command, ang_command))
+            for _ in range(repeat):
+                self.robot.send_commands((self.world_state[0], self.world_state[1], lin_command, ang_command))
             # random delay for the monkey to input commands
-            time.sleep(0.5*randint(0,100)/100.)
+            time.sleep(0.1*randint(0,100)/100.)
 
     def update(self):
         """ Independent process for a user (at a designated host:port) to recieve 

@@ -81,7 +81,7 @@ class RoboAgent(Agent):
                 num_executed += 1
             # TODO: better synchronization with robot update
             time.sleep(1./self.freq)
-        print("\nRobot powering off")
+        print("\nRobot powering off, took", len(self.commands),"commands")
         listen_thread.join()
  
     def listen(self, host=None, port=None):
