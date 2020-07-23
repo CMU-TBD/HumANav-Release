@@ -11,6 +11,10 @@ class RoboAgent(Agent):
         self.commands = []
         self.running = False
         self.freq = 100. # update frequency
+        # sockets for communication
+        self.controller_socket = None
+        self.port = 6000
+        self.host = None
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
 
     # Getters for the Human class
@@ -83,19 +87,26 @@ class RoboAgent(Agent):
         print("\nRobot powering off, took", len(self.commands),"commands")
         listen_thread.join()
  
-    def listen(self, host=None, port=None):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    """BEGIN socket utils"""
+
+    def update_host_port(self, host, port):
         # Define host
         if(host is None):
-            host = socket.gethostname()
-        # define the communication port
+            self.host = socket.gethostname()
+        else:
+            self.host = host
+        # Define the communication port
         if (port is None):
-            port = 5010
-        s.bind((host, port))
-        s.listen(10)
+            self.port = 6000 # default port
+        else:
+            self.port = port
+
+    def listen(self, host=None, port=None):
+        self.controller_socket.listen(10)
         self.running = True # initialize listener
         while(self.running):
-            connection, client = s.accept()
+            connection, client = self.controller_socket.accept()
             while(True): # constantly taking in information until breaks
                 # TODO: allow for buffered data, thus no limit
                 data = connection.recv(128)
@@ -109,5 +120,18 @@ class RoboAgent(Agent):
                 self.commands.append(np_data)
                 if(data[0] is False):
                     self.running = False
-                    break
-        s.close()
+                break
+        self.controller_socket.close()
+        self.controller_socket.shutdown()
+
+    def establish_controller_connection(self, port, host=None):
+        """This is akin to a server connection (controller is server)"""
+        self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.update_host_port(host, port)
+        self.controller_socket.bind((self.host, self.port))
+        # wait for a connection
+        self.controller_socket.listen(1)
+        connection, client = self.controller_socket.accept()
+        return connection, client
+
+    """ END socket utils """

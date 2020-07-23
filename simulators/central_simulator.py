@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import copy, os, glob, imageio
 import time, threading, multiprocessing
-import socket
 from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.robot_agent import RoboAgent
@@ -93,20 +92,6 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
-    def establish_server_connection(self, port, host=None):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        h = None
-        # Define host
-        if(host is None):
-            h = socket.gethostname()
-        else:
-            h = host
-        s.bind((h, port))
-        s.listen(1)
-        connection, client = s.accept()
-        return connection, client
-
-
     def simulate(self):
         """ A function that simulates an entire episode. The agent starts
         at self.start_config, repeatedly calling _iterate to generate 
@@ -114,23 +99,16 @@ class CentralSimulator(SimulatorHelper):
         calculates its objective value, and sets the episode_type 
         (timeout, collision, success) """
         num_agents = len(self.agents)
-        print(print_colors()["blue"], 
-            "Running simulation on", num_agents, "agents", 
-            print_colors()["reset"])
+        print("Running simulation on", num_agents, "agents")
         
-        # initialize robot and its thread
-        robot_threads = []
+        # wait for controller connection to be established
+        print("Waiting for Controller connection")
+        self.robot.establish_controller_connection(6000)
+        print("Simulator->Controller connection established")
         self.robot.init_time(0)
         robot_thread = threading.Thread(target=self.robot.update)
         robot_thread.start()
-
-        # wait for controller connection to be established
-        print("Waiting for Controller connection")
-        connection, client = self.establish_server_connection(6000)
-        print("Simulator->Controller connection established")
-        # continue to spawn the simulation
-        # with an established (independent) connection, spawn the simulator
-
+        # continue to spawn the simulation with an established (independent) connection
         # Initialize time for agents
         for a in self.agents.values():
             a.init_time(0)
@@ -158,7 +136,6 @@ class CentralSimulator(SimulatorHelper):
             # Update number of iterations
             iteration += 1
         # close robot agent threads
-        connection.send(False) # tell the controller to stop
         robot_thread.join()
         del(robot_thread)
         print("\nSimulation completed in", self.t, "seconds")
