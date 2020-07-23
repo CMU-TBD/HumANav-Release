@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import copy, os, glob, imageio
 import time, threading, multiprocessing
+import socket
 from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.robot_agent import RoboAgent
@@ -92,6 +93,20 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
+    def establish_server_connection(self, port, host=None):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        h = None
+        # Define host
+        if(host is None):
+            h = socket.gethostname()
+        else:
+            h = host
+        s.bind((h, port))
+        s.listen(1)
+        connection, client = s.accept()
+        return connection, client
+
+
     def simulate(self):
         """ A function that simulates an entire episode. The agent starts
         at self.start_config, repeatedly calling _iterate to generate 
@@ -109,6 +124,13 @@ class CentralSimulator(SimulatorHelper):
         robot_thread = threading.Thread(target=self.robot.update)
         robot_thread.start()
 
+        # wait for controller connection to be established
+        print("Waiting for Controller connection")
+        connection, client = self.establish_server_connection(6000)
+        print("Simulator->Controller connection established")
+        # continue to spawn the simulation
+        # with an established (independent) connection, spawn the simulator
+
         # Initialize time for agents
         for a in self.agents.values():
             a.init_time(0)
@@ -117,11 +139,6 @@ class CentralSimulator(SimulatorHelper):
         start_time = time.clock()
         self.t = 0
         self.save_state(self.t)
-        # Create random controller
-        C = Controller(self.robot)
-        # starting a "monkey" process that sends random commands to the robot socket
-        monkey = multiprocessing.Process(target=C.update)
-        monkey.start()
         while self.exists_running_agent() and iteration < 20 * num_agents: # added hard limit
             # Takes screenshot of the simulation state as long as the update is still going
             self.save_state(self.t)
@@ -135,16 +152,13 @@ class CentralSimulator(SimulatorHelper):
                 t.join()
                 del(t)
             # Update controller with simulation information
-            C.send((True, self.t, 0))
             # capture time after all the agents have updated
             self.t = time.clock() - start_time # update "simulaiton time"
             self.print_sim_progress(iteration)
             # Update number of iterations
             iteration += 1
         # close robot agent threads
-        C.send((False, self.t, 1))
-        monkey.join()
-        del(monkey)
+        connection.send(False) # tell the controller to stop
         robot_thread.join()
         del(robot_thread)
         print("\nSimulation completed in", self.t, "seconds")

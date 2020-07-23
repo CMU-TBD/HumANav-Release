@@ -79,7 +79,6 @@ class RoboAgent(Agent):
             if(num_executed < len(self.commands)):
                 self.execute(num_executed)
                 num_executed += 1
-            # TODO: better synchronization with robot update
             time.sleep(1./self.freq)
         print("\nRobot powering off, took", len(self.commands),"commands")
         listen_thread.join()
@@ -110,22 +109,5 @@ class RoboAgent(Agent):
                 self.commands.append(np_data)
                 if(data[0] is False):
                     self.running = False
-                break
+                    break
         s.close()
-
-    def send_commands(self, commands, host=None, port=None):
-        # Create a TCP/IP socket
-        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Define host
-        if(host is None):
-            host = socket.gethostname()
-        # define the communication port
-        if (port is None):
-            port = 5010
-        # Connect the socket to the port where the server is listening
-        server_address = ((host, port))
-        client_socket.connect(server_address)
-        # Send data
-        client_socket.sendall(bytes(str(commands), "utf-8"))
-        # Close communication channel
-        client_socket.close()

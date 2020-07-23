@@ -8,7 +8,7 @@ import shutil
 from dotmap import DotMap
 from random import seed, random, randint
 import string, random
-
+import socket
 
 def tf_session_config():
     config = tf.ConfigProto()

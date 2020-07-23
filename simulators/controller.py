@@ -94,5 +94,6 @@ class Controller():
         listen_thread = threading.Thread(target=self.listen, args=(None,None))
         listen_thread.start()
         self.random_robot_controller()
-        self.robot.send_commands((False, time.clock(), 0, 0))
+        # send a message to the robot to stop execution    
+        # self.robot.send_commands((False, time.clock(), 0, 0))
         listen_thread.join()
