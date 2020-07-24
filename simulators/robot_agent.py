@@ -122,7 +122,6 @@ class RoboAgent(Agent):
                     self.running = False
                 break
         self.controller_socket.close()
-        self.controller_socket.shutdown()
 
     def establish_controller_connection(self, port, host=None):
         """This is akin to a server connection (controller is server)"""

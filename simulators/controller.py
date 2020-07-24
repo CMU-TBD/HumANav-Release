@@ -1,11 +1,11 @@
 import tensorflow as tf
 import socket, threading, multiprocessing
 import time
+from utils.utils import print_colors
 
 class Controller():
     def __init__(self, host=None, port=None):
         self.update_host_port(host, port) # defines class' host and port
-        self.establish_robot_connection()
         self.t = 0
         self.latest_state = None
         self.world_state = (False, 0, 0)
@@ -25,20 +25,21 @@ class Controller():
         accel_scale = 100 # scale to multiply the raw acceleration values by 
         repeat = 2 # number of times to send the same command to the robot
         sent_commands = 0
-        while(self.world_state[0] is True):
+        robot_running = True
+        while(robot_running is True):
             lin_command = (randint(10, 100) / 100.) # robot can only more forwards
             ang_command = (randint(-100, 100) / 100.)
             # print(lin_command, ang_command)
             for _ in range(repeat):
+                # TODO: remove robot_running stuff
                 if(sent_commands is 200):
-                    self.world_state[0] = False
-                message = (self.world_state[0], self.world_state[1], lin_command, ang_command)
+                    robot_running = False
+                message = (robot_running, self.world_state[1], lin_command, ang_command)
                 self.send(message)
+                print("sent", message)
                 sent_commands += 1
             # random delay for the monkey to input commands
             time.sleep(0.1*randint(0,100)/100.)
-        # Close communication channel
-        self.robot_socket.close()
 
     def update(self):
         """ Independent process for a user (at a designated host:port) to recieve 
@@ -47,9 +48,11 @@ class Controller():
         # listen_thread.start()
         self.random_robot_controller()
         # send a message to the robot to stop execution    
-        halt_message = (False, time.clock(), 0, 0)
-        self.send(halt_message)
+        # halt_message = (False, time.clock(), 0, 0)
+        # self.send(halt_message)
         # listen_thread.join()
+        # Close communication channel
+        self.robot_socket.close()
 
     """BEGIN socket utils"""
 
@@ -74,34 +77,52 @@ class Controller():
         # TODO: use ast.literal_eval instead
         return eval(data)
 
-    def send(self, commands, host=None, port=None):
+    def send(self, commands, port=None, host=None):
+        # Create a TCP/IP socket
+        self.robot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # update self's host and port
+        self.update_host_port(host, port)
+        # Connect the socket to the port where the server is listening
+        server_address = ((self.host, self.port))
+        # print(self.host, self.port)
+        try:
+            self.robot_socket.connect(server_address)
+        except ConnectionRefusedError:
+            print(print_colors()["red"], "Connection closed unexpectedly", print_colors()['reset'])
+            return
         # Send data
         message = self.serialize(commands)
         self.robot_socket.sendall(bytes(message, "utf-8"))
+        self.robot_socket.close()
 
-    def listen(self, host=None, port=None):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.update_host_port(host, port)
-        s.bind((self.host, self.port))
-        s.listen(10)
-        self.world_state = (True, 0, 0) # initialize listener
-        while(self.world_state[0] is True):
-            connection, client = s.accept()
-            while(True): # constantly taking in information until breaks
-                # TODO: allow for buffered data, thus no limit
-                data = connection.recv(128)
-                # quickly close connection to open up for the next input
-                connection.close()
-                self.world_state = self.unserialize(data)
-                break
-        s.close()
+    # def listen(self, host=None, port=None):
+    #     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     self.update_host_port(host, port)
+    #     s.bind((self.host, self.port))
+    #     s.listen(10)
+    #     self.world_state = (True, 0, 0) # initialize listener
+    #     while(self.world_state[0] is True):
+    #         connection, client = s.accept()
+    #         while(True): # constantly taking in information until breaks
+    #             # TODO: allow for buffered data, thus no limit
+    #             data = connection.recv(128)
+    #             # quickly close connection to open up for the next input
+    #             connection.close()
+    #             self.world_state = self.unserialize(data)
+    #             break
+    #     s.close()
     
     def establish_robot_connection(self):
         """This is akin to a client connection (robot is client)"""
         self.robot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.update_host_port(None, 6000)
         robot_address = ((self.host, self.port))
-        self.robot_socket.connect(robot_address)
-        print("Connection to robot established")
-
+        try:
+            self.robot_socket.connect(robot_address)
+        except:
+            print(print_colors()["red"], "Unable to connect to robot", print_colors()['reset'])
+            print("Make sure you have a simulation instance running")
+            exit(1)
+        print(print_colors()["green"], "Connection to robot established", print_colors()['reset'])
+        assert(self.robot_socket is not None)
     """ END socket utils """
