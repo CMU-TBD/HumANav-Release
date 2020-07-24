@@ -1,7 +1,7 @@
 from utils.utils import print_colors, generate_name
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
-from trajectory.trajectory import SystemConfig
+from trajectory.trajectory import SystemConfig, Trajectory
 import numpy as np
 import socket, time, threading
 
@@ -12,11 +12,27 @@ class PrerecordedAgent(Agent):
         else:
             self.name = name
         self.record_data = record_data
-        self.start_config = HumanConfigs.generate_config_from_pos_3(record_data[0])
-        self.goal_config = HumanConfigs.generate_config_from_pos_3(record_data[-1])
+        start = HumanConfigs.generate_config_from_pos_3(record_data[0])
+        goal = HumanConfigs.generate_config_from_pos_3(record_data[-1])
+        super().__init__(start, goal, name)
+
+        # print(self.record_data)
+        # print("prerecorded agent start:", self.start_config.to_3D_numpy(), "goal:", self.goal_config.to_3D_numpy())
     
+    def simulation_init(self, sim_params, sim_map, with_planner=True):
+        """ Initializes important fields for the CentralSimulator"""
+        self.params = sim_params
+        self.obstacle_map = sim_map
+        # Initialize system dynamics and planner fields
+        self.system_dynamics = self._init_system_dynamics()
+        self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+
+    def get_appearance(self):
+        return None
+
     def execute(self, state):
-        self.current_config = HumanConfigs.generate_config_from_pos_3(state)
+        self.set_current_config(HumanConfigs.generate_config_from_pos_3(state))
+        print(self.get_current_config().to_3D_numpy())
         # TODO: perhaps make the control loop run multiple commands rather than one
         command = np.array([[[0,0]]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:

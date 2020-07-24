@@ -10,6 +10,7 @@ import time, threading, multiprocessing
 from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.robot_agent import RoboAgent
+from simulators.recorded_agent import PrerecordedAgent
 from simulators.controller import Controller
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
@@ -32,6 +33,8 @@ class CentralSimulator(SimulatorHelper):
         self.agents = {}
         # keep track of all robots in dictionary with names as the key
         self.robots = {}
+        # keep track of all prerecorded humans in a dictionary like the otherwise
+        self.prerecs = {}
         # keep a single (important) robot as a value
         self.robot = None
         self.states = {}
@@ -64,19 +67,20 @@ class CentralSimulator(SimulatorHelper):
         p.use_one_renderer = True
         return p
 
-    def add_agent(self, a, with_planner=True):
+    def add_agent(self, a):
         name = a.get_name()
         if(isinstance(a, RoboAgent)):
             # Same simulation init for agents *however* the robot wont include a planner
             a.simulation_init(self.params, self.obstacle_map, with_planner=False)
             self.robots[name] = a
             self.robot = a
+        elif (isinstance(a, PrerecordedAgent)):
+            a.simulation_init(self.params, self.obstacle_map, with_planner=False)
+            self.prerecs[name] = a
         else:
-            assert(isinstance(a, Human))
-            a.simulation_init(self.params, self.obstacle_map, with_planner=with_planner)
+            # assert(isinstance(a, Human))) # TODO: could be a prerecordedAgent
+            a.simulation_init(self.params, self.obstacle_map, with_planner=True)
             self.agents[name] = a
-            # update all agents' knowledge of other agents
-            Agent.all_agents = self.agents
 
     def exists_running_agent(self):
         for a in self.agents.values():
@@ -110,15 +114,23 @@ class CentralSimulator(SimulatorHelper):
         robot_thread.start()
         # continue to spawn the simulation with an established (independent) connection
 
+        # save initial state before the simulator is spawned
+        self.t = 0
+        self.save_state(self.t)
+
         # Initialize time for agents
         for a in self.agents.values():
             a.init_time(0)
-        iteration = 0
+
+        # Initialize threads for prerecorded agents
+        prerec_threads = []
+        for a in self.prerecs.values():
+            prerec_threads.append(threading.Thread(target=a.update))
+            prerec_threads[-1].start()
 
         # keep track of overall time in the simulator
         start_time = time.clock()
-        self.t = 0
-        self.save_state(self.t)
+        iteration = 0
         while self.exists_running_agent() and iteration < 20 * num_agents: # added hard limit
             # Takes screenshot of the simulation state as long as the update is still going
             self.save_state(self.t)
@@ -148,6 +160,10 @@ class CentralSimulator(SimulatorHelper):
         # free all the agents
         for a in self.agents.values():
             del(a)
+
+        for t in prerec_threads: 
+            t.join()
+            del(t)
 
         # turn off the robot
         self.robot.power_off()
@@ -197,11 +213,15 @@ class CentralSimulator(SimulatorHelper):
         saved_agents = {}
         for a in self.agents.values():
             saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
+        # deepcopy all prerecorded agents
+        saved_prerecs = {}
+        for a in self.prerecs.values():
+            saved_prerecs[a.get_name()] = AgentState(a, deepcpy=True)
         # Save all the robots
         saved_robots = {}
         for r in self.robots.values():
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
-        current_state = SimState(saved_env, saved_agents, saved_robots, current_time)
+        current_state = SimState(saved_env, saved_agents, saved_prerecs, saved_robots, current_time)
         # Save current state to a local dictionary
         self.states[current_time] = current_state
 
@@ -316,7 +336,7 @@ class CentralSimulator(SimulatorHelper):
                 os.remove(f)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
-                    agents, robots, plot_quiver=False):
+                    agents, prerecs, robots, plot_quiver=False):
         ax.imshow(traversible, extent=extent, cmap='gray',
                 vmin=-.5, vmax=1.5, origin='lower')
         # Plot human traversible
@@ -349,9 +369,34 @@ class CentralSimulator(SimulatorHelper):
                 ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
                     camera_pos_13[2]), np.sin(camera_pos_13[2]))
 
+        # plot all the simulated prerecorded agents
+        for i, a in enumerate(prerecs.values()):
+            pos_3 = a.get_current_config().to_3D_numpy()
+            # pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
+            # heading= (a.get_current_config().heading_nk1().numpy())[0][0]
+            # TODO: make colours of trajectories random rather than hardcoded
+            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+            color = 'yo' # agents are green and solid unless collided
+            if(a.get_collided()):
+                color='ro' # collided agents are drawn red
+            if(i == 0):
+                # Only add label on the first humans
+                ax.plot(pos_3[0], pos_3[1],
+                        color, markersize=10, label='Prerec')
+            else:
+                ax.plot(pos_3[0], pos_3[1], color, markersize=10)
+            # TODO: use agent radius instead of hardcode
+            ax.plot(pos_3[0], pos_3[1], color, alpha=0.2, markersize=25)
+            if(plot_quiver):
+                # Agent heading
+                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]), 
+                          scale=2, scale_units='inches')
+
+        # plot all the randomly generated simulated agents
         for i, a in enumerate(agents.values()):
-            pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
-            heading= (a.get_current_config().heading_nk1().numpy())[0][0]
+            pos_3 = a.get_current_config().to_3D_numpy()
+            # pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
+            # heading= (a.get_current_config().heading_nk1().numpy())[0][0]
             # TODO: make colours of trajectories random rather than hardcoded
             a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             color = 'go' # agents are green and solid unless collided
@@ -359,19 +404,19 @@ class CentralSimulator(SimulatorHelper):
                 color='ro' # collided agents are drawn red
             if(i == 0):
                 # Only add label on the first humans
-                ax.plot(pos_2[0], pos_2[1],
+                ax.plot(pos_3[0], pos_3[1],
                         color, markersize=10, label='Agent')
             else:
-                ax.plot(pos_2[0], pos_2[1], color, markersize=10)
+                ax.plot(pos_3[0], pos_3[1], color, markersize=10)
             # TODO: use agent radius instead of hardcode
-            ax.plot(pos_2[0], pos_2[1], color, alpha=0.2, markersize=25)
+            ax.plot(pos_3[0], pos_3[1], color, alpha=0.2, markersize=25)
             if(plot_quiver):
                 # Agent heading
-                ax.quiver(pos_2[0], pos_2[1], np.cos(heading), np.sin(heading), 
+                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]), 
                           scale=2, scale_units='inches')
                           
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
-                    camera_pos_13, agents, robots, current_time, filename, img_dir):
+                    camera_pos_13, agents, prerecs, robots, current_time, filename, img_dir):
 
         map_scale = environment["map_scale"]
         # Obstacles/building traversible
@@ -399,7 +444,7 @@ class CentralSimulator(SimulatorHelper):
         ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
         ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
         self.plot_topview(ax, extent, traversible, human_traversible,
-                    camera_pos_13, agents, robots, plot_quiver=True)
+                    camera_pos_13, agents, prerecs, robots, plot_quiver=True)
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
@@ -413,7 +458,7 @@ class CentralSimulator(SimulatorHelper):
         ax.set_xlim(0., outer_zoom)
         ax.set_ylim(0., outer_zoom)
         self.plot_topview(ax, extent, traversible, human_traversible,
-                        camera_pos_13, agents, robots)
+                        camera_pos_13, agents, prerecs, robots)
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
@@ -477,6 +522,7 @@ class CentralSimulator(SimulatorHelper):
             rgb_image_1mk3 = None
             depth_image_1mk1 = None
             tmp_r = None
+            # TODO: make the prerecs also generate a random human identity (probably human child)
             if self.params.humanav_params.render_with_display and not self.params.only_render_topview:
                 # environment should hold building and human traversibles
                 assert(len(state.get_environment()["traversibles"]) == 2)
@@ -505,7 +551,8 @@ class CentralSimulator(SimulatorHelper):
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
                             state.get_environment(), room_center, camera_pos_13, 
-                            state.get_agents(), state.get_robots(), state.get_time(), "rob" + str(i) + filename, i)
+                            state.get_agents(), state.get_prerecs(), state.get_robots(), 
+                            state.get_time(), "rob" + str(i) + filename, i)
             # Delete renderer once done to save on memory
             if(not self.params.use_one_renderer):
                 del(tmp_r)

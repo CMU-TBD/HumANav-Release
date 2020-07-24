@@ -207,6 +207,7 @@ def generate_prerecorded_humans(p, simulator):
     world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
     start_frame = world_df['frame'][0]
     for i in range(1): #range(8): # there are a total of 8 pedestrians
+        # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
         ped_id = i+1
         assert(ped_id in np.unique(world_df.ped))
         ped_i = world_df[world_df.ped==ped_id]
@@ -216,13 +217,13 @@ def generate_prerecorded_humans(p, simulator):
             times.append(relative_time)
         record = [] # NOTE: this has no instance of angles, so i'm assuming i can generate those
         for x in ped_i['x']: # generate a list of lists of positions (only x)
-            record.append([x])
+            record.append([x + 5.])
         for j, y in enumerate(ped_i['y']): # append y to the list of positions
-            record[j].append(y)
+            record[j].append(y + 14.)
         for j, t in enumerate(times): # lastly, append t to the list
             record[j].append(t)
         # print(record)
-        simulator.add_agent(PrerecordedAgent(record), with_planner=False)
+        simulator.add_agent(PrerecordedAgent(record))
 
 def test_socnav(num_humans):
     """
