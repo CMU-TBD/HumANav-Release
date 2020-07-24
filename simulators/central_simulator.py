@@ -64,7 +64,7 @@ class CentralSimulator(SimulatorHelper):
         p.use_one_renderer = True
         return p
 
-    def add_agent(self, a):
+    def add_agent(self, a, with_planner=True):
         name = a.get_name()
         if(isinstance(a, RoboAgent)):
             # Same simulation init for agents *however* the robot wont include a planner
@@ -73,7 +73,7 @@ class CentralSimulator(SimulatorHelper):
             self.robot = a
         else:
             assert(isinstance(a, Human))
-            a.simulation_init(self.params, self.obstacle_map)
+            a.simulation_init(self.params, self.obstacle_map, with_planner=with_planner)
             self.agents[name] = a
             # update all agents' knowledge of other agents
             Agent.all_agents = self.agents
@@ -109,10 +109,12 @@ class CentralSimulator(SimulatorHelper):
         robot_thread = threading.Thread(target=self.robot.update)
         robot_thread.start()
         # continue to spawn the simulation with an established (independent) connection
+
         # Initialize time for agents
         for a in self.agents.values():
             a.init_time(0)
         iteration = 0
+
         # keep track of overall time in the simulator
         start_time = time.clock()
         self.t = 0

@@ -21,6 +21,7 @@ from humans.human import Human
 from humans.human_configs import HumanConfigs
 from humans.human_appearance import HumanAppearance
 from simulators.robot_agent import RoboAgent
+from simulators.recorded_agent import PrerecordedAgent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.agent import Agent
 # Planner + Simulator:
@@ -196,19 +197,32 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
 
     return rgb_image_1mk3, depth_image_1mk1
 
-def generate_prerecorded_humans(simulator):
+def generate_prerecorded_humans(p, simulator):
     """"world_df" is a set of trajectories organized as a pandas dataframe. 
     Each row is a pedestrian at a given frame (aka time point). 
     The data was taken at 25 fps so between frames is 1/25th of a second. """
-    world_df  = pd.read_csv("world_coordinate_inter.csv", header=None).T
+    datafile = os.path.join(p.humanav_dir, "tests/world_coordinate_inter.csv")
+    world_df  = pd.read_csv(datafile, header=None).T
     world_df.columns = ['frame', 'ped', 'y', 'x']
     world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
+    start_frame = world_df['frame'][0]
     for i in range(1): #range(8): # there are a total of 8 pedestrians
         ped_id = i+1
         assert(ped_id in np.unique(world_df.ped))
         ped_i = world_df[world_df.ped==ped_id]
-        print(ped_i)
-    exit(0)
+        times = []
+        for f in ped_i['frame']:
+            relative_time = (f - start_frame) * (1 / 25.)
+            times.append(relative_time)
+        record = [] # NOTE: this has no instance of angles, so i'm assuming i can generate those
+        for x in ped_i['x']: # generate a list of lists of positions (only x)
+            record.append([x])
+        for j, y in enumerate(ped_i['y']): # append y to the list of positions
+            record[j].append(y)
+        for j, t in enumerate(times): # lastly, append t to the list
+            record[j].append(t)
+        # print(record)
+        simulator.add_agent(PrerecordedAgent(record), with_planner=False)
 
 def test_socnav(num_humans):
     """
@@ -289,7 +303,7 @@ def test_socnav(num_humans):
     simulator.add_agent(robot_agent)
     # simulator.add_agent(robot_agent2) # can add arbitrary agents
 
-    generate_prerecorded_humans(simulator)
+    generate_prerecorded_humans(p, simulator)
 
     for i in range(num_humans):
         # Generates a random human from the environment
