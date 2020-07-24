@@ -61,6 +61,7 @@ class RoboAgent(Agent):
     def sense(self):
         """use this to take in a world state and compute obstacles (agents/walls) to affect the robot"""
         if(self.current_state is not None):
+            # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states 
             self._enforce_episode_termination_conditions()
             if(self.end_episode):
                 self.collided = True
@@ -102,6 +103,11 @@ class RoboAgent(Agent):
         print("\nRobot powering off, took", len(self.commands),"commands")
         listen_thread.join()
  
+    def power_off(self):
+        if(self.running):
+            # if the robot is already "off" do nothing
+            self.running = False
+            self.controller_socket.close()
 
     """BEGIN socket utils"""
 
@@ -136,12 +142,6 @@ class RoboAgent(Agent):
                 if(data[0] is False):
                     self.running = False
                 break
-
-    def power_off(self):
-        if(self.running):
-            # if the robot is already "off" do nothing
-            self.running = False
-            self.controller_socket.close()
 
     def establish_controller_connection(self, port, host=None):
         """This is akin to a server connection (controller is server)"""

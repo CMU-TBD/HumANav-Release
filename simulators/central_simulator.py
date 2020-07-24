@@ -335,7 +335,7 @@ class CentralSimulator(SimulatorHelper):
             r_pos_3 = r.get_current_config().to_3D_numpy()
             r.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             color = 'bo' # robots are blue and solid unless collided
-            if(a.get_collided()):
+            if(r.get_collided()):
                 color='ro' # collided robots are drawn red
             if i == 0:
                 # only add label on first robot

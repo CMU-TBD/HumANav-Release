@@ -84,6 +84,9 @@ class Agent(object):
         if(with_planner):
             self.planner = self._init_planner()
             self.vehicle_data = self.planner.empty_data_dict()
+        else:
+            self.planner = None 
+            self.vehicle_data = None
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         # Motion fields
         self.max_v = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[1]
@@ -432,6 +435,7 @@ class Agent(object):
         collision_idxs = collisions[:, 1]
         if tf.size(collision_idxs).numpy() != 0:
             time_idx = collision_idxs[0]
+            self.collided = True
         else:
             time_idx = tf.constant(np.inf)
         return time_idx

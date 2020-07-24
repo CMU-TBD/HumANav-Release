@@ -5,6 +5,7 @@ import numpy as np
 import os, sys, math
 from dotmap import DotMap
 from random import seed, random, randint
+import pandas as pd
 import warnings  
 with warnings.catch_warnings():  
     warnings.filterwarnings("ignore",category=FutureWarning)
@@ -195,6 +196,19 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
 
     return rgb_image_1mk3, depth_image_1mk1
 
+def generate_prerecorded_humans(simulator):
+    """"world_df" is a set of trajectories organized as a pandas dataframe. 
+    Each row is a pedestrian at a given frame (aka time point). 
+    The data was taken at 25 fps so between frames is 1/25th of a second. """
+    world_df  = pd.read_csv("world_coordinate_inter.csv", header=None).T
+    world_df.columns = ['frame', 'ped', 'y', 'x']
+    world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
+    for i in range(1): #range(8): # there are a total of 8 pedestrians
+        ped_id = i+1
+        assert(ped_id in np.unique(world_df.ped))
+        ped_i = world_df[world_df.ped==ped_id]
+        print(ped_i)
+    exit(0)
 
 def test_socnav(num_humans):
     """
@@ -274,6 +288,9 @@ def test_socnav(num_humans):
     #                                                             )
     simulator.add_agent(robot_agent)
     # simulator.add_agent(robot_agent2) # can add arbitrary agents
+
+    generate_prerecorded_humans(simulator)
+
     for i in range(num_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment( 
