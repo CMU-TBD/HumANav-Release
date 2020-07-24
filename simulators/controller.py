@@ -33,7 +33,7 @@ class Controller():
             # print(lin_command, ang_command)
             for _ in range(repeat):
                 # TODO: remove robot_running stuff
-                message = (self.robot_running, self.world_state[1], lin_command, ang_command)
+                message = (self.robot_running, time.clock(), lin_command, ang_command)
                 self.send(message)
                 print("sent", message)
                 sent_commands += 1
@@ -67,15 +67,6 @@ class Controller():
         else:
             self.port = port
 
-    def serialize(self, data):
-        """Serialize a data object into something that can be pickled."""
-        # TODO: find a way to serialize tf objects (JSON?)
-        return str(data)
-
-    def unserialize(self, data):
-        # TODO: use ast.literal_eval instead
-        return eval(data)
-
     def send(self, commands, port=None, host=None):
         # Create a TCP/IP socket
         self.robot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -88,29 +79,29 @@ class Controller():
             self.robot_socket.connect(server_address)
         except ConnectionRefusedError: # used to turn off the controller
             self.robot_running = False
-            print(print_colors()["red"], "Connection closed unexpectedly", print_colors()['reset'])
+            print(print_colors()["red"], "Connection closed by robot", print_colors()['reset'])
             exit(1)
         # Send data
-        message = self.serialize(commands)
+        message = str(commands)
         self.robot_socket.sendall(bytes(message, "utf-8"))
         self.robot_socket.close()
 
-    # def listen(self, host=None, port=None):
-    #     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #     self.update_host_port(host, port)
-    #     s.bind((self.host, self.port))
-    #     s.listen(10)
-    #     self.world_state = (True, 0, 0) # initialize listener
-    #     while(self.world_state[0] is True):
-    #         connection, client = s.accept()
-    #         while(True): # constantly taking in information until breaks
-    #             # TODO: allow for buffered data, thus no limit
-    #             data = connection.recv(128)
-    #             # quickly close connection to open up for the next input
-    #             connection.close()
-    #             self.world_state = self.unserialize(data)
-    #             break
-    #     s.close()
+    def listen(self, host=None, port=None):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.update_host_port(host, port)
+        s.bind((self.host, self.port))
+        s.listen(10)
+        self.world_state = (True, 0, 0) # initialize listener
+        while(self.world_state[0] is True):
+            connection, client = s.accept()
+            while(True): # constantly taking in information until breaks
+                # TODO: allow for buffered data, thus no limit
+                data = connection.recv(128)
+                # quickly close connection to open up for the next input
+                connection.close()
+                self.world_state = eval(data)
+                break
+        s.close()
     
     def establish_robot_connection(self):
         """This is akin to a client connection (robot is client)"""

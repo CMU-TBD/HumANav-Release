@@ -359,28 +359,31 @@ class Agent(object):
                     self.termination_cause = color
             # clipping the trajectory only ends it early, we want it to actually reach the goal
             # vehicle_trajectory.clip_along_time_axis(termination_time)
-            self.planner_data, planner_data_last_step, last_step_data_valid = \
-                self.planner.mask_and_concat_data_along_batch_dim(
-                    self.planner_data,
-                    k=termination_time
-                )
-            commanded_actions_1kf = tf.concat(self.commanded_actions_nkf,
-                                              axis=1)[:, :termination_time]
+            if(self.planner is not None and self.planner_data is not None):
+                self.planner_data, planner_data_last_step, last_step_data_valid = \
+                    self.planner.mask_and_concat_data_along_batch_dim(
+                        self.planner_data,
+                        k=termination_time
+                    )
+                commanded_actions_1kf = tf.concat(self.commanded_actions_nkf,
+                                                axis=1)[:, :termination_time]
 
-            # If all of the data was masked then
-            # the episode simulated is not valid
-            valid_episode = True
-            if self.planner_data['system_config'] is None:
-                valid_episode = False
-            episode_data = {
-                'vehicle_trajectory': self.vehicle_trajectory,
-                'vehicle_data': self.planner_data,
-                'vehicle_data_last_step': planner_data_last_step,
-                'last_step_data_valid': last_step_data_valid,
-                'episode_type': idx,
-                'valid_episode': valid_episode,
-                'commanded_actions_1kf': commanded_actions_1kf
-            }
+                # If all of the data was masked then
+                # the episode simulated is not valid
+                valid_episode = True
+                if self.planner_data['system_config'] is None:
+                    valid_episode = False
+                episode_data = {
+                    'vehicle_trajectory': self.vehicle_trajectory,
+                    'vehicle_data': self.planner_data,
+                    'vehicle_data_last_step': planner_data_last_step,
+                    'last_step_data_valid': last_step_data_valid,
+                    'episode_type': idx,
+                    'valid_episode': valid_episode,
+                    'commanded_actions_1kf': commanded_actions_1kf
+                }
+            else:
+                episode_data = {}    
         else:
             end_episode = False
             episode_data = {}
@@ -415,12 +418,15 @@ class Agent(object):
             time_idx = tf.constant(np.inf)
         return time_idx
 
-    def _compute_time_idx_for_collision(self):
+    def _compute_time_idx_for_collision(self, use_current_config = None):
         """
         Compute and return the earliest time index of collision in vehicle
         trajectory. If there is no collision return infinity.
         """
-        pos_1k2 = self.vehicle_trajectory.position_nk2()
+        if(use_current_config is None):
+            pos_1k2 = self.vehicle_trajectory.position_nk2()
+        else:
+            pos_1k2 = self.get_current_config().position_nk2()
         obstacle_dists_1k = self.obstacle_map.dist_to_nearest_obs(pos_1k2)
         collisions = tf.where(tf.less(obstacle_dists_1k, 0.0))
         collision_idxs = collisions[:, 1]

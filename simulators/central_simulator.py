@@ -121,26 +121,44 @@ class CentralSimulator(SimulatorHelper):
             # Takes screenshot of the simulation state as long as the update is still going
             self.save_state(self.t)
             current_state = list(self.states.values())[-1]
+
+            # update the robot with the world's current state
+            self.robot.update_state(current_state) 
+
+            # begin agent threads
             threads = []
             for a in self.agents.values():
                 threads.append(threading.Thread(target=a.update, args=(current_state,)))
                 threads[-1].start()
+
             # wait until completion of all the threads
             for t in threads:
                 t.join()
                 del(t)
-            # Update controller with simulation information
+
             # capture time after all the agents have updated
             self.t = time.clock() - start_time # update "simulaiton time"
             self.print_sim_progress(iteration)
+
             # Update number of iterations
             iteration += 1
+
+        # free all the agents
+        for a in self.agents.values():
+            del(a)
+
+        # turn off the robot
         self.robot.power_off()
+
         # close robot agent threads
         robot_thread.join()
         del(robot_thread)
         print("\nSimulation completed in", self.t, "seconds")
+
+        # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames()
+
+        # convert all the generated frames into a gif file
         self.save_to_gif()
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
@@ -242,6 +260,7 @@ class CentralSimulator(SimulatorHelper):
                 gif_processes[p].start()
                 p += 1
                 print("Started processes:", p, "out of", num_frames, "%.3f" % (p/num_frames), "\r", end="")
+                del(s) # free the state from memory
             print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
@@ -253,7 +272,8 @@ class CentralSimulator(SimulatorHelper):
                 self.take_snapshot(s, filename + str(frame) + ".png")
                 frame += 1
                 print("Generated Frames:", frame, "out of", num_frames, "%.3f" % (frame/num_frames), "\r", end="")
-            
+                del(s) # free the state from memory
+        
         # newline to not interfere with previous prints
         print("\n")
         
@@ -313,11 +333,15 @@ class CentralSimulator(SimulatorHelper):
         # Plot the camera (robots)
         for i, r in enumerate(robots.values()):
             r_pos_3 = r.get_current_config().to_3D_numpy()
+            r.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+            color = 'bo' # robots are blue and solid unless collided
+            if(a.get_collided()):
+                color='ro' # collided robots are drawn red
             if i == 0:
                 # only add label on first robot
-                ax.plot(r_pos_3[0], r_pos_3[1], 'bo', markersize=10, label='Robot')
+                ax.plot(r_pos_3[0], r_pos_3[1], color, markersize=10, label='Robot')
             else:
-                ax.plot(r_pos_3[0], r_pos_3[1], 'bo', markersize=10)
+                ax.plot(r_pos_3[0], r_pos_3[1], color, markersize=10)
             if np.array_equal(camera_pos_13, r_pos_3):
                 # this is the "camera" robot (add quiver) 
                 ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(

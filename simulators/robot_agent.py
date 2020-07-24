@@ -15,12 +15,17 @@ class RoboAgent(Agent):
         self.controller_socket = None
         self.port = 6000
         self.host = None
+        # robot's knowledge of the current state of the world
+        self.current_state = None
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
 
-    # Getters for the Human class
-    # NOTE: most of the dynamics/configs implementation is in Agent.py
+    # Getters for the robot class
     def get_name(self):
         return self.name
+
+    # Setters for the robot class
+    def update_state(self, state):
+        self.current_state = state
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
@@ -53,6 +58,14 @@ class RoboAgent(Agent):
                                                             radius=radius)
         return RoboAgent.generate_robot(configs)
 
+    def sense(self):
+        """use this to take in a world state and compute obstacles (agents/walls) to affect the robot"""
+        if(self.current_state is not None):
+            self._enforce_episode_termination_conditions()
+            if(self.end_episode):
+                self.collided = True
+                self.power_off()
+
     def execute(self, command_indx):
         current_config = self.get_current_config()
         # TODO: perhaps make the control loop run multiple commands rather than one
@@ -62,6 +75,7 @@ class RoboAgent(Agent):
         t_seg, actions_nk2 = self.apply_control_open_loop(current_config,   
                                                         command, 1, sim_mode='ideal'
                                                         )
+        self.vehicle_trajectory.append_along_time_axis(t_seg)
         # act trajectory segment
         self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
@@ -80,6 +94,7 @@ class RoboAgent(Agent):
         num_executed = 0 # keeps track of the latest command that is to be executed
         while(self.running):
             # only execute the most recent commands
+            self.sense()
             if(num_executed < len(self.commands)):
                 self.execute(num_executed)
                 num_executed += 1
@@ -123,8 +138,10 @@ class RoboAgent(Agent):
                 break
 
     def power_off(self):
-        self.running = False
-        self.controller_socket.close()
+        if(self.running):
+            # if the robot is already "off" do nothing
+            self.running = False
+            self.controller_socket.close()
 
     def establish_controller_connection(self, port, host=None):
         """This is akin to a server connection (controller is server)"""
