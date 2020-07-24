@@ -12,6 +12,7 @@ class PrerecordedAgent(Agent):
         else:
             self.name = name
         self.record_data = record_data
+        self.t = 0
         start = HumanConfigs.generate_config_from_pos_3(record_data[0])
         goal = HumanConfigs.generate_config_from_pos_3(record_data[-1])
         super().__init__(start, goal, name)
@@ -31,22 +32,30 @@ class PrerecordedAgent(Agent):
         return None
 
     def execute(self, state):
-        self.set_current_config(HumanConfigs.generate_config_from_pos_3(state))
+        self.set_current_config(HumanConfigs.generate_config_from_pos_3(state[:3]))
         print(self.get_current_config().to_3D_numpy())
         # TODO: perhaps make the control loop run multiple commands rather than one
         command = np.array([[[0,0]]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-        t_seg, actions_nk2 = self.apply_control_open_loop(self.current_config,   
-                                                        command, 1, sim_mode='ideal'
-                                                        )
-        self.vehicle_trajectory.append_along_time_axis(t_seg)
+        # t_seg, actions_nk2 = self.apply_control_open_loop(self.current_config,   
+        #                                                 command, 1, sim_mode='ideal'
+        #                                                 )
+        # self.vehicle_trajectory.append_along_time_axis(t_seg)
+
+    def update_time(self, t):
+        self.t = t
 
     def update(self, sim_state=None):
-        last_act_t = 0
-        for r in self.record_data:
-            # NOTE: this is assuming the execute is INSTANT (which it probably isnt)
-            self.execute(r)
-            delay = r[-1] - last_act_t
-            last_act_t = r[-1]
-            time.sleep(delay)
+        most_recent_indx = 0
+        while(True):
+            r = self.record_data[most_recent_indx]
+            trace_time = r[-1] # last element
+            if(self.t >= trace_time):
+                self.execute(r)
+                most_recent_indx += 1
+                if(most_recent_indx == len(self.record_data)):
+                    break
+            else:
+                time.sleep(0.01) # TODO: fix hardcoded delay
+        

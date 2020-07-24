@@ -10,9 +10,11 @@ from simulators.controller import Controller
 from utils.utils import print_colors
 
 def test_monkey():
+    # TODO: rename controller to joystick
     C = Controller(host=None, port=6000)
     C.establish_robot_connection()
     C.update()
     
 if __name__ == '__main__':
+    # TODO: rename monkey to "joystick"
     test_monkey()

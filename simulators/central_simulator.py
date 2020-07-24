@@ -108,15 +108,12 @@ class CentralSimulator(SimulatorHelper):
         # wait for controller connection to be established
         print("Waiting for Controller connection")
         self.robot.establish_controller_connection(6000)
-        print("Simulator->Controller connection established")
+        print(print_colors()["green"],"Simulator->Controller connection established", print_colors()['reset'])
         self.robot.init_time(0)
         robot_thread = threading.Thread(target=self.robot.update)
         robot_thread.start()
         # continue to spawn the simulation with an established (independent) connection
 
-        # save initial state before the simulator is spawned
-        self.t = 0
-        self.save_state(self.t)
 
         # Initialize time for agents
         for a in self.agents.values():
@@ -124,20 +121,25 @@ class CentralSimulator(SimulatorHelper):
 
         # Initialize threads for prerecorded agents
         prerec_threads = []
-        for a in self.prerecs.values():
-            prerec_threads.append(threading.Thread(target=a.update))
+        for p in self.prerecs.values():
+            prerec_threads.append(threading.Thread(target=p.update))
             prerec_threads[-1].start()
 
-        # keep track of overall time in the simulator
+        # keep track of wall-time in the simulator
         start_time = time.clock()
         iteration = 0
-        while self.exists_running_agent() and iteration < 20 * num_agents: # added hard limit
+        # save initial state before the simulator is spawned
+        self.t = 0
+        # TODO: make all agents, robots, and prerecs be internal threads in THIS update 
+        while self.exists_running_agent() and iteration < 30 * num_agents: # added hard limit
             # Takes screenshot of the simulation state as long as the update is still going
-            self.save_state(self.t)
-            current_state = list(self.states.values())[-1]
+            current_state = self.save_state(self.t) # saves to self.states and returns most recent
 
             # update the robot with the world's current state
             self.robot.update_state(current_state) 
+
+            for p in self.prerecs.values():
+                p.update_time(self.t)
 
             # begin agent threads
             threads = []
@@ -149,21 +151,28 @@ class CentralSimulator(SimulatorHelper):
             for t in threads:
                 t.join()
                 del(t)
-
             # capture time after all the agents have updated
-            self.t = time.clock() - start_time # update "simulaiton time"
+            self.t += self.params.dt # update "simulaiton time"
             self.print_sim_progress(iteration)
 
             # Update number of iterations
             iteration += 1
 
+        for t in prerec_threads: 
+            while(t.is_alive()):
+                self.save_state(time.clock())
+                # arbitrary time fixture for update
+                self.print_sim_progress(iteration)
+                self.t += self.params.dt
+                time.sleep(self.params.dt)
+            del(t)
+
         # free all the agents
         for a in self.agents.values():
             del(a)
 
-        for t in prerec_threads: 
-            t.join()
-            del(t)
+        # capture wall clock time
+        wall_clock = time.clock() - start_time
 
         # turn off the robot
         self.robot.power_off()
@@ -171,7 +180,7 @@ class CentralSimulator(SimulatorHelper):
         # close robot agent threads
         robot_thread.join()
         del(robot_thread)
-        print("\nSimulation completed in", self.t, "seconds")
+        print("\nSimulation completed in", wall_clock, "seconds")
 
         # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames()
@@ -202,8 +211,7 @@ class CentralSimulator(SimulatorHelper):
             print_colors()["reset"],
             "Frames:", 
             rendered_frames+1,
-            "T =",
-            self.t,
+            "T =%.3f" % (self.t),
             "\r", end="")
     
     def save_state(self, current_time):
@@ -224,6 +232,7 @@ class CentralSimulator(SimulatorHelper):
         current_state = SimState(saved_env, saved_agents, saved_prerecs, saved_robots, current_time)
         # Save current state to a local dictionary
         self.states[current_time] = current_state
+        return current_state
 
     def _reset_obstacle_map(self, rng):
         """

@@ -99,7 +99,8 @@ class RoboAgent(Agent):
             if(num_executed < len(self.commands)):
                 self.execute(num_executed)
                 num_executed += 1
-            time.sleep(1./self.freq)
+            else:
+                time.sleep(0.01) # TODO: fix hardcoded delay 
         print("\nRobot powering off, took", len(self.commands),"commands")
         listen_thread.join()
  

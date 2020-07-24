@@ -220,6 +220,13 @@ def generate_prerecorded_humans(p, simulator):
             record.append([x + 5.])
         for j, y in enumerate(ped_i['y']): # append y to the list of positions
             record[j].append(y + 14.)
+        for j, pos_2 in enumerate(record): # append vector angles for all the agents
+            if(j > 0):
+                last_pos_2 = record[j-1]
+                theta = np.arctan2(pos_2[1] - last_pos_2[1], pos_2[0] - last_pos_2[0])
+                record[j-1].append(theta)
+                if(j == len(record) - 1):
+                    record[j].append(theta) # last element gets last angle
         for j, t in enumerate(times): # lastly, append t to the list
             record[j].append(t)
         # print(record)
