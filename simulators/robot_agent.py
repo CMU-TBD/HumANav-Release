@@ -121,6 +121,9 @@ class RoboAgent(Agent):
                 if(data[0] is False):
                     self.running = False
                 break
+
+    def power_off(self):
+        self.running = False
         self.controller_socket.close()
 
     def establish_controller_connection(self, port, host=None):

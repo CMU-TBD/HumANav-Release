@@ -11,6 +11,7 @@ class Controller():
         self.world_state = (False, 0, 0)
         # sockets for communication
         self.robot_socket = None
+        self.robot_running = False
         print("Initiated controller at", self.host, self.port)
 
     def set_host(self, h):
@@ -23,18 +24,16 @@ class Controller():
         from random import randint
         self.world_state = (True, 0, 0)
         accel_scale = 100 # scale to multiply the raw acceleration values by 
-        repeat = 2 # number of times to send the same command to the robot
+        repeat = 1 # number of times to send the same command to the robot
         sent_commands = 0
-        robot_running = True
-        while(robot_running is True):
+        self.robot_running = True
+        while(self.robot_running is True):
             lin_command = (randint(10, 100) / 100.) # robot can only more forwards
             ang_command = (randint(-100, 100) / 100.)
             # print(lin_command, ang_command)
             for _ in range(repeat):
                 # TODO: remove robot_running stuff
-                if(sent_commands is 200):
-                    robot_running = False
-                message = (robot_running, self.world_state[1], lin_command, ang_command)
+                message = (self.robot_running, self.world_state[1], lin_command, ang_command)
                 self.send(message)
                 print("sent", message)
                 sent_commands += 1
@@ -87,9 +86,10 @@ class Controller():
         # print(self.host, self.port)
         try:
             self.robot_socket.connect(server_address)
-        except ConnectionRefusedError:
+        except ConnectionRefusedError: # used to turn off the controller
+            self.robot_running = False
             print(print_colors()["red"], "Connection closed unexpectedly", print_colors()['reset'])
-            return
+            exit(1)
         # Send data
         message = self.serialize(commands)
         self.robot_socket.sendall(bytes(message, "utf-8"))

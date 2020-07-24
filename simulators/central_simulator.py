@@ -135,6 +135,7 @@ class CentralSimulator(SimulatorHelper):
             self.print_sim_progress(iteration)
             # Update number of iterations
             iteration += 1
+        self.robot.power_off()
         # close robot agent threads
         robot_thread.join()
         del(robot_thread)
