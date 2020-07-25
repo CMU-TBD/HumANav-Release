@@ -156,9 +156,10 @@ class CentralSimulator(SimulatorHelper):
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
             # capture time after all the agents have updated
-            self.t += self.params.dt # update "simulaiton time"
+            delta_t = 3*self.params.dt # update time for all the prerecorded agents
+            self.t += delta_t # update "simulaiton time"
             # print simulation progress
-            iteration = int(self.t * (1./self.params.dt))
+            iteration = int(self.t * (1./delta_t))
             self.print_sim_progress(iteration)
             if (iteration > 20 * num_agents):
                 # hard limit of 20frames per agent

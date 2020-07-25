@@ -43,10 +43,8 @@ class HumanConfigs():
     @staticmethod
     def generate_config_from_pos_3(pos_3, dt=0.1, speed=0):
         pos_n11 = tf.constant([[[pos_3[0], pos_3[1]]]], dtype=tf.float32)
-        # range of speed from [0, 0.6)
-        initial_linear_velocity = random.random() * speed
         heading_n11 = tf.constant([[[pos_3[2]]]], dtype=tf.float32)
-        speed_nk1 = tf.ones((1, 1, 1), dtype=tf.float32) * initial_linear_velocity
+        speed_nk1 = tf.ones((1, 1, 1), dtype=tf.float32) * speed
         return SystemConfig(dt, 1, 1,
                             position_nk2=pos_n11,
                             heading_nk1=heading_n11,

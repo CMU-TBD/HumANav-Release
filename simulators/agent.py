@@ -128,7 +128,7 @@ class Agent(object):
         if(not hasattr(self, 'planner')):
             # create planner if none exists
             self.planner = self._init_planner()
-        if(not self.end_episode):
+        if(not self.end_episode and not self.end_acting):
             if(self.params.verbose_printing):
                 print("planned next:", self.planned_next_config.position_nk2().numpy())
             self.planner_data = \

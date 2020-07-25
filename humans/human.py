@@ -31,11 +31,11 @@ class Human(Agent):
             human_name = generate_name(max_chars)
         else:
             human_name = name
-        # In order to print more readable arrays
-        np.set_printoptions(precision=2)
-        pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
-        goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
         if(verbose):
+            # In order to print more readable arrays
+            np.set_printoptions(precision=2)
+            pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
+            goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
             print(" Human", human_name, "at", pos_2, "with goal", goal_2)
         return Human(human_name, appearance, configs)
 
