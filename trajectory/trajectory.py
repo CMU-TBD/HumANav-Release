@@ -14,15 +14,16 @@ class Trajectory(object):
                  angular_speed_nk1=None, angular_acceleration_nk1=None,
                  dtype=tf.float32, variable=True, direct_init=False,
                  valid_horizons_n1=None,
-                 track_trajectory_acceleration=True):
+                 track_trajectory_acceleration=True, 
+                 check_dimens = True):
 
         # Check dimensions now to make your life easier later
-        if position_nk2 is not None:
+        if position_nk2 is not None and check_dimens:
             assert(n == position_nk2.shape[0])
             try:
                 assert(k == position_nk2.shape[1])
             except:
-                print(k, position_nk2.shape[1])
+                print("ERROR, dimens mismatch:", k, position_nk2.shape[1])
                 exit(1)
 
         # Discretization step
@@ -333,7 +334,7 @@ class Trajectory(object):
                    direct_init=True)
 
     @classmethod
-    def copy(cls, traj):
+    def copy(cls, traj, check_dimens=True):
         return cls(dt=traj.dt, n=traj.n, k=traj.k,
                    position_nk2=traj.position_nk2()*1.,
                    speed_nk1=traj.speed_nk1()*1.,
@@ -342,7 +343,7 @@ class Trajectory(object):
                    angular_speed_nk1=traj.angular_speed_nk1()*1.,
                    angular_acceleration_nk1=traj.angular_acceleration_nk1()*1.,
                    valid_horizons_n1=traj.valid_horizons_n1*1.,
-                   variable=False, direct_init=True)
+                   variable=False, direct_init=True, check_dimens=check_dimens)
 
     @classmethod
     def new_traj_clip_along_time_axis(cls, trajectory, horizon,
@@ -487,14 +488,15 @@ class SystemConfig(Trajectory):
                  angular_speed_nk1=None, angular_acceleration_nk1=None,
                  dtype=tf.float32, variable=True, direct_init=False,
                  valid_horizons_n1=None,
-                 track_trajectory_acceleration=True):
+                 track_trajectory_acceleration=True, check_dimens = True):
         assert(k == 1)
         # Don't pass on valid_horizons_n1 as a SystemConfig has no horizon
         super(SystemConfig, self).__init__(dt, n, k, position_nk2, speed_nk1, acceleration_nk1,
                                            heading_nk1, angular_speed_nk1,
                                            angular_acceleration_nk1, dtype=tf.float32,
                                            variable=variable, direct_init=direct_init,
-                                           track_trajectory_acceleration=track_trajectory_acceleration)
+                                           track_trajectory_acceleration=track_trajectory_acceleration, 
+                                           check_dimens = check_dimens)
 
 
     def assign_from_broadcasted_batch(self, config, n):

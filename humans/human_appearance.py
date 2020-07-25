@@ -1,5 +1,5 @@
 from random import seed, random, randint
-import random
+import random, os
 import string
 import math
 import numpy as np

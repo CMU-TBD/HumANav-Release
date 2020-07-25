@@ -65,7 +65,7 @@ class Agent(object):
 
     def get_trajectory(self, deepcpy=False):
         if(deepcpy):
-            return Trajectory.copy(self.vehicle_trajectory)
+            return Trajectory.copy(self.vehicle_trajectory, check_dimens=False)
         return self.vehicle_trajectory
 
     def get_collided(self):

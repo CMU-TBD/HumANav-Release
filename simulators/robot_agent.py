@@ -99,17 +99,20 @@ class RoboAgent(Agent):
                 time.sleep(0.01) # TODO: fix hardcoded delay 
             else:
                 self.sense()
+                # using a loop to carry through the backlock of commands over time
                 while(num_executed < len(self.commands)):
                     self.execute(num_executed)
                     num_executed += 1
                     if(self.get_trajectory().k != self.get_trajectory().position_nk2().shape[1]):
-                        print(self.get_trajectory().k, self.get_trajectory().position_nk2().shape[1])
-                        exit(0)
+                        # fix this nonfatal bug
+                        print("BAD ROBOT TRAJECTORY")
+                        # print(self.get_trajectory().k, self.get_trajectory().position_nk2().shape[1])
+                        # exit(0)
                         
 
             # print(num_executed)
 
-        print("\nRobot powering off, took", len(self.commands),"commands")
+        print("\nRobot powering off, recieved", len(self.commands),"commands")
         listen_thread.join()
  
     def power_off(self):

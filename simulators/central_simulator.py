@@ -8,9 +8,9 @@ import numpy as np
 import copy, os, glob, imageio
 import time, threading, multiprocessing
 from humans.human import Human
+from humans.recorded_human import PrerecordedHuman
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.robot_agent import RoboAgent
-from simulators.recorded_agent import PrerecordedAgent
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
@@ -55,7 +55,7 @@ class CentralSimulator(SimulatorHelper):
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
         # Much more optimized to only render topview, but can also render Humans
-        p.only_render_topview = True
+        p.only_render_topview = False
         if(p.only_render_topview):
             print("Printing Topview with multithreading")
         else:
@@ -73,7 +73,7 @@ class CentralSimulator(SimulatorHelper):
             a.simulation_init(self.params, self.obstacle_map, with_planner=False)
             self.robots[name] = a
             self.robot = a
-        elif (isinstance(a, PrerecordedAgent)):
+        elif (isinstance(a, PrerecordedHuman)):
             a.simulation_init(self.params, self.obstacle_map, with_planner=False)
             self.prerecs[name] = a
         else:
@@ -229,7 +229,7 @@ class CentralSimulator(SimulatorHelper):
         # deepcopy all prerecorded agents
         saved_prerecs = {}
         for a in self.prerecs.values():
-            saved_prerecs[a.get_name()] = AgentState(a, deepcpy=True)
+            saved_prerecs[a.get_name()] = HumanState(a, deepcpy=True)
         # Save all the robots
         saved_robots = {}
         for r in self.robots.values():
@@ -547,7 +547,10 @@ class CentralSimulator(SimulatorHelper):
                 if(self.params.use_one_renderer):
                     # only when rendering with opengl
                     for a in state.get_agents().values():
-                        self.r.update_human(a) #Agent.agent_to_human(a, human_exists=True))
+                        self.r.update_human(a) 
+                    # update prerecorded humans
+                    for r_a in state.get_prerecs().values():
+                        self.r.update_human(r_a) 
                     # Update human traversible
                     state.get_environment()["traversibles"][1] = self.r.get_human_traversible()
                     # compute the rgb and depth images

@@ -1,11 +1,12 @@
 from utils.utils import print_colors, generate_name
-from simulators.agent import Agent
+from humans.human import Human
 from humans.human_configs import HumanConfigs
+from humans.human_appearance import HumanAppearance
 from trajectory.trajectory import SystemConfig, Trajectory
 import numpy as np
 import socket, time, threading
 
-class PrerecordedAgent(Agent):
+class PrerecordedHuman(Human):
     def __init__(self, record_data, name=None):
         if name is None:
             self.name = generate_name(20)
@@ -16,9 +17,11 @@ class PrerecordedAgent(Agent):
         self.current_step = 0
         self.max_steps = len(self.record_data)
         self.next_state = self.record_data[1]
-        start = HumanConfigs.generate_config_from_pos_3(record_data[0])
-        goal = HumanConfigs.generate_config_from_pos_3(record_data[-1])
-        super().__init__(start, goal, name)
+        start = HumanConfigs.generate_config_from_pos_3(record_data[0][:3])
+        goal = HumanConfigs.generate_config_from_pos_3(record_data[-1][:3])
+        init_configs = HumanConfigs(start, goal)
+        appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
+        super().__init__(name, appearance, init_configs)
 
         # print(self.record_data)
         # print("prerecorded agent start:", self.start_config.to_3D_numpy(), "goal:", self.goal_config.to_3D_numpy())
@@ -30,9 +33,6 @@ class PrerecordedAgent(Agent):
         # Initialize system dynamics and planner fields
         self.system_dynamics = self._init_system_dynamics()
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
-
-    def get_appearance(self):
-        return None
 
     def execute(self, state):
         self.current_step += 1 # Has executed one more step

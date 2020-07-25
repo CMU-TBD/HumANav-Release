@@ -18,10 +18,10 @@ with warnings.catch_warnings():
 # Humanav
 from humanav import sbpd
 from humans.human import Human
+from humans.recorded_human import PrerecordedHuman
 from humans.human_configs import HumanConfigs
 from humans.human_appearance import HumanAppearance
 from simulators.robot_agent import RoboAgent
-from simulators.recorded_agent import PrerecordedAgent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.agent import Agent
 # Planner + Simulator:
@@ -235,7 +235,7 @@ def generate_prerecorded_humans(p, simulator):
         for j, t in enumerate(times): # lastly, append t to the list
             record[j].append(t)
         # print(record)
-        simulator.add_agent(PrerecordedAgent(record))
+        simulator.add_agent(PrerecordedHuman(record))
 
 def test_socnav(num_humans):
     """
