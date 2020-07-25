@@ -4,8 +4,10 @@ from params.obstacle_map.sbpd_obstacle_map_params import create_params as create
 from params.simulator.simulator_params import create_params as create_simulator_params 
 
 
-def create_params():
+def create_params(render_3D = None):
     p = create_simulator_params()
+
+    p.render_3D = render_3D
 
     # Load the dependencies
     p.obstacle_map_params = create_obstacle_map_params()

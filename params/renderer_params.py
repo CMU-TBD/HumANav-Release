@@ -14,9 +14,9 @@ def create_params():
     # precomputed traversible from the traversible folder
     p.load_traversible_from_pickle_file = True
 
-    # Depending on pc, those equipped with an X graphical instance (or other display)
+    # Depending on computer, those equipped with an X graphical instance (or other display)
     # can set this to True to use the openGL renderer and render the 3D humans/scene
-    p.render_with_display = False 
+    p.render_3D = False 
     # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
 
     p.camera_params = DotMap(modalities=['rgb'],  # rgb or disparity
@@ -67,7 +67,7 @@ def create_params():
 
 # NOTE: this must be the ABSOLUTE path
 def get_path_to_humanav():
-    PATH_TO_HUMANAV = '/home/gustavo/Documents/tbd_SocNavBenchmark'
+    PATH_TO_HUMANAV = '/home/gsilvera/Documents/tbd_SocNavBenchmark'
     if(not os.path.exists(PATH_TO_HUMANAV)):
         print('\033[31m', "ERROR: Failed to find HumANav installation at", PATH_TO_HUMANAV, '\033[0m')
         os._exit(1) # Failure condition

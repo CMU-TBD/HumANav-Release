@@ -7,7 +7,7 @@ import numpy as np
 import socket, time, threading
 
 class PrerecordedHuman(Human):
-    def __init__(self, record_data, name=None):
+    def __init__(self, record_data, generate_appearance=True, name=None):
         if name is None:
             self.name = generate_name(20)
         else:
@@ -20,7 +20,10 @@ class PrerecordedHuman(Human):
         start = HumanConfigs.generate_config_from_pos_3(record_data[0][:3])
         goal = HumanConfigs.generate_config_from_pos_3(record_data[-1][:3])
         init_configs = HumanConfigs(start, goal)
-        appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
+        if(generate_appearance):
+            appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
+        else:
+            appearance = None
         super().__init__(name, appearance, init_configs)
 
         # print(self.record_data)

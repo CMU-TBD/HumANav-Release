@@ -21,13 +21,11 @@ from params.renderer_params import get_path_to_humanav
 
 class CentralSimulator(SimulatorHelper):
 
-    def __init__(self, params, environment, renderer_params = None, renderer=None):
+    def __init__(self, params, environment, renderer=None):
         self.params = CentralSimulator.parse_params(params)
         self.r = renderer
-        self.renderer_params = renderer_params
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
-        self.humanav_dir = get_path_to_humanav()
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
         # keep track of all robots in dictionary with names as the key
@@ -46,6 +44,7 @@ class CentralSimulator(SimulatorHelper):
         Parse the parameters to add some additional helpful parameters.
         """
         # Parse the dependencies
+        p.humanav_dir = get_path_to_humanav()
         p.planner_params.planner.parse_params(p.planner_params)
         p.obstacle_map_params.obstacle_map.parse_params(p.obstacle_map_params)
         # Time discretization step
@@ -55,15 +54,14 @@ class CentralSimulator(SimulatorHelper):
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
         # Much more optimized to only render topview, but can also render Humans
-        p.only_render_topview = False
-        if(p.only_render_topview):
-            print("Printing Topview with multithreading")
+        if(not p.render_3D):
+            print("Printing Topview movie with multithreading")
         else:
-            print("Printing whole image sequentially")
+            print("Printing 3D movie sequentially")
         # verbose printing
         p.verbose_printing = False
         # Save memory by updating renderer rather than deepcopying it, but very slow & sequential
-        p.use_one_renderer = True
+        # p.use_one_renderer = True
         return p
 
     def add_agent(self, a):
@@ -284,7 +282,7 @@ class CentralSimulator(SimulatorHelper):
     def generate_frames(self, filename="obs"):
         num_frames = len(self.states)
         np.set_printoptions(precision=3)
-        if(self.params.only_render_topview or not self.params.use_one_renderer):
+        if(not self.params.render_3D):
             # optimized to use multiple processes
             # TODO: put a limit on the maximum number of processes that can be run at once
             gif_processes = []
@@ -318,7 +316,7 @@ class CentralSimulator(SimulatorHelper):
         rendering_processes = []
         for i in range(num_robots):
             dirname = "tests/socnav/sim_movie" + str(i)
-            IMAGES_DIR = os.path.join(self.humanav_dir, dirname)
+            IMAGES_DIR = os.path.join(self.params.humanav_dir, dirname)
             if(with_multiprocessing):
                 # little use to use pools here, since this is for multiple robot agents in a scene
                 # and the assumption here is that is a small number
@@ -441,7 +439,8 @@ class CentralSimulator(SimulatorHelper):
         traversible = environment["traversibles"][0]
         human_traversible = None
 
-        if len(environment["traversibles"]) > 1 and not p.only_render_topview:
+        if len(environment["traversibles"]) > 1:
+            assert(p.render_3D)
             human_traversible = environment["traversibles"][1]
         # Compute the real_world extent (in meters) of the traversible
         extent = [0., traversible.shape[1], 0., traversible.shape[0]]
@@ -499,7 +498,7 @@ class CentralSimulator(SimulatorHelper):
             ax.set_title('Depth')
 
         dirname = 'tests/socnav/sim_movie' + str(img_dir)
-        full_file_name = os.path.join(self.humanav_dir, dirname, filename)
+        full_file_name = os.path.join(self.params.humanav_dir, dirname, filename)
         if(not os.path.exists(full_file_name)):
             if(self.params.verbose_printing):
                 print('\033[31m', "Failed to find:", full_file_name,
@@ -539,44 +538,29 @@ class CentralSimulator(SimulatorHelper):
             camera_pos_13 = r.get_current_config().to_3D_numpy()
             rgb_image_1mk3 = None
             depth_image_1mk1 = None
-            tmp_r = None
             # TODO: make the prerecs also generate a random human identity (probably human child)
-            if self.params.humanav_params.render_with_display and not self.params.only_render_topview:
-                # environment should hold building and human traversibles
-                assert(len(state.get_environment()["traversibles"]) == 2)
-                if(self.params.use_one_renderer):
-                    # only when rendering with opengl
-                    for a in state.get_agents().values():
-                        self.r.update_human(a) 
-                    # update prerecorded humans
-                    for r_a in state.get_prerecs().values():
-                        self.r.update_human(r_a) 
-                    # Update human traversible
-                    state.get_environment()["traversibles"][1] = self.r.get_human_traversible()
-                    # compute the rgb and depth images
-                    rgb_image_1mk3, depth_image_1mk1 = \
-                        self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), 
-                                                state.get_environment()["map_scale"], human_visible=True)
-                else:
-                    # TODO: Fix multiprocessing for properly deepcopied renderers 
-                    # generate new renderer (deepcopied) to mitigate race condition
-                    tmp_r = HumANavRendererMulti.get_renderer(self.renderer_params, deepcpy = True)
-                    for a in state.get_agents().values():
-                        tmp_r.add_human(a)
-                    # Update human traversible
-                    state.get_environment()["traversibles"][1] = tmp_r.get_human_traversible()
-                    # compute the rgb and depth images
-                    rgb_image_1mk3, depth_image_1mk1 = \
-                        self.render_rgb_and_depth(tmp_r, np.array([camera_pos_13]), 
-                                                state.get_environment()["map_scale"], human_visible=True)
+            if self.params.render_3D:
+                # only when rendering with opengl
+                assert(len(state.get_environment()["traversibles"]) == 2) # environment holds building and human traversibles
+                for a in state.get_agents().values():
+                    self.r.update_human(a) 
+                # update prerecorded humans
+                for r_a in state.get_prerecs().values():
+                    self.r.update_human(r_a) 
+                # Update human traversible
+                state.get_environment()["traversibles"][1] = self.r.get_human_traversible()
+                # compute the rgb and depth images
+                rgb_image_1mk3, depth_image_1mk1 = \
+                    self.render_rgb_and_depth(self.r, np.array([camera_pos_13]), 
+                                            state.get_environment()["map_scale"], human_visible=True)
+            
+                # TODO: Fix multiprocessing for properly deepcopied renderers 
+            
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
                             state.get_environment(), room_center, camera_pos_13, 
                             state.get_agents(), state.get_prerecs(), state.get_robots(), 
                             state.get_time(), "rob" + str(i) + filename, i)
-            # Delete renderer once done to save on memory
-            if(not self.params.use_one_renderer):
-                del(tmp_r)
         # Delete state to save memory after frames are generated
         del(state)
             

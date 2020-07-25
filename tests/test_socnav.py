@@ -50,7 +50,7 @@ def create_params():
     # Tilt the camera 10 degree down from the horizontal axis
     p.robot_params.camera_elevation_degree = -10
 
-    if p.render_with_display:
+    if p.render_3D:
         # Can only render rgb and depth then host pc has an available display
         p.camera_params.modalities = ['rgb', 'disparity']
     else:
@@ -235,7 +235,7 @@ def generate_prerecorded_humans(p, simulator):
         for j, t in enumerate(times): # lastly, append t to the list
             record[j].append(t)
         # print(record)
-        simulator.add_agent(PrerecordedHuman(record))
+        simulator.add_agent(PrerecordedHuman(record, generate_appearance=p.render_3D))
 
 def test_socnav(num_humans):
     """
@@ -243,21 +243,22 @@ def test_socnav(num_humans):
     and rendering topview, rgb, and depth images.
     """
     p = create_params()  # used to instantiate the camera and its parameters
-
+    # TODO: can optimize HumANavRendererMulti renderer when not rendering humans
     # get the renderer from the camera p
     r = HumANavRendererMulti.get_renderer(p, deepcpy = False)
-    # Get the surreal dataset for human generation
-    surreal_data = r.d
-
-    # Update the Human's appearance classes to contain the dataset
-    HumanAppearance.dataset = surreal_data
-
     # obtain "resolution and traversible of building"
     dx_cm, traversible = r.get_config()
-    human_traversible = np.empty(traversible.shape)
-    human_traversible.fill(True)  # initially all good
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm/100.
+    if(p.render_3D):
+        # Get the surreal dataset for human generation
+        surreal_data = r.d
+
+        # Update the Human's appearance classes to contain the dataset
+        HumanAppearance.dataset = surreal_data
+
+        human_traversible = np.empty(traversible.shape)
+        human_traversible.fill(True)  # initially all good
 
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
@@ -269,7 +270,7 @@ def test_socnav(num_humans):
     num_cameras = np.shape(camera_pos_13)[0]
 
     # In order to print more readable arrays
-    np.set_printoptions(precision=2)
+    np.set_printoptions(precision=3)
 
     # Output position of new camera renders
     for i in range(num_cameras):
@@ -284,7 +285,7 @@ def test_socnav(num_humans):
     environment = {}
     environment["map_scale"] = dx_m
     # obstacle traversible / human traversible
-    if p.render_with_display:
+    if p.render_3D:
         environment["traversibles"] = [traversible, human_traversible]
     else:
         environment["traversibles"] = np.array([traversible])
@@ -295,8 +296,8 @@ def test_socnav(num_humans):
 
     # Create planner parameters
     # planner_params = create_planner_params()
-    sim_params = create_sim_params()
-    simulator = CentralSimulator(sim_params, environment, p, renderer=r)
+    sim_params = create_sim_params(render_3D = p.render_3D)
+    simulator = CentralSimulator(sim_params, environment, renderer=r)
 
     """
     Generate the humans and run the simulation on every human
@@ -308,11 +309,6 @@ def test_socnav(num_humans):
                                                                 room_center, 
                                                                 radius=5
                                                                 )
-    # robot_agent2 = RoboAgent.generate_random_robot_from_environment(
-    #                                                             environment, 
-    #                                                             room_center, 
-    #                                                             radius=5
-    #                                                             )
     simulator.add_agent(robot_agent)
     # simulator.add_agent(robot_agent2) # can add arbitrary agents
 
@@ -322,14 +318,16 @@ def test_socnav(num_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment( 
             environment, room_center, 
-            generate_appearance=p.render_with_display, radius=5)
+            generate_appearance=p.render_3D, 
+            radius=5
+        )
         # Or specify a human's initial configs with a HumanConfig instance
         # Human.generate_human_with_configs(Human, fixed_start_goal)
         human_list.append(new_human_i)
 
         # Load a random human at a specified state and speed
         # update human traversible
-        if p.render_with_display:
+        if p.render_3D:
             r.add_human(new_human_i)
             environment["traversibles"] = np.array([traversible, r.get_human_traversible()])  
         else:
@@ -343,7 +341,7 @@ def test_socnav(num_humans):
     for i in range(num_cameras):
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
-        if p.render_with_display: # only when rendering with opengl
+        if p.render_3D: # only when rendering with opengl
             rgb_image_1mk3, depth_image_1mk1 = \
                 render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
         # Plot the rendered images
@@ -351,7 +349,7 @@ def test_socnav(num_humans):
                     camera_pos_13[i], human_list, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
-    if p.render_with_display: # only when rendering with opengl
+    if p.render_3D: # only when rendering with opengl
         r.remove_all_humans()
 
 
