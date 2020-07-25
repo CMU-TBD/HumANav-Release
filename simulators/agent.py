@@ -102,13 +102,13 @@ class Agent(object):
         self.commanded_actions_1kf = self.episode_data['commanded_actions_1kf']
         self.obj_val = self._compute_objective_value()
 
-    def init_time(self, t):
+    def update_time(self, t):
         self.time = t
 
-    def update(self, sim_state = None):
+    def update(self, time, sim_state = None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         # with lock:
-        init_time = time.clock()
+        self.update_time(time)
         if(self.params.verbose_printing):
             print("start: ", self.get_start_config().position_nk2().numpy())
             print("goal: ", self.get_goal_config().position_nk2().numpy())
@@ -117,8 +117,6 @@ class Agent(object):
         self.plan()
         # NOTE: instant_complete discards any anymations and finishes the trajectory segment instantly
         self.act(instant_complete = False, world_state = sim_state)
-        update_dt = time.clock() - init_time
-        self.time = self.time + update_dt # update local clock
         
     def plan(self):
         """ Runs the planner for one step from config to generate a

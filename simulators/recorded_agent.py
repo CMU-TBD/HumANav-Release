@@ -13,6 +13,9 @@ class PrerecordedAgent(Agent):
             self.name = name
         self.record_data = record_data
         self.t = 0
+        self.current_step = 0
+        self.max_steps = len(self.record_data)
+        self.next_state = self.record_data[1]
         start = HumanConfigs.generate_config_from_pos_3(record_data[0])
         goal = HumanConfigs.generate_config_from_pos_3(record_data[-1])
         super().__init__(start, goal, name)
@@ -32,8 +35,9 @@ class PrerecordedAgent(Agent):
         return None
 
     def execute(self, state):
+        self.current_step += 1 # Has executed one more step
         self.set_current_config(HumanConfigs.generate_config_from_pos_3(state[:3]))
-        print(self.get_current_config().to_3D_numpy())
+        # print(self.get_current_config().to_3D_numpy())
         # TODO: perhaps make the control loop run multiple commands rather than one
         command = np.array([[[0,0]]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
@@ -43,19 +47,19 @@ class PrerecordedAgent(Agent):
         #                                                 )
         # self.vehicle_trajectory.append_along_time_axis(t_seg)
 
-    def update_time(self, t):
-        self.t = t
-
-    def update(self, sim_state=None):
-        most_recent_indx = 0
-        while(True):
-            r = self.record_data[most_recent_indx]
-            trace_time = r[-1] # last element
-            if(self.t >= trace_time):
-                self.execute(r)
-                most_recent_indx += 1
-                if(most_recent_indx == len(self.record_data)):
+    def update(self, time):
+        self.t = time
+        if(self.current_step < self.max_steps):
+            # continue jumping through states until time limit is reached
+            while(self.t > self.next_state[-1]):
+                self.execute(self.next_state)
+                try:
+                    self.next_state = self.record_data[self.current_step + 1]
+                except IndexError:
+                    self.next_state = self.record_data[-1] # last one
+                    self.current_step = self.max_steps
                     break
-            else:
-                time.sleep(0.01) # TODO: fix hardcoded delay
-        
+        else:
+            # tell the simulator this agent is done
+            self.end_episode = True
+            self.end_acting = True

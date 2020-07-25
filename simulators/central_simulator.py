@@ -89,12 +89,37 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
-    def exists_planning_agent(self):
-        for a in self.agents.values():
-            # if there is even just a single agent acting 
-            if (not a.end_episode):
+    def exists_running_prerec(self):
+        for a in self.prerecs.values():
+            # if there is even just a single prerec acting 
+            if (not a.end_acting):
                 return True
         return False
+
+    """BEGIN thread utils"""
+
+    def init_agent_threads(self, time, current_state):
+        agent_threads = []
+        for a in self.agents.values():
+            agent_threads.append(threading.Thread(target=a.update, args=(time, current_state,)))
+        return agent_threads
+
+    def init_prerec_threads(self, time):
+        prerec_threads = []
+        for a in self.prerecs.values():
+            prerec_threads.append(threading.Thread(target=a.update, args=(time,)))
+        return prerec_threads
+
+    def start_threads(self, thread_group):
+        for t in thread_group: 
+            t.start()
+    
+    def join_threads(self, thread_group):
+        for t in thread_group:
+            t.join()
+            del(t)
+
+    """END thread utils"""
 
     def simulate(self):
         """ A function that simulates an entire episode. The agent starts
@@ -102,80 +127,58 @@ class CentralSimulator(SimulatorHelper):
         subtrajectories. Generates a vehicle_trajectory for the episode, 
         calculates its objective value, and sets the episode_type 
         (timeout, collision, success) """
-        num_agents = len(self.agents)
+        num_agents = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
         
         # wait for controller connection to be established
-        print("Waiting for Controller connection")
+        print("Waiting for Joystick connection")
         self.robot.establish_controller_connection(6000)
-        print(print_colors()["green"],"Simulator->Controller connection established", print_colors()['reset'])
-        self.robot.init_time(0)
+        print(print_colors()["green"],"Simulator->Joystick connection established", print_colors()['reset'])
+        self.robot.update_time(0)
         robot_thread = threading.Thread(target=self.robot.update)
         robot_thread.start()
         # continue to spawn the simulation with an established (independent) connection
 
-
-        # Initialize time for agents
-        for a in self.agents.values():
-            a.init_time(0)
-
-        # Initialize threads for prerecorded agents
-        prerec_threads = []
-        for p in self.prerecs.values():
-            prerec_threads.append(threading.Thread(target=p.update))
-            prerec_threads[-1].start()
-
         # keep track of wall-time in the simulator
         start_time = time.clock()
-        iteration = 0
         # save initial state before the simulator is spawned
         self.t = 0
         # TODO: make all agents, robots, and prerecs be internal threads in THIS update 
-        while self.exists_running_agent() and iteration < 30 * num_agents: # added hard limit
+        while self.exists_running_agent() or self.exists_running_prerec():
             # Takes screenshot of the simulation state as long as the update is still going
             current_state = self.save_state(self.t) # saves to self.states and returns most recent
-
             # update the robot with the world's current state
             self.robot.update_state(current_state) 
-
-            for p in self.prerecs.values():
-                p.update_time(self.t)
-
-            # begin agent threads
-            threads = []
-            for a in self.agents.values():
-                threads.append(threading.Thread(target=a.update, args=(current_state,)))
-                threads[-1].start()
-
-            # wait until completion of all the threads
-            for t in threads:
-                t.join()
-                del(t)
+            # Complete thread operations
+            agent_threads = self.init_agent_threads(self.t, current_state)
+            prerec_threads = self.init_prerec_threads(self.t)
+            # start all thread groups
+            self.start_threads(agent_threads)
+            self.start_threads(prerec_threads)
+            # join all thread groups
+            self.join_threads(agent_threads)
+            self.join_threads(prerec_threads)
             # capture time after all the agents have updated
             self.t += self.params.dt # update "simulaiton time"
+            # print simulation progress
+            iteration = int(self.t * (1./self.params.dt))
             self.print_sim_progress(iteration)
-
-            # Update number of iterations
-            iteration += 1
-
-        for t in prerec_threads: 
-            while(t.is_alive()):
-                self.save_state(time.clock())
-                # arbitrary time fixture for update
-                self.print_sim_progress(iteration)
-                self.t += self.params.dt
-                time.sleep(self.params.dt)
-            del(t)
-
+            if (iteration > 30 * num_agents):
+                # hard limit of 30frames per agent
+                break
         # free all the agents
         for a in self.agents.values():
             del(a)
 
-        # capture wall clock time
-        wall_clock = time.clock() - start_time
+        # free all the prerecs
+        for p in self.prerecs.values():
+            del(p)
 
         # turn off the robot
         self.robot.power_off()
+
+        # capture wall clock time
+        wall_clock = time.clock() - start_time
 
         # close robot agent threads
         robot_thread.join()
@@ -211,7 +214,7 @@ class CentralSimulator(SimulatorHelper):
             print_colors()["reset"],
             "Frames:", 
             rendered_frames+1,
-            "T =%.3f" % (self.t),
+            "T = %.3f" % (self.t),
             "\r", end="")
     
     def save_state(self, current_time):

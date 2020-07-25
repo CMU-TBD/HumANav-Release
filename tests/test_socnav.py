@@ -216,11 +216,14 @@ def generate_prerecorded_humans(p, simulator):
             relative_time = (f - start_frame) * (1 / 25.)
             times.append(relative_time)
         record = [] # NOTE: this has no instance of angles, so i'm assuming i can generate those
-        for x in ped_i['x']: # generate a list of lists of positions (only x)
+        # generate a list of lists of positions (only x)
+        for x in ped_i['x']: 
             record.append([x + 5.])
-        for j, y in enumerate(ped_i['y']): # append y to the list of positions
+        # append y to the list of positions
+        for j, y in enumerate(ped_i['y']):
             record[j].append(y + 14.)
-        for j, pos_2 in enumerate(record): # append vector angles for all the agents
+        # append vector angles for all the agents
+        for j, pos_2 in enumerate(record):
             if(j > 0):
                 last_pos_2 = record[j-1]
                 theta = np.arctan2(pos_2[1] - last_pos_2[1], pos_2[0] - last_pos_2[0])

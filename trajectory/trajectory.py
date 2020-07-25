@@ -19,7 +19,11 @@ class Trajectory(object):
         # Check dimensions now to make your life easier later
         if position_nk2 is not None:
             assert(n == position_nk2.shape[0])
-            assert(k == position_nk2.shape[1])
+            try:
+                assert(k == position_nk2.shape[1])
+            except:
+                print(k, position_nk2.shape[1])
+                exit(1)
 
         # Discretization step
         self.dt = dt
