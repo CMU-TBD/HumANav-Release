@@ -162,8 +162,8 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             iteration = int(self.t * (1./self.params.dt))
             self.print_sim_progress(iteration)
-            if (iteration > 30 * num_agents):
-                # hard limit of 30frames per agent
+            if (iteration > 20 * num_agents):
+                # hard limit of 20frames per agent
                 break
         # free all the agents
         for a in self.agents.values():
@@ -286,17 +286,17 @@ class CentralSimulator(SimulatorHelper):
         np.set_printoptions(precision=3)
         if(self.params.only_render_topview or not self.params.use_one_renderer):
             # optimized to use multiple processes
+            # TODO: put a limit on the maximum number of processes that can be run at once
             gif_processes = []
             for p, s in enumerate(self.states.values()):
-                gif_processes.append(
-                    multiprocessing.Process(
-                                    target=self.take_snapshot, 
-                                    args=(s, filename + str(p) + ".png"))
-                                    )
-                gif_processes[p].start()
+                # pool.apply_async(self.take_snapshot, args=(s, filename + str(p) + ".png"))
+                gif_processes.append(multiprocessing.Process(
+                                        target=self.take_snapshot, 
+                                        args=(s, filename + str(p) + ".png"))
+                                        )
+                gif_processes[-1].start()
                 p += 1
                 print("Started processes:", p, "out of", num_frames, "%.3f" % (p/num_frames), "\r", end="")
-                del(s) # free the state from memory
             print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
@@ -313,18 +313,22 @@ class CentralSimulator(SimulatorHelper):
         # newline to not interfere with previous prints
         print("\n")
         
-    def save_to_gif(self, clear_old_files = True):
+    def save_to_gif(self, clear_old_files = True, with_multiprocessing=True):
         num_robots = len(self.robots)
         rendering_processes = []
         for i in range(num_robots):
             dirname = "tests/socnav/sim_movie" + str(i)
             IMAGES_DIR = os.path.join(self.humanav_dir, dirname)
-            # self._save_to_gif(IMAGES_DIR, clear_old_files=clear_old_files) # sequentially
-            rendering_processes.append(multiprocessing.Process(
-                                       target=self._save_to_gif, 
-                                       args=(IMAGES_DIR, clear_old_files))
-                                       )
-            rendering_processes[i].start()
+            if(with_multiprocessing):
+                # little use to use pools here, since this is for multiple robot agents in a scene
+                # and the assumption here is that is a small number
+                rendering_processes.append(multiprocessing.Process(
+                                        target=self._save_to_gif, 
+                                        args=(IMAGES_DIR, clear_old_files))
+                                        )
+                rendering_processes[i].start()
+            else:
+                self._save_to_gif(IMAGES_DIR, clear_old_files=clear_old_files) # sequentially
         
         for p in rendering_processes:
             p.join()

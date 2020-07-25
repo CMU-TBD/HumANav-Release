@@ -102,6 +102,11 @@ class RoboAgent(Agent):
                 while(num_executed < len(self.commands)):
                     self.execute(num_executed)
                     num_executed += 1
+                    if(self.get_trajectory().k != self.get_trajectory().position_nk2().shape[1]):
+                        print(self.get_trajectory().k, self.get_trajectory().position_nk2().shape[1])
+                        exit(0)
+                        
+
             # print(num_executed)
 
         print("\nRobot powering off, took", len(self.commands),"commands")
