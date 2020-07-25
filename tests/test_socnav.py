@@ -232,10 +232,21 @@ def generate_prerecorded_humans(p, simulator):
                 record[j-1].append(theta)
                 if(j == len(record) - 1):
                     record[j].append(theta) # last element gets last angle
+        # append linear speed to the list of variables
+        for j, pos_2 in enumerate(record):
+            if(j > 0):
+                last_pos_2 = record[j-1]
+                # calculating euclidean dist / delta_t
+                delta_t = (times[j] - times[j-1])
+                speed = np.sqrt((pos_2[1] - last_pos_2[1])**2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
+                record[j].append(speed) # last element gets last angle
+            else:
+                record[0].append(0) # initial speed is 0
         for j, t in enumerate(times): # lastly, append t to the list
             record[j].append(t)
-        # print(record)
         simulator.add_agent(PrerecordedHuman(record, generate_appearance=p.render_3D))
+        print("Generated Prerecorded Humans:", i, "\r", end="")
+    print("\n")
 
 def test_socnav(num_humans):
     """
@@ -334,7 +345,8 @@ def test_socnav(num_humans):
             environment["traversibles"] = np.array([traversible]) 
         # Input human fields into simulator
         simulator.add_agent(new_human_i)
-
+        print("Generated Random Humans:", i+1, "\r", end="")
+    print("\n")
     # run simulation
     simulator.simulate()
     # Plotting an image for each camera location

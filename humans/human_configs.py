@@ -105,8 +105,22 @@ class HumanConfigs():
         return np.add(center, np.array([offset_x, offset_y, offset_theta]))
 
     @staticmethod
-    def within_traversible(new_pos, traversible, map_scale, radius=1,
+    def within_traversible(new_pos, traversible, map_scale,
                            stroked_radius=False):
+        """
+        Returns whether or not the position is in a valid spot in the 
+        traversible
+        """
+        pos_x = int(new_pos[0] / map_scale)
+        pos_y = int(new_pos[1] / map_scale)
+        # Note: the traversible is mapped unintuitively, goes [y, x]
+        if (not traversible[pos_y][pos_x]):  # Looking for invalid spots
+            return False
+        return True
+    
+    @staticmethod
+    def within_traversible_with_radius(new_pos, traversible, map_scale, radius=1,
+                                       stroked_radius=False):
         """
         Returns whether or not the position is in a valid spot in the 
         traversible the Radius input can determine how many surrounding 
@@ -140,9 +154,9 @@ class HumanConfigs():
 
         # Combine the occupancy information from the static map
         # and the human
-        global_traversible = np.empty(environment["traversibles"][0].shape)
-        global_traversible.fill(True)
         if len(environment["traversibles"]) > 1:
+            global_traversible = np.empty(environment["traversibles"][0].shape)
+            global_traversible.fill(True)
             for t in environment["traversibles"]:
                 # add 0th and all others that match shape
                 if(t.shape == environment["traversibles"][0].shape):
@@ -153,7 +167,9 @@ class HumanConfigs():
 
         # Generating new position as human's position
         pos_3 = np.array([-1, -1, 0])  # start far out of the traversible
-        while(not HumanConfigs.within_traversible(pos_3, global_traversible, map_scale, radius=3)):
+
+        # continuously generate random positions near the center until one is valid
+        while(not HumanConfigs.within_traversible(pos_3, global_traversible, map_scale)):
             pos_3 = HumanConfigs.generate_random_pos_3(center, radius, radius)
 
         # Random theta from 0 to pi

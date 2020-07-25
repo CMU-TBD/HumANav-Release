@@ -17,8 +17,8 @@ class PrerecordedHuman(Human):
         self.current_step = 0
         self.max_steps = len(self.record_data)
         self.next_state = self.record_data[1]
-        start = HumanConfigs.generate_config_from_pos_3(record_data[0][:3])
-        goal = HumanConfigs.generate_config_from_pos_3(record_data[-1][:3])
+        start = HumanConfigs.generate_config_from_pos_3(record_data[0][:3], speed=0)
+        goal = HumanConfigs.generate_config_from_pos_3(record_data[-1][:3], speed=0)
         init_configs = HumanConfigs(start, goal)
         if(generate_appearance):
             appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
@@ -39,16 +39,15 @@ class PrerecordedHuman(Human):
 
     def execute(self, state):
         self.current_step += 1 # Has executed one more step
-        self.set_current_config(HumanConfigs.generate_config_from_pos_3(state[:3]))
+        self.set_current_config(HumanConfigs.generate_config_from_pos_3(state[:3], speed=state[3]))
         # print(self.get_current_config().to_3D_numpy())
-        # TODO: perhaps make the control loop run multiple commands rather than one
-        command = np.array([[[0,0]]], dtype=np.float32)
+        null_command = np.array([[[0,0]]], dtype=np.float32) # dummy "command" since these agents "teleport"
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-        # t_seg, actions_nk2 = self.apply_control_open_loop(self.current_config,   
-        #                                                 command, 1, sim_mode='ideal'
-        #                                                 )
-        # self.vehicle_trajectory.append_along_time_axis(t_seg)
+        t_seg, actions_nk2 = self.apply_control_open_loop(self.current_config,   
+                                                        null_command, 1, sim_mode='ideal'
+                                                        )
+        self.vehicle_trajectory.append_along_time_axis(t_seg)
 
     def update(self, time):
         self.t = time

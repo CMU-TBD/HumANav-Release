@@ -339,10 +339,18 @@ class CentralSimulator(SimulatorHelper):
             print('\033[31m', "ERROR: Failed to image directory at", IMAGES_DIR, '\033[0m')
             os._exit(1) # Failure condition
         files = natural_sort(glob.glob(os.path.join(IMAGES_DIR, '*.png')))
-        for filename in files:
+        num_images = len(files)
+        for i, filename in enumerate(files):
             if(self.params.verbose_printing):
                 print("appending", filename)
-            images.append(imageio.imread(filename))
+            try:
+                images.append(imageio.imread(filename))
+            except:
+                print(print_colors()["red"], 
+                "Unable to read file:", filename, "Try clearing the directory of old files and rerunning", 
+                print_colors()["reset"])
+                exit(1)
+            print("Movie progress:", i, "out of", num_images, "%.3f" % (i/num_images), "\r", end="")
         output_location = os.path.join(IMAGES_DIR, 'movie.gif')
         imageio.mimsave(output_location, images)
         print('\033[32m', "Rendered gif at", output_location, '\033[0m')
