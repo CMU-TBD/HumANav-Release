@@ -95,12 +95,15 @@ class RoboAgent(Agent):
         num_executed = 0 # keeps track of the latest command that is to be executed
         while(self.running):
             # only execute the most recent commands
-            self.sense()
-            if(num_executed < len(self.commands)):
-                self.execute(num_executed)
-                num_executed += 1
-            else:
+            if(num_executed >= len(self.commands)):
                 time.sleep(0.01) # TODO: fix hardcoded delay 
+            else:
+                self.sense()
+                while(num_executed < len(self.commands)):
+                    self.execute(num_executed)
+                    num_executed += 1
+            # print(num_executed)
+
         print("\nRobot powering off, took", len(self.commands),"commands")
         listen_thread.join()
  
@@ -144,7 +147,7 @@ class RoboAgent(Agent):
                     self.running = False
                 break
 
-    def establish_controller_connection(self, port, host=None):
+    def establish_joystick_connection(self, port, host=None):
         """This is akin to a server connection (controller is server)"""
         self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.update_host_port(host, port)

@@ -6,15 +6,14 @@ with warnings.catch_warnings():
     from tensorflow.keras.preprocessing.text import Tokenizer
     tf.enable_eager_execution()
 import threading, socket, time
-from simulators.controller import Controller
+from simulators.joystick import Joystick
 from utils.utils import print_colors
 
-def test_monkey():
+def test_joystick():
     # TODO: rename controller to joystick
-    C = Controller(host=None, port=6000)
-    C.establish_robot_connection()
-    C.update()
+    J = Joystick(host=None, port=6000)
+    J.establish_robot_connection()
+    J.update()
     
 if __name__ == '__main__':
-    # TODO: rename monkey to "joystick"
-    test_monkey()
+    test_joystick()

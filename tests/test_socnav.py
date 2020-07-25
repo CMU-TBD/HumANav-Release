@@ -206,10 +206,12 @@ def generate_prerecorded_humans(p, simulator):
     world_df.columns = ['frame', 'ped', 'y', 'x']
     world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
     start_frame = world_df['frame'][0]
-    for i in range(1): #range(8): # there are a total of 8 pedestrians
+    num_peds = max(np.unique(world_df.ped))
+    for i in range(num_peds):
         # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
         ped_id = i+1
-        assert(ped_id in np.unique(world_df.ped))
+        if(ped_id not in np.unique(world_df.ped)):
+            continue
         ped_i = world_df[world_df.ped==ped_id]
         times = []
         for f in ped_i['frame']:

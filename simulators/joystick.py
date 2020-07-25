@@ -3,7 +3,7 @@ import socket, threading, multiprocessing
 import time
 from utils.utils import print_colors
 
-class Controller():
+class Joystick():
     def __init__(self, host=None, port=None):
         self.update_host_port(host, port) # defines class' host and port
         self.t = 0
@@ -12,7 +12,7 @@ class Controller():
         # sockets for communication
         self.robot_socket = None
         self.robot_running = False
-        print("Initiated controller at", self.host, self.port)
+        print("Initiated joystick at", self.host, self.port)
 
     def set_host(self, h):
         self.host = h
@@ -20,7 +20,7 @@ class Controller():
     def set_port(self, p):
         self.port = p
 
-    def random_robot_controller(self):
+    def random_robot_joystick(self):
         from random import randint
         self.world_state = (True, 0, 0)
         accel_scale = 100 # scale to multiply the raw acceleration values by 
@@ -37,7 +37,7 @@ class Controller():
                 self.send(message)
                 print("sent", message)
                 sent_commands += 1
-            # random delay for the monkey to input commands
+            # random delay for the Joystick to input commands
             time.sleep(0.1*randint(0,100)/100.)
 
     def update(self):
@@ -45,7 +45,7 @@ class Controller():
         information from the simulation while also sending commands to the robot """
         # listen_thread = threading.Thread(target=self.listen, args=(None,None))
         # listen_thread.start()
-        self.random_robot_controller()
+        self.random_robot_joystick()
         # send a message to the robot to stop execution    
         # halt_message = (False, time.clock(), 0, 0)
         # self.send(halt_message)
@@ -77,7 +77,7 @@ class Controller():
         # print(self.host, self.port)
         try:
             self.robot_socket.connect(server_address)
-        except ConnectionRefusedError: # used to turn off the controller
+        except ConnectionRefusedError: # used to turn off the joystick
             self.robot_running = False
             print(print_colors()["red"], "Connection closed by robot", print_colors()['reset'])
             exit(1)

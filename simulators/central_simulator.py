@@ -11,7 +11,6 @@ from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from simulators.robot_agent import RoboAgent
 from simulators.recorded_agent import PrerecordedAgent
-from simulators.controller import Controller
 from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
@@ -130,9 +129,9 @@ class CentralSimulator(SimulatorHelper):
         num_agents = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
         
-        # wait for controller connection to be established
+        # wait for joystick connection to be established
         print("Waiting for Joystick connection")
-        self.robot.establish_controller_connection(6000)
+        self.robot.establish_joystick_connection(6000)
         print(print_colors()["green"],"Simulator->Joystick connection established", print_colors()['reset'])
         self.robot.update_time(0)
         robot_thread = threading.Thread(target=self.robot.update)
@@ -184,6 +183,9 @@ class CentralSimulator(SimulatorHelper):
         robot_thread.join()
         del(robot_thread)
         print("\nSimulation completed in", wall_clock, "seconds")
+
+        # TODO: make SURE to clean the simulation of all "leaks" since these are 
+        # MULTIPLIED for multiple processes
 
         # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames()
