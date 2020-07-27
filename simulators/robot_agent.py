@@ -3,7 +3,7 @@ from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig
 import numpy as np
-import socket, time, threading
+import socket, time, threading, sys
 
 class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
@@ -108,12 +108,11 @@ class RoboAgent(Agent):
                         print("BAD ROBOT TRAJECTORY")
                         # print(self.get_trajectory().k, self.get_trajectory().position_nk2().shape[1])
                         # exit(0)
-                        
-
             # print(num_executed)
-
         print("\nRobot powering off, recieved", len(self.commands),"commands")
+        self.power_off()
         listen_thread.join()
+        sys.exit(0)
  
     def power_off(self):
         if(self.running):
@@ -139,22 +138,29 @@ class RoboAgent(Agent):
         self.controller_socket.listen(10)
         self.running = True # initialize listener
         while(self.running):
+            print(self.running)
+            # try:
             connection, client = self.controller_socket.accept()
-            while(True): # constantly taking in information until breaks
-                # TODO: allow for buffered data, thus no limit
-                data = connection.recv(128)
-                # quickly close connection to open up for the next input
-                connection.close()
-                # NOTE: data is in the form (running, time, lin_command, ang_command)
-                # TODO: use ast.literal_eval instead of eval to
+            # except:
+            #     print("Joystick connection closed")
+            #     self.power_off()
+            # while(True): # constantly taking in information until breaks
+            # TODO: allow for buffered data, thus no limit
+            data = connection.recv(128)
+            # quickly close connection to open up for the next input
+            connection.close()
+            # NOTE: data is in the form (running, time, lin_command, ang_command)
+            # TODO: use ast.literal_eval instead of eval to
+            if(data is not None):
                 data = eval(data)
-                np_data = np.array([data[2], data[3]], dtype=np.float32)
-                # NOTE: commands can also be a dictionary indexed by time
-                self.commands.append(np_data)
-                if(data[0] is False):
-                    self.running = False
+            else:
                 break
-
+            np_data = np.array([data[2], data[3]], dtype=np.float32)
+            # NOTE: commands can also be a dictionary indexed by time
+            self.commands.append(np_data)
+            if(data[0] is False):
+                self.running = False
+                break
     def establish_joystick_connection(self, port, host=None):
         """This is akin to a server connection (controller is server)"""
         self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

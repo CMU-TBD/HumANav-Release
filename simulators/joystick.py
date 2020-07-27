@@ -1,6 +1,6 @@
 import tensorflow as tf
 import socket, threading, multiprocessing
-import time
+import time, sys
 from utils.utils import print_colors
 
 class Joystick():
@@ -38,7 +38,12 @@ class Joystick():
                 print("sent", message)
                 sent_commands += 1
             # random delay for the Joystick to input commands
-            time.sleep(0.1*randint(0,100)/100.)
+            try:
+                time.sleep(0.1*randint(0,100)/100.)
+            except KeyboardInterrupt:
+                print(print_colors()["yellow"], "Joystick disconnected by user", print_colors()['reset'])
+                self.send((False, time.clock(), 0, 0)) # stop signal
+                sys.exit(0)
 
     def update(self):
         """ Independent process for a user (at a designated host:port) to recieve 
