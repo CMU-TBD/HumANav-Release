@@ -95,6 +95,34 @@ class CentralSimulator(SimulatorHelper):
 
     """BEGIN thread utils"""
 
+    def init_robot_thread(self):
+        # wait for joystick connection to be established
+        if(self.robot is not None):
+            print("Waiting for Joystick connection")
+            self.robot.establish_joystick_connection(6000)
+            print(print_colors()["green"],"Robot->Joystick connection established", print_colors()['reset'])
+            self.robot.update_time(0)
+            robot_thread = threading.Thread(target=self.robot.update)
+            robot_thread.start()
+            return robot_thread
+        print(print_colors()["red"],"No robot in simulator",print_colors()['reset'])
+        return None
+
+    def decommission_robot(self, thread):
+        if(thread is not None):
+            assert(self.robot is not None)
+            # turn off the robot
+            self.robot.power_off()
+            # close robot agent threads
+            thread.join()
+            del(thread)
+        return
+    
+    def update_robot(self, current_state):
+        if(self.robot is not None):
+            self.robot.update_state(current_state) 
+        
+
     def init_agent_threads(self, time, current_state):
         agent_threads = []
         for a in self.agents.values():
@@ -127,13 +155,7 @@ class CentralSimulator(SimulatorHelper):
         num_agents = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
         
-        # wait for joystick connection to be established
-        print("Waiting for Joystick connection")
-        self.robot.establish_joystick_connection(6000)
-        print(print_colors()["green"],"Simulator->Joystick connection established", print_colors()['reset'])
-        self.robot.update_time(0)
-        robot_thread = threading.Thread(target=self.robot.update)
-        robot_thread.start()
+        r_t = self.init_robot_thread()
         # continue to spawn the simulation with an established (independent) connection
 
         # keep track of wall-time in the simulator
@@ -147,7 +169,7 @@ class CentralSimulator(SimulatorHelper):
             # Takes screenshot of the simulation state as long as the update is still going
             current_state = self.save_state(self.t, wall_clock) # saves to self.states and returns most recent
             # update the robot with the world's current state
-            self.robot.update_state(current_state) 
+            self.update_robot(current_state)
             # Complete thread operations
             agent_threads = self.init_agent_threads(self.t, current_state)
             prerec_threads = self.init_prerec_threads(self.t)
@@ -174,15 +196,11 @@ class CentralSimulator(SimulatorHelper):
         for p in self.prerecs.values():
             del(p)
 
-        # turn off the robot
-        self.robot.power_off()
-
+        self.decommission_robot(r_t)
+        
         # capture wall clock time
         wall_clock = time.clock() - start_time
 
-        # close robot agent threads
-        robot_thread.join()
-        del(robot_thread)
         print("\nSimulation completed in", wall_clock, "seconds")
 
         # TODO: make SURE to clean the simulation of all "leaks" since these are 
@@ -336,7 +354,6 @@ class CentralSimulator(SimulatorHelper):
         
         for p in rendering_processes:
             p.join()
-
 
     def _save_to_gif(self, IMAGES_DIR, clear_old_files = True):
         """Takes the image directory and naturally sorts the images into a singular movie.gif"""

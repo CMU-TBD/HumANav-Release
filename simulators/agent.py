@@ -36,6 +36,7 @@ class Agent(object):
         self.termination_cause = None
         # for collisions with other agents
         self.collided = False 
+        self.plan_time = 0.0
 
     # Getters for the Agent class
     def get_name(self):
@@ -105,16 +106,19 @@ class Agent(object):
     def update_time(self, t):
         self.time = t
 
-    def update(self, time, sim_state = None):
+    def update(self, t, sim_state = None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         # with lock:
-        self.update_time(time)
+        self.update_time(t)
         if(self.params.verbose_printing):
             print("start: ", self.get_start_config().position_nk2().numpy())
             print("goal: ", self.get_goal_config().position_nk2().numpy())
 
         # Generate the next trajectory segment, update next config, update actions/data
+        tmp = time.clock()
         self.plan()
+        print(time.clock() - tmp, " ")
+        self.plan_time += time.clock() - tmp 
         # NOTE: instant_complete discards any anymations and finishes the trajectory segment instantly
         self.act(instant_complete = False, world_state = sim_state)
         
@@ -146,7 +150,9 @@ class Agent(object):
             self.vehicle_trajectory.append_along_time_axis(traj_segment)
             self.commanded_actions_nkf.append(commands_1kf)
             self._enforce_episode_termination_conditions()
-            if(self.end_episode):
+            if(self.end_episode or self.end_acting):
+                print("completed plan in", self.plan_time, "seconds")
+
                 if(self.params.verbose):
                     print("terminated plan for agent", self.get_name(), 
                           "at t =", self.time, "k=", self.vehicle_trajectory.k, 

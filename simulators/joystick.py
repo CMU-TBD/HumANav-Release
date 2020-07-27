@@ -28,18 +28,21 @@ class Joystick():
         sent_commands = 0
         self.robot_running = True
         while(self.robot_running is True):
-            lin_command = (randint(10, 100) / 100.) # robot can only more forwards
-            ang_command = (randint(-100, 100) / 100.)
-            # print(lin_command, ang_command)
-            for _ in range(repeat):
-                # TODO: remove robot_running stuff
-                message = (self.robot_running, time.clock(), lin_command, ang_command)
-                self.send(message)
-                print("sent", message)
-                sent_commands += 1
-            # random delay for the Joystick to input commands
             try:
-                time.sleep(0.1*randint(0,100)/100.)
+                lin_command = (randint(10, 100) / 100.) # robot can only more forwards
+                ang_command = (randint(-100, 100) / 100.)
+                # print(lin_command, ang_command)
+                for _ in range(repeat):
+                    # TODO: remove robot_running stuff
+                    message = (self.robot_running, time.clock(), lin_command, ang_command)
+                    self.send(message)
+                    print("sent", message)
+                    sent_commands += 1
+                # random delay for the Joystick to input commands
+                if(sent_commands == 10):
+                    time.sleep(2)
+                else:
+                    time.sleep(0.1*randint(0,100)/100.)
             except KeyboardInterrupt:
                 print(print_colors()["yellow"], "Joystick disconnected by user", print_colors()['reset'])
                 self.send((False, time.clock(), 0, 0)) # stop signal

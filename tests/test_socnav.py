@@ -207,7 +207,7 @@ def generate_prerecorded_humans(p, simulator):
     world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
     start_frame = world_df['frame'][0]
     num_peds = max(np.unique(world_df.ped))
-    for i in range(3):
+    for i in range(0):
         # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
         ped_id = i+1
         if(ped_id not in np.unique(world_df.ped)):
@@ -246,7 +246,8 @@ def generate_prerecorded_humans(p, simulator):
             record[j].append(t)
         simulator.add_agent(PrerecordedHuman(record, generate_appearance=p.render_3D))
         print("Generated Prerecorded Humans:", i, "\r", end="")
-    print("\n")
+    if(num_peds > 0):
+        print("\n")
 
 def test_socnav(num_humans):
     """
@@ -366,4 +367,4 @@ def test_socnav(num_humans):
 
 
 if __name__ == '__main__':
-    test_socnav(3)  # run basic room test with variable # of human
+    test_socnav(1)  # run basic room test with variable # of human
