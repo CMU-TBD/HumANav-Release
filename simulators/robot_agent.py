@@ -138,13 +138,7 @@ class RoboAgent(Agent):
         self.controller_socket.listen(10)
         self.running = True # initialize listener
         while(self.running):
-            print(self.running)
-            # try:
             connection, client = self.controller_socket.accept()
-            # except:
-            #     print("Joystick connection closed")
-            #     self.power_off()
-            # while(True): # constantly taking in information until breaks
             # TODO: allow for buffered data, thus no limit
             data = connection.recv(128)
             # quickly close connection to open up for the next input

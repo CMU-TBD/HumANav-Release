@@ -42,12 +42,13 @@ class HumanState(AgentState):
         return self.appearance
 
 class SimState():
-    def __init__(self, environment, agents, prerecs, robots, time):
+    def __init__(self, environment, agents, prerecs, robots, sim_time, wall_time):
         self.environment = environment
         self.agents = agents
         self.prerecs = prerecs
         self.robots = robots
-        self.time = time
+        self.sim_t = sim_time
+        self.wall_t = wall_time
 
     def get_environment(self):
         return self.environment
@@ -64,6 +65,9 @@ class SimState():
     def get_robots(self):
         return self.robots
 
-    def get_time(self):
-        return self.time
+    def get_sim_t(self):
+        return self.sim_t
+    
+    def get_wall_t(self):
+        return self.wall_t
 

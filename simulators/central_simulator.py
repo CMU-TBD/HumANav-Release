@@ -142,8 +142,10 @@ class CentralSimulator(SimulatorHelper):
         self.t = 0
         # TODO: make all agents, robots, and prerecs be internal threads in THIS update 
         while self.exists_running_agent() or self.exists_running_prerec():
+            # update "wall clock" time
+            wall_clock = time.clock() - start_time
             # Takes screenshot of the simulation state as long as the update is still going
-            current_state = self.save_state(self.t) # saves to self.states and returns most recent
+            current_state = self.save_state(self.t, wall_clock) # saves to self.states and returns most recent
             # update the robot with the world's current state
             self.robot.update_state(current_state) 
             # Complete thread operations
@@ -218,7 +220,7 @@ class CentralSimulator(SimulatorHelper):
             "T = %.3f" % (self.t),
             "\r", end="")
     
-    def save_state(self, current_time):
+    def save_state(self, simulator_time, wall_clock_time):
         #TODO: when using a modular environment, make saved_env a deepcopy
         saved_env = self.environment
         # deepcopy all agents individually using a HumanState copy
@@ -233,9 +235,12 @@ class CentralSimulator(SimulatorHelper):
         saved_robots = {}
         for r in self.robots.values():
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
-        current_state = SimState(saved_env, saved_agents, saved_prerecs, saved_robots, current_time)
-        # Save current state to a local dictionary
-        self.states[current_time] = current_state
+        current_state = SimState(saved_env, 
+                                saved_agents, saved_prerecs, saved_robots, 
+                                simulator_time, wall_clock_time
+                                )
+        # Save current state to a class dictionary indexed by simulator time
+        self.states[simulator_time] = current_state
         return current_state
 
     def _reset_obstacle_map(self, rng):
@@ -441,7 +446,7 @@ class CentralSimulator(SimulatorHelper):
                           scale=2, scale_units='inches')
                           
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
-                    camera_pos_13, agents, prerecs, robots, current_time, filename, img_dir):
+                    camera_pos_13, agents, prerecs, robots, sim_time, wall_time, filename, img_dir):
 
         map_scale = environment["map_scale"]
         # Obstacles/building traversible
@@ -474,8 +479,8 @@ class CentralSimulator(SimulatorHelper):
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
-        time_string = "T="+ "%.3f" % current_time
-        ax.set_title('Topview (zoomed) '+ time_string, fontsize=20)
+        time_string = "sim_t=%.3f" % sim_time + " wall_t=%.3f" % wall_time
+        ax.set_title(time_string, fontsize=20)
 
         # Render entire map-view from the top
         # to keep square plot
@@ -488,7 +493,7 @@ class CentralSimulator(SimulatorHelper):
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_title('Topview '+ time_string, fontsize=20)
+        ax.set_title(time_string, fontsize=20)
 
         if rgb_image_1mk3 is not None:
             # Plot the RGB Image
@@ -569,7 +574,7 @@ class CentralSimulator(SimulatorHelper):
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
                             state.get_environment(), room_center, camera_pos_13, 
                             state.get_agents(), state.get_prerecs(), state.get_robots(), 
-                            state.get_time(), "rob" + str(i) + filename, i)
+                            state.get_sim_t(), state.get_wall_t(), "rob" + str(i) + filename, i)
         # Delete state to save memory after frames are generated
         del(state)
             
