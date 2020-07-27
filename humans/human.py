@@ -51,12 +51,15 @@ class Human(Agent):
         return Human.generate_human(appearance, configs)
 
     @staticmethod
-    def generate_human_with_configs(configs, name=None, verbose=False):
+    def generate_human_with_configs(configs, generate_appearance=False, name=None, verbose=False):
         """
         Sample a new random from known configs and a randomized
         appearance, if any of the configs are None they will be generated
         """
-        appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
+        if(generate_appearance):
+            appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
+        else:
+            appearance = None
         return Human.generate_human(appearance, configs, verbose=verbose, name=name)
 
     @staticmethod

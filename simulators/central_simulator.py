@@ -123,10 +123,10 @@ class CentralSimulator(SimulatorHelper):
             self.robot.update_state(current_state) 
         
 
-    def init_agent_threads(self, time, current_state):
+    def init_agent_threads(self, time, t_step, current_state):
         agent_threads = []
         for a in self.agents.values():
-            agent_threads.append(threading.Thread(target=a.update, args=(time, current_state,)))
+            agent_threads.append(threading.Thread(target=a.update, args=(time, t_step, current_state,)))
         return agent_threads
 
     def init_prerec_threads(self, time):
@@ -162,6 +162,8 @@ class CentralSimulator(SimulatorHelper):
         start_time = time.clock()
         # save initial state before the simulator is spawned
         self.t = 0
+        delta_t = 3*self.params.dt
+        # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
         # TODO: make all agents, robots, and prerecs be internal threads in THIS update 
         while self.exists_running_agent() or self.exists_running_prerec():
             # update "wall clock" time
@@ -171,7 +173,7 @@ class CentralSimulator(SimulatorHelper):
             # update the robot with the world's current state
             self.update_robot(current_state)
             # Complete thread operations
-            agent_threads = self.init_agent_threads(self.t, current_state)
+            agent_threads = self.init_agent_threads(self.t, delta_t, current_state)
             prerec_threads = self.init_prerec_threads(self.t)
             # start all thread groups
             self.start_threads(agent_threads)
@@ -180,14 +182,13 @@ class CentralSimulator(SimulatorHelper):
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
             # capture time after all the agents have updated
-            delta_t = 3*self.params.dt # update time for all the prerecorded agents
             self.t += delta_t # update "simulaiton time"
             # print simulation progress
             iteration = int(self.t * (1./delta_t))
             self.print_sim_progress(iteration)
-            if (iteration > 20 * num_agents):
-                # hard limit of 20frames per agent
-                break
+            # if (iteration > 40 * num_agents):
+            #     # hard limit of 40 frames per agent
+            #     break
         # free all the agents
         for a in self.agents.values():
             del(a)
@@ -210,7 +211,7 @@ class CentralSimulator(SimulatorHelper):
         self.generate_frames()
 
         # convert all the generated frames into a gif file
-        self.save_to_gif()
+        self.save_to_gif(clear_old_files = True)
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
 

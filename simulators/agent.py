@@ -84,6 +84,7 @@ class Agent(object):
         if(with_planner):
             self.planner = self._init_planner()
             self.vehicle_data = self.planner.empty_data_dict()
+            # set the minimum action_dt for competing an "action"
         else:
             self.planner = None 
             self.vehicle_data = None
@@ -105,7 +106,7 @@ class Agent(object):
     def update_time(self, t):
         self.time = t
 
-    def update(self, t, sim_state = None):
+    def update(self, t, t_step, sim_state = None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         # with lock:
         self.update_time(t)
@@ -120,8 +121,15 @@ class Agent(object):
             # delta = time.clock() - tmp
             # print(delta, " ")
             # self.plan_time += delta
-        # NOTE: instant_complete discards any anymations and finishes the trajectory segment instantly
-        self.act(instant_complete = False, world_state = sim_state)
+        # TODO: should use linear/angular speed to traverse the agent's paths, # v * t = d (all in meters)
+        #       lin_speed = min(self.max_v, self.get_current_config().speed_nk1().numpy()[0][0][0])
+        #       ang_speed = min(self.max_w, self.get_current_config().angular_speed_nk1().numpy()[0][0][0])
+        #       norm_speed = max(lin_speed, abs(ang_speed)) # TODO: fix so that speeds can combine, not cancel
+        # NOTE: typically the current planner will have a large difference between lin/ang speed, thus 
+        #       there are very few situations where both are at a high point
+        action_dt = int(np.floor(t_step / self.params.dt)) 
+        # NOTE: instant_complete discards any animations and finishes the trajectory segment instantly
+        self.act(action_dt, instant_complete = False, world_state = sim_state, )
         
     def plan(self):
         """ Runs the planner for one step from config to generate a
@@ -136,10 +144,8 @@ class Agent(object):
         if(not self.end_episode and not self.end_acting):
             if(self.params.verbose_printing):
                 print("planned next:", self.planned_next_config.position_nk2().numpy())
-            self.planner_data = \
-                self.planner.optimize(self.planned_next_config, self.goal_config)
-            traj_segment, trajectory_data, commands_1kf = \
-                self._process_planner_data()
+            self.planner_data = self.planner.optimize(self.planned_next_config, self.goal_config)
+            traj_segment, trajectory_data, commands_1kf = self._process_planner_data()
             self.planned_next_config = \
                 SystemConfig.init_config_from_trajectory_time_index( 
                     traj_segment,
@@ -164,7 +170,7 @@ class Agent(object):
         diff_y = self_pos[1] - other_pos[1]
         return np.sqrt(diff_x**2 + diff_y**2)
         
-    def act(self, instant_complete = False, world_state = None):
+    def act(self, action_dt, instant_complete = False, world_state = None):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
         if(not self.end_acting):
@@ -176,16 +182,10 @@ class Agent(object):
                 # Automatically finished trajectory
                 self.end_acting = True
             else:
-                lin_speed = min(self.max_v, self.get_current_config().speed_nk1().numpy()[0][0][0])
-                ang_speed = min(self.max_w, self.get_current_config().angular_speed_nk1().numpy()[0][0][0])
-                # NOTE: typically the current planner will have a large difference between lin/ang speed, thus 
-                # there are very few situations where both are at a high point
-                norm_speed = max(lin_speed, abs(ang_speed))
-                # action_dt = int(min(self.params.control_horizon, (self.params.control_horizon * norm_speed)))
                 # DEBUG:
-                action_dt = int(self.params.control_horizon * 0.8)
+                # action_dt = int(self.params.control_horizon * 0.8)
                 # to not skip all the way to the end:
-                assert(action_dt <= self.params.control_horizon)
+                # assert(action_dt <= self.params.control_horizon)
                 # Update through the path traversal incrementally
                 if(world_state is not None):
                     # first check for collisions with any other agents
@@ -196,8 +196,9 @@ class Agent(object):
                 # then update the current config 
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
-                        self.vehicle_trajectory, t=self.path_step)
-                self.path_step = self.path_step + action_dt
+                        self.vehicle_trajectory, t = self.path_step)
+                # updating "next step" for agent path after traversing it
+                self.path_step += action_dt
                 if(self.path_step >= self.vehicle_trajectory.k or self.collided):
                     self.end_acting = True
                 if(self.end_acting or self.collided):

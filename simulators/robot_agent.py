@@ -105,7 +105,7 @@ class RoboAgent(Agent):
                     num_executed += 1
                     if(self.get_trajectory().k != self.get_trajectory().position_nk2().shape[1]):
                         # fix this nonfatal bug
-                        print("BAD ROBOT TRAJECTORY")
+                        print("ERROR: robot_trajectory dimens mismatch")
                         # print(self.get_trajectory().k, self.get_trajectory().position_nk2().shape[1])
                         # exit(0)
             # print(num_executed)
