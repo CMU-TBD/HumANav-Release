@@ -101,7 +101,8 @@ PYOPENGL_PLATFORM=egl PYTHONPATH='.' python3 tests/test_socnav.py
 python3 tests/test_joystick.py
 ```
 
-![Expected Movie](https://smlbansal.github.io/LB-WayPtNav-DH/resources/images/humanav_demo/expected_humanav_setup_image.png)
+![Expected Movie without OpenGL](https://github.com/GustavoSilvera/GustavoSilvera.github.io/blob/master/Images/proj/sim_without_humans.gif)
+![Expected Movie with OpenGL](https://github.com/GustavoSilvera/GustavoSilvera.github.io/blob/master/Images/proj/sim_with_humans.gif)
 
 ## Citing This Work
 If you find the HumANav dataset useful in your research please cite:
