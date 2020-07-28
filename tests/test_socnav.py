@@ -325,14 +325,23 @@ def test_socnav(num_humans):
     simulator.add_agent(robot_agent)
     # simulator.add_agent(robot_agent2) # can add arbitrary agents
 
+    """
+    Add the prerecorded humans to the simulator
+    """
     generate_prerecorded_humans(p, simulator)
 
+    """
+    Generate and add a single human with a constant start/end config on every run 
+    """
     known_start = HumanConfigs.generate_config_from_pos_3(np.array([9., 20., 0.]))
     known_end = HumanConfigs.generate_config_from_pos_3(np.array([13., 15., 0.]))
     known_init_configs = HumanConfigs(known_start, known_end)
     const_human = Human.generate_human_with_configs(known_init_configs)
     simulator.add_agent(const_human)
 
+    """
+    Generate and add num_humans number of randomly generated humans to the simulator
+    """
     for i in range(num_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment( 
@@ -374,4 +383,4 @@ def test_socnav(num_humans):
 
 
 if __name__ == '__main__':
-    test_socnav(0)  # run basic room test with variable # of human
+    test_socnav(4)  # run basic room test with variable # of human

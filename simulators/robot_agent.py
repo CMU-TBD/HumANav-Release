@@ -96,7 +96,9 @@ class RoboAgent(Agent):
         while(self.running):
             # only execute the most recent commands
             if(num_executed >= len(self.commands)):
-                time.sleep(0.01) # TODO: fix hardcoded delay 
+                time.sleep(1./self.freq) 
+                # NOTE: send a command to the joystick letting it know to send another command
+                # self.ping_joystick(True)
             else:
                 self.sense()
                 # using a loop to carry through the backlock of commands over time
@@ -109,6 +111,7 @@ class RoboAgent(Agent):
                         # print(self.get_trajectory().k, self.get_trajectory().position_nk2().shape[1])
                         # exit(0)
             # print(num_executed)
+        # self.ping_joystick(False)
         print("\nRobot powering off, recieved", len(self.commands),"commands")
         self.power_off()
         listen_thread.join()
@@ -134,35 +137,44 @@ class RoboAgent(Agent):
         else:
             self.port = port
 
+    def ping_joystick(self, message):
+        # Send data
+        message = str(message)
+        self.controller_socket.sendall(bytes(message, "utf-8"))
+
     def listen(self, host=None, port=None):
         self.controller_socket.listen(10)
         self.running = True # initialize listener
         while(self.running):
             connection, client = self.controller_socket.accept()
-            # TODO: allow for buffered data, thus no limit
-            data = connection.recv(128)
-            # quickly close connection to open up for the next input
+            while(True):
+                # TODO: allow for buffered data, thus no limit
+                data = connection.recv(128)
+                # quickly close connection to open up for the next input
+                # connection.close()
+                # NOTE: data is in the form (running, time, lin_command, ang_command)
+                # TODO: use ast.literal_eval instead of eval to
+                if(data is not None):
+                    data = eval(data)
+                else:
+                    break
+                np_data = np.array([data[2], data[3]], dtype=np.float32)
+                # NOTE: commands can also be a dictionary indexed by time
+                self.commands.append(np_data)
+                if(data[0] is False):
+                    self.running = False
+                break
             connection.close()
-            # NOTE: data is in the form (running, time, lin_command, ang_command)
-            # TODO: use ast.literal_eval instead of eval to
-            if(data is not None):
-                data = eval(data)
-            else:
-                break
-            np_data = np.array([data[2], data[3]], dtype=np.float32)
-            # NOTE: commands can also be a dictionary indexed by time
-            self.commands.append(np_data)
-            if(data[0] is False):
-                self.running = False
-                break
+
     def establish_joystick_connection(self, port, host=None):
-        """This is akin to a server connection (controller is server)"""
+        """This is akin to a server connection (robot is server)"""
         self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.update_host_port(host, port)
         self.controller_socket.bind((self.host, self.port))
         # wait for a connection
         self.controller_socket.listen(1)
         connection, client = self.controller_socket.accept()
+        # self.ping_joystick(True)
         return connection, client
 
     """ END socket utils """
