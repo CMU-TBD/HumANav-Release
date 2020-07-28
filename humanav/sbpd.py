@@ -39,15 +39,13 @@ def get_dataset(dataset_name, imset, data_dir, surreal_params = None):
 class Loader():
 
   def load_building(self, name, data_dir=None):
-    if data_dir is None: data_dir = get_sbpd_data_dir()
+    if data_dir is None: data_dir = get_sbpd_data_dir() # when not using surreal
     out = {}
     out['name'] = name
     out['data_dir'] = data_dir
-    print(data_dir)
     return out
 
   def load_building_meshes(self, building, materials_scale=1.0):
-    print(building['data_dir'], building['name'])
     dir_name = os.path.join(building['data_dir'], 'mesh', building['name'])
     mesh_file_name = glob.glob1(dir_name, '*.obj')[0]
     mesh_file_name_full = os.path.join(dir_name, mesh_file_name)
