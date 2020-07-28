@@ -50,18 +50,19 @@ def create_params():
     # Traversible dir
     p.traversible_dir = get_traversible_dir()
 
-    # SBPD Data Directory
-    p.sbpd_data_dir = get_sbpd_data_dir()
+    if(p.render_3D):
+        # SBPD Data Directory
+        p.sbpd_data_dir = get_sbpd_data_dir()
 
-    # Surreal Parameters
-    p.surreal = DotMap(mode='train',
-                       data_dir=get_surreal_mesh_dir(),
-                       texture_dir=get_surreal_texture_dir(),
-                       body_shapes_train=[519, 1320, 521, 523, 779, 365, 1198, 368],
-                       body_shapes_test=[337, 944, 1333, 502, 344, 538, 413],
-                       compute_human_traversible=True,
-                       render_humans_in_gray_only=False
-                      )
+        # Surreal Parameters
+        p.surreal = DotMap(mode='train',
+                        data_dir=get_surreal_mesh_dir(),
+                        texture_dir=get_surreal_texture_dir(),
+                        body_shapes_train=[519, 1320, 521, 523, 779, 365, 1198, 368],
+                        body_shapes_test=[337, 944, 1333, 502, 344, 538, 413],
+                        compute_human_traversible=True,
+                        render_humans_in_gray_only=False
+                        )
 
     return p
 
@@ -97,13 +98,13 @@ def get_traversible_dir():
 def get_surreal_mesh_dir():
     PATH_TO_SURREAL_MESH = os.path.join(get_path_to_humanav(), 'surreal/code/human_meshes')
     if(not os.path.exists(PATH_TO_SURREAL_MESH)):
-        print('\033[31m', "ERROR: Failed to find SURREAL textures at", PATH_TO_SURREAL_MESH, '\033[0m')
+        print('\033[31m', "ERROR: Failed to find SURREAL meshes at", PATH_TO_SURREAL_MESH, '\033[0m')
         os._exit(1) # Failure condition
     return PATH_TO_SURREAL_MESH
 
 def get_surreal_texture_dir():
     PATH_TO_SURREAL_TEXTURES = os.path.join(get_path_to_humanav(), 'surreal/code/human_textures')
     if(not os.path.exists(PATH_TO_SURREAL_TEXTURES)):
-        print('\033[31m', "ERROR: Failed to find SURREAL meshes at", PATH_TO_SURREAL_TEXTURES, '\033[0m')
+        print('\033[31m', "ERROR: Failed to find SURREAL textures at", PATH_TO_SURREAL_TEXTURES, '\033[0m')
         os._exit(1) # Failure condition
     return PATH_TO_SURREAL_TEXTURES
