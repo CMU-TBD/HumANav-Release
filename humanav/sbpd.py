@@ -24,6 +24,7 @@ import numpy  as np
 from mp_env.render import swiftshader_renderer as renderer 
 from humanav import utils
 from mp_env import mp_env
+from params.renderer_params import get_sbpd_data_dir
 
 def get_dataset(dataset_name, imset, data_dir, surreal_params = None):
   if dataset_name == 'sbpd':
@@ -36,17 +37,17 @@ def get_dataset(dataset_name, imset, data_dir, surreal_params = None):
   return dataset
 
 class Loader():
-  def get_data_dir():
-    pass
 
   def load_building(self, name, data_dir=None):
-    if data_dir is None: data_dir = self.get_data_dir()
+    if data_dir is None: data_dir = get_sbpd_data_dir()
     out = {}
     out['name'] = name
     out['data_dir'] = data_dir
+    print(data_dir)
     return out
 
   def load_building_meshes(self, building, materials_scale=1.0):
+    print(building['data_dir'], building['name'])
     dir_name = os.path.join(building['data_dir'], 'mesh', building['name'])
     mesh_file_name = glob.glob1(dir_name, '*.obj')[0]
     mesh_file_name_full = os.path.join(dir_name, mesh_file_name)
