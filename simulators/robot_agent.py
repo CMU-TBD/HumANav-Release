@@ -154,16 +154,17 @@ class RoboAgent(Agent):
                 # connection.close()
                 # NOTE: data is in the form (running, time, lin_command, ang_command)
                 # TODO: use ast.literal_eval instead of eval to
-                if(data is not None):
+                if(data):
+                    # print(data)
                     data = eval(data)
+                    np_data = np.array([data[2], data[3]], dtype=np.float32)
+                    self.commands.append(np_data)
+                    if(data[0] is False):
+                        self.running = False
+                        break
                 else:
                     break
-                np_data = np.array([data[2], data[3]], dtype=np.float32)
                 # NOTE: commands can also be a dictionary indexed by time
-                self.commands.append(np_data)
-                if(data[0] is False):
-                    self.running = False
-                break
             connection.close()
 
     def establish_joystick_connection(self, port, host=None):
