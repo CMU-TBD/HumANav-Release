@@ -158,13 +158,15 @@ class RoboAgent(Agent):
                     # print(data)
                     data = eval(data)
                     np_data = np.array([data[2], data[3]], dtype=np.float32)
+                    # NOTE: commands can also be a dictionary indexed by time
                     self.commands.append(np_data)
                     if(data[0] is False):
                         self.running = False
                         break
                 else:
                     break
-                # NOTE: commands can also be a dictionary indexed by time
+            connection.sendall(bytes(str(True), "utf-8"))
+            # close connection to be reaccepted when the joystick sends data
             connection.close()
 
     def establish_joystick_connection(self, port, host=None):

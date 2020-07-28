@@ -12,6 +12,7 @@ class Joystick():
         # sockets for communication
         self.robot_socket = None
         self.robot_running = False
+        self.ready_to_send = False
         print("Initiated joystick at", self.host, self.port)
 
     def set_host(self, h):
@@ -29,20 +30,18 @@ class Joystick():
         self.robot_running = True
         while(self.robot_running is True):
             try:
-                lin_command = (randint(10, 100) / 100.) # robot can only more forwards
-                ang_command = (randint(-100, 100) / 100.)
-                # print(lin_command, ang_command)
-                for _ in range(repeat):
-                    # TODO: remove robot_running stuff
-                    message = (self.robot_running, time.clock(), lin_command, ang_command)
-                    self.send(message)
-                    print("sent", message)
-                    sent_commands += 1
-                # random delay for the Joystick to input commands
-                if(sent_commands == 10):
-                    time.sleep(2)
-                else:
-                    time.sleep(0.1*randint(0,100)/100.)
+                if(self.ready_to_send):
+                    lin_command = (randint(10, 100) / 100.) # robot can only more forwards
+                    ang_command = (randint(-100, 100) / 100.)
+                    # print(lin_command, ang_command)
+                    for _ in range(repeat):
+                        # TODO: remove robot_running stuff
+                        message = (self.robot_running, time.clock(), lin_command, ang_command)
+                        self.send(message)
+                        print("sent", message)
+                        sent_commands += 1
+                    # now wait for robot to ping with "ready"
+                    self.ready_to_send = False
             except KeyboardInterrupt:
                 print(print_colors()["yellow"], "Joystick disconnected by user", print_colors()['reset'])
                 self.send((False, time.clock(), 0, 0)) # stop signal
@@ -51,13 +50,13 @@ class Joystick():
     def update(self):
         """ Independent process for a user (at a designated host:port) to recieve 
         information from the simulation while also sending commands to the robot """
-        # listen_thread = threading.Thread(target=self.listen, args=(None,None))
-        # listen_thread.start()
+        listen_thread = threading.Thread(target=self.listen, args=(None,None))
+        listen_thread.start()
         self.random_robot_joystick()
         # send a message to the robot to stop execution    
         # halt_message = (False, time.clock(), 0, 0)
         # self.send(halt_message)
-        # listen_thread.join()
+        listen_thread.join()
         # Close communication channel
         self.robot_socket.close()
 
@@ -95,24 +94,24 @@ class Joystick():
         self.robot_socket.close()
 
     def listen(self, host=None, port=None):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.update_host_port(host, port)
-        s.bind((self.host, self.port))
-        s.listen(10)
-        self.world_state = (True, 0, 0) # initialize listener
-        while(self.world_state[0] is True):
-            connection, client = s.accept()
-            while(True): # constantly taking in information until breaks
-                # TODO: allow for buffered data, thus no limit
-                data = connection.recv(128)
-                # quickly close connection to open up for the next input
-                connection.close()
-                self.world_state = eval(data)
+        self.robot_running = True
+        while(self.robot_running):
+            connection, client = self.robot_socket.accept()
+            # TODO: allow for buffered data, thus no limit
+            data = connection.recv(128)
+            # quickly close connection to open up for the next input
+            connection.close()
+            # NOTE: data is either true or false
+            # TODO: use ast.literal_eval instead of eval to
+            if(data is not None):
+                print("recieved", data, "from server")
+                data = eval(data)
+                self.ready_to_send = data
+            else:
                 break
-        s.close()
     
     def establish_robot_connection(self):
-        """This is akin to a client connection (robot is client)"""
+        """This is akin to a client connection (joystick is client)"""
         self.robot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.update_host_port(None, 6000)
         robot_address = ((self.host, self.port))
