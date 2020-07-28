@@ -82,15 +82,26 @@ cd /PATH/TO/tbd_SocNavBenchmark
 pip install -e .
 ```
 
-## Test the tbd_SocNavBenchmark installation
-To get you started we've included `tests`, which contains 2 code examples for rendering different image modalities (topview, RGB, Depth) from HumANav.
-```
-cd /PATH/TO/tbd_SocNavBenchmark/tests
-PYOPENGL_PLATFORM=egl PYTHONPATH='.' python3 test_socnav.py
-```
-The output of examples.py is example1.png and example2.png, both of which are expected to match the image below. If the images match, you have successfully installed & configured HumANav!
+## Run the tbd_SocNavBenchmark installation
+To get you started we've included `tests`, which contains the main code example for rendering the central simulaton. Currently the mode is set to "topview only" which focuses on the top-down "bird's-eye-view" perspective without using an OpenGL renderer. However, to run the 3D OpenGL renderer (which adds an RGB and Depth view from the robot's perspective) simply change the `p.render_3D` in `./params/renderer_params` to `True`.
 
-![Expected Image](https://smlbansal.github.io/LB-WayPtNav-DH/resources/images/humanav_demo/expected_humanav_setup_image.png)
+## Run the external Joystick process
+The simulation relies on (and will wait until a connection is established) a bidirectional connection to a local socket that communicates between the internal "robot" thread and an external "Joystick" process that can be run as a *separate executable* in `./tests/test_joystick.py`
+
+### Things to note
+- The joystick must be run in an external process (and within the same `conda` environment)
+    - Therefore, make sure before running `test_joystick.py` that the conda environment is `tbd_socnavbench` (same as for `test_socnav.py`
+- The joystick socket is defaulted to 6000, if this interferes with a port on your existing machine, edit the `p.port` in `./params/robot_params`
+
+```
+cd /PATH/TO/tbd_SocNavBenchmark/
+# To run the main simulator that will wait for the joystick process to execute
+PYOPENGL_PLATFORM=egl PYTHONPATH='.' python3 tests/test_socnav.py
+# To run the joystick process (once the simulator says "Waiting for Joystick Connection"
+python3 tests/test_joystick.py
+```
+
+![Expected Movie](https://smlbansal.github.io/LB-WayPtNav-DH/resources/images/humanav_demo/expected_humanav_setup_image.png)
 
 ## Citing This Work
 If you find the HumANav dataset useful in your research please cite:
