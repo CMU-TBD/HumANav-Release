@@ -382,4 +382,4 @@ def test_socnav(num_generated_humans, num_prerecorded_humans):
 
 
 if __name__ == '__main__':
-    test_socnav(0, 0)  # run basic room test with variable # of human
+    test_socnav(3, 5)  # run basic room test with variable # of human

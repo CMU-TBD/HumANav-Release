@@ -67,7 +67,7 @@ def create_params():
 
 # NOTE: this must be the ABSOLUTE path
 def get_path_to_humanav():
-    PATH_TO_HUMANAV = '/home/gsilvera/Documents/tbd_SocNavBenchmark'
+    PATH_TO_HUMANAV = '/PATH/TO/tbd_SocNavBenchmark'
     if(not os.path.exists(PATH_TO_HUMANAV)):
         print('\033[31m', "ERROR: Failed to find HumANav installation at", PATH_TO_HUMANAV, '\033[0m')
         os._exit(1) # Failure condition
@@ -83,7 +83,7 @@ def base_data_dir():
 def get_sbpd_data_dir():
     PATH_TO_SBPD = os.path.join(get_path_to_humanav(),'sd3dis/stanford_building_parser_dataset')
     if(not os.path.exists(PATH_TO_SBPD)):
-        print('\033[31m', "ERROR: Failed to find SBPD installation at", PATH_TO_SBPD, '\033[0m')
+        print('\033[31m', "ERROR: Failed to find sd3dis installation at", PATH_TO_SBPD, '\033[0m')
         os._exit(1) # Failure condition
     return PATH_TO_SBPD
 

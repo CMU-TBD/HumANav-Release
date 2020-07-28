@@ -114,11 +114,11 @@ class Agent(object):
             print("goal: ", self.get_goal_config().position_nk2().numpy())
 
         # Generate the next trajectory segment, update next config, update actions/data
-        if(not self.end_episode and not self.end_acting):
-            tmp = time.clock()
-            self.plan()
-            delta = time.clock() - tmp
-            print(delta, " ")
+        # if(not self.end_episode and not self.end_acting):
+            # tmp = time.clock()
+        self.plan()
+            # delta = time.clock() - tmp
+            # print(delta, " ")
         # TODO: should use linear/angular speed to traverse the agent's paths, # v * t = d (all in meters)
         #       lin_speed = min(self.max_v, self.get_current_config().speed_nk1().numpy()[0][0][0])
         #       ang_speed = min(self.max_w, self.get_current_config().angular_speed_nk1().numpy()[0][0][0])
