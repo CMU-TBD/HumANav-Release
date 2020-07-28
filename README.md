@@ -39,23 +39,23 @@ sudo apt-get install gcc
 sudo apt-get install g++
 ```
 
-### Setup A Virtual Environment
-```
-conda env create -f environment.yml
-conda activate tbd_socnavbench
-```
-
 #### Install Libassimp-dev
 In the terminal run:
 ```
 sudo apt-get install libassimp-dev
 ```
 
+### Setup A Virtual Environment
+```
+conda env create -f environment.yml # this might end with "Pip failed" which is fine
+conda activate tbd_socnavbench
+```
+
 #### Install pip/conda packages
 In the terminal (and in the virtual environment from above [`tbd_lab`]) run:
 ```
 chmod a+x get_packages.sh
-./get_packages.sh
+./get_packages.sh # make sure the tbd_socnavbench conda environment is active!
 ```
 The script will inform you of all packages being installed and their status, to install manually just look inside
 
@@ -65,6 +65,9 @@ In the terminal run the following commands.
 ```
 1. /PATH/TO/HumANav/humanav
 2. bash patches/apply_patches_3.sh
+# NOTE: after running get_packages.sh you should see:
+# HUNK #3 succeeded at 401 (offset 1 line).
+# Hunk #4 succeeded at 407 (offset 1 line).
 ```
 If the script fails there are instructions in apply_patches_3.sh describing how to manually apply the patch. Additionally, the failure may be due to a bug in this version of `pyassimp` which can be fixed by following [this commit](https://github.com/assimp/assimp/commit/b6d3cbcb61f4cc4c42678d5f183351f95c97c8d4) and simply changing `isinstance(obj,int)` to `isinstance(obj, (int, str, bytes))` on line 96 of `anaconda3/envs/tbd_humanav/lib/python3.6/site-packages/pyassimp/core.py`. Then try running the patches again, or manually (not recommended).
 
