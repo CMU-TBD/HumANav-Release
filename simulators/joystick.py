@@ -2,24 +2,25 @@ import tensorflow as tf
 import socket, threading, multiprocessing
 import time, sys
 from utils.utils import print_colors
+from params.robot_params import create_params
 
 class Joystick():
-    def __init__(self, host=None, port=None):
-        self.update_host_port(host, port) # defines class' host and port
+    def __init__(self):
         self.t = 0
         self.latest_state = None
         self.world_state = (False, 0, 0)
+        self.params = create_params()
         # sockets for communication
-        self.robot_socket = None
+        self.robot_sender_socket = None
         self.robot_running = False
+        self.host = socket.gethostname()
+        self.port_send = self.params.port # port for sending commands to the robot
+        self.port_recv = self.port_send+1 # port for recieving commands from the robot
         self.ready_to_send = False
-        print("Initiated joystick at", self.host, self.port)
+        print("Initiated joystick at", self.host, self.port_send)
 
     def set_host(self, h):
         self.host = h
-
-    def set_port(self, p):
-        self.port = p
 
     def random_robot_joystick(self):
         from random import randint
@@ -37,20 +38,20 @@ class Joystick():
                     for _ in range(repeat):
                         # TODO: remove robot_running stuff
                         message = (self.robot_running, time.clock(), lin_command, ang_command)
-                        self.send(message)
+                        self.send_to_robot(message)
                         print("sent", message)
                         sent_commands += 1
                     # now wait for robot to ping with "ready"
-                    self.ready_to_send = False
+                self.ready_to_send = True
             except KeyboardInterrupt:
                 print(print_colors()["yellow"], "Joystick disconnected by user", print_colors()['reset'])
-                self.send((False, time.clock(), 0, 0)) # stop signal
+                self.send_to_robot((False, time.clock(), 0, 0)) # stop signal
                 sys.exit(0)
 
     def update(self):
         """ Independent process for a user (at a designated host:port) to recieve 
         information from the simulation while also sending commands to the robot """
-        listen_thread = threading.Thread(target=self.listen, args=(None,None))
+        listen_thread = threading.Thread(target=self.listen_to_robot)
         listen_thread.start()
         self.random_robot_joystick()
         # send a message to the robot to stop execution    
@@ -58,45 +59,32 @@ class Joystick():
         # self.send(halt_message)
         listen_thread.join()
         # Close communication channel
-        self.robot_socket.close()
+        self.robot_sender_socket.close()
 
     """BEGIN socket utils"""
 
-    def update_host_port(self, host, port):
-        # Define host
-        if(host is None):
-            self.host = socket.gethostname()
-        else:
-            self.host = host
-        # Define the communication port
-        if (port is None):
-            self.port = 6000
-        else:
-            self.port = port
-
-    def send(self, commands, port=None, host=None):
+    def send_to_robot(self, commands):
         # Create a TCP/IP socket
-        self.robot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # update self's host and port
-        self.update_host_port(host, port)
+        self.robot_sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
-        server_address = ((self.host, self.port))
+        server_address = ((self.host, self.port_send))
         # print(self.host, self.port)
         try:
-            self.robot_socket.connect(server_address)
+            self.robot_sender_socket.connect(server_address)
         except ConnectionRefusedError: # used to turn off the joystick
             self.robot_running = False
             print(print_colors()["red"], "Connection closed by robot", print_colors()['reset'])
             exit(1)
         # Send data
         message = str(commands)
-        self.robot_socket.sendall(bytes(message, "utf-8"))
-        self.robot_socket.close()
+        self.robot_sender_socket.sendall(bytes(message, "utf-8"))
+        self.robot_sender_socket.close()
 
-    def listen(self, host=None, port=None):
+    def listen_to_robot(self):
         self.robot_running = True
-        while(self.robot_running):
-            connection, client = self.robot_socket.accept()
+        while(False and self.robot_running):
+            print("waiting for server to send smth")
+            connection, client = self.robot_sender_socket.accept()
             # TODO: allow for buffered data, thus no limit
             data = connection.recv(128)
             # quickly close connection to open up for the next input
@@ -110,17 +98,16 @@ class Joystick():
             else:
                 break
     
-    def establish_robot_connection(self):
+    def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
-        self.robot_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.update_host_port(None, 6000)
-        robot_address = ((self.host, self.port))
+        self.robot_sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        robot_address = ((self.host, self.port_send))
         try:
-            self.robot_socket.connect(robot_address)
+            self.robot_sender_socket.connect(robot_address)
         except:
             print(print_colors()["red"], "Unable to connect to robot", print_colors()['reset'])
             print("Make sure you have a simulation instance running")
             exit(1)
-        print(print_colors()["green"], "Connection to robot established", print_colors()['reset'])
-        assert(self.robot_socket is not None)
+        print(print_colors()["green"], "Joystick->Robot connection established", print_colors()['reset'])
+        assert(self.robot_sender_socket is not None)
     """ END socket utils """

@@ -99,7 +99,7 @@ class CentralSimulator(SimulatorHelper):
         # wait for joystick connection to be established
         if(self.robot is not None):
             print("Waiting for Joystick connection")
-            self.robot.establish_joystick_connection(6000)
+            self.robot.establish_joystick_connection()
             print(print_colors()["green"],"Robot->Joystick connection established", print_colors()['reset'])
             self.robot.update_time(0)
             robot_thread = threading.Thread(target=self.robot.update)

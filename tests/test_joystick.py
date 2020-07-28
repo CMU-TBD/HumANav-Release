@@ -11,8 +11,8 @@ from utils.utils import print_colors
 
 def test_joystick():
     # TODO: rename controller to joystick
-    J = Joystick(host=None, port=6000)
-    J.establish_robot_connection()
+    J = Joystick()
+    J.establish_robot_sender_connection()
     J.update()
     
 if __name__ == '__main__':

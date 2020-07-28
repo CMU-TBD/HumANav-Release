@@ -2,6 +2,7 @@ from utils.utils import print_colors, generate_name
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig
+from params.robot_params import create_params
 import numpy as np
 import socket, time, threading, sys
 
@@ -11,10 +12,12 @@ class RoboAgent(Agent):
         self.commands = []
         self.running = False
         self.freq = 100. # update frequency
+        self.params = create_params()
         # sockets for communication
-        self.controller_socket = None
-        self.port = 6000
-        self.host = None
+        self.joystick_reciever_socket = None
+        self.host = socket.gethostname()
+        self.port_recv = self.params.port # port for recieving commands from the joystick
+        self.port_send = self.port_recv+1 # port for sending commands to the joystick
         # robot's knowledge of the current state of the world
         self.current_state = None
         super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
@@ -60,16 +63,15 @@ class RoboAgent(Agent):
 
     def sense(self):
         """use this to take in a world state and compute obstacles (agents/walls) to affect the robot"""
-        if(self.current_state is not None):
-            # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states 
-            self._enforce_episode_termination_conditions()
-            if(self.end_episode):
-                self.collided = True
-                self.power_off()
+        # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states 
+        self._enforce_episode_termination_conditions()
+        if(self.end_episode):
+            self.collided = True
+            self.power_off()
 
     def execute(self, command_indx):
         current_config = self.get_current_config()
-        # TODO: perhaps make the control loop run multiple commands rather than one
+        # the command is indexed by command_indx and is safe due to the size constraints in the update()
         command = np.array([[self.commands[command_indx]]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
@@ -88,7 +90,7 @@ class RoboAgent(Agent):
 
     def update(self):
         print("Robot powering on")
-        listen_thread = threading.Thread(target=self.listen, args=(None,None))
+        listen_thread = threading.Thread(target=self.listen_to_joystick)
         listen_thread.start()
         self.running = True
         self.last_command = None
@@ -121,32 +123,20 @@ class RoboAgent(Agent):
         if(self.running):
             # if the robot is already "off" do nothing
             self.running = False
-            self.controller_socket.close()
+            self.joystick_reciever_socket.close()
 
     """BEGIN socket utils"""
-
-    def update_host_port(self, host, port):
-        # Define host
-        if(host is None):
-            self.host = socket.gethostname()
-        else:
-            self.host = host
-        # Define the communication port
-        if (port is None):
-            self.port = 6000 # default port
-        else:
-            self.port = port
 
     def ping_joystick(self, message):
         # Send data
         message = str(message)
-        self.controller_socket.sendall(bytes(message, "utf-8"))
+        self.joystick_reciever_socket.sendall(bytes(message, "utf-8"))
 
-    def listen(self, host=None, port=None):
-        self.controller_socket.listen(10)
+    def listen_to_joystick(self):
+        self.joystick_reciever_socket.listen(10)
         self.running = True # initialize listener
         while(self.running):
-            connection, client = self.controller_socket.accept()
+            connection, client = self.joystick_reciever_socket.accept()
             while(True):
                 # TODO: allow for buffered data, thus no limit
                 data = connection.recv(128)
@@ -165,18 +155,16 @@ class RoboAgent(Agent):
                         break
                 else:
                     break
-            connection.sendall(bytes(str(True), "utf-8"))
             # close connection to be reaccepted when the joystick sends data
             connection.close()
 
-    def establish_joystick_connection(self, port, host=None):
+    def establish_joystick_connection(self):
         """This is akin to a server connection (robot is server)"""
-        self.controller_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.update_host_port(host, port)
-        self.controller_socket.bind((self.host, self.port))
+        self.joystick_reciever_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.joystick_reciever_socket.bind((self.host, self.port_recv))
         # wait for a connection
-        self.controller_socket.listen(1)
-        connection, client = self.controller_socket.accept()
+        self.joystick_reciever_socket.listen(1)
+        connection, client = self.joystick_reciever_socket.accept()
         # self.ping_joystick(True)
         return connection, client
 
