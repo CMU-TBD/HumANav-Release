@@ -14,7 +14,8 @@ class RoboAgent(Agent):
         self.freq = 100. # update frequency
         self.params = create_params()
         # sockets for communication
-        self.joystick_reciever_socket = None
+        self.joystick_receiver_socket = None
+        self.joystick_sender_socket = None
         self.host = socket.gethostname()
         self.port_recv = self.params.port # port for recieving commands from the joystick
         self.port_send = self.port_recv+1 # port for sending commands to the joystick
@@ -64,10 +65,12 @@ class RoboAgent(Agent):
     def sense(self):
         """use this to take in a world state and compute obstacles (agents/walls) to affect the robot"""
         # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states 
-        self._enforce_episode_termination_conditions()
-        if(self.end_episode):
-            self.collided = True
-            self.power_off()
+        if(not self.end_episode):
+            self._enforce_episode_termination_conditions()
+            # NOTE: enforce_episode_terminator updates the self.end_episode variable
+            if(self.end_episode):
+                self.collided = True
+                self.power_off()
 
     def execute(self, command_indx):
         current_config = self.get_current_config()
@@ -100,20 +103,20 @@ class RoboAgent(Agent):
             if(num_executed >= len(self.commands)):
                 time.sleep(1./self.freq) 
                 # NOTE: send a command to the joystick letting it know to send another command
-                # self.ping_joystick(True)
             else:
-                self.sense()
                 # using a loop to carry through the backlock of commands over time
-                while(num_executed < len(self.commands)):
+                while(num_executed < len(self.commands) and self.running):
+                    self.sense()
                     self.execute(num_executed)
                     num_executed += 1
                     if(self.get_trajectory().k != self.get_trajectory().position_nk2().shape[1]):
-                        # fix this nonfatal bug
+                        # TODO: fix this uncommonly-occuring nonfatal bug
                         print("ERROR: robot_trajectory dimens mismatch")
-                        # print(self.get_trajectory().k, self.get_trajectory().position_nk2().shape[1])
-                        # exit(0)
-            # print(num_executed)
-        # self.ping_joystick(False)
+                    time.sleep(1./self.freq)
+            # notify the joystick that the robot can take another input
+            self.send_to_joystick(True)
+        # notify the joystick to stop sending commands to the robot
+        self.send_to_joystick(False)
         print("\nRobot powering off, recieved", len(self.commands),"commands")
         self.power_off()
         listen_thread.join()
@@ -123,20 +126,32 @@ class RoboAgent(Agent):
         if(self.running):
             # if the robot is already "off" do nothing
             self.running = False
-            self.joystick_reciever_socket.close()
+            self.joystick_receiver_socket.close()
 
     """BEGIN socket utils"""
 
-    def ping_joystick(self, message):
+    def send_to_joystick(self, message):
+        # Create a TCP/IP socket
+        self.joystick_sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # Connect the socket to the port where the server is listening
+        server_address = ((self.host, self.port_send))
+        # print(self.host, self.port)
+        try:
+            self.joystick_sender_socket.connect(server_address)
+        except ConnectionRefusedError: # used to turn off the joystick
+            self.joystick_running = False
+            print(print_colors()["red"], "Connection closed by joystick", print_colors()['reset'])
+            exit(1)
         # Send data
         message = str(message)
-        self.joystick_reciever_socket.sendall(bytes(message, "utf-8"))
+        self.joystick_sender_socket.sendall(bytes(message, "utf-8"))
+        self.joystick_sender_socket.close()
 
     def listen_to_joystick(self):
-        self.joystick_reciever_socket.listen(10)
+        self.joystick_receiver_socket.listen(10)
         self.running = True # initialize listener
         while(self.running):
-            connection, client = self.joystick_reciever_socket.accept()
+            connection, client = self.joystick_receiver_socket.accept()
             while(True):
                 # TODO: allow for buffered data, thus no limit
                 data = connection.recv(128)
@@ -158,14 +173,28 @@ class RoboAgent(Agent):
             # close connection to be reaccepted when the joystick sends data
             connection.close()
 
-    def establish_joystick_connection(self):
+    def establish_joystick_receiver_connection(self):
         """This is akin to a server connection (robot is server)"""
-        self.joystick_reciever_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.joystick_reciever_socket.bind((self.host, self.port_recv))
+        self.joystick_receiver_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.joystick_receiver_socket.bind((self.host, self.port_recv))
         # wait for a connection
-        self.joystick_reciever_socket.listen(1)
-        connection, client = self.joystick_reciever_socket.accept()
-        # self.ping_joystick(True)
+        self.joystick_receiver_socket.listen(1)
+        print("Waiting for Joystick connection")
+        connection, client = self.joystick_receiver_socket.accept()
+        print(print_colors()["green"],"Robot---->Joystick connection established", print_colors()['reset'])
         return connection, client
 
+    def establish_joystick_sender_connection(self):
+        """This is akin to a client connection (joystick is client)"""
+        # TODO: prior to simply connecting, wait for the joystick to send a "ready to connect" message
+        self.joystick_sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        address = ((self.host, self.port_send))
+        try:
+            self.joystick_sender_socket.connect(address)
+        except:
+            print(print_colors()["red"], "Unable to connect to joystick", print_colors()['reset'])
+            print("Make sure you have a joystick instance running")
+            exit(1)
+        assert(self.joystick_sender_socket is not None)
+        print(print_colors()["green"],"Joystick->Robot connection established", print_colors()['reset'])
     """ END socket utils """

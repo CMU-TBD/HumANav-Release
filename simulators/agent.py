@@ -84,7 +84,6 @@ class Agent(object):
         if(with_planner):
             self.planner = self._init_planner()
             self.vehicle_data = self.planner.empty_data_dict()
-            # set the minimum action_dt for competing an "action"
         else:
             self.planner = None 
             self.vehicle_data = None

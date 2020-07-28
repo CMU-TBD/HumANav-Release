@@ -25,8 +25,8 @@ class Joystick():
     def random_robot_joystick(self):
         from random import randint
         self.world_state = (True, 0, 0)
-        accel_scale = 100 # scale to multiply the raw acceleration values by 
-        repeat = 1 # number of times to send the same command to the robot
+        accel_scale = 100   # scale to multiply the raw acceleration values by 
+        repeat = 1          # number of times to send the same command to the robot
         sent_commands = 0
         self.robot_running = True
         while(self.robot_running is True):
@@ -34,7 +34,6 @@ class Joystick():
                 if(self.ready_to_send):
                     lin_command = (randint(10, 100) / 100.) # robot can only more forwards
                     ang_command = (randint(-100, 100) / 100.)
-                    # print(lin_command, ang_command)
                     for _ in range(repeat):
                         # TODO: remove robot_running stuff
                         message = (self.robot_running, time.clock(), lin_command, ang_command)
@@ -42,7 +41,8 @@ class Joystick():
                         print("sent", message)
                         sent_commands += 1
                     # now wait for robot to ping with "ready"
-                self.ready_to_send = True
+                    self.ready_to_send = False
+                # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
             except KeyboardInterrupt:
                 print(print_colors()["yellow"], "Joystick disconnected by user", print_colors()['reset'])
                 self.send_to_robot((False, time.clock(), 0, 0)) # stop signal
@@ -61,6 +61,11 @@ class Joystick():
         # Close communication channel
         self.robot_sender_socket.close()
 
+    def power_off(self):
+        if(self.robot_running):
+            print(print_colors()["red"], "Connection closed by robot", print_colors()['reset'])
+            self.robot_running = False
+
     """BEGIN socket utils"""
 
     def send_to_robot(self, commands):
@@ -72,8 +77,7 @@ class Joystick():
         try:
             self.robot_sender_socket.connect(server_address)
         except ConnectionRefusedError: # used to turn off the joystick
-            self.robot_running = False
-            print(print_colors()["red"], "Connection closed by robot", print_colors()['reset'])
+            self.power_off()
             exit(1)
         # Send data
         message = str(commands)
@@ -81,20 +85,22 @@ class Joystick():
         self.robot_sender_socket.close()
 
     def listen_to_robot(self):
+        self.robot_receiver_socket.listen(10)
         self.robot_running = True
-        while(False and self.robot_running):
-            print("waiting for server to send smth")
-            connection, client = self.robot_sender_socket.accept()
+        while(self.robot_running):
+            connection, client = self.robot_receiver_socket.accept()
             # TODO: allow for buffered data, thus no limit
             data = connection.recv(128)
             # quickly close connection to open up for the next input
             connection.close()
             # NOTE: data is either true or false
             # TODO: use ast.literal_eval instead of eval to
-            if(data is not None):
-                print("recieved", data, "from server")
+            if(data):
                 data = eval(data)
                 self.ready_to_send = data
+                if(data is False):
+                    self.power_off()
+                    break
             else:
                 break
     
@@ -110,4 +116,15 @@ class Joystick():
             exit(1)
         print(print_colors()["green"], "Joystick->Robot connection established", print_colors()['reset'])
         assert(self.robot_sender_socket is not None)
+
+    def establish_robot_receiver_connection(self):
+        """This is akin to a server connection (robot is server)"""
+        self.robot_receiver_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.robot_receiver_socket.bind((self.host, self.port_recv))
+        # wait for a connection
+        self.robot_receiver_socket.listen(1)
+        connection, client = self.robot_receiver_socket.accept()
+        print(print_colors()["green"],"Robot---->Joystick connection established", print_colors()['reset'])
+        return connection, client
+    
     """ END socket utils """

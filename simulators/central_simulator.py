@@ -98,9 +98,9 @@ class CentralSimulator(SimulatorHelper):
     def init_robot_thread(self):
         # wait for joystick connection to be established
         if(self.robot is not None):
-            print("Waiting for Joystick connection")
-            self.robot.establish_joystick_connection()
-            print(print_colors()["green"],"Robot->Joystick connection established", print_colors()['reset'])
+            self.robot.establish_joystick_receiver_connection()
+            time.sleep(0.01)
+            self.robot.establish_joystick_sender_connection()
             self.robot.update_time(0)
             robot_thread = threading.Thread(target=self.robot.update)
             robot_thread.start()
@@ -116,12 +116,7 @@ class CentralSimulator(SimulatorHelper):
             # close robot agent threads
             thread.join()
             del(thread)
-        return
-    
-    def update_robot(self, current_state):
-        if(self.robot is not None):
-            self.robot.update_state(current_state) 
-        
+        return        
 
     def init_agent_threads(self, time, t_step, current_state):
         agent_threads = []
@@ -170,8 +165,6 @@ class CentralSimulator(SimulatorHelper):
             wall_clock = time.clock() - start_time
             # Takes screenshot of the simulation state as long as the update is still going
             current_state = self.save_state(self.t, wall_clock) # saves to self.states and returns most recent
-            # update the robot with the world's current state
-            self.update_robot(current_state)
             # Complete thread operations
             agent_threads = self.init_agent_threads(self.t, delta_t, current_state)
             prerec_threads = self.init_prerec_threads(self.t)

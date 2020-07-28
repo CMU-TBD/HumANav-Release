@@ -13,6 +13,7 @@ def test_joystick():
     # TODO: rename controller to joystick
     J = Joystick()
     J.establish_robot_sender_connection()
+    J.establish_robot_receiver_connection()
     J.update()
     
 if __name__ == '__main__':
