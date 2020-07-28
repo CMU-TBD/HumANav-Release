@@ -12,7 +12,7 @@ which pip || (echo -e "${RED}pip not installed${NC}" && exit)
 which conda || (echo -e "${RED}conda not installed${NC}" && exit)
 
 #install pip packages
-PIP_PACKAGES="matplotlib dotmap pyassimp scikit-image scikit-fmm numpy==1.14.5 tensorflow==1.10.1"
+PIP_PACKAGES="matplotlib dotmap pyassimp scikit-image scikit-fmm numpy==1.19.0 tensorflow==1.10.1"
 echo -e "${CYAN}Using pip to install $PIP_PACKAGES ${NC}"
 for i in $PIP_PACKAGES; do
     pip install $i || (echo -e "${RED}Failed to install $i${NC}" && exit 1)
