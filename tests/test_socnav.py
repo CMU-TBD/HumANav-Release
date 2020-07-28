@@ -197,7 +197,7 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
 
     return rgb_image_1mk3, depth_image_1mk1
 
-def generate_prerecorded_humans(p, simulator):
+def generate_prerecorded_humans(num_pedestrians, p, simulator):
     """"world_df" is a set of trajectories organized as a pandas dataframe. 
     Each row is a pedestrian at a given frame (aka time point). 
     The data was taken at 25 fps so between frames is 1/25th of a second. """
@@ -207,8 +207,7 @@ def generate_prerecorded_humans(p, simulator):
     world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
     start_frame = world_df['frame'][0]
     max_peds = max(np.unique(world_df.ped))
-    num_peds = 0
-    for i in range(num_peds):
+    for i in range(num_pedestrians):
         # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
         ped_id = i+1
         if(ped_id not in np.unique(world_df.ped)):
@@ -246,11 +245,11 @@ def generate_prerecorded_humans(p, simulator):
         for j, t in enumerate(times): # lastly, append t to the list
             record[j].append(t)
         simulator.add_agent(PrerecordedHuman(record, generate_appearance=p.render_3D))
-        print("Generated Prerecorded Humans:", i, "\r", end="")
-    if(num_peds > 0):
+        print("Generated Prerecorded Humans:", i+1, "\r", end="")
+    if(num_pedestrians > 0):
         print("\n")
 
-def test_socnav(num_humans):
+def test_socnav(num_generated_humans, num_prerecorded_humans):
     """
     Code for loading a random human into the environment
     and rendering topview, rgb, and depth images.
@@ -328,7 +327,7 @@ def test_socnav(num_humans):
     """
     Add the prerecorded humans to the simulator
     """
-    generate_prerecorded_humans(p, simulator)
+    generate_prerecorded_humans(num_prerecorded_humans, p, simulator)
 
     """
     Generate and add a single human with a constant start/end config on every run 
@@ -342,7 +341,7 @@ def test_socnav(num_humans):
     """
     Generate and add num_humans number of randomly generated humans to the simulator
     """
-    for i in range(num_humans):
+    for i in range(num_generated_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment( 
             environment, room_center, 
@@ -383,4 +382,4 @@ def test_socnav(num_humans):
 
 
 if __name__ == '__main__':
-    test_socnav(4)  # run basic room test with variable # of human
+    test_socnav(0, 0)  # run basic room test with variable # of human
