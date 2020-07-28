@@ -21,7 +21,7 @@ for i in $PIP_PACKAGES; do
 done
 
 #install conda packages
-CONDA_PACKAGES="opencv pyopengl pandas"
+CONDA_PACKAGES="pyopengl pandas"
 echo -e "${CYAN}Using conda to install $CONDA_PACKAGES ${NC}"
 for i in $CONDA_PACKAGES; do
     conda install -y $i || (echo -e "${RED}Failed to install $i${NC}" && exit 1)
