@@ -128,7 +128,11 @@ class CentralSimulator(SimulatorHelper):
     def init_prerec_threads(self, time):
         prerec_threads = []
         for a in self.prerecs.values():
-            prerec_threads.append(threading.Thread(target=a.update, args=(time,)))
+            if(not a.end_acting):
+                prerec_threads.append(threading.Thread(target=a.update, args=(time,)))
+            else:
+                self.prerecs.pop(a.get_name())
+                del(a)
         return prerec_threads
 
     def start_threads(self, thread_group):
@@ -470,7 +474,7 @@ class CentralSimulator(SimulatorHelper):
         ax.plot([start[0], start[0]], [start[1] + h, start[1] - h], col) # tick left
         ax.plot([end[0], end[0]], [end[1] + h, end[1] - h], col) # tick right
         if(plot_quiver):
-            ax.text(0.5*(start[0] + start[1]), start[1] - h, "1m", fontsize=14,verticalalignment='top')
+            ax.text(0.5*(start[0] + end[0]) - 0.2, start[1] + 0.5, "1m", fontsize=14,verticalalignment='top')
 
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
                     camera_pos_13, agents, prerecs, robots, sim_time, wall_time, filename, img_dir):

@@ -205,7 +205,7 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator):
     world_df  = pd.read_csv(datafile, header=None).T
     world_df.columns = ['frame', 'ped', 'y', 'x']
     world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
-    start_frame = world_df['frame'][start_ped]
+    start_frame = world_df['frame'][0] # default start (of data)
     max_peds = max(np.unique(world_df.ped))
     for i in range(num_pedestrians):
         # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
@@ -215,7 +215,9 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator):
             continue
         ped_i = world_df[world_df.ped==ped_id]
         times = []
-        for f in ped_i['frame']:
+        for j, f in enumerate(ped_i['frame']):
+            if(i == 0 and j == 0):
+                start_frame = f # update start frame to be representative of "first" pedestrian
             relative_time = (f - start_frame) * (1 / 25.)
             times.append(relative_time)
         record = [] # NOTE: this has no instance of angles, so i'm assuming i can generate those
@@ -384,4 +386,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
 
 
 if __name__ == '__main__':
-    test_socnav(3, 5)  # run basic room test with variable # of human
+    test_socnav(3, 5, starting_prerec=20)  # run basic room test with variable # of human
