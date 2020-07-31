@@ -197,7 +197,7 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
 
     return rgb_image_1mk3, depth_image_1mk1
 
-def generate_prerecorded_humans(num_pedestrians, p, simulator):
+def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator):
     """"world_df" is a set of trajectories organized as a pandas dataframe. 
     Each row is a pedestrian at a given frame (aka time point). 
     The data was taken at 25 fps so between frames is 1/25th of a second. """
@@ -205,11 +205,12 @@ def generate_prerecorded_humans(num_pedestrians, p, simulator):
     world_df  = pd.read_csv(datafile, header=None).T
     world_df.columns = ['frame', 'ped', 'y', 'x']
     world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
-    start_frame = world_df['frame'][0]
+    start_frame = world_df['frame'][start_ped]
     max_peds = max(np.unique(world_df.ped))
     for i in range(num_pedestrians):
         # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
-        ped_id = i+1
+        ped_id = i + start_ped + 1
+        assert(ped_id < max_peds) # need data to be within the bounds 
         if(ped_id not in np.unique(world_df.ped)):
             continue
         ped_i = world_df[world_df.ped==ped_id]
@@ -249,7 +250,7 @@ def generate_prerecorded_humans(num_pedestrians, p, simulator):
     if(num_pedestrians > 0):
         print("\n")
 
-def test_socnav(num_generated_humans, num_prerecorded_humans):
+def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     """
     Code for loading a random human into the environment
     and rendering topview, rgb, and depth images.
@@ -327,7 +328,8 @@ def test_socnav(num_generated_humans, num_prerecorded_humans):
     """
     Add the prerecorded humans to the simulator
     """
-    generate_prerecorded_humans(num_prerecorded_humans, p, simulator)
+    print("Gathering prerecorded agents from", starting_prerec, "to", starting_prerec + num_prerecorded)
+    generate_prerecorded_humans(starting_prerec, num_prerecorded, p, simulator)
 
     """
     Generate and add a single human with a constant start/end config on every run 

@@ -114,7 +114,8 @@ class CentralSimulator(SimulatorHelper):
             # turn off the robot
             self.robot.power_off()
             # close robot agent threads
-            thread.join()
+            if(thread.is_alive()):
+                thread.join()
             del(thread)
         return        
 
@@ -204,7 +205,7 @@ class CentralSimulator(SimulatorHelper):
         self.generate_frames()
 
         # convert all the generated frames into a gif file
-        self.save_to_gif(clear_old_files = True)
+        self.save_to_gif(clear_old_files = False)
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
 
@@ -377,7 +378,7 @@ class CentralSimulator(SimulatorHelper):
                 os.remove(f)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13, 
-                    agents, prerecs, robots, plot_quiver=False):
+                    agents, prerecs, robots, room_center, plot_quiver=False):
         ax.imshow(traversible, extent=extent, cmap='gray',
                 vmin=-.5, vmax=1.5, origin='lower')
         # Plot human traversible
@@ -455,7 +456,22 @@ class CentralSimulator(SimulatorHelper):
                 # Agent heading
                 ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]), 
                           scale=2, scale_units='inches')
-                          
+
+        # plot other useful informational visuals in the topview
+        # such as the key to the length of a "meter" unit
+        plot_line_loc = room_center[:2] * 0.7
+        start = [0, 0] + plot_line_loc
+        end = [1, 0] + plot_line_loc
+        gather_xs = [start[0], end[0]]
+        gather_ys = [start[1], end[1]]
+        col = 'k-'
+        h = 0.1 # height of the "ticks" of the key
+        ax.plot(gather_xs, gather_ys, col) # main line
+        ax.plot([start[0], start[0]], [start[1] + h, start[1] - h], col) # tick left
+        ax.plot([end[0], end[0]], [end[1] + h, end[1] - h], col) # tick right
+        if(plot_quiver):
+            ax.text(0.5*(start[0] + start[1]), start[1] - h, "1m", fontsize=14,verticalalignment='top')
+
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
                     camera_pos_13, agents, prerecs, robots, sim_time, wall_time, filename, img_dir):
 
@@ -486,7 +502,7 @@ class CentralSimulator(SimulatorHelper):
         ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
         ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
         self.plot_topview(ax, extent, traversible, human_traversible,
-                    camera_pos_13, agents, prerecs, robots, plot_quiver=True)
+                    camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=True)
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
@@ -500,7 +516,7 @@ class CentralSimulator(SimulatorHelper):
         ax.set_xlim(0., outer_zoom)
         ax.set_ylim(0., outer_zoom)
         self.plot_topview(ax, extent, traversible, human_traversible,
-                        camera_pos_13, agents, prerecs, robots)
+                        camera_pos_13, agents, prerecs, robots, room_center)
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
