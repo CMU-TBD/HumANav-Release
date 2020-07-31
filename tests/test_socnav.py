@@ -210,7 +210,9 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator):
     for i in range(num_pedestrians):
         # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
         ped_id = i + start_ped + 1
-        assert(ped_id < max_peds) # need data to be within the bounds 
+        if (ped_id >= max_peds): # need data to be within the bounds 
+            print(print_colors()["red"], "Requested Prerec agent index out of bounds:", 
+                  ped_id, print_colors()["reset"])
         if(ped_id not in np.unique(world_df.ped)):
             continue
         ped_i = world_df[world_df.ped==ped_id]
@@ -386,4 +388,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
 
 
 if __name__ == '__main__':
-    test_socnav(3, 5, starting_prerec=20)  # run basic room test with variable # of human
+    test_socnav(3, 5, starting_prerec=0)  # run basic room test with variable # of human

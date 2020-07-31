@@ -37,6 +37,7 @@ class CentralSimulator(SimulatorHelper):
         self.states = {}
         self.wall_clock_time = 0
         self.t = 0
+        self.delta_t = 0 # will be updated in simulator based off dt
 
     @staticmethod
     def parse_params(p):
@@ -127,7 +128,8 @@ class CentralSimulator(SimulatorHelper):
 
     def init_prerec_threads(self, time):
         prerec_threads = []
-        for a in self.prerecs.values():
+        prerec_agents = list(self.prerecs.values())
+        for a in prerec_agents:
             if(not a.end_acting):
                 prerec_threads.append(threading.Thread(target=a.update, args=(time,)))
             else:
@@ -162,8 +164,8 @@ class CentralSimulator(SimulatorHelper):
         start_time = time.clock()
         # save initial state before the simulator is spawned
         self.t = 0
-        delta_t = 3*self.params.dt
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
+        self.delta_t = 3*self.params.dt 
         # TODO: make all agents, robots, and prerecs be internal threads in THIS update 
         while self.exists_running_agent() or self.exists_running_prerec():
             # update "wall clock" time
@@ -171,7 +173,7 @@ class CentralSimulator(SimulatorHelper):
             # Takes screenshot of the simulation state as long as the update is still going
             current_state = self.save_state(self.t, wall_clock) # saves to self.states and returns most recent
             # Complete thread operations
-            agent_threads = self.init_agent_threads(self.t, delta_t, current_state)
+            agent_threads = self.init_agent_threads(self.t, self.delta_t, current_state)
             prerec_threads = self.init_prerec_threads(self.t)
             # start all thread groups
             self.start_threads(agent_threads)
@@ -180,9 +182,9 @@ class CentralSimulator(SimulatorHelper):
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
             # capture time after all the agents have updated
-            self.t += delta_t # update "simulaiton time"
+            self.t += self.delta_t # update "simulaiton time"
             # print simulation progress
-            iteration = int(self.t * (1./delta_t))
+            iteration = int(self.t * (1./self.delta_t))
             self.print_sim_progress(iteration)
             # if (iteration > 40 * num_agents):
             #     # hard limit of 40 frames per agent
@@ -209,7 +211,7 @@ class CentralSimulator(SimulatorHelper):
         self.generate_frames()
 
         # convert all the generated frames into a gif file
-        self.save_to_gif(clear_old_files = False)
+        self.save_to_gif(clear_old_files = True)
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
 
@@ -337,6 +339,8 @@ class CentralSimulator(SimulatorHelper):
     def save_to_gif(self, clear_old_files = True, with_multiprocessing=True):
         num_robots = len(self.robots)
         rendering_processes = []
+        # fps = 1. / self.delta_t # based off simulation capture rate
+        duration = self.delta_t
         for i in range(num_robots):
             dirname = "tests/socnav/sim_movie" + str(i)
             IMAGES_DIR = os.path.join(self.params.humanav_dir, dirname)
@@ -345,16 +349,16 @@ class CentralSimulator(SimulatorHelper):
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
                                         target=self._save_to_gif, 
-                                        args=(IMAGES_DIR, clear_old_files))
+                                        args=(IMAGES_DIR, duration, clear_old_files))
                                         )
                 rendering_processes[i].start()
             else:
-                self._save_to_gif(IMAGES_DIR, clear_old_files=clear_old_files) # sequentially
+                self._save_to_gif(IMAGES_DIR, duration, clear_old_files=clear_old_files) # sequentially
         
         for p in rendering_processes:
             p.join()
 
-    def _save_to_gif(self, IMAGES_DIR, clear_old_files = True):
+    def _save_to_gif(self, IMAGES_DIR, duration, clear_old_files = True):
         """Takes the image directory and naturally sorts the images into a singular movie.gif"""
         images = []
         if(not os.path.exists(IMAGES_DIR)):
@@ -374,7 +378,8 @@ class CentralSimulator(SimulatorHelper):
                 exit(1)
             print("Movie progress:", i, "out of", num_images, "%.3f" % (i/num_images), "\r", end="")
         output_location = os.path.join(IMAGES_DIR, 'movie.gif')
-        imageio.mimsave(output_location, images)
+        kargs = {'duration':duration }
+        imageio.mimsave(output_location, images, 'GIF', **kargs)
         print('\033[32m', "Rendered gif at", output_location, '\033[0m')
         # Clearing remaining files to not affect next render
         if clear_old_files:
