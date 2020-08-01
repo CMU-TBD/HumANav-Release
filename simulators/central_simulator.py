@@ -175,8 +175,12 @@ class CentralSimulator(SimulatorHelper):
         # save initial state before the simulator is spawned
         self.t = 0
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        self.delta_t = self.params.dt
-        # TODO: make all agents, robots, and prerecs be internal threads in THIS update
+        self.delta_t = 4 * self.params.dt
+        if(self.delta_t < self.params.dt):
+            print(print_colors()["red"],
+                  "Simulation dt is too small either lower the agents' dt's",
+                  self.params.dt, "or increase simulation delta_t", print_colors()['reset'])
+            exit(1)
         while self.exists_running_agent() or self.exists_running_prerec():
             # update "wall clock" time
             wall_clock = time.clock() - start_time
@@ -198,9 +202,9 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             iteration = int(self.t * (1. / self.delta_t))
             self.print_sim_progress(iteration)
-            # if (iteration > 40 * num_agents):
-            #     # hard limit of 40 frames per agent
-            #     break
+            if (iteration > 40 * num_agents):
+                # hard limit of 40 frames per agent
+                break
         # free all the agents
         for a in self.agents.values():
             del(a)
@@ -406,6 +410,11 @@ class CentralSimulator(SimulatorHelper):
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13,
                      agents, prerecs, robots, room_center, plot_quiver=False):
+        # get number of pixels per meter based off the ax plot space
+        img_scale = ax.transData.transform(
+            (0, 1)) - ax.transData.transform((0, 0))
+        # print(img_scale)
+        ppm = img_scale[1]  # number of pixels per "meter" unit in the plot
         ax.imshow(traversible, extent=extent, cmap='gray',
                   vmin=-.5, vmax=1.5, origin='lower')
         # Plot human traversible
@@ -427,25 +436,25 @@ class CentralSimulator(SimulatorHelper):
             r.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             color = 'bo'  # robots are blue and solid unless collided
             if(r.get_collided()):
-                color = 'ro'  # collided robots are drawn red
+                color = 'ko'  # collided robots are drawn BLACK
             if i == 0:
                 # only add label on first robot
                 ax.plot(r_pos_3[0], r_pos_3[1], color,
                         markersize=10, label='Robot')
             else:
-                ax.plot(r_pos_3[0], r_pos_3[1], color, markersize=10)
-            # TODO: use agent radius instead of hardcode
-            ax.plot(r_pos_3[0], r_pos_3[1], color, alpha=0.2, markersize=25)
+                ax.plot(r_pos_3[0], r_pos_3[1], color,
+                        markersize=r.get_radius() * ppm)
+            # visual "bubble" around robot base to stay safe
+            ax.plot(r_pos_3[0], r_pos_3[1], color,
+                    alpha=0.2, markersize=r.get_radius() * 2. * ppm)
             if np.array_equal(camera_pos_13, r_pos_3):
-                # this is the "camera" robot (add quiver)
+                # this is the "camera" robot (with quiver)
                 ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
                     camera_pos_13[2]), np.sin(camera_pos_13[2]))
 
         # plot all the simulated prerecorded agents
         for i, a in enumerate(prerecs.values()):
             pos_3 = a.get_current_config().to_3D_numpy()
-            # pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
-            # heading= (a.get_current_config().heading_nk1().numpy())[0][0]
             # TODO: make colours of trajectories random rather than hardcoded
             a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             color = 'yo'  # agents are green and solid unless collided
@@ -456,9 +465,11 @@ class CentralSimulator(SimulatorHelper):
                 ax.plot(pos_3[0], pos_3[1],
                         color, markersize=10, label='Prerec')
             else:
-                ax.plot(pos_3[0], pos_3[1], color, markersize=10)
+                ax.plot(pos_3[0], pos_3[1], color,
+                        markersize=a.get_radius() * ppm)
             # TODO: use agent radius instead of hardcode
-            ax.plot(pos_3[0], pos_3[1], color, alpha=0.2, markersize=25)
+            ax.plot(pos_3[0], pos_3[1], color,
+                    alpha=0.2, markersize=a.get_radius() * 2.0 * ppm)
             if(plot_quiver):
                 # Agent heading
                 ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
@@ -467,8 +478,6 @@ class CentralSimulator(SimulatorHelper):
         # plot all the randomly generated simulated agents
         for i, a in enumerate(agents.values()):
             pos_3 = a.get_current_config().to_3D_numpy()
-            # pos_2 = a.get_current_config().position_nk2().numpy()[0][0]
-            # heading= (a.get_current_config().heading_nk1().numpy())[0][0]
             # TODO: make colours of trajectories random rather than hardcoded
             a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             color = 'go'  # agents are green and solid unless collided
@@ -479,9 +488,11 @@ class CentralSimulator(SimulatorHelper):
                 ax.plot(pos_3[0], pos_3[1],
                         color, markersize=10, label='Agent')
             else:
-                ax.plot(pos_3[0], pos_3[1], color, markersize=10)
+                ax.plot(pos_3[0], pos_3[1], color,
+                        markersize=a.get_radius() * ppm)
             # TODO: use agent radius instead of hardcode
-            ax.plot(pos_3[0], pos_3[1], color, alpha=0.2, markersize=25)
+            ax.plot(pos_3[0], pos_3[1], color,
+                    alpha=0.2, markersize=a.get_radius() * 2. * ppm)
             if(plot_quiver):
                 # Agent heading
                 ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
@@ -489,7 +500,7 @@ class CentralSimulator(SimulatorHelper):
 
         # plot other useful informational visuals in the topview
         # such as the key to the length of a "meter" unit
-        plot_line_loc = room_center[:2] * 0.7
+        plot_line_loc = room_center[:2] * 0.65
         start = [0, 0] + plot_line_loc
         end = [1, 0] + plot_line_loc
         gather_xs = [start[0], end[0]]
@@ -520,18 +531,19 @@ class CentralSimulator(SimulatorHelper):
         extent = [0., traversible.shape[1], 0., traversible.shape[0]]
         extent = np.array(extent) * map_scale
 
-        num_frames = 2
+        # count used to signify the number of images that will be generated in a single frame
+        plot_count = 2  # default 2, for zoomed topview and normal topview
         if rgb_image_1mk3 is not None:
-            num_frames = num_frames + 1
+            plot_count = plot_count + 1
         if depth_image_1mk1 is not None:
-            num_frames = num_frames + 1
+            plot_count = plot_count + 1
 
         img_size = 10
-        fig = plt.figure(figsize=(num_frames * img_size, img_size))
+        fig = plt.figure(figsize=(plot_count * img_size, img_size))
 
         # Plot the 5x5 meter occupancy grid centered around the camera
         zoom = 8.5  # zoom out in by a constant amount
-        ax = fig.add_subplot(1, num_frames, 1)
+        ax = fig.add_subplot(1, plot_count, 1)
         ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
         ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
         self.plot_topview(ax, extent, traversible, human_traversible,
@@ -546,7 +558,7 @@ class CentralSimulator(SimulatorHelper):
         # to keep square plot
         outer_zoom = min(traversible.shape[0],
                          traversible.shape[1]) * map_scale
-        ax = fig.add_subplot(1, num_frames, 2)
+        ax = fig.add_subplot(1, plot_count, 2)
         ax.set_xlim(0., outer_zoom)
         ax.set_ylim(0., outer_zoom)
         self.plot_topview(ax, extent, traversible, human_traversible,
@@ -558,7 +570,7 @@ class CentralSimulator(SimulatorHelper):
 
         if rgb_image_1mk3 is not None:
             # Plot the RGB Image
-            ax = fig.add_subplot(1, num_frames, 3)
+            ax = fig.add_subplot(1, plot_count, 3)
             ax.imshow(rgb_image_1mk3[0].astype(np.uint8))
             ax.set_xticks([])
             ax.set_yticks([])
@@ -566,7 +578,7 @@ class CentralSimulator(SimulatorHelper):
 
         if depth_image_1mk1 is not None:
             # Plot the Depth Image
-            ax = fig.add_subplot(1, num_frames, 4)
+            ax = fig.add_subplot(1, plot_count, 4)
             ax.imshow(depth_image_1mk1[0, :, :, 0].astype(
                 np.uint8), cmap='gray')
             ax.set_xticks([])

@@ -29,7 +29,7 @@ class Agent(object):
         self.planned_next_config = copy.deepcopy(self.current_config)
 
         self.time = 0  # tie to track progress during an update
-        self.radius = 0.2  # meters
+        self.radius = 0.2  # meters (10cm radius)
 
         # Dynamics and movement attributes
         self.fmm_map = None
@@ -39,7 +39,7 @@ class Agent(object):
         self.path_step = 0
         self.termination_cause = None
         # for collisions with other agents
-        self.collided = False
+        self.has_collided = False
 
     # Getters for the Agent class
     def get_name(self):
@@ -73,7 +73,10 @@ class Agent(object):
         return self.vehicle_trajectory
 
     def get_collided(self):
-        return self.collided
+        return self.has_collided
+
+    def get_radius(self):
+        return self.radius
 
     def simulation_init(self, sim_params, sim_map, with_planner=True):
         """ Initializes important fields for the CentralSimulator"""
@@ -92,6 +95,8 @@ class Agent(object):
             self.planner = None
             self.vehicle_data = None
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        # the point in the trajectory where the agent collided
+        self.collision_point_k = np.inf
         # Motion fields
         self.max_v = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[
             1]
@@ -133,7 +138,7 @@ class Agent(object):
         #       there are very few situations where both are at a high point
         action_dt = int(np.floor(t_step / self.params.dt))
         # NOTE: instant_complete discards any animations and finishes the trajectory segment instantly
-        self.act(action_dt, instant_complete=False, world_state=sim_state, )
+        self.act(action_dt, instant_complete=False, world_state=sim_state)
 
     def plan(self):
         """ Runs the planner for one step from config to generate a
@@ -185,34 +190,41 @@ class Agent(object):
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
                         self.vehicle_trajectory, t=-1)
-                # Automatically finished trajectory
+                # Instantly finished trajectory
                 self.end_acting = True
             else:
-                # DEBUG:
-                # action_dt = int(self.params.control_horizon * 0.8)
-                # to not skip all the way to the end:
-                # assert(action_dt <= self.params.control_horizon)
                 # Update through the path traversal incrementally
                 if(world_state is not None):
                     # first check for collisions with any other agents
                     for a in world_state.get_agents().values():
                         if(a.get_name() is not self.get_name() and self.dist_to_agent(a) < 2 * self.radius):
-                            self.collided = True
+                            # instantly collide and stop updating
+                            self.has_collided = True
+                            self.collision_point_k = self.vehicle_trajectory.k  # this instant
                             self.end_acting = True
+
                 # then update the current config
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
                         self.vehicle_trajectory, t=self.path_step)
+
                 # updating "next step" for agent path after traversing it
                 self.path_step += action_dt
-                if(self.path_step >= self.vehicle_trajectory.k or self.collided):
+                if(self.path_step >= self.vehicle_trajectory.k):
                     self.end_acting = True
-                if(self.end_acting or self.collided):
+
+                # considers a full on collision once the agent has passed its "collision point"
+                if(self.path_step >= self.collision_point_k):
+                    self.has_collided = True
+                    self.end_acting = True
+
+                if(self.end_acting or self.has_collided):
                     if(self.params.verbose):
-                        print("terminated act  for agent",
+                        print("terminated act for agent",
                               self.get_name(), "at t =", self.time)
                     # save memory by deleting control pipeline (very memory intensive)
                     del(self.planner)
+
         # NOTE: can use the following if want to update further tracked variables, but sometimes
         # this is buggy when the action is not fully completed, thus this should be a TODO: fix
         # else:
@@ -446,7 +458,7 @@ class Agent(object):
         collision_idxs = collisions[:, 1]
         if tf.size(collision_idxs).numpy() != 0:
             time_idx = collision_idxs[0]
-            self.collided = True
+            self.collision_point_k = self.vehicle_trajectory.k
         else:
             time_idx = tf.constant(np.inf)
         return time_idx

@@ -27,6 +27,7 @@ class RoboAgent(Agent):
         self.current_state = None
         super().__init__(start_configs.get_start_config(),
                          start_configs.get_goal_config(), name)
+        self.radius = self.params.radius
 
     # Getters for the robot class
     def get_name(self):
@@ -72,7 +73,7 @@ class RoboAgent(Agent):
             self._enforce_episode_termination_conditions()
             # NOTE: enforce_episode_terminator updates the self.end_episode variable
             if(self.end_episode):
-                self.collided = True
+                self.has_collided = True
                 self.power_off()
 
     def execute(self, command_indx):

@@ -205,7 +205,7 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
     return rgb_image_1mk3, depth_image_1mk1
 
 
-def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator):
+def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center_offset=np.array([0., 0.])):
     """"world_df" is a set of trajectories organized as a pandas dataframe. 
     Each row is a pedestrian at a given frame (aka time point). 
     The data was taken at 25 fps so between frames is 1/25th of a second. """
@@ -233,10 +233,10 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator):
         record = []  # NOTE: this has no instance of angles, so i'm assuming i can generate those
         # generate a list of lists of positions (only x)
         for x in ped_i['x']:
-            record.append([x + 8.])
+            record.append([x + center_offset[0]])
         # append y to the list of positions
         for j, y in enumerate(ped_i['y']):
-            record[j].append(y + 8.)
+            record[j].append(y + center_offset[1])
         # append vector angles for all the agents
         for j, pos_2 in enumerate(record):
             if(j > 0):
@@ -347,7 +347,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     print("Gathering prerecorded agents from", starting_prerec,
           "to", starting_prerec + num_prerecorded)
-    generate_prerecorded_humans(starting_prerec, num_prerecorded, p, simulator)
+    generate_prerecorded_humans(
+        starting_prerec, num_prerecorded, p, simulator, center_offset=room_center[:2])
 
     """
     Generate and add a single human with a constant start/end config on every run 
@@ -407,4 +408,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(3, 20, starting_prerec=0)
+    test_socnav(0, 5, starting_prerec=5)

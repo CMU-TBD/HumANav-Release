@@ -8,7 +8,6 @@ NOTE: they are all READ-ONLY (only getters)
 """
 
 
-
 class AgentState():
     def __init__(self, a, deepcpy=False):
         self.name = a.get_name()
@@ -18,19 +17,29 @@ class AgentState():
         self.vehicle_trajectory = a.get_trajectory(deepcpy=deepcpy)
         self.collided = a.get_collided()
         self.end_acting = a.end_acting
+        self.radius = a.get_radius()
 
     def get_name(self):
         return self.name
+
     def get_current_config(self):
         return self.current_config
+
     def get_start_config(self):
         return self.start_config
+
     def get_goal_config(self):
         return self.goal_config
+
     def get_trajectory(self):
         return self.vehicle_trajectory
+
     def get_collided(self):
         return self.collided
+
+    def get_radius(self):
+        return self.radius
+
 
 class HumanState(AgentState):
     def __init__(self, human, deepcpy=False):
@@ -38,8 +47,10 @@ class HumanState(AgentState):
         self.appearance = human.get_appearance()
         # Initialize the agent state class
         super().__init__(human, deepcpy=deepcpy)
+
     def get_appearance(self):
         return self.appearance
+
 
 class SimState():
     def __init__(self, environment, agents, prerecs, robots, sim_time, wall_time):
@@ -67,7 +78,6 @@ class SimState():
 
     def get_sim_t(self):
         return self.sim_t
-    
+
     def get_wall_t(self):
         return self.wall_t
-
