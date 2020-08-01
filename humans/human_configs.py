@@ -53,42 +53,38 @@ class HumanConfigs():
 
     @staticmethod
     def generate_random_config(environment, dt=0.1, 
-                               center=np.array([0., 0., 0.]), 
                                max_vel=0.6, radius=5.):
-        pos_3 = HumanConfigs.generate_random_pos_in_environment(center, environment, radius)
+        pos_3 = HumanConfigs.generate_random_pos_in_environment(environment, radius)
         return HumanConfigs.generate_config_from_pos_3(pos_3, dt=dt, speed=max_vel)
 
     @staticmethod
     def generate_random_human_config_from_start(start_config, 
-                                                environment, 
-                                                center=np.array([0, 0, 0])):
+                                                environment):
         """
         Generate a human with a random goal config given a known start
         config. The generated start config will be near center by a threshold
         """
-        goal_config = HumanConfigs.generate_random_config(environment, center=center)
+        goal_config = HumanConfigs.generate_random_config(environment)
         return HumanConfigs.generate_human_config(start_config, goal_config)
 
     @staticmethod
     def generate_random_human_config_with_goal(goal_config, 
-                                               environment, 
-                                               center=np.array([0, 0, 0])):
+                                               environment):
         """
         Generate a human with a random start config given a known goal
         config. The generated start config will be near center by a threshold
         """
-        start_config = HumanConfigs.generate_random_config(environment, center=center)
+        start_config = HumanConfigs.generate_random_config(environment)
         return HumanConfigs.generate_human_config(start_config, goal_config)
 
     @staticmethod
-    def generate_random_human_config(environment, 
-                                     center=np.array([0, 0, 0]), radius=5.):
+    def generate_random_human_config(environment, radius=5.):
         """
         Generate a random human config (both start and goal configs) from
         the given environment
         """
-        start_config = HumanConfigs.generate_random_config(environment, center=center, radius=radius)
-        goal_config = HumanConfigs.generate_random_config(environment, center=center, radius=radius)
+        start_config = HumanConfigs.generate_random_config(environment, radius=radius)
+        goal_config = HumanConfigs.generate_random_config(environment, radius=radius)
         return HumanConfigs.generate_human_config(start_config, goal_config)
 
     # For generating positional arguments in an environment
@@ -137,7 +133,7 @@ class HumanConfigs():
         return True
 
     @staticmethod
-    def generate_random_pos_in_environment(center, environment, radius=5):
+    def generate_random_pos_in_environment(environment, radius=5):
         """
         Generate a random position (x : meters, y : meters, theta : radians) 
         and near the 'center' with a nearby valid goal position. 
@@ -149,7 +145,7 @@ class HumanConfigs():
         of precision, it is best to use the dx_m provided in examples.py
         """
         map_scale = environment["map_scale"]
-
+        center = environment["room_center"]
         # Combine the occupancy information from the static map
         # and the human
         if len(environment["traversibles"]) > 1:

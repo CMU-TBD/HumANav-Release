@@ -41,13 +41,12 @@ class Human(Agent):
 
     @staticmethod
     def generate_human_with_appearance(appearance,
-                                       environment,
-                                       center=np.array([0., 0., 0.])):
+                                       environment):
         """
         Sample a new human with a known appearance at a random 
         config with a random goal config.
         """
-        configs = HumanConfigs.generate_random_human_config( HumanConfigs, environment, center)
+        configs = HumanConfigs.generate_random_human_config( HumanConfigs, environment)
         return Human.generate_human(appearance, configs)
 
     @staticmethod
@@ -64,7 +63,6 @@ class Human(Agent):
 
     @staticmethod
     def generate_random_human_from_environment(environment,
-                                               center=np.array([0., 0., 0.]),
                                                radius=5.,
                                                generate_appearance=False):
         """
@@ -75,6 +73,5 @@ class Human(Agent):
         if generate_appearance:
             appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
         configs = HumanConfigs.generate_random_human_config(environment,
-                                                            center,
                                                             radius=radius)
         return Human.generate_human(appearance, configs)

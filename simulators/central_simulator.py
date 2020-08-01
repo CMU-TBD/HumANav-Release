@@ -156,16 +156,14 @@ class CentralSimulator(SimulatorHelper):
         (timeout, collision, success) """
         num_agents = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
-        
         r_t = self.init_robot_thread()
         # continue to spawn the simulation with an established (independent) connection
-
         # keep track of wall-time in the simulator
         start_time = time.clock()
         # save initial state before the simulator is spawned
         self.t = 0
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        self.delta_t = 3*self.params.dt 
+        self.delta_t = self.params.dt 
         # TODO: make all agents, robots, and prerecs be internal threads in THIS update 
         while self.exists_running_agent() or self.exists_running_prerec():
             # update "wall clock" time
@@ -415,6 +413,8 @@ class CentralSimulator(SimulatorHelper):
                 ax.plot(r_pos_3[0], r_pos_3[1], color, markersize=10, label='Robot')
             else:
                 ax.plot(r_pos_3[0], r_pos_3[1], color, markersize=10)
+            # TODO: use agent radius instead of hardcode
+            ax.plot(r_pos_3[0], r_pos_3[1], color, alpha=0.2, markersize=25)
             if np.array_equal(camera_pos_13, r_pos_3):
                 # this is the "camera" robot (add quiver) 
                 ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
@@ -481,10 +481,11 @@ class CentralSimulator(SimulatorHelper):
         if(plot_quiver):
             ax.text(0.5*(start[0] + end[0]) - 0.2, start[1] + 0.5, "1m", fontsize=14,verticalalignment='top')
 
-    def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
+    def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment,
                     camera_pos_13, agents, prerecs, robots, sim_time, wall_time, filename, img_dir):
 
         map_scale = environment["map_scale"]
+        room_center = environment["room_center"]
         # Obstacles/building traversible
         traversible = environment["traversibles"][0]
         human_traversible = None
@@ -506,7 +507,7 @@ class CentralSimulator(SimulatorHelper):
         fig = plt.figure(figsize=(num_frames * img_size, img_size))
 
         # Plot the 5x5 meter occupancy grid centered around the camera
-        zoom = 5.5  # zoom in by a constant amount
+        zoom = 8.5  # zoom out in by a constant amount
         ax = fig.add_subplot(1, num_frames, 1)
         ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
         ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
@@ -581,9 +582,8 @@ class CentralSimulator(SimulatorHelper):
         """
         takes screenshot of a specific state of the world
         """
-        # TODO: find a way to plot something in teh openGL 3D human view representing the robots
+        # TODO: find a way to plot something in the openGL 3D human view representing the robots
         # as right now they are invisible in all but the topview
-        room_center = np.array([12., 17., 0.]) # to focus on in the zoomed image
         for i, r in enumerate(state.get_robots().values()):
             camera_pos_13 = r.get_current_config().to_3D_numpy()
             rgb_image_1mk3 = None
@@ -608,7 +608,7 @@ class CentralSimulator(SimulatorHelper):
             
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1, 
-                            state.get_environment(), room_center, camera_pos_13, 
+                            state.get_environment(), camera_pos_13, 
                             state.get_agents(), state.get_prerecs(), state.get_robots(), 
                             state.get_sim_t(), state.get_wall_t(), "rob" + str(i) + filename, i)
         # Delete state to save memory after frames are generated

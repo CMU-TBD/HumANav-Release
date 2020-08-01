@@ -51,14 +51,12 @@ class RoboAgent(Agent):
 
     @staticmethod
     def generate_random_robot_from_environment(environment,
-                                               center=np.array([0., 0., 0.]),
                                                radius=5.):
         """
         Sample a new robot without knowing any configs or appearance fields
         NOTE: needs environment to produce valid configs
         """
         configs = HumanConfigs.generate_random_human_config(environment,
-                                                            center,
                                                             radius=radius)
         return RoboAgent.generate_robot(configs)
 

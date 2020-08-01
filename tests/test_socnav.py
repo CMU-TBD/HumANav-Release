@@ -225,10 +225,10 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator):
         record = [] # NOTE: this has no instance of angles, so i'm assuming i can generate those
         # generate a list of lists of positions (only x)
         for x in ped_i['x']: 
-            record.append([x + 5.])
+            record.append([x + 8.])
         # append y to the list of positions
         for j, y in enumerate(ped_i['y']):
-            record[j].append(y + 14.)
+            record[j].append(y + 8.)
         # append vector angles for all the agents
         for j, pos_2 in enumerate(record):
             if(j > 0):
@@ -280,7 +280,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
     camera_pos_13 = np.array([
-        [9., 22., -np.pi/4]
+        [12., 15., -np.pi/4]
     ])
 
     # Add surrounding boundary dots to camer's so generated humans won't interfere
@@ -296,11 +296,15 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     # Creating list of to-be humans that will partake in the scene
     human_list = []
 
+    # Generate the ~center~ of area3 when scaled up 2x
+    room_center = np.array([14, 14., 0.])
     # Create default environment which is a dictionary
     # containing ["map_scale", "traversibles"]
     # which is a constant and list of traversibles respectively
+
     environment = {}
     environment["map_scale"] = dx_m
+    environment["room_center"] = room_center
     # obstacle traversible / human traversible
     if p.render_3D:
         environment["traversibles"] = [traversible, human_traversible]
@@ -319,11 +323,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     """
     Generate the humans and run the simulation on every human
     """
-    # Generate the ~center~ of area3 when scaled up 50%
-    room_center = np.array([12., 17., 0.])
     robot_agent = RoboAgent.generate_random_robot_from_environment(
                                                                 environment, 
-                                                                room_center, 
                                                                 radius=5
                                                                 )
     simulator.add_agent(robot_agent)
@@ -338,8 +339,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     """
     Generate and add a single human with a constant start/end config on every run 
     """
-    known_start = HumanConfigs.generate_config_from_pos_3(np.array([9., 20., 0.]))
-    known_end = HumanConfigs.generate_config_from_pos_3(np.array([13., 15., 0.]))
+    known_start = HumanConfigs.generate_config_from_pos_3(np.array([9., 18., 0.]))
+    known_end = HumanConfigs.generate_config_from_pos_3(np.array([13., 10., 0.]))
     known_init_configs = HumanConfigs(known_start, known_end)
     const_human = Human.generate_human_with_configs(known_init_configs)
     simulator.add_agent(const_human)
@@ -350,7 +351,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     for i in range(num_generated_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment( 
-            environment, room_center, 
+            environment, 
             generate_appearance=p.render_3D, 
             radius=5
         )
@@ -388,4 +389,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
 
 
 if __name__ == '__main__':
-    test_socnav(3, 5, starting_prerec=0)  # run basic room test with variable # of human
+    test_socnav(3, 20, starting_prerec=0)  # run basic room test with variable # of human
