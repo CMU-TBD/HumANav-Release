@@ -1,19 +1,21 @@
 import matplotlib as mpl
-mpl.use('Agg') # for rendering without a display
+mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
-import os, sys, math
+import os
+import sys
+import math
 from dotmap import DotMap
 from random import seed, random, randint
 import pandas as pd
-import warnings  
-with warnings.catch_warnings():  
-    warnings.filterwarnings("ignore",category=FutureWarning)
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=FutureWarning)
     import tensorflow as tf
     from tensorflow import keras
     from tensorflow.keras.preprocessing.text import Tokenizer
     tf.enable_eager_execution()
-# print("Suppressed Numpy Incompatability Warnings")  
+# print("Suppressed Numpy Incompatability Warnings")
 # import tensorflow as tf
 # Humanav
 from humanav import sbpd
@@ -32,6 +34,7 @@ from params.simulator.sbpd_simulator_params import create_params as create_sim_p
 from params.renderer_params import create_params as create_base_params
 # Other
 from utils.utils import touch, print_colors
+
 
 def create_params():
     p = create_base_params()
@@ -58,7 +61,8 @@ def create_params():
 
     return p
 
-def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13, 
+
+def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
                  humans, plot_quiver=False):
     ax.imshow(traversible, extent=extent, cmap='gray',
               vmin=-.5, vmax=1.5, origin='lower')
@@ -72,7 +76,7 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
             for x in range(human_traversible.shape[0]):
                 alphas[x][y] = not(human_traversible[x][y])
         ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
-                vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
+                  vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
         alphas = np.all(np.invert(human_traversible))
 
     # Plot the camera
@@ -84,19 +88,22 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
     # Plot the humans (added support for multiple humans) and their trajectories
     for i, human in enumerate(humans):
         human_pos_2 = human.get_current_config().position_nk2().numpy()[0][0]
-        human_heading = (human.get_current_config().heading_nk1().numpy())[0][0]
+        human_heading = (
+            human.get_current_config().heading_nk1().numpy())[0][0]
         human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
         goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
-        color = 'go' # humand are green and solid unless collided
+        color = 'go'  # humand are green and solid unless collided
         trajectory_color = "green"
         if(human.collided):
-            color='ro' # collided humans are drawn red
+            color = 'ro'  # collided humans are drawn red
             trajectory_color = "red"
         human.get_trajectory().render(ax, freq=1, color=trajectory_color, plot_quiver=False)
         if(i == 0):
             # Only add label on the first humans
-            ax.plot(human_pos_2[0], human_pos_2[1], color, markersize=10, label='Human')
-            ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10, label='Goal')
+            ax.plot(human_pos_2[0], human_pos_2[1],
+                    color, markersize=10, label='Human')
+            ax.plot(human_goal_2[0], human_goal_2[1],
+                    'go', markersize=10, label='Goal')
         else:
             ax.plot(human_pos_2[0], human_pos_2[1], color, markersize=10)
             ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10)
@@ -184,7 +191,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
     # Convert from real world units to grid world units
-    camera_grid_world_pos_12 = camera_pos_13[:, :2]/dx_m
+    camera_grid_world_pos_12 = camera_pos_13[:, :2] / dx_m
 
     # Render RGB and Depth Images. The shape of the resulting
     # image is (1 (batch), m (width), k (height), c (number channels))
@@ -192,39 +199,40 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
         camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
 
     depth_image_1mk1, _, _ = r._get_depth_image(
-        camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05, 
+        camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05,
         map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
 
     return rgb_image_1mk3, depth_image_1mk1
+
 
 def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator):
     """"world_df" is a set of trajectories organized as a pandas dataframe. 
     Each row is a pedestrian at a given frame (aka time point). 
     The data was taken at 25 fps so between frames is 1/25th of a second. """
     datafile = os.path.join(p.humanav_dir, "tests/world_coordinate_inter.csv")
-    world_df  = pd.read_csv(datafile, header=None).T
+    world_df = pd.read_csv(datafile, header=None).T
     world_df.columns = ['frame', 'ped', 'y', 'x']
     world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
-    start_frame = world_df['frame'][0] # default start (of data)
+    start_frame = world_df['frame'][0]  # default start (of data)
     max_peds = max(np.unique(world_df.ped))
     for i in range(num_pedestrians):
         # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
         ped_id = i + start_ped + 1
-        if (ped_id >= max_peds): # need data to be within the bounds 
-            print(print_colors()["red"], "Requested Prerec agent index out of bounds:", 
+        if (ped_id >= max_peds):  # need data to be within the bounds
+            print(print_colors()["red"], "Requested Prerec agent index out of bounds:",
                   ped_id, print_colors()["reset"])
         if(ped_id not in np.unique(world_df.ped)):
             continue
-        ped_i = world_df[world_df.ped==ped_id]
+        ped_i = world_df[world_df.ped == ped_id]
         times = []
         for j, f in enumerate(ped_i['frame']):
             if(i == 0 and j == 0):
-                start_frame = f # update start frame to be representative of "first" pedestrian
+                start_frame = f  # update start frame to be representative of "first" pedestrian
             relative_time = (f - start_frame) * (1 / 25.)
             times.append(relative_time)
-        record = [] # NOTE: this has no instance of angles, so i'm assuming i can generate those
+        record = []  # NOTE: this has no instance of angles, so i'm assuming i can generate those
         # generate a list of lists of positions (only x)
-        for x in ped_i['x']: 
+        for x in ped_i['x']:
             record.append([x + 8.])
         # append y to the list of positions
         for j, y in enumerate(ped_i['y']):
@@ -232,29 +240,33 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator):
         # append vector angles for all the agents
         for j, pos_2 in enumerate(record):
             if(j > 0):
-                last_pos_2 = record[j-1]
-                theta = np.arctan2(pos_2[1] - last_pos_2[1], pos_2[0] - last_pos_2[0])
-                record[j-1].append(theta)
+                last_pos_2 = record[j - 1]
+                theta = np.arctan2(
+                    pos_2[1] - last_pos_2[1], pos_2[0] - last_pos_2[0])
+                record[j - 1].append(theta)
                 if(j == len(record) - 1):
-                    record[j].append(theta) # last element gets last angle
+                    record[j].append(theta)  # last element gets last angle
         # append linear speed to the list of variables
         for j, pos_2 in enumerate(record):
             if(j > 0):
-                last_pos_2 = record[j-1]
+                last_pos_2 = record[j - 1]
                 # calculating euclidean dist / delta_t
-                delta_t = (times[j] - times[j-1])
-                speed = np.sqrt((pos_2[1] - last_pos_2[1])**2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
-                record[j].append(speed) # last element gets last angle
+                delta_t = (times[j] - times[j - 1])
+                speed = np.sqrt((pos_2[1] - last_pos_2[1]) **
+                                2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
+                record[j].append(speed)  # last element gets last angle
             else:
-                record[0].append(0) # initial speed is 0
-        for j, t in enumerate(times): # lastly, append t to the list
+                record[0].append(0)  # initial speed is 0
+        for j, t in enumerate(times):  # lastly, append t to the list
             record[j].append(t)
-        simulator.add_agent(PrerecordedHuman(record, generate_appearance=p.render_3D))
-        print("Generated Prerecorded Humans:", i+1, "\r", end="")
+        simulator.add_agent(PrerecordedHuman(
+            record, generate_appearance=p.render_3D))
+        print("Generated Prerecorded Humans:", i + 1, "\r", end="")
     if(num_pedestrians > 0):
         print("\n")
 
-def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
+
+def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     Code for loading a random human into the environment
     and rendering topview, rgb, and depth images.
@@ -262,11 +274,11 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     p = create_params()  # used to instantiate the camera and its parameters
     # TODO: can optimize HumANavRendererMulti renderer when not rendering humans
     # get the renderer from the camera p
-    r = HumANavRendererMulti.get_renderer(p, deepcpy = False)
+    r = HumANavRendererMulti.get_renderer(p, deepcpy=False)
     # obtain "resolution and traversible of building"
     dx_cm, traversible = r.get_config()
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-    dx_m = dx_cm/100.
+    dx_m = dx_cm / 100.
     if(p.render_3D):
         # Get the surreal dataset for human generation
         surreal_data = r.d
@@ -280,7 +292,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
     camera_pos_13 = np.array([
-        [12., 15., -np.pi/4]
+        [12., 15., -np.pi / 4]
     ])
 
     # Add surrounding boundary dots to camer's so generated humans won't interfere
@@ -317,30 +329,33 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
 
     # Create planner parameters
     # planner_params = create_planner_params()
-    sim_params = create_sim_params(render_3D = p.render_3D)
+    sim_params = create_sim_params(render_3D=p.render_3D)
     simulator = CentralSimulator(sim_params, environment, renderer=r)
 
     """
     Generate the humans and run the simulation on every human
     """
     robot_agent = RoboAgent.generate_random_robot_from_environment(
-                                                                environment, 
-                                                                radius=5
-                                                                )
+        environment,
+        radius=5
+    )
     simulator.add_agent(robot_agent)
     # simulator.add_agent(robot_agent2) # can add arbitrary agents
 
     """
     Add the prerecorded humans to the simulator
     """
-    print("Gathering prerecorded agents from", starting_prerec, "to", starting_prerec + num_prerecorded)
+    print("Gathering prerecorded agents from", starting_prerec,
+          "to", starting_prerec + num_prerecorded)
     generate_prerecorded_humans(starting_prerec, num_prerecorded, p, simulator)
 
     """
     Generate and add a single human with a constant start/end config on every run 
     """
-    known_start = HumanConfigs.generate_config_from_pos_3(np.array([9., 18., 0.]))
-    known_end = HumanConfigs.generate_config_from_pos_3(np.array([13., 10., 0.]))
+    known_start = HumanConfigs.generate_config_from_pos_3(
+        np.array([9., 18., 0.]))
+    known_end = HumanConfigs.generate_config_from_pos_3(
+        np.array([13., 10., 0.]))
     known_init_configs = HumanConfigs(known_start, known_end)
     const_human = Human.generate_human_with_configs(known_init_configs)
     simulator.add_agent(const_human)
@@ -350,9 +365,9 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     """
     for i in range(num_generated_humans):
         # Generates a random human from the environment
-        new_human_i = Human.generate_random_human_from_environment( 
-            environment, 
-            generate_appearance=p.render_3D, 
+        new_human_i = Human.generate_random_human_from_environment(
+            environment,
+            generate_appearance=p.render_3D,
             radius=5
         )
         # Or specify a human's initial configs with a HumanConfig instance
@@ -363,12 +378,13 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
         # update human traversible
         if p.render_3D:
             r.add_human(new_human_i)
-            environment["traversibles"] = np.array([traversible, r.get_human_traversible()])  
+            environment["traversibles"] = np.array(
+                [traversible, r.get_human_traversible()])
         else:
-            environment["traversibles"] = np.array([traversible]) 
+            environment["traversibles"] = np.array([traversible])
         # Input human fields into simulator
         simulator.add_agent(new_human_i)
-        print("Generated Random Humans:", i+1, "\r", end="")
+        print("Generated Random Humans:", i + 1, "\r", end="")
     print("\n")
     # run simulation
     simulator.simulate()
@@ -376,17 +392,19 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec = 0):
     for i in range(num_cameras):
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
-        if p.render_3D: # only when rendering with opengl
+        if p.render_3D:  # only when rendering with opengl
             rgb_image_1mk3, depth_image_1mk1 = \
-                render_rgb_and_depth(r, np.array([camera_pos_13[i]]), dx_m, human_visible=True)
+                render_rgb_and_depth(r, np.array(
+                    [camera_pos_13[i]]), dx_m, human_visible=True)
         # Plot the rendered images
         plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
                     camera_pos_13[i], human_list, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
-    if p.render_3D: # only when rendering with opengl
+    if p.render_3D:  # only when rendering with opengl
         r.remove_all_humans()
 
 
 if __name__ == '__main__':
-    test_socnav(3, 20, starting_prerec=0)  # run basic room test with variable # of human
+    # run basic room test with variable # of human
+    test_socnav(3, 20, starting_prerec=0)

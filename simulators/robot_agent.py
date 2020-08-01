@@ -4,24 +4,29 @@ from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig
 from params.robot_params import create_params
 import numpy as np
-import socket, time, threading, sys
+import socket
+import time
+import threading
+import sys
+
 
 class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
         self.commands = []
         self.running = False
-        self.freq = 100. # update frequency
+        self.freq = 100.  # update frequency
         self.params = create_params()
         # sockets for communication
         self.joystick_receiver_socket = None
         self.joystick_sender_socket = None
         self.host = socket.gethostname()
-        self.port_recv = self.params.port # port for recieving commands from the joystick
-        self.port_send = self.port_recv+1 # port for sending commands to the joystick
+        self.port_recv = self.params.port  # port for recieving commands from the joystick
+        self.port_send = self.port_recv + 1  # port for sending commands to the joystick
         # robot's knowledge of the current state of the world
         self.current_state = None
-        super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
+        super().__init__(start_configs.get_start_config(),
+                         start_configs.get_goal_config(), name)
 
     # Getters for the robot class
     def get_name(self):
@@ -62,7 +67,7 @@ class RoboAgent(Agent):
 
     def sense(self):
         """use this to take in a world state and compute obstacles (agents/walls) to affect the robot"""
-        # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states 
+        # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states
         if(not self.end_episode):
             self._enforce_episode_termination_conditions()
             # NOTE: enforce_episode_terminator updates the self.end_episode variable
@@ -76,16 +81,16 @@ class RoboAgent(Agent):
         command = np.array([[self.commands[command_indx]]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-        t_seg, actions_nk2 = self.apply_control_open_loop(current_config,   
-                                                        command, 1, sim_mode='ideal'
-                                                        )
+        t_seg, actions_nk2 = self.apply_control_open_loop(current_config,
+                                                          command, 1, sim_mode='ideal'
+                                                          )
         self.vehicle_trajectory.append_along_time_axis(t_seg)
         # act trajectory segment
         self.current_config = \
-                    SystemConfig.init_config_from_trajectory_time_index(
-                    t_seg,
-                    t=-1
-                )
+            SystemConfig.init_config_from_trajectory_time_index(
+                t_seg,
+                t=-1
+            )
         if (self.params.verbose):
             print(self.get_current_config().to_3D_numpy())
 
@@ -95,11 +100,11 @@ class RoboAgent(Agent):
         listen_thread.start()
         self.running = True
         self.last_command = None
-        num_executed = 0 # keeps track of the latest command that is to be executed
+        num_executed = 0  # keeps track of the latest command that is to be executed
         while(self.running):
             # only execute the most recent commands
             if(num_executed >= len(self.commands)):
-                time.sleep(1./self.freq) 
+                time.sleep(1. / self.freq)
                 # NOTE: send a command to the joystick letting it know to send another command
             else:
                 # using a loop to carry through the backlock of commands over time
@@ -110,16 +115,16 @@ class RoboAgent(Agent):
                     if(self.get_trajectory().k != self.get_trajectory().position_nk2().shape[1]):
                         # TODO: fix this uncommonly-occuring nonfatal bug
                         print("ERROR: robot_trajectory dimens mismatch")
-                    time.sleep(1./self.freq)
+                    time.sleep(1. / self.freq)
             # notify the joystick that the robot can take another input
             self.send_to_joystick(True)
         # notify the joystick to stop sending commands to the robot
         self.send_to_joystick(False)
-        print("\nRobot powering off, recieved", len(self.commands),"commands")
+        print("\nRobot powering off, recieved", len(self.commands), "commands")
         self.power_off()
         listen_thread.join()
         sys.exit(0)
- 
+
     def power_off(self):
         if(self.running):
             # if the robot is already "off" do nothing
@@ -130,15 +135,17 @@ class RoboAgent(Agent):
 
     def send_to_joystick(self, message):
         # Create a TCP/IP socket
-        self.joystick_sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.joystick_sender_socket = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
         server_address = ((self.host, self.port_send))
         # print(self.host, self.port)
         try:
             self.joystick_sender_socket.connect(server_address)
-        except ConnectionRefusedError: # used to turn off the joystick
+        except ConnectionRefusedError:  # used to turn off the joystick
             self.joystick_running = False
-            print(print_colors()["red"], "Connection closed by joystick", print_colors()['reset'])
+            print(print_colors()[
+                  "red"], "Connection closed by joystick", print_colors()['reset'])
             exit(1)
         # Send data
         message = str(message)
@@ -147,7 +154,7 @@ class RoboAgent(Agent):
 
     def listen_to_joystick(self):
         self.joystick_receiver_socket.listen(10)
-        self.running = True # initialize listener
+        self.running = True  # initialize listener
         while(self.running):
             connection, client = self.joystick_receiver_socket.accept()
             while(True):
@@ -173,26 +180,31 @@ class RoboAgent(Agent):
 
     def establish_joystick_receiver_connection(self):
         """This is akin to a server connection (robot is server)"""
-        self.joystick_receiver_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.joystick_receiver_socket = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
         self.joystick_receiver_socket.bind((self.host, self.port_recv))
         # wait for a connection
         self.joystick_receiver_socket.listen(1)
         print("Waiting for Joystick connection")
         connection, client = self.joystick_receiver_socket.accept()
-        print(print_colors()["green"],"Robot---->Joystick connection established", print_colors()['reset'])
+        print(print_colors()[
+              "green"], "Robot---->Joystick connection established", print_colors()['reset'])
         return connection, client
 
     def establish_joystick_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
         # TODO: prior to simply connecting, wait for the joystick to send a "ready to connect" message
-        self.joystick_sender_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.joystick_sender_socket = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
         address = ((self.host, self.port_send))
         try:
             self.joystick_sender_socket.connect(address)
         except:
-            print(print_colors()["red"], "Unable to connect to joystick", print_colors()['reset'])
+            print(print_colors()[
+                  "red"], "Unable to connect to joystick", print_colors()['reset'])
             print("Make sure you have a joystick instance running")
             exit(1)
         assert(self.joystick_sender_socket is not None)
-        print(print_colors()["green"],"Joystick->Robot connection established", print_colors()['reset'])
+        print(print_colors()[
+              "green"], "Joystick->Robot connection established", print_colors()['reset'])
     """ END socket utils """

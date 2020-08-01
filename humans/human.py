@@ -2,16 +2,19 @@ from humans.human_appearance import HumanAppearance
 from humans.human_configs import HumanConfigs
 from utils.utils import print_colors, generate_name
 from simulators.agent import Agent
-import math, sys, os, pickle
+import math
+import sys
+import os
+import pickle
 import numpy as np
-
 
 
 class Human(Agent):
     def __init__(self, name, appearance, start_configs, trajectory=None):
         self.name = name
         self.appearance = appearance
-        super().__init__(start_configs.get_start_config(), start_configs.get_goal_config(), name)
+        super().__init__(start_configs.get_start_config(),
+                         start_configs.get_goal_config(), name)
 
     # Getters for the Human class
     # NOTE: most of the dynamics/configs implementation is in Agent.py
@@ -46,7 +49,8 @@ class Human(Agent):
         Sample a new human with a known appearance at a random 
         config with a random goal config.
         """
-        configs = HumanConfigs.generate_random_human_config( HumanConfigs, environment)
+        configs = HumanConfigs.generate_random_human_config(
+            HumanConfigs, environment)
         return Human.generate_human(appearance, configs)
 
     @staticmethod
@@ -56,7 +60,8 @@ class Human(Agent):
         appearance, if any of the configs are None they will be generated
         """
         if(generate_appearance):
-            appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
+            appearance = HumanAppearance.generate_random_human_appearance(
+                HumanAppearance)
         else:
             appearance = None
         return Human.generate_human(appearance, configs, verbose=verbose, name=name)
@@ -71,7 +76,8 @@ class Human(Agent):
         """
         appearance = None
         if generate_appearance:
-            appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)
+            appearance = HumanAppearance.generate_random_human_appearance(
+                HumanAppearance)
         configs = HumanConfigs.generate_random_human_config(environment,
                                                             radius=radius)
         return Human.generate_human(appearance, configs)

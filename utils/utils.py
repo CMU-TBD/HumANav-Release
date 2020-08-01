@@ -7,8 +7,10 @@ import dotmap
 import shutil
 from dotmap import DotMap
 from random import seed, random, randint
-import string, random
+import string
+import random
 import socket
+
 
 def tf_session_config():
     config = tf.ConfigProto()
@@ -22,7 +24,7 @@ def tf_session_config():
     tf_config = {'config': config,
                  'device_policy': device_policy}
     return tf_config
-    
+
 
 def ensure_odd(integer):
     if integer % 2 == 0:
@@ -33,7 +35,7 @@ def ensure_odd(integer):
 def render_angle_frequency(p):
     """Returns a render angle frequency
     that looks heuristically nice on plots."""
-    return int(p.episode_horizon/25)
+    return int(p.episode_horizon / 25)
 
 
 def log_dict_as_json(params, filename):
@@ -41,7 +43,8 @@ def log_dict_as_json(params, filename):
     with open(filename, 'w') as f:
         if isinstance(params, dotmap.DotMap):
             params = params.toDict()
-        param_dict_serializable = _to_json_serializable_dict(copy.deepcopy(params))
+        param_dict_serializable = _to_json_serializable_dict(
+            copy.deepcopy(params))
         json.dump(param_dict_serializable, f, indent=4, sort_keys=True)
 
 
@@ -65,6 +68,7 @@ def _to_json_serializable_dict(param_dict):
         param_dict[key] = _to_serializable_type(param_dict[key])
     return param_dict
 
+
 def touch(path):
     basedir = os.path.dirname(path)
     if not os.path.exists(basedir):
@@ -72,11 +76,13 @@ def touch(path):
     with open(path, 'a'):
         os.utime(path, None)
 
-def natural_sort(l): 
+
+def natural_sort(l):
     import re
-    convert = lambda text: int(text) if text.isdigit() else text.lower() 
-    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ] 
-    return sorted(l, key = alphanum_key)
+    def convert(text): return int(text) if text.isdigit() else text.lower()
+    def alphanum_key(key): return [convert(c)
+                                   for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
 
 
 def generate_name(max_chars):
@@ -84,6 +90,7 @@ def generate_name(max_chars):
         random.choice(string.ascii_letters + string.digits)
         for n in range(max_chars)
     ])
+
 
 def mkdir_if_missing(dirname):
     if not os.path.exists(dirname):
@@ -103,7 +110,7 @@ def check_dotmap_equality(d1, d2):
         d1_attr = getattr(d1, key)
         d2_attr = getattr(d2, key)
         if type(d1_attr) is DotMap:
-            equality[i] = check_dotmap_equality(d1_attr, d2_attr) 
+            equality[i] = check_dotmap_equality(d1_attr, d2_attr)
     return np.array(equality).all()
 
 
@@ -116,7 +123,7 @@ def subplot2(plt, Y_X, sz_y_sz_x=(10, 10), space_y_x=(0.1, 0.1), T=False):
     Y, X = Y_X
     sz_y, sz_x = sz_y_sz_x
     hspace, wspace = space_y_x
-    plt.rcParams['figure.figsize'] = (X*sz_x, Y*sz_y)
+    plt.rcParams['figure.figsize'] = (X * sz_x, Y * sz_y)
     fig, axes = plt.subplots(Y, X, squeeze=False)
     plt.subplots_adjust(wspace=wspace, hspace=hspace)
     if T:
@@ -124,6 +131,7 @@ def subplot2(plt, Y_X, sz_y_sz_x=(10, 10), space_y_x=(0.1, 0.1), T=False):
     else:
         axes_list = axes.ravel()[::-1].tolist()
     return fig, axes, axes_list
+
 
 def print_colors():
     # Create dictionary of common print colors

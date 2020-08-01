@@ -1,6 +1,9 @@
 import tensorflow as tf
 import numpy as np
-import sys, os, copy, time
+import sys
+import os
+import copy
+import time
 
 from objectives.objective_function import ObjectiveFunction
 from objectives.angle_distance import AngleDistance
@@ -12,8 +15,9 @@ from utils.fmm_map import FmmMap
 from utils.utils import print_colors, generate_name
 from planners.sampling_planner import SamplingPlanner
 
+
 class Agent(object):
-    def __init__(self, start, goal, name = None):
+    def __init__(self, start, goal, name=None):
         if name is None:
             self.name = generate_name(20)
         else:
@@ -24,8 +28,8 @@ class Agent(object):
         self.current_config = copy.deepcopy(start)
         self.planned_next_config = copy.deepcopy(self.current_config)
 
-        self.time = 0 # tie to track progress during an update
-        self.radius = 0.2 # meters
+        self.time = 0  # tie to track progress during an update
+        self.radius = 0.2  # meters
 
         # Dynamics and movement attributes
         self.fmm_map = None
@@ -35,7 +39,7 @@ class Agent(object):
         self.path_step = 0
         self.termination_cause = None
         # for collisions with other agents
-        self.collided = False 
+        self.collided = False
 
     # Getters for the Agent class
     def get_name(self):
@@ -85,12 +89,14 @@ class Agent(object):
             self.planner = self._init_planner()
             self.vehicle_data = self.planner.empty_data_dict()
         else:
-            self.planner = None 
+            self.planner = None
             self.vehicle_data = None
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         # Motion fields
-        self.max_v = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[1]
-        self.max_w = self.params.planner_params.control_pipeline_params.system_dynamics_params.w_bounds[1]
+        self.max_v = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[
+            1]
+        self.max_w = self.params.planner_params.control_pipeline_params.system_dynamics_params.w_bounds[
+            1]
 
     def update_final(self):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']
@@ -105,7 +111,7 @@ class Agent(object):
     def update_time(self, t):
         self.time = t
 
-    def update(self, t, t_step, sim_state = None):
+    def update(self, t, t_step, sim_state=None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         # with lock:
         self.update_time(t)
@@ -117,18 +123,18 @@ class Agent(object):
         # if(not self.end_episode and not self.end_acting):
             # tmp = time.clock()
         self.plan()
-            # delta = time.clock() - tmp
-            # print(delta, " ")
+        # delta = time.clock() - tmp
+        # print(delta, " ")
         # TODO: should use linear/angular speed to traverse the agent's paths, # v * t = d (all in meters)
         #       lin_speed = min(self.max_v, self.get_current_config().speed_nk1().numpy()[0][0][0])
         #       ang_speed = min(self.max_w, self.get_current_config().angular_speed_nk1().numpy()[0][0][0])
         #       norm_speed = max(lin_speed, abs(ang_speed)) # TODO: fix so that speeds can combine, not cancel
-        # NOTE: typically the current planner will have a large difference between lin/ang speed, thus 
+        # NOTE: typically the current planner will have a large difference between lin/ang speed, thus
         #       there are very few situations where both are at a high point
-        action_dt = int(np.floor(t_step / self.params.dt)) 
+        action_dt = int(np.floor(t_step / self.params.dt))
         # NOTE: instant_complete discards any animations and finishes the trajectory segment instantly
-        self.act(action_dt, instant_complete = False, world_state = sim_state, )
-        
+        self.act(action_dt, instant_complete=False, world_state=sim_state, )
+
     def plan(self):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
@@ -141,11 +147,13 @@ class Agent(object):
             self.planner = self._init_planner()
         if(not self.end_episode and not self.end_acting):
             if(self.params.verbose_printing):
-                print("planned next:", self.planned_next_config.position_nk2().numpy())
-            self.planner_data = self.planner.optimize(self.planned_next_config, self.goal_config)
+                print("planned next:",
+                      self.planned_next_config.position_nk2().numpy())
+            self.planner_data = self.planner.optimize(
+                self.planned_next_config, self.goal_config)
             traj_segment, trajectory_data, commands_1kf = self._process_planner_data()
             self.planned_next_config = \
-                SystemConfig.init_config_from_trajectory_time_index( 
+                SystemConfig.init_config_from_trajectory_time_index(
                     traj_segment,
                     t=-1
                 )
@@ -157,9 +165,9 @@ class Agent(object):
             self._enforce_episode_termination_conditions()
             if(self.end_episode or self.end_acting):
                 if(self.params.verbose):
-                    print("terminated plan for agent", self.get_name(), 
-                          "at t =", self.time, "k=", self.vehicle_trajectory.k, 
-                          "total time=", self.vehicle_trajectory.k*self.vehicle_trajectory.dt)
+                    print("terminated plan for agent", self.get_name(),
+                          "at t =", self.time, "k=", self.vehicle_trajectory.k,
+                          "total time=", self.vehicle_trajectory.k * self.vehicle_trajectory.dt)
 
     def dist_to_agent(self, other):
         self_pos = self.get_current_config().position_nk2()[0][0]
@@ -167,8 +175,8 @@ class Agent(object):
         diff_x = self_pos[0] - other_pos[0]
         diff_y = self_pos[1] - other_pos[1]
         return np.sqrt(diff_x**2 + diff_y**2)
-        
-    def act(self, action_dt, instant_complete = False, world_state = None):
+
+    def act(self, action_dt, instant_complete=False, world_state=None):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
         if(not self.end_acting):
@@ -191,17 +199,18 @@ class Agent(object):
                         if(a.get_name() is not self.get_name() and self.dist_to_agent(a) < 2 * self.radius):
                             self.collided = True
                             self.end_acting = True
-                # then update the current config 
+                # then update the current config
                 self.current_config = \
                     SystemConfig.init_config_from_trajectory_time_index(
-                        self.vehicle_trajectory, t = self.path_step)
+                        self.vehicle_trajectory, t=self.path_step)
                 # updating "next step" for agent path after traversing it
                 self.path_step += action_dt
                 if(self.path_step >= self.vehicle_trajectory.k or self.collided):
                     self.end_acting = True
                 if(self.end_acting or self.collided):
                     if(self.params.verbose):
-                        print("terminated act  for agent", self.get_name(), "at t =", self.time)
+                        print("terminated act  for agent",
+                              self.get_name(), "at t =", self.time)
                     # save memory by deleting control pipeline (very memory intensive)
                     del(self.planner)
         # NOTE: can use the following if want to update further tracked variables, but sometimes
@@ -220,7 +229,7 @@ class Agent(object):
             trajectory, commanded_actions_nkf = \
                 self.apply_control_open_loop(start_config,
                                              self.planner_data['optimal_control_nk2'],
-                                             T=self.params.control_horizon-1,
+                                             T=self.params.control_horizon - 1,
                                              sim_mode=self.system_dynamics.simulation_params.simulation_mode)
         # The 'plan' is LQR feedback control
         else:
@@ -239,7 +248,7 @@ class Agent(object):
                                                    self.planner_data['spline_trajectory'],
                                                    self.planner_data['k_nkf1'],
                                                    self.planner_data['K_nkfd'],
-                                                   T=self.params.control_horizon-1,
+                                                   T=self.params.control_horizon - 1,
                                                    sim_mode='realistic')
             else:
                 assert(False)
@@ -371,7 +380,7 @@ class Agent(object):
                         k=termination_time
                     )
                 commanded_actions_1kf = tf.concat(self.commanded_actions_nkf,
-                                                axis=1)[:, :termination_time]
+                                                  axis=1)[:, :termination_time]
 
                 # If all of the data was masked then
                 # the episode simulated is not valid
@@ -388,7 +397,7 @@ class Agent(object):
                     'commanded_actions_1kf': commanded_actions_1kf
                 }
             else:
-                episode_data = {}    
+                episode_data = {}
         else:
             end_episode = False
             episode_data = {}
@@ -423,7 +432,7 @@ class Agent(object):
             time_idx = tf.constant(np.inf)
         return time_idx
 
-    def _compute_time_idx_for_collision(self, use_current_config = None):
+    def _compute_time_idx_for_collision(self, use_current_config=None):
         """
         Compute and return the earliest time index of collision in vehicle
         trajectory. If there is no collision return infinity.
@@ -452,7 +461,7 @@ class Agent(object):
                 if use_euclidean:
                     diff_x = self.vehicle_trajectory.position_nk2()[0][-1][0]
                     - self.goal_config.position_nk2()[0][0][0]
-                    diff_y = self.vehicle_trajectory.position_nk2()[0][-1][1] 
+                    diff_y = self.vehicle_trajectory.position_nk2()[0][-1][1]
                     - self.goal_config.position_nk2()[0][0][1]
                     euclidean = np.sqrt(diff_x**2 + diff_y**2)
                 dist_to_goal_nk = objective.compute_dist_to_goal_nk(
@@ -465,7 +474,8 @@ class Agent(object):
         in vehicle trajectory. If there is no collision return infinity.
         """
         dist_to_goal_1k = self._dist_to_goal(use_euclidean=False)
-        successes = tf.where(tf.less(dist_to_goal_1k, self.params.goal_cutoff_dist))
+        successes = tf.where(
+            tf.less(dist_to_goal_1k, self.params.goal_cutoff_dist))
         success_idxs = successes[:, 1]
         if tf.size(success_idxs).numpy() != 0:
             time_idx = success_idxs[0]
@@ -481,10 +491,10 @@ class Agent(object):
         """
         x0_n1d, _ = self.system_dynamics.parse_trajectory(start_config)
         applied_actions = []
-        states = [x0_n1d*1.]
-        x_next_n1d = x0_n1d*1.
+        states = [x0_n1d * 1.]
+        x_next_n1d = x0_n1d * 1.
         for t in range(T):
-            u_n1f = control_nk2[:, t:t+1]
+            u_n1f = control_nk2[:, t:t + 1]
             x_next_n1d = self.system_dynamics.simulate(
                 x_next_n1d, u_n1f, mode=sim_mode)
 
@@ -497,7 +507,7 @@ class Agent(object):
                 # implement hardware.state_dx such that it reflects the current
                 # sensor reading of the robot's applied actions
                 applied_actions.append(
-                    np.array(self.system_dynamics.hardware.state_dx*1.)[None, None])
+                    np.array(self.system_dynamics.hardware.state_dx * 1.)[None, None])
             else:
                 assert(False)
 
@@ -525,12 +535,13 @@ class Agent(object):
             angle_dims = self.system_dynamics._angle_dims
             commanded_actions_nkf = []
             applied_actions = []
-            states = [x0_n1d*1.]
+            states = [x0_n1d * 1.]
             x_ref_nkd, u_ref_nkf = self.system_dynamics.parse_trajectory(
                 trajectory_ref)
-            x_next_n1d = x0_n1d*1.
+            x_next_n1d = x0_n1d * 1.
             for t in range(T):
-                x_ref_n1d, u_ref_n1f = x_ref_nkd[:, t:t+1], u_ref_nkf[:, t:t+1]
+                x_ref_n1d, u_ref_n1f = x_ref_nkd[:,
+                                                 t:t + 1], u_ref_nkf[:, t:t + 1]
                 error_t_n1d = x_next_n1d - x_ref_n1d
 
                 # TODO: Currently calling numpy() here as tfe.DEVICE_PLACEMENT_SILENT
@@ -538,8 +549,8 @@ class Agent(object):
                 # turning tensors into numpy arrays is a hack around this.
                 error_t_n1d = tf.concat([error_t_n1d[:, :, :angle_dims],
                                          angle_normalize(
-                                             error_t_n1d[:, :, angle_dims:angle_dims+1].numpy()),
-                                         error_t_n1d[:, :, angle_dims+1:]],
+                                             error_t_n1d[:, :, angle_dims:angle_dims + 1].numpy()),
+                                         error_t_n1d[:, :, angle_dims + 1:]],
                                         axis=2)
                 fdback_nf1 = tf.matmul(K_array_nTfd[:, t],
                                        tf.transpose(error_t_n1d, perm=[0, 2, 1]))
@@ -559,7 +570,7 @@ class Agent(object):
                     # implement hardware.state_dx such that it reflects the current
                     # sensor reading of the robot's applied actions
                     applied_actions.append(
-                        np.array(self.system_dynamics.hardware.state_dx*1.)[None, None])
+                        np.array(self.system_dynamics.hardware.state_dx * 1.)[None, None])
                 else:
                     assert(False)
 
