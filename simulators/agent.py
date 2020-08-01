@@ -12,7 +12,7 @@ from objectives.obstacle_avoidance import ObstacleAvoidance
 
 from trajectory.trajectory import SystemConfig, Trajectory
 from utils.fmm_map import FmmMap
-from utils.utils import print_colors, generate_name
+from utils.utils import print_colors, generate_name, euclidean_dist
 from planners.sampling_planner import SamplingPlanner
 
 
@@ -174,13 +174,6 @@ class Agent(object):
                           "at t =", self.time, "k=", self.vehicle_trajectory.k,
                           "total time=", self.vehicle_trajectory.k * self.vehicle_trajectory.dt)
 
-    def dist_to_agent(self, other):
-        self_pos = self.get_current_config().position_nk2()[0][0]
-        other_pos = other.get_current_config().position_nk2()[0][0]
-        diff_x = self_pos[0] - other_pos[0]
-        diff_y = self_pos[1] - other_pos[1]
-        return np.sqrt(diff_x**2 + diff_y**2)
-
     def act(self, action_dt, instant_complete=False, world_state=None):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
@@ -196,8 +189,11 @@ class Agent(object):
                 # Update through the path traversal incrementally
                 if(world_state is not None):
                     # first check for collisions with any other agents
+                    own_pos = self.get_current_config().position_nk2().numpy()
                     for a in world_state.get_agents().values():
-                        if(a.get_name() is not self.get_name() and self.dist_to_agent(a) < 2 * self.radius):
+                        othr_pos = a.get_current_config().position_nk2().numpy()
+                        if(a.get_name() is not self.get_name() and
+                                euclidean_dist(own_pos[0][0], othr_pos[0][0]) < self.get_radius() + a.get_radius()):
                             # instantly collide and stop updating
                             self.has_collided = True
                             self.collision_point_k = self.vehicle_trajectory.k  # this instant

@@ -1,4 +1,4 @@
-from utils.utils import print_colors, generate_name
+from utils.utils import print_colors, generate_name, euclidean_dist
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig
@@ -24,7 +24,7 @@ class RoboAgent(Agent):
         self.port_recv = self.params.port  # port for recieving commands from the joystick
         self.port_send = self.port_recv + 1  # port for sending commands to the joystick
         # robot's knowledge of the current state of the world
-        self.current_state = None
+        self.world_state = None
         super().__init__(start_configs.get_start_config(),
                          start_configs.get_goal_config(), name)
         self.radius = self.params.radius
@@ -34,8 +34,8 @@ class RoboAgent(Agent):
         return self.name
 
     # Setters for the robot class
-    def update_state(self, state):
-        self.current_state = state
+    def update_world(self, state):
+        self.world_state = state
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
@@ -70,9 +70,18 @@ class RoboAgent(Agent):
         """use this to take in a world state and compute obstacles (agents/walls) to affect the robot"""
         # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states
         if(not self.end_episode):
+            if(self.world_state is not None):
+                # check for collisions with other agents
+                own_pos = self.get_current_config().position_nk2().numpy()
+                for a in self.world_state.get_agents().values():
+                    othr_pos = a.get_current_config().position_nk2().numpy()
+                    if(euclidean_dist(own_pos[0][0], othr_pos[0][0]) < self.get_radius() + a.get_radius()):
+                        # instantly collide and stop updating
+                        self.has_collided = True
+                        self.end_acting = True
             self._enforce_episode_termination_conditions()
             # NOTE: enforce_episode_terminator updates the self.end_episode variable
-            if(self.end_episode):
+            if(self.end_episode or self.has_collided):
                 self.has_collided = True
                 self.power_off()
 

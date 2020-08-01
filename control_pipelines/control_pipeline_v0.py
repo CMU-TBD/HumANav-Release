@@ -35,7 +35,12 @@ class ControlPipelineV0(ControlPipelineBase):
             cls.pipeline = cls(params)
         else:
             assert(utils.check_dotmap_equality(cls.pipeline.params, params))
-        return copy.deepcopy(cls.pipeline)
+        # can deepcopy for true parallelism, but due to the GIL (since our agents are threaded)
+        # it would be better to simply use the same pipeline
+        if(cls.only_one_system):  # part of the base
+            return cls.pipeline
+        else:
+            return copy.deepcopy(cls.pipeline)
 
     def plan(self, start_config, goal_config=None):
         """Computes which velocity bin start_config belongs to and returns the corresponding waypoints, horizons,
@@ -93,7 +98,7 @@ class ControlPipelineV0(ControlPipelineBase):
         waypt_idx = self.helper.compute_closest_waypt_idx(
             goal_config, self.waypt_configs_world[idx])
         waypt_configs = self.waypt_configs_world[idx][waypt_idx]
-        horizons = self.horizons[idx][waypt_idx:waypt_idx+1]
+        horizons = self.horizons[idx][waypt_idx:waypt_idx + 1]
 
         self.system_dynamics.to_world_coordinates(start_config, self.lqr_trajectories[idx][waypt_idx],
                                                   self.trajectories_world[0], mode='assign')
@@ -105,8 +110,8 @@ class ControlPipelineV0(ControlPipelineBase):
             self.system_dynamics.to_world_coordinates(start_config, self.spline_trajectories[idx][waypt_idx],
                                                       self.spline_trajectories_world[0], mode='assign')
 
-        controllers = {'K_nkfd': self.K_nkfd[idx][waypt_idx:waypt_idx+1],
-                       'k_nkf1': self.k_nkf1[idx][waypt_idx:waypt_idx+1]}
+        controllers = {'K_nkfd': self.K_nkfd[idx][waypt_idx:waypt_idx + 1],
+                       'k_nkf1': self.k_nkf1[idx][waypt_idx:waypt_idx + 1]}
 
         if self.params.convert_K_to_world_coordinates:
             controllers['K_nkfd'] = \
@@ -244,7 +249,7 @@ class ControlPipelineV0(ControlPipelineBase):
         if self.params.verbose:
             N = self.params.waypoint_params.n
             for v0, start_config in zip(self.start_velocities, self.start_configs):
-                print('Velocity: {:.3f}, {:.3f}% of goals kept({:d}).'.format(v0, 100.*start_config.n/N,
+                print('Velocity: {:.3f}, {:.3f}% of goals kept({:d}).'.format(v0, 100. * start_config.n / N,
                                                                               start_config.n))
 
     def _ensure_world_coordinate_tensors_exist(self, goal_config=None):
@@ -315,10 +320,10 @@ class ControlPipelineV0(ControlPipelineBase):
                 lqr_bins = self._compute_bin_idx_for_start_velocities(
                     data_bin['lqr_trajectories'].speed_nk1()[:, 0, :])
                 percent_correct = 100. * \
-                    np.sum(lqr_bins.numpy() == i)/len(lqr_bins.numpy())
+                    np.sum(lqr_bins.numpy() == i) / len(lqr_bins.numpy())
                 percent_incorrect = 100. * \
-                    np.sum(lqr_bins.numpy() != i)/len(lqr_bins.numpy())
-                max_bin_error = np.max(np.abs(lqr_bins.numpy()-i))
+                    np.sum(lqr_bins.numpy() != i) / len(lqr_bins.numpy())
+                max_bin_error = np.max(np.abs(lqr_bins.numpy() - i))
                 print('{:.3f}% Correct Bin, {:.3f}% Incorrect Bin, Max {:d} bin(s) error'.format(
                     percent_correct, percent_incorrect, max_bin_error))
             self.helper.append_data_bin_to_pipeline_data(

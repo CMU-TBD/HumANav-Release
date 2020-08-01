@@ -94,7 +94,7 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
         goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
         color = 'go'  # humand are green and solid unless collided
         trajectory_color = "green"
-        if(human.collided):
+        if(human.get_collided()):
             color = 'ro'  # collided humans are drawn red
             trajectory_color = "red"
         human.get_trajectory().render(ax, freq=1, color=trajectory_color, plot_quiver=False)
@@ -348,7 +348,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     print("Gathering prerecorded agents from", starting_prerec,
           "to", starting_prerec + num_prerecorded)
     generate_prerecorded_humans(
-        starting_prerec, num_prerecorded, p, simulator, center_offset=room_center[:2])
+        starting_prerec, num_prerecorded, p, simulator, center_offset=np.array([8., 7.]))
 
     """
     Generate and add a single human with a constant start/end config on every run 
@@ -408,4 +408,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(0, 5, starting_prerec=5)
+    test_socnav(15, 5, starting_prerec=15)

@@ -69,6 +69,12 @@ def _to_json_serializable_dict(param_dict):
     return param_dict
 
 
+def euclidean_dist(p1, p2):
+    diff_x = p1[0] - p2[0]
+    diff_y = p1[1] - p2[1]
+    return np.sqrt(diff_x**2 + diff_y**2)
+
+
 def touch(path):
     basedir = os.path.dirname(path)
     if not os.path.exists(basedir):

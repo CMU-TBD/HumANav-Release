@@ -7,6 +7,7 @@ class ControlPipelineBase(object):
     """A parent class representing an abstract control pipeline. It defines the basic functions that a control pipeline
     should expose. A control pipeline is used for planning trajectories between start and waypoint/goal configs.
     """
+    only_one_system = None
 
     def __init__(self, params):
         self.params = params.pipeline.parse_params(params)
@@ -22,7 +23,14 @@ class ControlPipelineBase(object):
         # Parse the dependencies
         p.waypoint_params.grid.parse_params(p.waypoint_params)
         p.planning_horizon_s = p.spline_params.max_final_time
-        p.planning_horizon = int(np.ceil(p.planning_horizon_s / p.system_dynamics_params.dt))
+        p.planning_horizon = int(
+            np.ceil(p.planning_horizon_s / p.system_dynamics_params.dt))
+        # ensures that there will be at most one ControlPipeline generated at any time because they are
+        # very memory intensive, set to false to produce a separate control pipeline for each agent/planner
+        # which could theoretically allow for true parallelism, but is not as useful in our multithreaded model
+        # (due to the python GIL)
+        p.only_one_system = False
+        ControlPipelineBase.only_one_system = p.only_one_system
         return p
 
     @classmethod
@@ -46,8 +54,8 @@ class ControlPipelineBase(object):
         if self.does_pipeline_exist():
             self._load_control_pipeline(params=params)
         else:
-            assert(False,
-                   'Control pipeline does not exist! Generate the pipeline first.')
+            print('Control pipeline does not exist! Generate the pipeline first.')
+            exit(1)
 
     def _load_control_pipeline(self, params=None):
         """

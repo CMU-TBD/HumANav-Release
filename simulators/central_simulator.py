@@ -119,6 +119,11 @@ class CentralSimulator(SimulatorHelper):
               "No robot in simulator", print_colors()['reset'])
         return None
 
+    def update_robot(self, world_state):
+        if(self.robot is not None):
+            self.robot.update_world(world_state)
+        return
+
     def decommission_robot(self, thread):
         if(thread is not None):
             assert(self.robot is not None)
@@ -175,7 +180,7 @@ class CentralSimulator(SimulatorHelper):
         # save initial state before the simulator is spawned
         self.t = 0
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        self.delta_t = 4 * self.params.dt
+        self.delta_t = self.params.dt
         if(self.delta_t < self.params.dt):
             print(print_colors()["red"],
                   "Simulation dt is too small either lower the agents' dt's",
@@ -187,6 +192,7 @@ class CentralSimulator(SimulatorHelper):
             # Takes screenshot of the simulation state as long as the update is still going
             # saves to self.states and returns most recent
             current_state = self.save_state(self.t, wall_clock)
+            self.update_robot(current_state)
             # Complete thread operations
             agent_threads = self.init_agent_threads(
                 self.t, self.delta_t, current_state)
@@ -219,9 +225,6 @@ class CentralSimulator(SimulatorHelper):
         wall_clock = time.clock() - start_time
 
         print("\nSimulation completed in", wall_clock, "seconds")
-
-        # TODO: make SURE to clean the simulation of all "leaks" since these are
-        # MULTIPLIED for multiple processes
 
         # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames()
