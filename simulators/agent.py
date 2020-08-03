@@ -40,29 +40,31 @@ class Agent(object):
         self.termination_cause = None
         # for collisions with other agents
         self.has_collided = False
+        # NOTE: JSON serialization is done within sim_state.py
 
     # Getters for the Agent class
     def get_name(self):
         return self.name
 
-    def get_start_config(self):
-        return self.start_config
+    def get_config(self, config, deepcpy):
+        if(deepcpy):
+            return SystemConfig.copy(config)
+        return config
+
+    def get_start_config(self, deepcpy=False):
+        return self.get_config(self.start_config, deepcpy)
 
     def set_start_config(self, start):
         self.start_config = start
 
-    def get_goal_config(self):
-        return self.goal_config
+    def get_goal_config(self, deepcpy=False):
+        return self.get_config(self.goal_config, deepcpy)
 
     def set_goal_config(self, goal):
         self.goal_config = goal
 
     def get_current_config(self, deepcpy=False):
-        if(deepcpy):
-            # returned deep copy
-            return SystemConfig.copy(self.current_config)
-        else:
-            return self.current_config
+        return self.get_config(self.current_config, deepcpy)
 
     def set_current_config(self, current):
         self.current_config = current
