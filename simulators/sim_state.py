@@ -93,22 +93,27 @@ class SimState():
         self.sim_t = sim_time
         self.wall_t = wall_time
 
-    def convert_to_JSON(self, filename):
-        environment_json = SimState.to_json_dict(
-            copy.deepcopy(self.environment))
-        agents_json = SimState.to_json_dict(self.agents)
-        prerecs_json = SimState.to_json_dict(self.prerecs)
-        robots_json = SimState.to_json_dict(self.robots)
-        sim_t_json = copy.deepcopy(self.sim_t)
-        wall_t_json = copy.deepcopy(self.wall_t)
-        # building the json type
+    def convert_to_json(self):
         json_type = ""
-        json_type += json.dumps(environment_json, indent=4)
-        json_type += json.dumps(agents_json, indent=4)
-        json_type += json.dumps(prerecs_json, indent=4)
-        json_type += json.dumps(robots_json, indent=4)
-        json_type += json.dumps(sim_t_json, indent=4)
-        json_type += json.dumps(wall_t_json, indent=4)
+        if(self.environment is not None):
+            environment_json = SimState.to_json_dict(
+                copy.deepcopy(self.environment))
+            json_type += json.dumps(environment_json, indent=4)
+        if(self.agents is not None):
+            agents_json = SimState.to_json_dict(self.agents)
+            json_type += json.dumps(agents_json, indent=4)
+        if(self.prerecs is not None):
+            prerecs_json = SimState.to_json_dict(self.prerecs)
+            json_type += json.dumps(prerecs_json, indent=4)
+        if(self.robots is not None):
+            robots_json = SimState.to_json_dict(self.robots)
+            json_type += json.dumps(robots_json, indent=4)
+        if(self.sim_t is not None):
+            sim_t_json = copy.deepcopy(self.sim_t)
+            json_type += json.dumps(sim_t_json, indent=4)
+        if(self.wall_t is not None):
+            wall_t_json = copy.deepcopy(self.wall_t)
+            json_type += json.dumps(wall_t_json, indent=4)
         return json_type
 
     def get_environment(self):
@@ -132,7 +137,7 @@ class SimState():
     def get_wall_t(self):
         return self.wall_t
 
-    @ staticmethod
+    @staticmethod
     def to_json_dict(param_dict):
         """ Converts params_dict to a json serializable dict."""
         def _to_serializable_type(elem):
@@ -145,7 +150,7 @@ class SimState():
                 return elem.tolist()
             if isinstance(elem, dict):
                 # recursive for dictionaries within dictionaries
-                return self.to_json_dict(elem)
+                return SimState.to_json_dict(elem)
             if isinstance(elem, AgentState):
                 return elem.to_json()
             if type(elem) is type:  # elem is a class
