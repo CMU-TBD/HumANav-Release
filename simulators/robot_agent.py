@@ -127,9 +127,10 @@ class RoboAgent(Agent):
                         print("ERROR: robot_trajectory dimens mismatch")
                     time.sleep(1. / self.freq)
             # notify the joystick that the robot can take another input
-            self.send_to_joystick((True, self.world_state.convert_to_json()))
+            if(self.world_state is not None):
+                self.send_to_joystick(self.world_state.convert_to_json())
         # notify the joystick to stop sending commands to the robot
-        self.send_to_joystick(False)  # no need to update world state
+        self.send_to_joystick("")  # no need to update world state
         print("\nRobot powering off, recieved", len(self.commands), "commands")
         self.power_off()
         listen_thread.join()

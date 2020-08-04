@@ -44,18 +44,21 @@ class AgentState():
         return self.radius
 
     def to_json(self):
-        name_json = SimState.to_json_dict(copy.deepcopy(self.name))
-        start_json = SimState.to_json_dict(
+        name_json = SimState.to_json_type(copy.deepcopy(self.name))
+        start_json = SimState.to_json_type(
             self.get_start_config().to_numpy_repr())
-        goal_json = SimState.to_json_dict(
+        goal_json = SimState.to_json_type(
             self.get_start_config().to_numpy_repr())
-        current_json = SimState.to_json_dict(
+        current_json = SimState.to_json_type(
             self.get_start_config().to_numpy_repr())
-        trajectory_json = SimState.to_json_dict(
+        trajectory_json = SimState.to_json_type(
             self.get_trajectory().to_numpy_repr())
-        collided_json = SimState.to_json_dict(copy.deepcopy(self.collided))
-        end_acting_json = SimState.to_json_dict(copy.deepcopy(self.end_acting))
-        radius_json = SimState.to_json_dict(copy.deepcopy(self.radius))
+        collided_json = SimState.to_json_type(
+            copy.deepcopy(self.collided))
+        end_acting_json = SimState.to_json_type(
+            copy.deepcopy(self.end_acting))
+        radius_json = SimState.to_json_type(
+            copy.deepcopy(self.radius))
         json_type = ""
         json_type += json.dumps(name_json, indent=4)
         json_type += json.dumps(start_json, indent=4)
@@ -79,7 +82,7 @@ class HumanState(AgentState):
         return self.appearance
 
     def to_json(self):
-        appearance_json = SimState.to_json_dict(copy.deepcopy(self.appearance))
+        appearance_json = SimState.to_json_type(self.appearance)
         agent_json = super().to_json()
         return json.dumps(appearance_json, indent=4) + agent_json
 
@@ -94,26 +97,20 @@ class SimState():
         self.wall_t = wall_time
 
     def convert_to_json(self):
+        environment_json = SimState.to_json_dict(
+            copy.deepcopy(self.environment))
+        agents_json = SimState.to_json_dict(self.agents)
+        prerecs_json = SimState.to_json_dict(self.prerecs)
+        robots_json = SimState.to_json_dict(self.robots)
+        sim_t_json = SimState.to_json_type(self.sim_t)
+        wall_t_json = SimState.to_json_type(self.wall_t)
         json_type = ""
-        if(self.environment is not None):
-            environment_json = SimState.to_json_dict(
-                copy.deepcopy(self.environment))
-            json_type += json.dumps(environment_json, indent=4)
-        if(self.agents is not None):
-            agents_json = SimState.to_json_dict(self.agents)
-            json_type += json.dumps(agents_json, indent=4)
-        if(self.prerecs is not None):
-            prerecs_json = SimState.to_json_dict(self.prerecs)
-            json_type += json.dumps(prerecs_json, indent=4)
-        if(self.robots is not None):
-            robots_json = SimState.to_json_dict(self.robots)
-            json_type += json.dumps(robots_json, indent=4)
-        if(self.sim_t is not None):
-            sim_t_json = copy.deepcopy(self.sim_t)
-            json_type += json.dumps(sim_t_json, indent=4)
-        if(self.wall_t is not None):
-            wall_t_json = copy.deepcopy(self.wall_t)
-            json_type += json.dumps(wall_t_json, indent=4)
+        json_type += json.dumps(environment_json, indent=4)
+        json_type += json.dumps(agents_json, indent=4)
+        json_type += json.dumps(robots_json, indent=4)
+        json_type += json.dumps(prerecs_json, indent=4)
+        json_type += json.dumps(sim_t_json, indent=4)
+        json_type += json.dumps(wall_t_json, indent=4)
         return json_type
 
     def get_environment(self):
@@ -137,26 +134,28 @@ class SimState():
     def get_wall_t(self):
         return self.wall_t
 
-    @staticmethod
+    @ staticmethod
+    def to_json_type(elem):
+        """ Converts an element to a json serializable type. """
+        if isinstance(elem, np.int64) or isinstance(elem, np.int32):
+            return int(elem)
+        if isinstance(elem, tf.Tensor):
+            return elem.numpy().tolist()
+        if isinstance(elem, np.ndarray):
+            return elem.tolist()
+        if isinstance(elem, dict):
+            # recursive for dictionaries within dictionaries
+            return SimState.to_json_dict(elem)
+        if isinstance(elem, AgentState):
+            return elem.to_json()
+        if type(elem) is type:  # elem is a class
+            return str(elem)
+        else:
+            return str(elem)
+
+    @ staticmethod
     def to_json_dict(param_dict):
         """ Converts params_dict to a json serializable dict."""
-        def _to_serializable_type(elem):
-            """ Converts an element to a json serializable type. """
-            if isinstance(elem, np.int64) or isinstance(elem, np.int32):
-                return int(elem)
-            if isinstance(elem, tf.Tensor):
-                return elem.numpy().tolist()
-            if isinstance(elem, np.ndarray):
-                return elem.tolist()
-            if isinstance(elem, dict):
-                # recursive for dictionaries within dictionaries
-                return SimState.to_json_dict(elem)
-            if isinstance(elem, AgentState):
-                return elem.to_json()
-            if type(elem) is type:  # elem is a class
-                return str(elem)
-            else:
-                return str(elem)
         for key in param_dict.keys():
-            param_dict[key] = _to_serializable_type(param_dict[key])
+            param_dict[key] = SimState.to_json_type(param_dict[key])
         return param_dict

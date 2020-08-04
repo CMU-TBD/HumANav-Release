@@ -4,6 +4,7 @@ import threading
 import multiprocessing
 import time
 import sys
+import json
 from utils.utils import print_colors
 from params.robot_params import create_params
 
@@ -99,13 +100,15 @@ class Joystick():
         while(self.robot_running):
             connection, client = self.robot_receiver_socket.accept()
             # TODO: allow for buffered data, thus no limit
-            data = connection.recv(128)
+            data = connection.recv(1024 * 1024)
             # quickly close connection to open up for the next input
             connection.close()
             # NOTE: data is either true or false
             # TODO: use ast.literal_eval instead of eval to
             if(data):
-                data = eval(data)
+                data = json.loads(data)
+                print(data)
+                sys.exit(1)
                 if(isinstance(data, tuple)):
                     self.ready_to_send = data[0]
                     self.world_state = data[1]
