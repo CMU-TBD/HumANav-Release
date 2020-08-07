@@ -105,7 +105,7 @@ class CentralSimulator(SimulatorHelper):
 
     """BEGIN thread utils"""
 
-    def init_robot_thread(self):
+    def init_robot_thread(self, power_on=True):
         # wait for joystick connection to be established
         if(self.robot is not None):
             self.robot.establish_joystick_receiver_connection()
@@ -113,7 +113,8 @@ class CentralSimulator(SimulatorHelper):
             self.robot.establish_joystick_sender_connection()
             self.robot.update_time(0)
             robot_thread = threading.Thread(target=self.robot.update)
-            robot_thread.start()
+            if(power_on):
+                robot_thread.start()
             return robot_thread
         print(print_colors()["red"],
               "No robot in simulator", print_colors()['reset'])
@@ -173,7 +174,12 @@ class CentralSimulator(SimulatorHelper):
         (timeout, collision, success) """
         num_agents = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
-        r_t = self.init_robot_thread()
+
+        r_t = self.init_robot_thread(False)
+        current_state = self.save_state(0, 0)
+        self.update_robot(current_state)
+        self.robot.send_to_joystick(current_state.convert_to_json())
+        exit(0)
         # continue to spawn the simulation with an established (independent) connection
         # keep track of wall-time in the simulator
         start_time = time.clock()

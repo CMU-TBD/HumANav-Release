@@ -159,7 +159,8 @@ class RoboAgent(Agent):
                   "red"], "Connection closed by joystick", print_colors()['reset'])
             exit(1)
         # Send data
-        message = str(message)
+        if(not isinstance(message, str)):
+            message = str(message)
         self.joystick_sender_socket.sendall(bytes(message, "utf-8"))
         self.joystick_sender_socket.close()
 

@@ -99,15 +99,26 @@ class Joystick():
         self.robot_running = True
         while(self.robot_running):
             connection, client = self.robot_receiver_socket.accept()
-            # TODO: allow for buffered data, thus no limit
-            data = connection.recv(1024 * 1024)
+            # NOTE: allow for buffered data, thus no limit
+            chunks = []
+            response_len = 0
+            while True:
+                chunk = connection.recv(1024)
+                if chunk == b'':
+                    break
+                chunks.append(chunk)
+                response_len += len(chunk)
+            data = b''.join(chunks)
             # quickly close connection to open up for the next input
             connection.close()
             # NOTE: data is either true or false
             # TODO: use ast.literal_eval instead of eval to
-            if(data):
-                data = json.loads(data)
-                print(data)
+            print("recieved", response_len, "from server")
+            if(data is not None):
+                data_str = data.decode("utf-8")  # bytes to str
+                # TODO: only send a single instance of the map since it is MASSIVE
+                world_state = json.loads(data_str)
+                print(world_state)
                 sys.exit(1)
                 if(isinstance(data, tuple)):
                     self.ready_to_send = data[0]
