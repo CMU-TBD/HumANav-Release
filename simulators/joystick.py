@@ -130,10 +130,9 @@ class Joystick():
                     self.prerecs = world_state['prerecs']
                 if(world_state['robots']):  # not empty
                     self.robots = world_state['robots']
-                if(world_state['sim_t']):  # not empty
-                    self.sim_t = eval(world_state['sim_t'])  # float
-                if(world_state['wall_t']):  # not empty
-                    self.wall_t = eval(world_state['wall_t'])  # float
+                # for lingering constants
+                self.sim_t = world_state['sim_t']
+                self.wall_t = world_state['wall_t']
                 self.generate_world(self.environment, self.agents,
                                     self.prerecs, self.robots, self.sim_t, self.wall_t)
                 exit(1)
@@ -189,14 +188,13 @@ class Joystick():
             ax.quiver(r_pos_3[0], r_pos_3[1], np.cos(
                 r_pos_3[2]), np.sin(r_pos_3[2]))
 
-        """
         # plot all the simulated prerecorded agents
         for i, a in enumerate(prerecs.values()):
-            pos_3 = a.get_current_config().to_3D_numpy()
+            pos_3 = a["current_config"]
             # TODO: make colours of trajectories random rather than hardcoded
-            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+            # a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             color = 'yo'  # agents are green and solid unless collided
-            if(a.get_collided()):
+            if(a["collided"]):
                 color = 'ro'  # collided agents are drawn red
             if(i == 0):
                 # Only add label on the first humans
@@ -204,10 +202,10 @@ class Joystick():
                         color, markersize=10, label='Prerec')
             else:
                 ax.plot(pos_3[0], pos_3[1], color,
-                        markersize=a.get_radius() * ppm)
+                        markersize=a["radius"] * ppm)
             # TODO: use agent radius instead of hardcode
             ax.plot(pos_3[0], pos_3[1], color,
-                    alpha=0.2, markersize=a.get_radius() * 2.0 * ppm)
+                    alpha=0.2, markersize=a["radius"] * 2.0 * ppm)
             if(plot_quiver):
                 # Agent heading
                 ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
@@ -215,11 +213,11 @@ class Joystick():
 
         # plot all the randomly generated simulated agents
         for i, a in enumerate(agents.values()):
-            pos_3 = a.get_current_config().to_3D_numpy()
+            pos_3 = a["current_config"]
             # TODO: make colours of trajectories random rather than hardcoded
-            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+            # a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
             color = 'go'  # agents are green and solid unless collided
-            if(a.get_collided()):
+            if(a["collided"]):
                 color = 'ro'  # collided agents are drawn red
             if(i == 0):
                 # Only add label on the first humans
@@ -227,16 +225,15 @@ class Joystick():
                         color, markersize=10, label='Agent')
             else:
                 ax.plot(pos_3[0], pos_3[1], color,
-                        markersize=a.get_radius() * ppm)
+                        markersize=a["radius"] * ppm)
             # TODO: use agent radius instead of hardcode
             ax.plot(pos_3[0], pos_3[1], color,
-                    alpha=0.2, markersize=a.get_radius() * 2. * ppm)
+                    alpha=0.2, markersize=a["radius"] * 2. * ppm)
             if(plot_quiver):
                 # Agent heading
                 ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
                           scale=2, scale_units='inches')
 
-        """
         # save the axis to a file
         fig.savefig("joystick_map.png", bbox_inches='tight', pad_inches=0)
 

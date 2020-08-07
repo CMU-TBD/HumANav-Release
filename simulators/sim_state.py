@@ -54,9 +54,9 @@ class AgentState():
             self.get_start_config().to_3D_numpy())
         trajectory_json = SimState.to_json_type(
             self.get_trajectory().to_numpy_repr())
-        collided_json = SimState.to_json_type(self.collided)
-        end_acting_json = SimState.to_json_type(self.end_acting)
-        radius_json = SimState.to_json_type(self.radius)
+        collided_json = self.collided
+        end_acting_json = self.end_acting
+        radius_json = self.radius
         json_dict = {}
         json_dict['name'] = name_json
         # NOTE: goal and start can perhaps be optimized to be only sent once
@@ -107,8 +107,8 @@ class SimState():
         agents_json = SimState.to_json_dict(self.agents)
         prerecs_json = SimState.to_json_dict(self.prerecs)
         robots_json = SimState.to_json_dict(self.robots)
-        sim_t_json = SimState.to_json_type(self.sim_t)
-        wall_t_json = SimState.to_json_type(self.wall_t)
+        sim_t_json = self.sim_t
+        wall_t_json = self.wall_t
         json_dict = {}
         json_dict['environment'] = environment_json
         json_dict['agents'] = agents_json
