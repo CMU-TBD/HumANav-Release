@@ -122,20 +122,21 @@ class Joystick():
                 data_str = data.decode("utf-8")  # bytes to str
                 # TODO: only send a single instance of the map since it is MASSIVE
                 world_state = json.loads(data_str)
-                print(world_state)
-                # NOTE: in order to send multiple dictionaries through JSON,
-                # need to wrap them in a python list (so they are ordered now)
-                # NOTE: world_state[0] = environment
-                #       world_state[1] = generated agents
-                #       world_state[2] = prerecorded agents
-                #       world_state[3] = robots
-                #       world_state[4] = simulation_time
-                #       world_state[5] = wall_clock time
-                if(world_state[0]):  # not empty
-                    self.environment = world_state[0]
-                    self.generate_world(self.environment)
-                    sys.exit(0)
-
+                if(world_state['environment']):  # not empty
+                    self.environment = world_state['environment']
+                if(world_state['agents']):  # not empty
+                    self.agents = world_state['agents']
+                if(world_state['prerecs']):  # not empty
+                    self.prerecs = world_state['prerecs']
+                if(world_state['robots']):  # not empty
+                    self.robots = world_state['robots']
+                if(world_state['sim_t']):  # not empty
+                    self.sim_t = eval(world_state['sim_t'])  # float
+                if(world_state['wall_t']):  # not empty
+                    self.wall_t = eval(world_state['wall_t'])  # float
+                self.generate_world(self.environment, self.agents,
+                                    self.prerecs, self.robots, self.sim_t, self.wall_t)
+                exit(1)
                 if(isinstance(data, tuple)):
                     self.ready_to_send = data[0]
                     self.world_state = data[1]
@@ -147,8 +148,8 @@ class Joystick():
             else:
                 break
 
-    def generate_world(self, environment):
-        map_scale = eval(environment["map_scale"])
+    def generate_world(self, environment, agents, prerecs, robots, sim_time, wall_time, plot_quiver=False):
+        map_scale = eval(environment["map_scale"])  # float
         room_center = np.array(environment["room_center"])
         traversible = np.array(environment['traversibles'][0])
         # Compute the real_world extent (in meters) of the traversible
@@ -160,6 +161,82 @@ class Joystick():
         # plot the img on the axis
         ax.imshow(traversible, extent=extent, cmap='gray',
                   vmin=-.5, vmax=1.5, origin='lower')
+
+        # get number of pixels per meter based off the ax plot space
+        img_scale = ax.transData.transform(
+            (0, 1)) - ax.transData.transform((0, 0))
+        # print(img_scale)
+        ppm = img_scale[1]  # number of pixels per "meter" unit in the plot
+        # Plot the camera (robots)
+        for i, r in enumerate(robots.values()):
+            r_pos_3 = r["current_config"]
+            # TODO: trajectory
+            # r.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+            color = 'bo'  # robots are blue and solid unless collided
+            if(r["collided"]):
+                color = 'ko'  # collided robots are drawn BLACK
+            if i == 0:
+                # only add label on first robot
+                ax.plot(r_pos_3[0], r_pos_3[1], color,
+                        markersize=10, label='Robot')
+            else:
+                ax.plot(r_pos_3[0], r_pos_3[1], color,
+                        markersize=r["radius"] * ppm)
+            # visual "bubble" around robot base to stay safe
+            ax.plot(r_pos_3[0], r_pos_3[1], color,
+                    alpha=0.2, markersize=r["radius"] * 2. * ppm)
+            # this is the "camera" robot (with quiver)
+            ax.quiver(r_pos_3[0], r_pos_3[1], np.cos(
+                r_pos_3[2]), np.sin(r_pos_3[2]))
+
+        """
+        # plot all the simulated prerecorded agents
+        for i, a in enumerate(prerecs.values()):
+            pos_3 = a.get_current_config().to_3D_numpy()
+            # TODO: make colours of trajectories random rather than hardcoded
+            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+            color = 'yo'  # agents are green and solid unless collided
+            if(a.get_collided()):
+                color = 'ro'  # collided agents are drawn red
+            if(i == 0):
+                # Only add label on the first humans
+                ax.plot(pos_3[0], pos_3[1],
+                        color, markersize=10, label='Prerec')
+            else:
+                ax.plot(pos_3[0], pos_3[1], color,
+                        markersize=a.get_radius() * ppm)
+            # TODO: use agent radius instead of hardcode
+            ax.plot(pos_3[0], pos_3[1], color,
+                    alpha=0.2, markersize=a.get_radius() * 2.0 * ppm)
+            if(plot_quiver):
+                # Agent heading
+                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
+                          scale=2, scale_units='inches')
+
+        # plot all the randomly generated simulated agents
+        for i, a in enumerate(agents.values()):
+            pos_3 = a.get_current_config().to_3D_numpy()
+            # TODO: make colours of trajectories random rather than hardcoded
+            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+            color = 'go'  # agents are green and solid unless collided
+            if(a.get_collided()):
+                color = 'ro'  # collided agents are drawn red
+            if(i == 0):
+                # Only add label on the first humans
+                ax.plot(pos_3[0], pos_3[1],
+                        color, markersize=10, label='Agent')
+            else:
+                ax.plot(pos_3[0], pos_3[1], color,
+                        markersize=a.get_radius() * ppm)
+            # TODO: use agent radius instead of hardcode
+            ax.plot(pos_3[0], pos_3[1], color,
+                    alpha=0.2, markersize=a.get_radius() * 2. * ppm)
+            if(plot_quiver):
+                # Agent heading
+                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
+                          scale=2, scale_units='inches')
+
+        """
         # save the axis to a file
         fig.savefig("joystick_map.png", bbox_inches='tight', pad_inches=0)
 

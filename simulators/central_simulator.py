@@ -176,7 +176,8 @@ class CentralSimulator(SimulatorHelper):
         r_t = self.init_robot_thread(False)
         current_state = self.save_state(0, 0)
         self.update_robot(current_state)
-        self.robot.send_to_joystick(current_state.convert_to_json())
+        self.robot.send_to_joystick(
+            current_state.convert_to_json(include_map=True))
         exit(0)
         # continue to spawn the simulation with an established (independent) connection
         # keep track of wall-time in the simulator

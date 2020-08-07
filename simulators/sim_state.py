@@ -44,7 +44,7 @@ class AgentState():
         return self.radius
 
     def to_json(self):
-        name_json = SimState.to_json_type(copy.deepcopy(self.name))
+        name_json = SimState.to_json_type(self.name)
         start_json = SimState.to_json_type(
             self.get_start_config().to_numpy_repr())
         goal_json = SimState.to_json_type(
@@ -53,22 +53,22 @@ class AgentState():
             self.get_start_config().to_numpy_repr())
         trajectory_json = SimState.to_json_type(
             self.get_trajectory().to_numpy_repr())
-        collided_json = SimState.to_json_type(
-            copy.deepcopy(self.collided))
-        end_acting_json = SimState.to_json_type(
-            copy.deepcopy(self.end_acting))
-        radius_json = SimState.to_json_type(
-            copy.deepcopy(self.radius))
-        json_type = ""
-        json_type += json.dumps(name_json, indent=2)
-        json_type += json.dumps(start_json, indent=2)
-        json_type += json.dumps(goal_json, indent=2)
-        json_type += json.dumps(current_json, indent=2)
-        json_type += json.dumps(trajectory_json, indent=2)
-        json_type += json.dumps(collided_json, indent=2)
-        json_type += json.dumps(end_acting_json, indent=2)
-        json_type += json.dumps(radius_json, indent=2)
-        return json_type
+        collided_json = SimState.to_json_type(self.collided)
+        end_acting_json = SimState.to_json_type(self.end_acting)
+        radius_json = SimState.to_json_type(self.radius)
+        json_dict = {}
+        json_dict['name'] = name_json
+        # NOTE: goal and start can perhaps be optimized to be only sent once
+        # since they don't change over the course of the simulation.
+        json_dict['start_config'] = start_json
+        json_dict['goal_config'] = goal_json
+        json_dict['current_config'] = current_json
+        json_dict['trajectory'] = trajectory_json
+        json_dict['collided'] = collided_json
+        json_dict['end_acting'] = end_acting_json
+        json_dict['radius'] = radius_json
+        # returns array (python list) to be json'd in_simstate
+        return json_dict
 
 
 class HumanState(AgentState):
@@ -81,10 +81,12 @@ class HumanState(AgentState):
     def get_appearance(self):
         return self.appearance
 
-    def to_json(self):
-        appearance_json = SimState.to_json_type(self.appearance)
-        agent_json = super().to_json()
-        return json.dumps(appearance_json, indent=2) + agent_json
+    # def to_json(self):
+    #     json_dict = []
+    #     json_dict.append(super().to_json())
+    #     # appends serialized appearance to end of Agent dict
+    #     json_dict.apend(SimState.to_json_type(self.appearance))
+    #     return json_dict
 
 
 class SimState():
@@ -101,18 +103,18 @@ class SimState():
             environment_json = SimState.to_json_dict(self.environment)
         else:
             environment_json = {}  # empty dictionary
-        # agents_json = SimState.to_json_dict(self.agents)
-        # prerecs_json = SimState.to_json_dict(self.prerecs)
-        # robots_json = SimState.to_json_dict(self.robots)
-        # sim_t_json = SimState.to_json_type(self.sim_t)
-        # wall_t_json = SimState.to_json_type(self.wall_t)
-        json_dict = []
-        json_dict.append(environment_json)
-        # json_type += json.dumps(agents_json, indent=2)
-        # json_type += json.dumps(robots_json, indent=2)
-        # json_type += json.dumps(prerecs_json, indent=2)
-        # json_type += json.dumps(sim_t_json, indent=2)
-        # json_type += json.dumps(wall_t_json, indent=2)
+        agents_json = SimState.to_json_dict(self.agents)
+        prerecs_json = SimState.to_json_dict(self.prerecs)
+        robots_json = SimState.to_json_dict(self.robots)
+        sim_t_json = SimState.to_json_type(self.sim_t)
+        wall_t_json = SimState.to_json_type(self.wall_t)
+        json_dict = {}
+        json_dict['environment'] = environment_json
+        json_dict['agents'] = agents_json
+        json_dict['prerecs'] = robots_json
+        json_dict['robots'] = prerecs_json
+        json_dict['sim_t'] = sim_t_json
+        json_dict['wall_t'] = wall_t_json
         return json.dumps(json_dict, indent=1)
 
     def get_environment(self):
