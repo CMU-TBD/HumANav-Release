@@ -1,6 +1,4 @@
 import tensorflow as tf
-# with tf.Session() as sess:
-#     sess.run(tf.global_variables_initializer())
 import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt

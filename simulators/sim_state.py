@@ -96,22 +96,24 @@ class SimState():
         self.sim_t = sim_time
         self.wall_t = wall_time
 
-    def convert_to_json(self):
-        environment_json = SimState.to_json_dict(
-            copy.deepcopy(self.environment))
+    def convert_to_json(self, include_map=False):
+        if(include_map):
+            environment_json = SimState.to_json_dict(self.environment)
+        else:
+            environment_json = {}  # empty dictionary
         # agents_json = SimState.to_json_dict(self.agents)
         # prerecs_json = SimState.to_json_dict(self.prerecs)
         # robots_json = SimState.to_json_dict(self.robots)
         # sim_t_json = SimState.to_json_type(self.sim_t)
         # wall_t_json = SimState.to_json_type(self.wall_t)
-        json_type = ""
-        json_type += json.dumps(environment_json, indent=2)
+        json_dict = []
+        json_dict.append(environment_json)
         # json_type += json.dumps(agents_json, indent=2)
         # json_type += json.dumps(robots_json, indent=2)
         # json_type += json.dumps(prerecs_json, indent=2)
         # json_type += json.dumps(sim_t_json, indent=2)
         # json_type += json.dumps(wall_t_json, indent=2)
-        return json_type
+        return json.dumps(json_dict, indent=1)
 
     def get_environment(self):
         return self.environment

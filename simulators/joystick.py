@@ -5,6 +5,10 @@ import multiprocessing
 import time
 import sys
 import json
+import numpy as np
+import matplotlib as mpl
+mpl.use('Agg')  # for rendering without a display
+import matplotlib.pyplot as plt
 from utils.utils import print_colors
 from params.robot_params import create_params
 
@@ -57,7 +61,7 @@ class Joystick():
                 sys.exit(0)
 
     def update(self):
-        """ Independent process for a user (at a designated host:port) to recieve 
+        """ Independent process for a user (at a designated host:port) to recieve
         information from the simulation while also sending commands to the robot """
         listen_thread = threading.Thread(target=self.listen_to_robot)
         listen_thread.start()
@@ -119,7 +123,19 @@ class Joystick():
                 # TODO: only send a single instance of the map since it is MASSIVE
                 world_state = json.loads(data_str)
                 print(world_state)
-                sys.exit(1)
+                # NOTE: in order to send multiple dictionaries through JSON,
+                # need to wrap them in a python list (so they are ordered now)
+                # NOTE: world_state[0] = environment
+                #       world_state[1] = generated agents
+                #       world_state[2] = prerecorded agents
+                #       world_state[3] = robots
+                #       world_state[4] = simulation_time
+                #       world_state[5] = wall_clock time
+                if(world_state[0]):  # not empty
+                    self.environment = world_state[0]
+                    self.generate_world(self.environment)
+                    sys.exit(0)
+
                 if(isinstance(data, tuple)):
                     self.ready_to_send = data[0]
                     self.world_state = data[1]
@@ -130,6 +146,22 @@ class Joystick():
                     break
             else:
                 break
+
+    def generate_world(self, environment):
+        map_scale = eval(environment["map_scale"])
+        room_center = np.array(environment["room_center"])
+        traversible = np.array(environment['traversibles'][0])
+        # Compute the real_world extent (in meters) of the traversible
+        extent = [0., traversible.shape[1], 0., traversible.shape[0]]
+        extent = np.array(extent) * map_scale
+        # plot the matplot imgs
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(1, 1, 1)
+        # plot the img on the axis
+        ax.imshow(traversible, extent=extent, cmap='gray',
+                  vmin=-.5, vmax=1.5, origin='lower')
+        # save the axis to a file
+        fig.savefig("joystick_map.png", bbox_inches='tight', pad_inches=0)
 
     def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
