@@ -83,6 +83,7 @@ class Joystick():
 
     def send_to_robot(self, commands):
         # Create a TCP/IP socket
+        # TODO: make this use JSON rather than the current jank solution
         self.robot_sender_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
@@ -117,19 +118,20 @@ class Joystick():
             connection.close()
             # NOTE: data is either true or false
             # TODO: use ast.literal_eval instead of eval to
-            print("recieved", response_len, "from server")
+            print("received", response_len, "from server")
             if(data is not None):
                 data_str = data.decode("utf-8")  # bytes to str
                 # TODO: only send a single instance of the map since it is MASSIVE
                 world_state = json.loads(data_str)
                 if(world_state['environment']):  # not empty
+                    # only update the environment if it is non-empty
                     self.environment = world_state['environment']
-                if(world_state['agents']):  # not empty
-                    self.agents = world_state['agents']
-                if(world_state['prerecs']):  # not empty
-                    self.prerecs = world_state['prerecs']
-                if(world_state['robots']):  # not empty
-                    self.robots = world_state['robots']
+                    print("received environment from robot")
+                    # notify the robot that the joystick received the environment
+                    self.send_to_robot((True, -1, 0, 0))
+                self.agents = world_state['agents']
+                self.prerecs = world_state['prerecs']
+                self.robots = world_state['robots']
                 # for lingering constants
                 self.sim_t = world_state['sim_t']
                 self.wall_t = world_state['wall_t']

@@ -105,14 +105,22 @@ class CentralSimulator(SimulatorHelper):
 
     def init_robot_thread(self, power_on=True):
         # wait for joystick connection to be established
-        if(self.robot is not None):
-            self.robot.establish_joystick_receiver_connection()
+        r = self.robot
+        if(r is not None):
+            r.establish_joystick_receiver_connection()
             time.sleep(0.01)
-            self.robot.establish_joystick_sender_connection()
-            self.robot.update_time(0)
-            robot_thread = threading.Thread(target=self.robot.update)
+            r.establish_joystick_sender_connection()
+            r.update_time(0)
+            assert(r.world_state is not None)
+            # send first transaction to the joystick
+            r.send_to_joystick(r.world_state.to_json(include_map=True))
+            robot_thread = threading.Thread(target=r.update)
             if(power_on):
                 robot_thread.start()
+            # wait until joystick is ready
+            while(not r.joystick_ready):
+                # wait until joystick recieves the environment (once)
+                time.sleep(0.01)
             return robot_thread
         print(print_colors()["red"],
               "No robot in simulator", print_colors()['reset'])
@@ -172,13 +180,11 @@ class CentralSimulator(SimulatorHelper):
         (timeout, collision, success) """
         num_agents = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
-
-        r_t = self.init_robot_thread(False)
+        # get initial state
         current_state = self.save_state(0, 0)
         self.update_robot(current_state)
-        self.robot.send_to_joystick(
-            current_state.convert_to_json(include_map=True))
-        exit(0)
+        # initialize the robot to establish joystick connection
+        r_t = self.init_robot_thread()
         # continue to spawn the simulation with an established (independent) connection
         # keep track of wall-time in the simulator
         start_time = time.clock()

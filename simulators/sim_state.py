@@ -99,7 +99,7 @@ class SimState():
         self.sim_t = sim_time
         self.wall_t = wall_time
 
-    def convert_to_json(self, include_map=False):
+    def to_json(self, include_map=False):
         if(include_map):
             environment_json = SimState.to_json_dict(self.environment)
         else:

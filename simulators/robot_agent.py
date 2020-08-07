@@ -28,6 +28,7 @@ class RoboAgent(Agent):
         super().__init__(start_configs.get_start_config(),
                          start_configs.get_goal_config(), name)
         self.radius = self.params.radius
+        self.joystick_ready = False  # josystick is ready once it has been sent an environment
 
     # Getters for the robot class
     def get_name(self):
@@ -127,8 +128,9 @@ class RoboAgent(Agent):
                         print("ERROR: robot_trajectory dimens mismatch")
                     time.sleep(1. / self.freq)
             # notify the joystick that the robot can take another input
-            if(self.world_state is not None):
-                self.send_to_joystick(self.world_state.convert_to_json())
+            if(False):  # only send when joystick requests
+                self.send_to_joystick(
+                    self.world_state.to_json(include_map=False))
         # notify the joystick to stop sending commands to the robot
         self.send_to_joystick("")  # no need to update world state
         print("\nRobot powering off, recieved", len(self.commands), "commands")
@@ -181,10 +183,13 @@ class RoboAgent(Agent):
                     data = eval(data)
                     np_data = np.array([data[2], data[3]], dtype=np.float32)
                     # NOTE: commands can also be a dictionary indexed by time
-                    self.commands.append(np_data)
-                    if(data[0] is False):
-                        self.running = False
-                        break
+                    if(data[1] != -1):  # only sent by joystick when "ready"
+                        self.commands.append(np_data)
+                        if(data[0] is False):
+                            self.running = False
+                            break
+                    else:
+                        self.joystick_ready = True
                 else:
                     break
             # close connection to be reaccepted when the joystick sends data
