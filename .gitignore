@@ -20,3 +20,4 @@ tests/humanav/
 tests/visual-nav/
 tests/socnav/
 params/renderer_params.py
+.idea*
