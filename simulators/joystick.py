@@ -126,7 +126,7 @@ class Joystick():
                 if(world_state['environment']):  # not empty
                     # only update the environment if it is non-empty
                     self.environment = world_state['environment']
-                    print("received environment from robot")
+                    print("Updated environment from robot")
                     # notify the robot that the joystick received the environment
                     self.send_to_robot((True, -1, 0, 0))
                 self.agents = world_state['agents']
