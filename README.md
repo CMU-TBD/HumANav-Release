@@ -1,5 +1,5 @@
 # tbd_SocNavBenchmark
-Welcome to the Social Navigation Benchmark utility (SocNavBenchmark), a codebase for benchmarking robot planning algorithms within an environment with several agents and indoor obstacles. We are a team of researches from Carnegie Mellon University's Robotics Institute at HARP Lab. 
+Welcome to the Social Navigation Benchmark utility (SocNavBenchmark), a codebase for benchmarking robot planning algorithms within an environment with several agents and indoor obstacles. We are a team of researches from Carnegie Mellon University's Robotics Institute at TBD Lab and HARP Lab. 
 
 ## HumANav
 Welcome to the Human Active Navigation Dataset (HumANav), a codebase for photorealistic simulations of humans in indoor office environments! We are a team of researchers from UC Berkeley and Google Brain.
