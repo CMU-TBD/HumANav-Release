@@ -179,25 +179,28 @@ class RoboAgent(Agent):
             self.joystick_requests_heard += 1  # update number of heard joystick requests
             while(True):
                 data_b, response_len = conn_recv(connection, buffr_amnt=128)
-
-                if(data_b is not None):
+                if(data_b is not b''):
                     # TODO: commands can also be a dictionary indexed by time
                     # NOTE: data is in the form:
-                    # (joystick running, joystick time, lin acc, ang comm, requests_world)
                     data_str = data_b.decode("utf-8")  # bytes to str
-                    data = ast.literal_eval(data_str)
-                    if(data[-1] is False and data[1] != -1):
-                        np_data = np.array(
-                            [data[2], data[3]], dtype=np.float32)
-                        self.commands.append(np_data)
-                        if(data[0] is False):
-                            self.running = False
-                    elif data[1] == -1:  # only sent by joystick when "ready" and needs the map
-                        self.joystick_ready = True
+                    data = json.loads(data_str)
+                    if(data["joystick_on"]):
+                        if(data["j_time"] >= 0):  # normal command input
+                            lin_vel = data["lin_vel"]
+                            ang_vel = data["ang_vel"]
+                            np_data = np.array(
+                                [lin_vel, ang_vel], dtype=np.float32)
+                            self.commands.append(np_data)
+                        # only sent by joystick when "ready" and needs the map
+                        elif data["j_time"] == -1:
+                            self.joystick_ready = True
+                        # whether or not the world state is requested
+                        if(data["req_world"] is True):
+                            # to send the world in the next update
+                            self.joystick_requests_world = True
                     else:
-                        assert(data[-1] is True)
-                        self.joystick_requests_world = True
-                    break
+                        self.power_off()
+                        break
                 else:
                     break
             # close connection to be reaccepted when the joystick sends data

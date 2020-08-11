@@ -39,6 +39,17 @@ class Joystick():
     def set_host(self, h):
         self.host = h
 
+    def create_message(self, joystick_power: bool, j_time: float = 0.0,
+                       lin_vel: float = 0.0, ang_vel: float = 0.0, req_world: bool = False):
+        json_dict = {}
+        json_dict["joystick_on"] = joystick_power
+        if(joystick_power):
+            json_dict["j_time"] = j_time
+            json_dict["lin_vel"] = lin_vel
+            json_dict["ang_vel"] = ang_vel
+            json_dict["req_world"] = req_world
+        return json.dumps(json_dict, indent=1)
+
     def random_robot_joystick(self):
         repeat = 1          # number of times to send the same command to the robot
         sent_commands = 0
@@ -51,8 +62,8 @@ class Joystick():
                     ang_command = (randint(-100, 100) / 100.)
                     for _ in range(repeat):
                         # TODO: remove robot_running stuff
-                        message = (self.robot_running, time.clock(),
-                                   lin_command, ang_command, self.ready_to_req)
+                        message = self.create_message(self.robot_running, time.clock(),
+                                                      lin_command, ang_command, self.ready_to_req)
                         self.send_to_robot(message)
                         print("sent", message)
                         sent_commands += 1
@@ -63,9 +74,7 @@ class Joystick():
             except KeyboardInterrupt:
                 print("%sJoystick disconnected by user%s" %
                       (color_yellow, color_reset))
-                # send message to turn off the robot
-                self.send_to_robot((False, time.clock(), 0, 0, False))  # stop
-                self.robot_running = False
+                self.power_off()
                 break
 
     def update(self):
@@ -88,13 +97,14 @@ class Joystick():
             print("%sConnection closed by robot%s" % (color_red, color_reset))
             self.robot_running = False
             try:
-                self.send_to_robot((False, time.clock(), 0, 0, False))  # stop
+                quit_message = self.create_message(False)
+                self.send_to_robot(quit_message)  # stop
             except:
                 pass
 
     """BEGIN socket utils"""
 
-    def send_to_robot(self, commands):
+    def send_to_robot(self, json_message: str):
         # Create a TCP/IP socket
         # TODO: make this use JSON rather than the current solution
         self.robot_sender_socket = socket.socket(
@@ -107,8 +117,7 @@ class Joystick():
             self.power_off()
             return
         # Send data
-        message = str(commands)
-        self.robot_sender_socket.sendall(bytes(message, "utf-8"))
+        self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
         self.robot_sender_socket.close()
 
     def listen_to_robot(self):
@@ -129,7 +138,9 @@ class Joystick():
                 if(self.world_state[-1]['robot_on'] is True):
                     if(self.world_state[-1]['environment']):  # not empty
                         # notify the robot that the joystick received the environment
-                        self.send_to_robot((True, -1, 0, 0, False))
+                        joystick_ready = self.create_message(
+                            True, -1, 0, 0, False)
+                        self.send_to_robot(joystick_ready)
                         # only update the environment if it is non-empty
                         self.environment = self.world_state[-1]['environment']
                         print("Updated environment from robot")
@@ -142,6 +153,35 @@ class Joystick():
                 break
             # this should be a separate thread
             self.ready_to_req = True
+
+    def establish_robot_sender_connection(self):
+        """This is akin to a client connection (joystick is client)"""
+        self.robot_sender_socket = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
+        robot_address = ((self.host, self.port_send))
+        try:
+            self.robot_sender_socket.connect(robot_address)
+        except:
+            print("%sUnable to connect to robot%s" % (color_red, color_reset))
+            print("Make sure you have a simulation instance running")
+            exit(1)
+        print("%sJoystick->Robot connection established%s" %
+              (color_green, color_reset))
+        assert(self.robot_sender_socket is not None)
+
+    def establish_robot_receiver_connection(self):
+        """This is akin to a server connection (robot is server)"""
+        self.robot_receiver_socket = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
+        self.robot_receiver_socket.bind((self.host, self.port_recv))
+        # wait for a connection
+        self.robot_receiver_socket.listen(1)
+        connection, client = self.robot_receiver_socket.accept()
+        print("%sRobot---->Joystick connection established%s" %
+              (color_green, color_reset))
+        return connection, client
+
+    """ END socket utils """
 
     def generate_frame(self, frame_count, plot_quiver=False):
         # extract the information from the world state
@@ -197,32 +237,3 @@ class Joystick():
         plt.clf()
         # update frame count
         self.frame_num += 1
-
-    def establish_robot_sender_connection(self):
-        """This is akin to a client connection (joystick is client)"""
-        self.robot_sender_socket = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM)
-        robot_address = ((self.host, self.port_send))
-        try:
-            self.robot_sender_socket.connect(robot_address)
-        except:
-            print("%sUnable to connect to robot%s" % (color_red, color_reset))
-            print("Make sure you have a simulation instance running")
-            exit(1)
-        print("%sJoystick->Robot connection established%s" %
-              (color_green, color_reset))
-        assert(self.robot_sender_socket is not None)
-
-    def establish_robot_receiver_connection(self):
-        """This is akin to a server connection (robot is server)"""
-        self.robot_receiver_socket = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM)
-        self.robot_receiver_socket.bind((self.host, self.port_recv))
-        # wait for a connection
-        self.robot_receiver_socket.listen(1)
-        connection, client = self.robot_receiver_socket.accept()
-        print("%sRobot---->Joystick connection established%s" %
-              (color_green, color_reset))
-        return connection, client
-
-    """ END socket utils """

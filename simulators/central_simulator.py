@@ -294,6 +294,7 @@ class CentralSimulator(SimulatorHelper):
                 break
             while(iteration >= self.robot.joystick_requests_heard):
                 # block on robot<->joystick communication
+                # wait until the joystick sent commands to pass the interval
                 time.sleep(0.01)
 
         # free all the agents
