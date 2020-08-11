@@ -57,7 +57,7 @@ class Joystick():
                         print("sent", message)
                         sent_commands += 1
                     # now wait for robot to ping with "ready"
-                    time.sleep(0.05)
+                    time.sleep(0.5)
                     self.ready_to_send = True
                 # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
             except KeyboardInterrupt:
@@ -140,7 +140,6 @@ class Joystick():
                     break
             else:
                 break
-            # time.sleep(1)
             # this should be a separate thread
             self.ready_to_req = True
 

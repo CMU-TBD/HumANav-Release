@@ -265,7 +265,7 @@ class CentralSimulator(SimulatorHelper):
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
         self.delta_t = self.params.dt
         if(self.delta_t < self.params.dt):
-            print("%sSimulation dt is too small either lower the agents' dt's" % (color_red),
+            print("%sSimulation dt is too small; either lower the agents' dt's" % (color_red),
                   self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
         while self.exists_running_agent() or self.exists_running_prerec():
@@ -292,6 +292,9 @@ class CentralSimulator(SimulatorHelper):
             if (iteration > 60 * num_agents):
                 # hard limit of 60 frames per agent
                 break
+            while(iteration >= self.robot.joystick_requests_heard):
+                # block on robot<->joystick communication
+                time.sleep(0.01)
 
         # free all the agents
         for a in self.agents.values():

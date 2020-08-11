@@ -31,6 +31,7 @@ class RoboAgent(Agent):
         self.radius = self.params.radius
         self.joystick_ready = False  # josystick is ready once it has been sent an environment
         self.joystick_requests_world = False  # to send the world state
+        self.joystick_requests_heard = 0
 
     # Getters for the robot class
     def get_name(self):
@@ -175,6 +176,7 @@ class RoboAgent(Agent):
         self.running = True  # initialize listener
         while(self.running):
             connection, client = self.joystick_receiver_socket.accept()
+            self.joystick_requests_heard += 1  # update number of heard joystick requests
             while(True):
                 data_b, response_len = conn_recv(connection, buffr_amnt=128)
 
