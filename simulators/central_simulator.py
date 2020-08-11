@@ -190,7 +190,7 @@ class CentralSimulator(SimulatorHelper):
         # save initial state before the simulator is spawned
         self.t = 0
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        self.delta_t = 3 * self.params.dt
+        self.delta_t = 2 * self.params.dt
         if(self.delta_t < self.params.dt):
             print(print_colors()["red"],
                   "Simulation dt is too small either lower the agents' dt's",
