@@ -114,6 +114,38 @@ def conn_recv(connection, buffr_amnt=1024):
     return data, response_len
 
 
+def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color='bo', collided_color='ro',
+                plot_trajectory=True, plot_quiver=False):
+    # plot all the simulated prerecorded agents
+    for i, a in enumerate(agents_dict.values()):
+        if(json_key is not None):
+            markersize = a["radius"] * ppm
+            pos_3 = a[json_key]
+        else:
+            markersize = a.get_radius() * ppm
+            pos_3 = a.get_current_config().to_3D_numpy()
+        if(plot_trajectory):
+            # TODO: make colours of trajectories random rather than hardcoded
+            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+        color = normal_color  # agents are green and solid unless collided
+        if(a.get_collided()):
+            color = collided_color  # collided agents are drawn red
+        if(i == 0):
+            # Only add label on the first humans
+            ax.plot(pos_3[0], pos_3[1],
+                    color, markersize=markersize, label=label)
+        else:
+            ax.plot(pos_3[0], pos_3[1], color,
+                    markersize=markersize)
+        # TODO: use agent radius instead of hardcode
+        ax.plot(pos_3[0], pos_3[1], color,
+                alpha=0.2, markersize=2. * markersize)
+        if(plot_quiver):
+            # Agent heading
+            ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
+                      scale=2, scale_units='inches')
+
+
 def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files=True, verbose=False):
     """Takes the image directory and naturally sorts the images into a singular movie.gif"""
     images = []

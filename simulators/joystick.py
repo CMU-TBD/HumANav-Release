@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
-from utils.utils import print_colors, conn_recv, touch, save_to_gif
+from utils.utils import print_colors, conn_recv, touch, save_to_gif, plot_agents
 from params.robot_params import create_params
 from params.renderer_params import get_path_to_humanav
 
@@ -167,74 +167,18 @@ class Joystick():
             (0, 1)) - ax.transData.transform((0, 0))
         # print(img_scale)
         ppm = img_scale[1]  # number of pixels per "meter" unit in the plot
+
         # Plot the camera (robots)
-        for i, r in enumerate(robots.values()):
-            r_pos_3 = r["current_config"]
-            # TODO: trajectory
-            # r.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-            color = 'bo'  # robots are blue and solid unless collided
-            if(r["collided"]):
-                color = 'ko'  # collided robots are drawn BLACK
-            if i == 0:
-                # only add label on first robot
-                ax.plot(r_pos_3[0], r_pos_3[1], color,
-                        markersize=10, label='Robot')
-            else:
-                ax.plot(r_pos_3[0], r_pos_3[1], color,
-                        markersize=r["radius"] * ppm)
-            # visual "bubble" around robot base to stay safe
-            ax.plot(r_pos_3[0], r_pos_3[1], color,
-                    alpha=0.2, markersize=r["radius"] * 2. * ppm)
-            # this is the "camera" robot (with quiver)
-            ax.quiver(r_pos_3[0], r_pos_3[1], np.cos(
-                r_pos_3[2]), np.sin(r_pos_3[2]))
+        plot_agents(ax, ppm, robots, json_key="current_config", label="Robot",
+                    normal_color="bo", collided_color="ko", plot_quiver=plot_quiver)
 
         # plot all the simulated prerecorded agents
-        if(prerecs is not None):
-            for i, a in enumerate(prerecs.values()):
-                pos_3 = a["current_config"]
-                # TODO: make colours of trajectories random rather than hardcoded
-                # a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-                color = 'yo'  # agents are green and solid unless collided
-                if(a["collided"]):
-                    color = 'ro'  # collided agents are drawn red
-                if(i == 0):
-                    # Only add label on the first humans
-                    ax.plot(pos_3[0], pos_3[1],
-                            color, markersize=10, label='Prerec')
-                else:
-                    ax.plot(pos_3[0], pos_3[1], color,
-                            markersize=a["radius"] * ppm)
-                # TODO: use agent radius instead of hardcode
-                ax.plot(pos_3[0], pos_3[1], color,
-                        alpha=0.2, markersize=a["radius"] * 2.0 * ppm)
-                if(plot_quiver):
-                    # Agent heading
-                    ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                              scale=2, scale_units='inches')
-        if(agents is not None):
-            # plot all the randomly generated simulated agents
-            for i, a in enumerate(agents.values()):
-                pos_3 = a["current_config"]
-                # TODO: make colours of trajectories random rather than hardcoded
-                # a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-                color = 'go'  # agents are green and solid unless collided
-                if(a["collided"]):
-                    color = 'ro'  # collided agents are drawn red
-                if(i == 0):
-                    # Only add label on the first humans
-                    ax.plot(pos_3[0], pos_3[1],
-                            color, markersize=10, label='Agent')
-                else:
-                    ax.plot(pos_3[0], pos_3[1], color,
-                            markersize=a["radius"] * ppm)
-                # TODO: use agent radius instead of hardcode
-                ax.plot(pos_3[0], pos_3[1], color,
-                        alpha=0.2, markersize=a["radius"] * 2. * ppm)
-                if(plot_quiver):
-                    # Agent heading
-                    ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                              scale=2, scale_units='inches')
+        plot_agents(ax, ppm, prerecs, json_key="current_config", label="Prerec",
+                    normal_color="yo", collided_color="ro", plot_quiver=plot_quiver)
+
+        # plot all the randomly generated simulated agents
+        plot_agents(ax, ppm, agents, json_key="current_config", label="Agent",
+                    normal_color="go", collided_color="ro", plot_quiver=plot_quiver)
 
         # save the axis to a file
         filename = "jview" + str(frame_count) + ".png"

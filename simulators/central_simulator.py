@@ -17,7 +17,7 @@ from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
 from simulators.sim_state import SimState, HumanState, AgentState
 from utils.fmm_map import FmmMap
-from utils.utils import touch, print_colors, save_to_gif
+from utils.utils import touch, print_colors, save_to_gif, plot_agents
 from params.renderer_params import get_path_to_humanav
 
 
@@ -415,72 +415,16 @@ class CentralSimulator(SimulatorHelper):
             alphas = np.all(np.invert(human_traversible))
 
         # Plot the camera (robots)
-        for i, r in enumerate(robots.values()):
-            r_pos_3 = r.get_current_config().to_3D_numpy()
-            r.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-            color = 'bo'  # robots are blue and solid unless collided
-            if(r.get_collided()):
-                color = 'ko'  # collided robots are drawn BLACK
-            if i == 0:
-                # only add label on first robot
-                ax.plot(r_pos_3[0], r_pos_3[1], color,
-                        markersize=10, label='Robot')
-            else:
-                ax.plot(r_pos_3[0], r_pos_3[1], color,
-                        markersize=r.get_radius() * ppm)
-            # visual "bubble" around robot base to stay safe
-            ax.plot(r_pos_3[0], r_pos_3[1], color,
-                    alpha=0.2, markersize=r.get_radius() * 2. * ppm)
-            if np.array_equal(camera_pos_13, r_pos_3):
-                # this is the "camera" robot (with quiver)
-                ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
-                    camera_pos_13[2]), np.sin(camera_pos_13[2]))
+        plot_agents(ax, ppm, robots, label="Robot", normal_color="bo",
+                    collided_color="ko", plot_quiver=plot_quiver)
 
         # plot all the simulated prerecorded agents
-        for i, a in enumerate(prerecs.values()):
-            pos_3 = a.get_current_config().to_3D_numpy()
-            # TODO: make colours of trajectories random rather than hardcoded
-            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-            color = 'yo'  # agents are green and solid unless collided
-            if(a.get_collided()):
-                color = 'ro'  # collided agents are drawn red
-            if(i == 0):
-                # Only add label on the first humans
-                ax.plot(pos_3[0], pos_3[1],
-                        color, markersize=10, label='Prerec')
-            else:
-                ax.plot(pos_3[0], pos_3[1], color,
-                        markersize=a.get_radius() * ppm)
-            # TODO: use agent radius instead of hardcode
-            ax.plot(pos_3[0], pos_3[1], color,
-                    alpha=0.2, markersize=a.get_radius() * 2.0 * ppm)
-            if(plot_quiver):
-                # Agent heading
-                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                          scale=2, scale_units='inches')
+        plot_agents(ax, ppm, prerecs, label="Prerec", normal_color="yo",
+                    collided_color="ro", plot_quiver=plot_quiver)
 
         # plot all the randomly generated simulated agents
-        for i, a in enumerate(agents.values()):
-            pos_3 = a.get_current_config().to_3D_numpy()
-            # TODO: make colours of trajectories random rather than hardcoded
-            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-            color = 'go'  # agents are green and solid unless collided
-            if(a.get_collided()):
-                color = 'ro'  # collided agents are drawn red
-            if(i == 0):
-                # Only add label on the first humans
-                ax.plot(pos_3[0], pos_3[1],
-                        color, markersize=10, label='Agent')
-            else:
-                ax.plot(pos_3[0], pos_3[1], color,
-                        markersize=a.get_radius() * ppm)
-            # TODO: use agent radius instead of hardcode
-            ax.plot(pos_3[0], pos_3[1], color,
-                    alpha=0.2, markersize=a.get_radius() * 2. * ppm)
-            if(plot_quiver):
-                # Agent heading
-                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                          scale=2, scale_units='inches')
+        plot_agents(ax, ppm, agents, label="Agent", normal_color="go",
+                    collided_color="ro", plot_quiver=plot_quiver)
 
         # plot other useful informational visuals in the topview
         # such as the key to the length of a "meter" unit
@@ -516,7 +460,7 @@ class CentralSimulator(SimulatorHelper):
         extent = np.array(extent) * map_scale
 
         # count used to signify the number of images that will be generated in a single frame
-        plot_count = 2  # default 2, for zoomed topview and normal topview
+        plot_count = 1  # default 2, for zoomed topview and normal topview
         if rgb_image_1mk3 is not None:
             plot_count = plot_count + 1
         if depth_image_1mk1 is not None:
@@ -538,19 +482,20 @@ class CentralSimulator(SimulatorHelper):
         time_string = "sim_t=%.3f" % sim_time + " wall_t=%.3f" % wall_time
         ax.set_title(time_string, fontsize=20)
 
-        # Render entire map-view from the top
-        # to keep square plot
-        outer_zoom = min(traversible.shape[0],
-                         traversible.shape[1]) * map_scale
-        ax = fig.add_subplot(1, plot_count, 2)
-        ax.set_xlim(0., outer_zoom)
-        ax.set_ylim(0., outer_zoom)
-        self.plot_topview(ax, extent, traversible, human_traversible,
-                          camera_pos_13, agents, prerecs, robots, room_center)
-        ax.legend()
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title(time_string, fontsize=20)
+        if(plot_count == 2):
+            # Render entire map-view from the top
+            # to keep square plot
+            outer_zoom = min(traversible.shape[0],
+                             traversible.shape[1]) * map_scale
+            ax = fig.add_subplot(1, plot_count, 2)
+            ax.set_xlim(0., outer_zoom)
+            ax.set_ylim(0., outer_zoom)
+            self.plot_topview(ax, extent, traversible, human_traversible,
+                              camera_pos_13, agents, prerecs, robots, room_center)
+            ax.legend()
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_title(time_string, fontsize=20)
 
         if rgb_image_1mk3 is not None:
             # Plot the RGB Image

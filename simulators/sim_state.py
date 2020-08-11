@@ -1,6 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import copy
+from copy import deepcopy
 import json
 from simulators.agent import Agent
 from humans.human import Human
@@ -44,19 +44,19 @@ class AgentState():
         return self.radius
 
     def to_json(self):
-        name_json = SimState.to_json_type(self.name)
+        name_json = SimState.to_json_type(deepcopy(self.name))
         # NOTE: the configs are just being serialized with their 3D positions
         # start_json = SimState.to_json_type(
         #     self.get_start_config().to_3D_numpy())
         # goal_json = SimState.to_json_type(
         #     self.get_goal_config().to_3D_numpy())
         current_json = SimState.to_json_type(
-            copy.deepcopy(self.get_current_config().to_3D_numpy()))
+            deepcopy(self.get_current_config().to_3D_numpy()))
         # SimState.to_json_type( self.get_trajectory().to_numpy_repr())
-        trajectory_json = "None"
-        collided_json = copy.deepcopy(self.collided)
-        end_acting_json = copy.deepcopy(self.end_acting)
-        radius_json = copy.deepcopy(self.radius)
+        # trajectory_json = "None"
+        collided_json = deepcopy(self.collided)
+        end_acting_json = deepcopy(self.end_acting)
+        radius_json = deepcopy(self.radius)
         json_dict = {}
         json_dict['name'] = name_json
         # NOTE: goal and start can perhaps be optimized to be only sent once
@@ -64,7 +64,7 @@ class AgentState():
         # json_dict['start_config'] = start_json
         # json_dict['goal_config'] = goal_json
         json_dict['current_config'] = current_json
-        json_dict['trajectory'] = trajectory_json
+        # json_dict['trajectory'] = trajectory_json
         json_dict['collided'] = collided_json
         json_dict['end_acting'] = end_acting_json
         json_dict['radius'] = radius_json
@@ -82,13 +82,6 @@ class HumanState(AgentState):
     def get_appearance(self):
         return self.appearance
 
-    # def to_json(self):
-    #     json_dict = []
-    #     json_dict.append(super().to_json())
-    #     # appends serialized appearance to end of Agent dict
-    #     json_dict.apend(SimState.to_json_type(self.appearance))
-    #     return json_dict
-
 
 class SimState():
     def __init__(self, environment, agents, prerecs, robots, sim_time, wall_time):
@@ -101,19 +94,19 @@ class SimState():
 
     def to_json(self, robot_on=True, include_map=False):
         json_dict = {}
-        json_dict['robot_on'] = robot_on  # true or false
+        json_dict['robot_on'] = deepcopy(robot_on)  # true or false
         if(robot_on):  # only send the world if the robot is ON
             if(include_map):
                 environment_json = SimState.to_json_dict(
-                    copy.deepcopy(self.environment))
+                    deepcopy(self.environment))
             else:
                 environment_json = {}  # empty dictionary
             # serialize all other fields
-            agents_json = SimState.to_json_dict(copy.deepcopy(self.agents))
-            prerecs_json = SimState.to_json_dict(copy.deepcopy(self.prerecs))
-            robots_json = SimState.to_json_dict(copy.deepcopy(self.robots))
-            sim_t_json = copy.deepcopy(self.sim_t)
-            wall_t_json = copy.deepcopy(self.wall_t)
+            agents_json = SimState.to_json_dict(deepcopy(self.agents))
+            prerecs_json = SimState.to_json_dict(deepcopy(self.prerecs))
+            robots_json = SimState.to_json_dict(deepcopy(self.robots))
+            sim_t_json = deepcopy(self.sim_t)
+            wall_t_json = deepcopy(self.wall_t)
             # append them to the json dictionary
             json_dict['environment'] = environment_json
             json_dict['agents'] = agents_json
