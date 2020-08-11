@@ -113,6 +113,7 @@ class CentralSimulator(SimulatorHelper):
             r.update_time(0)
             assert(r.world_state is not None)
             # send first transaction to the joystick
+            print("sending map to joystick")
             r.send_to_joystick(r.world_state.to_json(include_map=True))
             robot_thread = threading.Thread(target=r.update)
             if(power_on):

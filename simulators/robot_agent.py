@@ -1,10 +1,11 @@
-from utils.utils import print_colors, generate_name, euclidean_dist
+from utils.utils import print_colors, generate_name, euclidean_dist, conn_recv
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig
 from params.robot_params import create_params
 import numpy as np
 import socket
+import ast
 import time
 import threading
 import sys
@@ -29,6 +30,7 @@ class RoboAgent(Agent):
                          start_configs.get_goal_config(), name)
         self.radius = self.params.radius
         self.joystick_ready = False  # josystick is ready once it has been sent an environment
+        self.joystick_requests_world = False  # to send the world state
 
     # Getters for the robot class
     def get_name(self):
@@ -128,11 +130,13 @@ class RoboAgent(Agent):
                         print("ERROR: robot_trajectory dimens mismatch")
                     time.sleep(1. / self.freq)
             # notify the joystick that the robot can take another input
-            if(False):  # only send when joystick requests
+            if(self.joystick_requests_world):  # only send when joystick requests
                 self.send_to_joystick(
-                    self.world_state.to_json(include_map=False))
+                    self.world_state.to_json(robot_on=True, include_map=False))
+                # immediately note that the world has been sent:
+                self.joystick_requests_world = False
         # notify the joystick to stop sending commands to the robot
-        self.send_to_joystick("")  # no need to update world state
+        self.send_to_joystick(self.world_state.to_json(robot_on=False))
         print("\nRobot powering off, recieved", len(self.commands), "commands")
         self.power_off()
         listen_thread.join()
@@ -172,24 +176,26 @@ class RoboAgent(Agent):
         while(self.running):
             connection, client = self.joystick_receiver_socket.accept()
             while(True):
-                # TODO: allow for buffered data, thus no limit
-                data = connection.recv(128)
-                # quickly close connection to open up for the next input
-                # connection.close()
-                # NOTE: data is in the form (running, time, lin_command, ang_command)
-                # TODO: use ast.literal_eval instead of eval to
-                if(data):
-                    # print(data)
-                    data = eval(data)
-                    np_data = np.array([data[2], data[3]], dtype=np.float32)
-                    # NOTE: commands can also be a dictionary indexed by time
-                    if(data[1] != -1):  # only sent by joystick when "ready"
+                data_b, response_len = conn_recv(connection, buffr_amnt=128)
+
+                if(data_b is not None):
+                    # TODO: commands can also be a dictionary indexed by time
+                    # NOTE: data is in the form:
+                    # (joystick running, joystick time, lin acc, ang comm, requests_world)
+                    data_str = data_b.decode("utf-8")  # bytes to str
+                    data = ast.literal_eval(data_str)
+                    if(data[-1] is False and data[1] != -1):
+                        np_data = np.array(
+                            [data[2], data[3]], dtype=np.float32)
                         self.commands.append(np_data)
                         if(data[0] is False):
                             self.running = False
-                            break
-                    else:
+                    elif data[1] == -1:  # only sent by joystick when "ready" and needs the map
                         self.joystick_ready = True
+                    else:
+                        assert(data[-1] is True)
+                        self.joystick_requests_world = True
+                    break
                 else:
                     break
             # close connection to be reaccepted when the joystick sends data
@@ -224,4 +230,5 @@ class RoboAgent(Agent):
         assert(self.joystick_sender_socket is not None)
         print(print_colors()[
               "green"], "Joystick->Robot connection established", print_colors()['reset'])
+
     """ END socket utils """

@@ -98,6 +98,20 @@ def generate_name(max_chars):
     ])
 
 
+def conn_recv(connection, buffr_amnt=1024):
+    # NOTE: allow for buffered data, thus no limit
+    chunks = []
+    response_len = 0
+    while True:
+        chunk = connection.recv(buffr_amnt)
+        if chunk == b'':
+            break
+        chunks.append(chunk)
+        response_len += len(chunk)
+    data = b''.join(chunks)
+    return data, response_len
+
+
 def mkdir_if_missing(dirname):
     if not os.path.exists(dirname):
         os.makedirs(dirname)

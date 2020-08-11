@@ -49,11 +49,11 @@ class AgentState():
         start_json = SimState.to_json_type(
             self.get_start_config().to_3D_numpy())
         goal_json = SimState.to_json_type(
-            self.get_start_config().to_3D_numpy())
+            self.get_goal_config().to_3D_numpy())
         current_json = SimState.to_json_type(
-            self.get_start_config().to_3D_numpy())
-        trajectory_json = SimState.to_json_type(
-            self.get_trajectory().to_numpy_repr())
+            self.get_current_config().to_3D_numpy())
+        trajectory_json = "None"  # SimState.to_json_type(
+        # self.get_trajectory().to_numpy_repr())
         collided_json = self.collided
         end_acting_json = self.end_acting
         radius_json = self.radius
@@ -99,23 +99,28 @@ class SimState():
         self.sim_t = sim_time
         self.wall_t = wall_time
 
-    def to_json(self, include_map=False):
-        if(include_map):
-            environment_json = SimState.to_json_dict(self.environment)
-        else:
-            environment_json = {}  # empty dictionary
-        agents_json = SimState.to_json_dict(self.agents)
-        prerecs_json = SimState.to_json_dict(self.prerecs)
-        robots_json = SimState.to_json_dict(self.robots)
-        sim_t_json = self.sim_t
-        wall_t_json = self.wall_t
+    def to_json(self, robot_on=True, include_map=False):
         json_dict = {}
-        json_dict['environment'] = environment_json
-        json_dict['agents'] = agents_json
-        json_dict['prerecs'] = robots_json
-        json_dict['robots'] = prerecs_json
-        json_dict['sim_t'] = sim_t_json
-        json_dict['wall_t'] = wall_t_json
+        json_dict['robot_on'] = robot_on  # true or false
+        if(robot_on):  # only send the world if the robot is ON
+            if(include_map):
+                environment_json = SimState.to_json_dict(
+                    copy.deepcopy(self.environment))
+            else:
+                environment_json = {}  # empty dictionary
+            # serialize all other fields
+            # agents_json = SimState.to_json_dict(self.agents)
+            # prerecs_json = SimState.to_json_dict(self.prerecs)
+            robots_json = SimState.to_json_dict(copy.deepcopy(self.robots))
+            sim_t_json = self.sim_t
+            wall_t_json = self.wall_t
+            # append them to the json dictionary
+            json_dict['environment'] = environment_json
+            # json_dict['agents'] = agents_json
+            # json_dict['prerecs'] = prerecs_json
+            json_dict['robots'] = robots_json
+            json_dict['sim_t'] = sim_t_json
+            json_dict['wall_t'] = wall_t_json
         return json.dumps(json_dict, indent=1)
 
     def get_environment(self):

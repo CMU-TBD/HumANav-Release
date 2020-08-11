@@ -2,22 +2,28 @@ import tensorflow as tf
 import socket
 import threading
 import multiprocessing
+import threading
 import time
 import sys
 import json
+import os
+from copy import deepcopy
+from random import randint
 import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
-from utils.utils import print_colors
+from utils.utils import print_colors, conn_recv, touch
 from params.robot_params import create_params
+from params.renderer_params import get_path_to_humanav
 
 
 class Joystick():
     def __init__(self):
         self.t = 0
         self.latest_state = None
-        self.world_state = (False, 0, 0)
+        self.world_state = None
+        self.environment = None
         self.params = create_params()
         # sockets for communication
         self.robot_sender_socket = None
@@ -25,40 +31,42 @@ class Joystick():
         self.host = socket.gethostname()
         self.port_send = self.params.port  # port for sending commands to the robot
         self.port_recv = self.port_send + 1  # port for recieving commands from the robot
+        self.frame_num = 0
         self.ready_to_send = False
+        self.ready_to_req = False  # True whenever the joystick wants data about the world
         print("Initiated joystick at", self.host, self.port_send)
 
     def set_host(self, h):
         self.host = h
 
     def random_robot_joystick(self):
-        from random import randint
-        self.world_state = (True, 0, 0)
-        accel_scale = 100   # scale to multiply the raw acceleration values by
         repeat = 1          # number of times to send the same command to the robot
         sent_commands = 0
         self.robot_running = True
         while(self.robot_running is True):
             try:
-                if(self.ready_to_send):
+                if(self.ready_to_send and self.environment is not None):
                     # robot can only more forwards
                     lin_command = (randint(10, 100) / 100.)
                     ang_command = (randint(-100, 100) / 100.)
                     for _ in range(repeat):
                         # TODO: remove robot_running stuff
                         message = (self.robot_running, time.clock(),
-                                   lin_command, ang_command)
+                                   lin_command, ang_command, self.ready_to_req)
                         self.send_to_robot(message)
                         print("sent", message)
                         sent_commands += 1
                     # now wait for robot to ping with "ready"
-                    self.ready_to_send = False
+                    time.sleep(0.2)
+                    self.ready_to_send = True
                 # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
             except KeyboardInterrupt:
                 print(print_colors()[
                       "yellow"], "Joystick disconnected by user", print_colors()['reset'])
-                self.send_to_robot((False, time.clock(), 0, 0))  # stop signal
-                sys.exit(0)
+                # send message to turn off the robot
+                self.send_to_robot((False, time.clock(), 0, 0, False))  # stop
+                self.robot_running = False
+                break
 
     def update(self):
         """ Independent process for a user (at a designated host:port) to recieve
@@ -66,9 +74,6 @@ class Joystick():
         listen_thread = threading.Thread(target=self.listen_to_robot)
         listen_thread.start()
         self.random_robot_joystick()
-        # send a message to the robot to stop execution
-        # halt_message = (False, time.clock(), 0, 0)
-        # self.send(halt_message)
         listen_thread.join()
         # Close communication channel
         self.robot_sender_socket.close()
@@ -78,17 +83,20 @@ class Joystick():
             print(print_colors()[
                   "red"], "Connection closed by robot", print_colors()['reset'])
             self.robot_running = False
+            try:
+                self.send_to_robot((False, time.clock(), 0, 0, False))  # stop
+            except:
+                pass
 
     """BEGIN socket utils"""
 
     def send_to_robot(self, commands):
         # Create a TCP/IP socket
-        # TODO: make this use JSON rather than the current jank solution
+        # TODO: make this use JSON rather than the current solution
         self.robot_sender_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
         server_address = ((self.host, self.port_send))
-        # print(self.host, self.port)
         try:
             self.robot_sender_socket.connect(server_address)
         except ConnectionRefusedError:  # used to turn off the joystick
@@ -104,52 +112,53 @@ class Joystick():
         self.robot_running = True
         while(self.robot_running):
             connection, client = self.robot_receiver_socket.accept()
-            # NOTE: allow for buffered data, thus no limit
-            chunks = []
-            response_len = 0
-            while True:
-                chunk = connection.recv(1024)
-                if chunk == b'':
-                    break
-                chunks.append(chunk)
-                response_len += len(chunk)
-            data = b''.join(chunks)
+            data_b, response_len = conn_recv(connection)
             # quickly close connection to open up for the next input
             connection.close()
-            # NOTE: data is either true or false
-            # TODO: use ast.literal_eval instead of eval to
-            print("received", response_len, "from server")
-            if(data is not None):
-                data_str = data.decode("utf-8")  # bytes to str
-                # TODO: only send a single instance of the map since it is MASSIVE
+            print("received", response_len, "bytes from server")
+            if(data_b is not None):
+                self.ready_to_send = True
+                self.ready_to_req = False
+                data_str = data_b.decode("utf-8")  # bytes to str
                 world_state = json.loads(data_str)
-                if(world_state['environment']):  # not empty
-                    # only update the environment if it is non-empty
-                    self.environment = world_state['environment']
-                    print("Updated environment from robot")
-                    # notify the robot that the joystick received the environment
-                    self.send_to_robot((True, -1, 0, 0))
-                self.agents = world_state['agents']
-                self.prerecs = world_state['prerecs']
-                self.robots = world_state['robots']
-                # for lingering constants
-                self.sim_t = world_state['sim_t']
-                self.wall_t = world_state['wall_t']
-                self.generate_world(self.environment, self.agents,
-                                    self.prerecs, self.robots, self.sim_t, self.wall_t)
-                exit(1)
-                if(isinstance(data, tuple)):
-                    self.ready_to_send = data[0]
-                    self.world_state = data[1]
+                if(world_state['robot_on'] is True):
+                    if(world_state['environment']):  # not empty
+                        # notify the robot that the joystick received the environment
+                        self.send_to_robot((True, -1, 0, 0, False))
+                        # only update the environment if it is non-empty
+                        self.environment = world_state['environment']
+                        print("Updated environment from robot")
+                    self.agents = None  # world_state['agents']
+                    self.prerecs = None  # world_state['prerecs']
+                    self.robots = world_state['robots']
+                    # for lingering constants
+                    self.sim_t = world_state['sim_t']
+                    self.wall_t = world_state['wall_t']
+                    t = threading.Thread(target=self.generate_frame, args=(deepcopy(self.frame_num),
+                                                                           self.environment,
+                                                                           deepcopy(
+                                                                               self.agents),
+                                                                           deepcopy(
+                                                                               self.prerecs),
+                                                                           deepcopy(
+                                                                               self.robots),
+                                                                           deepcopy(
+                                                                               self.sim_t),
+                                                                           deepcopy(self.wall_t))
+                                         )
+                    t.start()
+                    # to not interfere with previous send (notifying robot of good env req)
                 else:
-                    self.ready_to_send = data
-                if(self.ready_to_send is False):
+                    print("powering off joystick")
                     self.power_off()
                     break
             else:
                 break
+            # this should be a separate thread
+            time.sleep(0.3)
+            self.ready_to_req = True
 
-    def generate_world(self, environment, agents, prerecs, robots, sim_time, wall_time, plot_quiver=False):
+    def generate_frame(self, frame_count, environment, agents, prerecs, robots, sim_time, wall_time, plot_quiver=False):
         map_scale = eval(environment["map_scale"])  # float
         room_center = np.array(environment["room_center"])
         traversible = np.array(environment['traversibles'][0])
@@ -191,53 +200,66 @@ class Joystick():
                 r_pos_3[2]), np.sin(r_pos_3[2]))
 
         # plot all the simulated prerecorded agents
-        for i, a in enumerate(prerecs.values()):
-            pos_3 = a["current_config"]
-            # TODO: make colours of trajectories random rather than hardcoded
-            # a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-            color = 'yo'  # agents are green and solid unless collided
-            if(a["collided"]):
-                color = 'ro'  # collided agents are drawn red
-            if(i == 0):
-                # Only add label on the first humans
-                ax.plot(pos_3[0], pos_3[1],
-                        color, markersize=10, label='Prerec')
-            else:
+        if(prerecs is not None):
+            for i, a in enumerate(prerecs.values()):
+                pos_3 = a["current_config"]
+                # TODO: make colours of trajectories random rather than hardcoded
+                # a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+                color = 'yo'  # agents are green and solid unless collided
+                if(a["collided"]):
+                    color = 'ro'  # collided agents are drawn red
+                if(i == 0):
+                    # Only add label on the first humans
+                    ax.plot(pos_3[0], pos_3[1],
+                            color, markersize=10, label='Prerec')
+                else:
+                    ax.plot(pos_3[0], pos_3[1], color,
+                            markersize=a["radius"] * ppm)
+                # TODO: use agent radius instead of hardcode
                 ax.plot(pos_3[0], pos_3[1], color,
-                        markersize=a["radius"] * ppm)
-            # TODO: use agent radius instead of hardcode
-            ax.plot(pos_3[0], pos_3[1], color,
-                    alpha=0.2, markersize=a["radius"] * 2.0 * ppm)
-            if(plot_quiver):
-                # Agent heading
-                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                          scale=2, scale_units='inches')
-
-        # plot all the randomly generated simulated agents
-        for i, a in enumerate(agents.values()):
-            pos_3 = a["current_config"]
-            # TODO: make colours of trajectories random rather than hardcoded
-            # a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-            color = 'go'  # agents are green and solid unless collided
-            if(a["collided"]):
-                color = 'ro'  # collided agents are drawn red
-            if(i == 0):
-                # Only add label on the first humans
-                ax.plot(pos_3[0], pos_3[1],
-                        color, markersize=10, label='Agent')
-            else:
+                        alpha=0.2, markersize=a["radius"] * 2.0 * ppm)
+                if(plot_quiver):
+                    # Agent heading
+                    ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
+                              scale=2, scale_units='inches')
+        if(agents is not None):
+            # plot all the randomly generated simulated agents
+            for i, a in enumerate(agents.values()):
+                pos_3 = a["current_config"]
+                # TODO: make colours of trajectories random rather than hardcoded
+                # a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+                color = 'go'  # agents are green and solid unless collided
+                if(a["collided"]):
+                    color = 'ro'  # collided agents are drawn red
+                if(i == 0):
+                    # Only add label on the first humans
+                    ax.plot(pos_3[0], pos_3[1],
+                            color, markersize=10, label='Agent')
+                else:
+                    ax.plot(pos_3[0], pos_3[1], color,
+                            markersize=a["radius"] * ppm)
+                # TODO: use agent radius instead of hardcode
                 ax.plot(pos_3[0], pos_3[1], color,
-                        markersize=a["radius"] * ppm)
-            # TODO: use agent radius instead of hardcode
-            ax.plot(pos_3[0], pos_3[1], color,
-                    alpha=0.2, markersize=a["radius"] * 2. * ppm)
-            if(plot_quiver):
-                # Agent heading
-                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                          scale=2, scale_units='inches')
+                        alpha=0.2, markersize=a["radius"] * 2. * ppm)
+                if(plot_quiver):
+                    # Agent heading
+                    ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
+                              scale=2, scale_units='inches')
 
         # save the axis to a file
-        fig.savefig("joystick_map.png", bbox_inches='tight', pad_inches=0)
+        filename = "jview" + str(frame_count) + ".png"
+        dirname = 'tests/socnav/joystick_movie'
+        full_file_name = os.path.join(get_path_to_humanav(), dirname, filename)
+        if(not os.path.exists(full_file_name)):
+            touch(full_file_name)  # Just as the bash command
+        fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
+        # clear matplot from memory
+        fig.clear()
+        plt.close(fig)
+        del fig
+        plt.clf()
+        # update frame count
+        self.frame_num += 1
 
     def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
