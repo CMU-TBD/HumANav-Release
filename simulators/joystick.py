@@ -151,7 +151,6 @@ class Joystick():
         prerecs = self.world_state[-1]['prerecs']
         robots = self.world_state[-1]['robots']
         sim_time = self.world_state[-1]['sim_t']
-        wall_time = self.world_state[-1]['wall_t']
         # process the information
         map_scale = eval(environment["map_scale"])  # float
         room_center = np.array(environment["room_center"])

@@ -84,13 +84,13 @@ class HumanState(AgentState):
 
 
 class SimState():
-    def __init__(self, environment, agents, prerecs, robots, sim_time, wall_time):
+    def __init__(self, environment, agents, prerecs, robots, sim_t, wall_t):
         self.environment = environment
         self.agents = agents
         self.prerecs = prerecs
         self.robots = robots
-        self.sim_t = sim_time
-        self.wall_t = wall_time
+        self.sim_t = sim_t
+        self.wall_t = wall_t
 
     def to_json(self, robot_on=True, include_map=False):
         json_dict = {}
@@ -109,14 +109,12 @@ class SimState():
             robots_json = deepcopy(
                 SimState.to_json_dict(deepcopy(self.robots)))
             sim_t_json = deepcopy(self.sim_t)
-            wall_t_json = deepcopy(self.wall_t)
             # append them to the json dictionary
             json_dict['environment'] = environment_json
             json_dict['agents'] = agents_json
             json_dict['prerecs'] = prerecs_json
             json_dict['robots'] = robots_json
             json_dict['sim_t'] = sim_t_json
-            json_dict['wall_t'] = wall_t_json
         return json.dumps(json_dict, indent=1)
 
     def get_environment(self):
