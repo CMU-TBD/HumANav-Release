@@ -178,7 +178,7 @@ def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files
     output_location = os.path.join(IMAGES_DIR, gif_filename + ".gif")
     kargs = {'duration': duration}  # 1/fps
     imageio.mimsave(output_location, images, 'GIF', **kargs)
-    print('\033[32m', "Rendered gif at", output_location, '\033[0m')
+    print("%sRendered gif at" % (color_green), output_location, '\033[0m')
     # Clearing remaining files to not affect next render
     if clear_old_files:
         for f in files:
