@@ -17,7 +17,7 @@ from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
 from simulators.sim_state import SimState, HumanState, AgentState
 from utils.fmm_map import FmmMap
-from utils.utils import touch, print_colors, save_to_gif, plot_agents
+from utils.utils import *
 from params.renderer_params import get_path_to_humanav
 
 
@@ -157,8 +157,7 @@ class CentralSimulator(SimulatorHelper):
                 # wait until joystick recieves the environment (once)
                 time.sleep(0.01)
             return robot_thread
-        print(print_colors()["red"],
-              "No robot in simulator", print_colors()['reset'])
+        print("%sNo robot in simulator%s" % (color_red, color_reset))
         return None
 
     def update_robot(self, world_state):
@@ -266,9 +265,8 @@ class CentralSimulator(SimulatorHelper):
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
         self.delta_t = self.params.dt
         if(self.delta_t < self.params.dt):
-            print(print_colors()["red"],
-                  "Simulation dt is too small either lower the agents' dt's",
-                  self.params.dt, "or increase simulation delta_t", print_colors()['reset'])
+            print("%sSimulation dt is too small either lower the agents' dt's" % (color_red),
+                  self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
         while self.exists_running_agent() or self.exists_running_prerec():
             # update "wall clock" time
@@ -343,17 +341,13 @@ class CentralSimulator(SimulatorHelper):
             rendered_frames (int): how many frames have been generated so far
         """
         print("A:", len(self.agents),
-              print_colors()["green"],
-              "Success:",
+              "%sSuccess:" % (color_green),
               self.num_conditions_in_agents("green"),
-              print_colors()["red"],
-              "Collide:",
+              "%sCollide:" % (color_red),
               self.num_conditions_in_agents("red"),
-              print_colors()["blue"],
-              "Time:",
+              "%sTime:" % (color_blue),
               self.num_conditions_in_agents("blue"),
-              print_colors()["reset"],
-              "Frames:",
+              "%sFrames:" % (color_reset),
               rendered_frames + 1,
               "T = %.3f" % (self.t),
               "\r", end="")

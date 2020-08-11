@@ -1,6 +1,6 @@
 from humans.human_appearance import HumanAppearance
 from humans.human_configs import HumanConfigs
-from utils.utils import print_colors, generate_name
+from utils.utils import *
 from simulators.agent import Agent
 import math
 import sys

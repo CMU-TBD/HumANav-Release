@@ -38,6 +38,7 @@ from OpenGL.GLES2 import *
 from OpenGL.EGL import *
 from humanav import utils
 from mp_env.render import rotation_utils
+from utils.utils import *
 
 __version__ = 'swiftshader_renderer'
 
@@ -96,11 +97,12 @@ class Shape():
         for i, m in enumerate(self.meshes):
             m.name = name_prefix + m.name + '_{:05d}'.format(i) + name_suffix
         # logging.error('#Meshes: %d', len(self.meshes))
-        print('\033[35m', "Number of Meshes:", len(self.meshes), '\033[0m')
+        print("%sNumber of Meshes:" %
+              (color_yellow), len(self.meshes), '\033[0m')
         dir_name = os.path.dirname(obj_file)
         # Load materials
         materials = None
-        print('\033[33m', "Loading meshes from", dir_name, '\033[00m')
+        print("%sLoading meshes from" % (color_orange), dir_name, '\033[00m')
         if load_materials:
             materials = []
             i = 0
@@ -110,19 +112,20 @@ class Shape():
                 try:
                     file_name = os.path.join(dir_name, all_files[i])
                 except:
-                    print("out of bounds reference to index",
-                          i, "out of", len(all_files))
+                    print("%sout of bounds reference to index" % (color_red),
+                          i, "out of", len(all_files), "%s" % (color_reset))
                     continue
                 i = i + 1
                 #assert(os.path.exists(file_name)), 'Texture file {:s} foes not exist.'.format(file_name)
                 if(not(os.path.exists(file_name))):
-                    print('\033[31m', "Texture file", file_name,
+                    print("%sTexture file" % (color_red), file_name,
                           "does not exist.", '\033[0m')
                     sys.exit(1)
                 materials.append(self._load_materials_from_file(
                     file_name, materials_scale))
         self.scene = scene
-        print('\033[32m', "All meshes successfully loaded", '\033[0m')
+        print("%sAll meshes successfully loaded%s" %
+              (color_green, color_reset))
         self.materials = materials
 
     @staticmethod

@@ -5,7 +5,9 @@ from humanav import utils
 from mp_env import map_utils as mu
 from mp_env.render import swiftshader_renderer as sr
 import numpy as np
-import sys, os, copy
+import sys
+import os
+import copy
 import pickle
 
 
@@ -15,18 +17,21 @@ class HumANavRendererMulti():
     SBPD dataset, now with support for multiple humans
     """
     renderer = None
-    default_human_radius = .5  # Computed by looking at a distribution of walking human radii
+    # Computed by looking at a distribution of walking human radii
+    default_human_radius = .5
 
     def __init__(self, params):
         self.p = params
 
         # Making use of a dictionary mapping Human's names to humans
-        self.humans = {} # to keep track of the Humans
+        self.humans = {}  # to keep track of the Humans
         self.human_traversible = []
 
         if self.p.load_meshes:
-            self.d = sbpd.get_dataset(self.p.dataset_name, 'all', data_dir=self.p.sbpd_data_dir, surreal_params=self.p.surreal)
-            self.building = self.d.load_data(self.p.building_name, self.p.robot_params, self.p.flip)
+            self.d = sbpd.get_dataset(
+                self.p.dataset_name, 'all', data_dir=self.p.sbpd_data_dir, surreal_params=self.p.surreal)
+            self.building = self.d.load_data(
+                self.p.building_name, self.p.robot_params, self.p.flip)
             self.humans_loaded = False
             # Instantiating a camera/ shader object is only needed
             # for rgb and depth images
@@ -40,14 +45,15 @@ class HumANavRendererMulti():
                 self.building.load_building_into_scene()
             elif 'occupancy_grid' in self.p.camera_params.modalities:
                 # MP Env only allows for square top views to be generated currently
-                assert(self.p.camera_params.width == self.p.camera_params.height)
+                assert(self.p.camera_params.width ==
+                       self.p.camera_params.height)
             else:
                 assert(False)
         else:
             self.human_radius = self.default_human_radius
 
     @classmethod
-    def get_renderer(cls, params, deepcpy = False):
+    def get_renderer(cls, params, deepcpy=False):
         """
         Used to instantiate a renderer object. Ensures that only one renderer
         object ever exists as they are very memory intensive.
@@ -77,7 +83,8 @@ class HumANavRendererMulti():
                 crop_size = [p.width, p.height]
             imgs = self._get_topview(starts_n2, thetas_n1, crop_size=crop_size)
         elif 'rgb' in p.modalities:
-            imgs = self._get_rgb_image(starts_n2, thetas_n1, human_visible=human_visible)
+            imgs = self._get_rgb_image(
+                starts_n2, thetas_n1, human_visible=human_visible)
         elif 'disparity' in p.modalities:
             return
         else:
@@ -105,7 +112,7 @@ class HumANavRendererMulti():
 
     def get_human_traversible(self):
         return self.human_traversible
-    
+
     def remove_human(self, name):
         """
         Remove the human with identity ID
@@ -114,7 +121,7 @@ class HumANavRendererMulti():
         if self.p.load_meshes:
             self.building.remove_human(name)
             self.humans.pop(name)
-    
+
     def remove_all_humans(self):
         """
         Remove all humans in the scene
@@ -138,15 +145,16 @@ class HumANavRendererMulti():
         if self.p.load_meshes:
             # Scale thetas by 1/delta_theta as the building object
             # internally scales theta by delta_theta
-            nodes_n3 = np.concatenate([starts_n2*1.,
+            nodes_n3 = np.concatenate([starts_n2 * 1.,
                                        thetas_n1 / self.building.robot.delta_theta], axis=1)
-            imgs_nmk3 = self.building.render_nodes(nodes_n3, modality='rgb', human_visible=human_visible)
+            imgs_nmk3 = self.building.render_nodes(
+                nodes_n3, modality='rgb', human_visible=human_visible)
         else:
             width = self.p.camera_params.width
             height = self.p.camera_params.height
             resize = self.p.camera_params.im_resize
-            width = int(width*resize)
-            height = int(height*resize)
+            width = int(width * resize)
+            height = int(height * resize)
             n = len(starts_n2)
             imgs_nmk3 = np.zeros((n, width, height, 3), dtype=np.float32)
         return np.array(imgs_nmk3)
@@ -161,13 +169,14 @@ class HumANavRendererMulti():
 
         traversible_map = self.building.map.traversible * 1.
 
-        # In the topview the positive x axis points to the right and 
+        # In the topview the positive x axis points to the right and
         # the positive y axis points up. The robot is located at
         # (0, (crop_size[0]-1)/2) (in pixel coordinates) facing directly to the right
-        x_axis_n2 = np.concatenate([np.cos(thetas_n1), np.sin(thetas_n1)], axis=1)
+        x_axis_n2 = np.concatenate(
+            [np.cos(thetas_n1), np.sin(thetas_n1)], axis=1)
         y_axis_n2 = -np.concatenate([np.cos(thetas_n1 + np.pi / 2.),
                                      np.sin(thetas_n1 + np.pi / 2.)], axis=1)
-        robot_loc_2 = np.array([0, (crop_size[0]-1.)/2.])
+        robot_loc_2 = np.array([0, (crop_size[0] - 1.) / 2.])
 
         crops_nmk = mu.generate_egocentric_maps([traversible_map], [1.0], [crop_size[0]],
                                                 starts_n2, x_axis_n2, y_axis_n2, dst_theta=0.,
@@ -175,7 +184,8 @@ class HumANavRendererMulti():
 
         # Invert the crops so that 1.0 corresponds to occupied space
         # and 0.0 corresponds to free space
-        crops_nmk1 = [np.logical_not(crop_mk[:, :, None])*1.0 for crop_mk in crops_nmk]
+        crops_nmk1 = [np.logical_not(
+            crop_mk[:, :, None]) * 1.0 for crop_mk in crops_nmk]
         return np.array(crops_nmk1)
 
     def _get_depth_image(self, starts_n2, thetas_n1, xy_resolution, map_size, pos_3, human_visible=True):
@@ -187,11 +197,14 @@ class HumANavRendererMulti():
         robot = self.building.robot
         z_bins = [-10, robot.base, robot.base + robot.height]
 
-        nodes_n3 = np.concatenate([starts_n2*1., thetas_n1 / self.building.robot.delta_theta], axis=1)
+        nodes_n3 = np.concatenate(
+            [starts_n2 * 1., thetas_n1 / self.building.robot.delta_theta], axis=1)
         # Disparity in centimeters
-        disparity_imgs_cm = np.array(self.building.render_nodes(nodes_n3, 'disparity', human_visible=human_visible))
-        
-        depth_imgs_meters = 100. / (disparity_imgs_cm[..., 1]+0.000001) #no divide by 0 error
+        disparity_imgs_cm = np.array(self.building.render_nodes(
+            nodes_n3, 'disparity', human_visible=human_visible))
+
+        depth_imgs_meters = 100. / \
+            (disparity_imgs_cm[..., 1] + 0.000001)  # no divide by 0 error
 
         # Optionally Clip Depth Readings
         if self.p.camera_params.max_depth_meters < np.inf:
@@ -203,31 +216,36 @@ class HumANavRendererMulti():
         assert (r_obj.fov_horizontal == r_obj.fov_vertical)
         # Generate a Point Cloud from the Depth Image
         # (In the Camera Coordinate System)
-        cm = du.get_camera_matrix(r_obj.width, r_obj.height, r_obj.fov_vertical)
+        cm = du.get_camera_matrix(
+            r_obj.width, r_obj.height, r_obj.fov_vertical)
         XYZ = du.get_point_cloud_from_z(depth_imgs_meters, cm)
         XYZ = XYZ * 100.  # convert to centimeters
-      
+
         # Transform from the camera coordinate system
         # to the geocentric coordinate system (align the point cloud to the ground plane)
-        XYZ = du.make_geocentric(XYZ, robot.sensor_height, robot.camera_elevation_degree)
-        
+        XYZ = du.make_geocentric(
+            XYZ, robot.sensor_height, robot.camera_elevation_degree)
+
         # Note: Added here to get the depth image in the current frame
         # Transform from the ground plane to the robots current
         # location in the map
         XYZ = self.transform_to_current_frame(XYZ[0], pos_3)
         XYZ = XYZ[None, :, :, :]
 
-        count, isvalid = du.bin_points(XYZ * 1., map_size, z_bins, xy_resolution)
+        count, isvalid = du.bin_points(
+            XYZ * 1., map_size, z_bins, xy_resolution)
         count = [x[0, ...] for x in np.split(count, count.shape[0], 0)]
         isvalid = [x[0, ...] for x in np.split(isvalid, isvalid.shape[0], 0)]
-        
+
         return disparity_imgs_cm, count, isvalid
-    
+
     def transform_to_current_frame(self, XYZ, current_loc):
         R = du.get_r_matrix([0., 0., 1.], angle=current_loc[2] - np.pi / 2.)
         XYZ = np.matmul(XYZ.reshape(-1, 3), R.T).reshape(XYZ.shape)
-        XYZ[:, :, 0] = XYZ[:, :, 0] + current_loc[0] * 100.  # convert to centimeters
-        XYZ[:, :, 1] = XYZ[:, :, 1] + current_loc[1] * 100.  # convert to centimeters
+        XYZ[:, :, 0] = XYZ[:, :, 0] + current_loc[0] * \
+            100.  # convert to centimeters
+        XYZ[:, :, 1] = XYZ[:, :, 1] + current_loc[1] * \
+            100.  # convert to centimeters
         return XYZ
 
     def get_config(self):
@@ -257,6 +275,7 @@ class HumANavRendererMulti():
                 data = {'resolution': resolution,
                         'traversible': traversible}
                 with open(os.path.join(traversible_dir, 'data.pkl'), 'wb') as f:
-                    pickle.dump(data, f, protocol=2) # Save with protocol = 2 for python2.7
+                    # Save with protocol = 2 for python2.7
+                    pickle.dump(data, f, protocol=2)
 
         return resolution, traversible

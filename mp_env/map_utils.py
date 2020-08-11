@@ -181,7 +181,7 @@ def compute_traversibility(map, robot_base, robot_height, robot_radius,
     map_out._human_traversible = np.ones_like(traversible * 1.)
     map_out.obstacle_free = obstacle_free
     map_out.valid_space = valid_space
-    print('\033[31m', "Computing Traversible", '\033[0m')
+    print("%sComputing Traversible" % '\033[31m', '\033[0m')
     return map_out
 
 

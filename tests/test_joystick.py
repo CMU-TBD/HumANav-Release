@@ -9,7 +9,6 @@ import threading
 import socket
 import time
 from simulators.joystick import Joystick
-from utils.utils import print_colors
 
 
 def test_joystick():

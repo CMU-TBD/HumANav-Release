@@ -12,7 +12,7 @@ from objectives.obstacle_avoidance import ObstacleAvoidance
 
 from trajectory.trajectory import SystemConfig, Trajectory
 from utils.fmm_map import FmmMap
-from utils.utils import print_colors, generate_name, euclidean_dist
+from utils.utils import *
 from planners.sampling_planner import SamplingPlanner
 
 

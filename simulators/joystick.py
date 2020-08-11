@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
-from utils.utils import print_colors, conn_recv, touch, save_to_gif, plot_agents
+from utils.utils import *
 from params.robot_params import create_params
 from params.renderer_params import get_path_to_humanav
 
@@ -61,8 +61,8 @@ class Joystick():
                     self.ready_to_send = True
                 # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
             except KeyboardInterrupt:
-                print(print_colors()[
-                      "yellow"], "Joystick disconnected by user", print_colors()['reset'])
+                print("%sJoystick disconnected by user%s" %
+                      (color_yellow, color_reset))
                 # send message to turn off the robot
                 self.send_to_robot((False, time.clock(), 0, 0, False))  # stop
                 self.robot_running = False
@@ -85,8 +85,7 @@ class Joystick():
 
     def power_off(self):
         if(self.robot_running):
-            print(print_colors()[
-                  "red"], "Connection closed by robot", print_colors()['reset'])
+            print("%sConnection closed by robot%s" % (color_red, color_reset))
             self.robot_running = False
             try:
                 self.send_to_robot((False, time.clock(), 0, 0, False))  # stop
@@ -120,9 +119,10 @@ class Joystick():
             data_b, response_len = conn_recv(connection)
             # quickly close connection to open up for the next input
             connection.close()
-            print("received", response_len, "bytes from server")
+            print("%sreceived" % (color_blue), response_len,
+                  "bytes from server%s" % (color_reset))
             if(data_b is not None):
-                self.ready_to_send = True  # has recieved a world state from the robot
+                self.ready_to_send = True  # has received a world state from the robot
                 self.ready_to_req = False
                 data_str = data_b.decode("utf-8")  # bytes to str
                 self.world_state.append(json.loads(data_str))
@@ -207,12 +207,11 @@ class Joystick():
         try:
             self.robot_sender_socket.connect(robot_address)
         except:
-            print(print_colors()[
-                  "red"], "Unable to connect to robot", print_colors()['reset'])
+            print("%sUnable to connect to robot%s" % (color_red, color_reset))
             print("Make sure you have a simulation instance running")
             exit(1)
-        print(print_colors()[
-              "green"], "Joystick->Robot connection established", print_colors()['reset'])
+        print("%sJoystick->Robot connection established%s" %
+              (color_green, color_reset))
         assert(self.robot_sender_socket is not None)
 
     def establish_robot_receiver_connection(self):
@@ -223,8 +222,8 @@ class Joystick():
         # wait for a connection
         self.robot_receiver_socket.listen(1)
         connection, client = self.robot_receiver_socket.accept()
-        print(print_colors()[
-              "green"], "Robot---->Joystick connection established", print_colors()['reset'])
+        print("%sRobot---->Joystick connection established%s" %
+              (color_green, color_reset))
         return connection, client
 
     """ END socket utils """

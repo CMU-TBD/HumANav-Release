@@ -13,6 +13,13 @@ import glob
 import imageio
 import socket
 
+color_orange = '\033[33m'
+color_green = '\033[32m'
+color_red = '\033[31m'
+color_blue = '\033[36m'
+color_yellow = '\033[35m'
+color_reset = '\033[00m'
+
 
 def tf_session_config():
     config = tf.ConfigProto()
@@ -163,9 +170,8 @@ def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files
         try:
             images.append(imageio.imread(filename))
         except:
-            print(print_colors()["red"],
-                  "Unable to read file:", filename, "Try clearing the directory of old files and rerunning",
-                  print_colors()["reset"])
+            print("%sUnable to read file:" % (color_red), filename,
+                  "Try clearing the directory of old files and rerunning%s" % (color_reset))
             exit(1)
         print("Movie progress:", i, "out of", num_images, "%.3f" %
               (i / num_images), "\r", end="")
@@ -218,15 +224,3 @@ def subplot2(plt, Y_X, sz_y_sz_x=(10, 10), space_y_x=(0.1, 0.1), T=False):
     else:
         axes_list = axes.ravel()[::-1].tolist()
     return fig, axes, axes_list
-
-
-def print_colors():
-    # Create dictionary of common print colors
-    color_list = {}
-    color_list["orange"] = '\033[33m'
-    color_list["green"] = '\033[32m'
-    color_list["red"] = '\033[31m'
-    color_list["blue"] = '\033[36m'
-    color_list["yellow"] = '\033[35m'
-    color_list["reset"] = '\033[00m'
-    return color_list

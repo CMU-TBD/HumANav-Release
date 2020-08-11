@@ -1,4 +1,4 @@
-from utils.utils import print_colors, generate_name, euclidean_dist, conn_recv
+from utils.utils import *
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig
@@ -161,8 +161,8 @@ class RoboAgent(Agent):
             self.joystick_sender_socket.connect(server_address)
         except ConnectionRefusedError:  # used to turn off the joystick
             self.joystick_running = False
-            print(print_colors()[
-                  "red"], "Connection closed by joystick", print_colors()['reset'])
+            print("%sConnection closed by joystick%s" %
+                  (color_red, color_reset))
             exit(1)
         # Send data
         if(not isinstance(message, str)):
@@ -210,8 +210,8 @@ class RoboAgent(Agent):
         self.joystick_receiver_socket.listen(1)
         print("Waiting for Joystick connection")
         connection, client = self.joystick_receiver_socket.accept()
-        print(print_colors()[
-              "green"], "Robot---->Joystick connection established", print_colors()['reset'])
+        print("%sRobot---->Joystick connection established%s" %
+              (color_green, color_reset))
         return connection, client
 
     def establish_joystick_sender_connection(self):
@@ -223,12 +223,12 @@ class RoboAgent(Agent):
         try:
             self.joystick_sender_socket.connect(address)
         except:
-            print(print_colors()[
-                  "red"], "Unable to connect to joystick", print_colors()['reset'])
+            print("%sUnable to connect to joystick%s" %
+                  (color_red, color_reset))
             print("Make sure you have a joystick instance running")
             exit(1)
         assert(self.joystick_sender_socket is not None)
-        print(print_colors()[
-              "green"], "Joystick->Robot connection established", print_colors()['reset'])
+        print("%sJoystick->Robot connection established%s" %
+              (color_green, color_reset))
 
     """ END socket utils """

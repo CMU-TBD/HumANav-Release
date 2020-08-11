@@ -32,8 +32,7 @@ from planners.sampling_planner import SamplingPlanner
 from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
 from params.renderer_params import create_params as create_base_params
-# Other
-from utils.utils import touch, print_colors
+from utils.utils import *
 
 
 def create_params():
@@ -219,8 +218,8 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
         # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
         ped_id = i + start_ped + 1
         if (ped_id >= max_peds):  # need data to be within the bounds
-            print(print_colors()["red"], "Requested Prerec agent index out of bounds:",
-                  ped_id, print_colors()["reset"])
+            print("%sRequested Prerec agent index out of bounds:" %
+                  (color_red), ped_id, "%s" % (color_reset))
         if(ped_id not in np.unique(world_df.ped)):
             continue
         ped_i = world_df[world_df.ped == ped_id]

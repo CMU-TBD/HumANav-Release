@@ -9,7 +9,6 @@ from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
 from planners.sampling_planner import SamplingPlanner
 from utils.fmm_map import FmmMap
-from utils.utils import print_colors
 import matplotlib
 
 
@@ -138,7 +137,6 @@ class Simulator(SimulatorHelper):
         between episodes.
         """
         return False
-
 
     def _render_obstacle_map(self, ax, zoom=0):
         p = self.params
