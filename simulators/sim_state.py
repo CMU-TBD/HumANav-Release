@@ -51,12 +51,12 @@ class AgentState():
         # goal_json = SimState.to_json_type(
         #     self.get_goal_config().to_3D_numpy())
         current_json = SimState.to_json_type(
-            self.get_current_config().to_3D_numpy())
+            copy.deepcopy(self.get_current_config().to_3D_numpy()))
         # SimState.to_json_type( self.get_trajectory().to_numpy_repr())
         trajectory_json = "None"
-        collided_json = self.collided
-        end_acting_json = self.end_acting
-        radius_json = self.radius
+        collided_json = copy.deepcopy(self.collided)
+        end_acting_json = copy.deepcopy(self.end_acting)
+        radius_json = copy.deepcopy(self.radius)
         json_dict = {}
         json_dict['name'] = name_json
         # NOTE: goal and start can perhaps be optimized to be only sent once
