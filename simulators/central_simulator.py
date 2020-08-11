@@ -190,7 +190,7 @@ class CentralSimulator(SimulatorHelper):
         # save initial state before the simulator is spawned
         self.t = 0
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        self.delta_t = 2 * self.params.dt
+        self.delta_t = self.params.dt
         if(self.delta_t < self.params.dt):
             print(print_colors()["red"],
                   "Simulation dt is too small either lower the agents' dt's",
@@ -244,6 +244,11 @@ class CentralSimulator(SimulatorHelper):
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
 
+    def _init_obstacle_map(self, renderer=None):
+        """ Initializes the sbpd map."""
+        p = self.params.obstacle_map_params
+        return p.obstacle_map(p, renderer)
+
     def num_conditions_in_agents(self, condition):
         num = 0
         for a in self.agents.values():
@@ -290,48 +295,6 @@ class CentralSimulator(SimulatorHelper):
         # Save current state to a class dictionary indexed by simulator time
         self.states[simulator_time] = current_state
         return current_state
-
-    def _reset_obstacle_map(self, rng):
-        """
-        For SBPD the obstacle map does not change
-        between episodes.
-        """
-        return False
-
-    def _init_obstacle_map(self, renderer=None):
-        """ Initializes the sbpd map."""
-        p = self.params.obstacle_map_params
-        return p.obstacle_map(p, renderer)
-
-    def _render_obstacle_map(self, ax, zoom=0):
-        p = self.params
-        self.obstacle_map.render_with_obstacle_margins(
-            ax,
-            margin0=p.avoid_obstacle_objective.obstacle_margin0,
-            margin1=p.avoid_obstacle_objective.obstacle_margin1,
-            zoom=zoom)
-
-    def get_observation(self, config=None, pos_n3=None, **kwargs):
-        """
-        Return the robot's observation from configuration config
-        or pos_nk3.
-        """
-        return self.obstacle_map.get_observation(config=config, pos_n3=pos_n3, **kwargs)
-
-    def get_observation_from_data_dict_and_model(self, data_dict, model):
-        """
-        Returns the robot's observation from the data inside data_dict,
-        using parameters specified by the model.
-        """
-        if hasattr(model, 'occupancy_grid_positions_ego_1mk12'):
-            kwargs = {'occupancy_grid_positions_ego_1mk12':
-                      model.occupancy_grid_positions_ego_1mk12}
-        else:
-            kwargs = {}
-        img_nmkd = self.get_observation(
-            pos_n3=data_dict['vehicle_state_nk3'][:, 0],
-            **kwargs)
-        return img_nmkd
 
     def generate_frames(self, filename="obs"):
         num_frames = len(self.states)

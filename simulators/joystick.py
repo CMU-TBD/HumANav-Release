@@ -22,7 +22,7 @@ class Joystick():
     def __init__(self):
         self.t = 0
         self.latest_state = None
-        self.world_state = None
+        self.world_state = []
         self.environment = None
         self.params = create_params()
         # sockets for communication
@@ -78,7 +78,10 @@ class Joystick():
         # Close communication channel
         self.robot_sender_socket.close()
         # begin gif (movie) generation
-        save_to_gif(os.path.join(get_path_to_humanav(), self.dirname))
+        try:
+            save_to_gif(os.path.join(get_path_to_humanav(), self.dirname))
+        except:
+            print("unable to render gif")
 
     def power_off(self):
         if(self.robot_running):
@@ -122,13 +125,13 @@ class Joystick():
                 self.ready_to_send = True  # has recieved a world state from the robot
                 self.ready_to_req = False
                 data_str = data_b.decode("utf-8")  # bytes to str
-                self.world_state = json.loads(data_str)
-                if(self.world_state['robot_on'] is True):
-                    if(self.world_state['environment']):  # not empty
+                self.world_state.append(json.loads(data_str))
+                if(self.world_state[-1]['robot_on'] is True):
+                    if(self.world_state[-1]['environment']):  # not empty
                         # notify the robot that the joystick received the environment
                         self.send_to_robot((True, -1, 0, 0, False))
                         # only update the environment if it is non-empty
-                        self.environment = self.world_state['environment']
+                        self.environment = self.world_state[-1]['environment']
                         print("Updated environment from robot")
                     self.generate_frame(self.frame_num)
                 else:
@@ -137,17 +140,18 @@ class Joystick():
                     break
             else:
                 break
+            # time.sleep(1)
             # this should be a separate thread
             self.ready_to_req = True
 
     def generate_frame(self, frame_count, plot_quiver=False):
         # extract the information from the world state
         environment = self.environment
-        agents = self.world_state['agents']
-        prerecs = self.world_state['prerecs']
-        robots = self.world_state['robots']
-        sim_time = self.world_state['sim_t']
-        wall_time = self.world_state['wall_t']
+        agents = self.world_state[-1]['agents']
+        prerecs = self.world_state[-1]['prerecs']
+        robots = self.world_state[-1]['robots']
+        sim_time = self.world_state[-1]['sim_t']
+        wall_time = self.world_state[-1]['wall_t']
         # process the information
         map_scale = eval(environment["map_scale"])  # float
         room_center = np.array(environment["room_center"])

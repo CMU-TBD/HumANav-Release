@@ -132,6 +132,44 @@ class Simulator(SimulatorHelper):
                                                self.params.control_horizon)
         return trajectory, planner_data, commanded_actions_nkf
 
+    def _reset_obstacle_map(self, rng):
+        """
+        For SBPD the obstacle map does not change
+        between episodes.
+        """
+        return False
+
+
+    def _render_obstacle_map(self, ax, zoom=0):
+        p = self.params
+        self.obstacle_map.render_with_obstacle_margins(
+            ax,
+            margin0=p.avoid_obstacle_objective.obstacle_margin0,
+            margin1=p.avoid_obstacle_objective.obstacle_margin1,
+            zoom=zoom)
+
+    def get_observation(self, config=None, pos_n3=None, **kwargs):
+        """
+        Return the robot's observation from configuration config
+        or pos_nk3.
+        """
+        return self.obstacle_map.get_observation(config=config, pos_n3=pos_n3, **kwargs)
+
+    def get_observation_from_data_dict_and_model(self, data_dict, model):
+        """
+        Returns the robot's observation from the data inside data_dict,
+        using parameters specified by the model.
+        """
+        if hasattr(model, 'occupancy_grid_positions_ego_1mk12'):
+            kwargs = {'occupancy_grid_positions_ego_1mk12':
+                      model.occupancy_grid_positions_ego_1mk12}
+        else:
+            kwargs = {}
+        img_nmkd = self.get_observation(
+            pos_n3=data_dict['vehicle_state_nk3'][:, 0],
+            **kwargs)
+        return img_nmkd
+
     def get_observation(self, config=None, pos_n3=None, **kwargs):
         """
         Return the robot's observation from configuration config or
