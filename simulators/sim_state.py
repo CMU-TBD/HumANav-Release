@@ -102,9 +102,12 @@ class SimState():
             else:
                 environment_json = {}  # empty dictionary
             # serialize all other fields
-            agents_json = SimState.to_json_dict(deepcopy(self.agents))
-            prerecs_json = SimState.to_json_dict(deepcopy(self.prerecs))
-            robots_json = SimState.to_json_dict(deepcopy(self.robots))
+            agents_json = deepcopy(
+                SimState.to_json_dict(deepcopy(self.agents)))
+            prerecs_json = deepcopy(
+                SimState.to_json_dict(deepcopy(self.prerecs)))
+            robots_json = deepcopy(
+                SimState.to_json_dict(deepcopy(self.robots)))
             sim_t_json = deepcopy(self.sim_t)
             wall_t_json = deepcopy(self.wall_t)
             # append them to the json dictionary

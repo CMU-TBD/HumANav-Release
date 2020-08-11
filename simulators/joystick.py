@@ -170,15 +170,15 @@ class Joystick():
 
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, json_key="current_config", label="Robot",
-                    normal_color="bo", collided_color="ko", plot_quiver=plot_quiver)
+                    normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=plot_quiver)
 
         # plot all the simulated prerecorded agents
         plot_agents(ax, ppm, prerecs, json_key="current_config", label="Prerec",
-                    normal_color="yo", collided_color="ro", plot_quiver=plot_quiver)
+                    normal_color="yo", collided_color="ro", plot_trajectory=False, plot_quiver=plot_quiver)
 
         # plot all the randomly generated simulated agents
         plot_agents(ax, ppm, agents, json_key="current_config", label="Agent",
-                    normal_color="go", collided_color="ro", plot_quiver=plot_quiver)
+                    normal_color="go", collided_color="ro", plot_trajectory=False, plot_quiver=plot_quiver)
 
         # save the axis to a file
         filename = "jview" + str(frame_count) + ".png"

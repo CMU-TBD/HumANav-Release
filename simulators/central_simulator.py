@@ -190,7 +190,7 @@ class CentralSimulator(SimulatorHelper):
         # save initial state before the simulator is spawned
         self.t = 0
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        self.delta_t = self.params.dt
+        self.delta_t = 3 * self.params.dt
         if(self.delta_t < self.params.dt):
             print(print_colors()["red"],
                   "Simulation dt is too small either lower the agents' dt's",
@@ -218,7 +218,7 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             iteration = int(self.t * (1. / self.delta_t))
             self.print_sim_progress(iteration)
-            if (iteration > 40 * num_agents):
+            if (iteration > 60 * num_agents):
                 # hard limit of 40 frames per agent
                 break
         # free all the agents
