@@ -9,6 +9,8 @@ from dotmap import DotMap
 from random import seed, random, randint
 import string
 import random
+import glob
+import imageio
 import socket
 
 
@@ -110,6 +112,37 @@ def conn_recv(connection, buffr_amnt=1024):
         response_len += len(chunk)
     data = b''.join(chunks)
     return data, response_len
+
+
+def save_to_gif(IMAGES_DIR, duration=0.05, filename="movie", clear_old_files=True, verbose=False):
+    """Takes the image directory and naturally sorts the images into a singular movie.gif"""
+    images = []
+    if(not os.path.exists(IMAGES_DIR)):
+        print('\033[31m', "ERROR: Failed to image directory at",
+              IMAGES_DIR, '\033[0m')
+        os._exit(1)  # Failure condition
+    files = natural_sort(glob.glob(os.path.join(IMAGES_DIR, '*.png')))
+    num_images = len(files)
+    for i, filename in enumerate(files):
+        if(verbose):
+            print("appending", filename)
+        try:
+            images.append(imageio.imread(filename))
+        except:
+            print(print_colors()["red"],
+                  "Unable to read file:", filename, "Try clearing the directory of old files and rerunning",
+                  print_colors()["reset"])
+            exit(1)
+        print("Movie progress:", i, "out of", num_images, "%.3f" %
+              (i / num_images), "\r", end="")
+    output_location = os.path.join(IMAGES_DIR, filename + ".gif")
+    kargs = {'duration': duration}  # 1/fps
+    imageio.mimsave(output_location, images, 'GIF', **kargs)
+    print('\033[32m', "Rendered gif at", output_location, '\033[0m')
+    # Clearing remaining files to not affect next render
+    if clear_old_files:
+        for f in files:
+            os.remove(f)
 
 
 def mkdir_if_missing(dirname):

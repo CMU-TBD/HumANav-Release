@@ -5,8 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import copy
 import os
-import glob
-import imageio
 import time
 import threading
 import multiprocessing
@@ -19,7 +17,7 @@ from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
 from simulators.sim_state import SimState, HumanState, AgentState
 from utils.fmm_map import FmmMap
-from utils.utils import touch, print_colors, natural_sort
+from utils.utils import touch, print_colors, save_to_gif
 from params.renderer_params import get_path_to_humanav
 
 
@@ -242,7 +240,7 @@ class CentralSimulator(SimulatorHelper):
         self.generate_frames()
 
         # convert all the generated frames into a gif file
-        self.save_to_gif(clear_old_files=True)
+        self.save_states_to_gif(clear_old_files=True)
         # Can also save to mp4 using imageio-ffmpeg or this bash script:
         # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
 
@@ -370,10 +368,10 @@ class CentralSimulator(SimulatorHelper):
         # newline to not interfere with previous prints
         print("\n")
 
-    def save_to_gif(self, clear_old_files=True, with_multiprocessing=True):
+    def save_states_to_gif(self, clear_old_files=True, with_multiprocessing=True):
         num_robots = len(self.robots)
         rendering_processes = []
-        # fps = 1. / self.delta_t # based off simulation capture rate
+        # fps = 1 / duration # where the duration is the simulation capture rate
         duration = self.delta_t
         for i in range(num_robots):
             dirname = "tests/socnav/sim_movie" + str(i)
@@ -382,46 +380,17 @@ class CentralSimulator(SimulatorHelper):
                 # little use to use pools here, since this is for multiple robot agents in a scene
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
-                    target=self._save_to_gif,
+                    target=save_to_gif,
                     args=(IMAGES_DIR, duration, clear_old_files))
                 )
                 rendering_processes[i].start()
             else:
-                self._save_to_gif(
-                    IMAGES_DIR, duration, clear_old_files=clear_old_files)  # sequentially
+                # sequentially
+                save_to_gif(IMAGES_DIR, duration,
+                            clear_old_files=clear_old_files)
 
         for p in rendering_processes:
             p.join()
-
-    def _save_to_gif(self, IMAGES_DIR, duration, clear_old_files=True):
-        """Takes the image directory and naturally sorts the images into a singular movie.gif"""
-        images = []
-        if(not os.path.exists(IMAGES_DIR)):
-            print('\033[31m', "ERROR: Failed to image directory at",
-                  IMAGES_DIR, '\033[0m')
-            os._exit(1)  # Failure condition
-        files = natural_sort(glob.glob(os.path.join(IMAGES_DIR, '*.png')))
-        num_images = len(files)
-        for i, filename in enumerate(files):
-            if(self.params.verbose_printing):
-                print("appending", filename)
-            try:
-                images.append(imageio.imread(filename))
-            except:
-                print(print_colors()["red"],
-                      "Unable to read file:", filename, "Try clearing the directory of old files and rerunning",
-                      print_colors()["reset"])
-                exit(1)
-            print("Movie progress:", i, "out of", num_images, "%.3f" %
-                  (i / num_images), "\r", end="")
-        output_location = os.path.join(IMAGES_DIR, 'movie.gif')
-        kargs = {'duration': duration}
-        imageio.mimsave(output_location, images, 'GIF', **kargs)
-        print('\033[32m', "Rendered gif at", output_location, '\033[0m')
-        # Clearing remaining files to not affect next render
-        if clear_old_files:
-            for f in files:
-                os.remove(f)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13,
                      agents, prerecs, robots, room_center, plot_quiver=False):

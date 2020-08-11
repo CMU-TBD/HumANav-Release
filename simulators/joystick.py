@@ -13,7 +13,7 @@ import numpy as np
 import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
-from utils.utils import print_colors, conn_recv, touch
+from utils.utils import print_colors, conn_recv, touch, save_to_gif
 from params.robot_params import create_params
 from params.renderer_params import get_path_to_humanav
 
@@ -77,6 +77,8 @@ class Joystick():
         listen_thread.join()
         # Close communication channel
         self.robot_sender_socket.close()
+        # begin gif (movie) generation
+        save_to_gif(os.path.join(get_path_to_humanav(), self.dirname))
 
     def power_off(self):
         if(self.robot_running):
@@ -237,7 +239,7 @@ class Joystick():
 
         # save the axis to a file
         filename = "jview" + str(frame_count) + ".png"
-        dirname = 'tests/socnav/joystick_movie'
+        self.dirname = 'tests/socnav/joystick_movie'
         full_file_name = os.path.join(get_path_to_humanav(), dirname, filename)
         if(not os.path.exists(full_file_name)):
             touch(full_file_name)  # Just as the bash command
