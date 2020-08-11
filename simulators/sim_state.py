@@ -52,8 +52,8 @@ class AgentState():
             self.get_goal_config().to_3D_numpy())
         current_json = SimState.to_json_type(
             self.get_current_config().to_3D_numpy())
-        trajectory_json = "None"  # SimState.to_json_type(
-        # self.get_trajectory().to_numpy_repr())
+        # SimState.to_json_type( self.get_trajectory().to_numpy_repr())
+        trajectory_json = "None"
         collided_json = self.collided
         end_acting_json = self.end_acting
         radius_json = self.radius
@@ -61,8 +61,8 @@ class AgentState():
         json_dict['name'] = name_json
         # NOTE: goal and start can perhaps be optimized to be only sent once
         # since they don't change over the course of the simulation.
-        json_dict['start_config'] = start_json
-        json_dict['goal_config'] = goal_json
+        # json_dict['start_config'] = start_json
+        # json_dict['goal_config'] = goal_json
         json_dict['current_config'] = current_json
         json_dict['trajectory'] = trajectory_json
         json_dict['collided'] = collided_json
@@ -109,15 +109,15 @@ class SimState():
             else:
                 environment_json = {}  # empty dictionary
             # serialize all other fields
-            # agents_json = SimState.to_json_dict(self.agents)
-            # prerecs_json = SimState.to_json_dict(self.prerecs)
+            agents_json = SimState.to_json_dict(copy.deepcopy(self.agents))
+            prerecs_json = SimState.to_json_dict(copy.deepcopy(self.prerecs))
             robots_json = SimState.to_json_dict(copy.deepcopy(self.robots))
-            sim_t_json = self.sim_t
-            wall_t_json = self.wall_t
+            sim_t_json = copy.deepcopy(self.sim_t)
+            wall_t_json = copy.deepcopy(self.wall_t)
             # append them to the json dictionary
             json_dict['environment'] = environment_json
-            # json_dict['agents'] = agents_json
-            # json_dict['prerecs'] = prerecs_json
+            json_dict['agents'] = agents_json
+            json_dict['prerecs'] = prerecs_json
             json_dict['robots'] = robots_json
             json_dict['sim_t'] = sim_t_json
             json_dict['wall_t'] = wall_t_json

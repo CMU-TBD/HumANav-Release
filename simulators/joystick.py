@@ -57,7 +57,7 @@ class Joystick():
                         print("sent", message)
                         sent_commands += 1
                     # now wait for robot to ping with "ready"
-                    time.sleep(0.2)
+                    time.sleep(0.05)
                     self.ready_to_send = True
                 # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
             except KeyboardInterrupt:
@@ -117,37 +117,18 @@ class Joystick():
             connection.close()
             print("received", response_len, "bytes from server")
             if(data_b is not None):
-                self.ready_to_send = True
+                self.ready_to_send = True  # has recieved a world state from the robot
                 self.ready_to_req = False
                 data_str = data_b.decode("utf-8")  # bytes to str
-                world_state = json.loads(data_str)
-                if(world_state['robot_on'] is True):
-                    if(world_state['environment']):  # not empty
+                self.world_state = json.loads(data_str)
+                if(self.world_state['robot_on'] is True):
+                    if(self.world_state['environment']):  # not empty
                         # notify the robot that the joystick received the environment
                         self.send_to_robot((True, -1, 0, 0, False))
                         # only update the environment if it is non-empty
-                        self.environment = world_state['environment']
+                        self.environment = self.world_state['environment']
                         print("Updated environment from robot")
-                    self.agents = None  # world_state['agents']
-                    self.prerecs = None  # world_state['prerecs']
-                    self.robots = world_state['robots']
-                    # for lingering constants
-                    self.sim_t = world_state['sim_t']
-                    self.wall_t = world_state['wall_t']
-                    t = threading.Thread(target=self.generate_frame, args=(deepcopy(self.frame_num),
-                                                                           self.environment,
-                                                                           deepcopy(
-                                                                               self.agents),
-                                                                           deepcopy(
-                                                                               self.prerecs),
-                                                                           deepcopy(
-                                                                               self.robots),
-                                                                           deepcopy(
-                                                                               self.sim_t),
-                                                                           deepcopy(self.wall_t))
-                                         )
-                    t.start()
-                    # to not interfere with previous send (notifying robot of good env req)
+                    self.generate_frame(self.frame_num)
                 else:
                     print("powering off joystick")
                     self.power_off()
@@ -155,10 +136,18 @@ class Joystick():
             else:
                 break
             # this should be a separate thread
-            time.sleep(0.3)
+            time.sleep(0.1)
             self.ready_to_req = True
 
-    def generate_frame(self, frame_count, environment, agents, prerecs, robots, sim_time, wall_time, plot_quiver=False):
+    def generate_frame(self, frame_count, plot_quiver=False):
+        # extract the information from the world state
+        environment = self.environment
+        agents = self.world_state['agents']
+        prerecs = self.world_state['prerecs']
+        robots = self.world_state['robots']
+        sim_time = self.world_state['sim_t']
+        wall_time = self.world_state['wall_t']
+        # process the information
         map_scale = eval(environment["map_scale"])  # float
         room_center = np.array(environment["room_center"])
         traversible = np.array(environment['traversibles'][0])
