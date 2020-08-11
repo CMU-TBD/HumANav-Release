@@ -103,7 +103,7 @@ class Joystick():
             self.robot_sender_socket.connect(server_address)
         except ConnectionRefusedError:  # used to turn off the joystick
             self.power_off()
-            exit(1)
+            return
         # Send data
         message = str(commands)
         self.robot_sender_socket.sendall(bytes(message, "utf-8"))
@@ -138,7 +138,6 @@ class Joystick():
             else:
                 break
             # this should be a separate thread
-            time.sleep(0.1)
             self.ready_to_req = True
 
     def generate_frame(self, frame_count, plot_quiver=False):
@@ -240,7 +239,8 @@ class Joystick():
         # save the axis to a file
         filename = "jview" + str(frame_count) + ".png"
         self.dirname = 'tests/socnav/joystick_movie'
-        full_file_name = os.path.join(get_path_to_humanav(), dirname, filename)
+        full_file_name = os.path.join(
+            get_path_to_humanav(), self.dirname, filename)
         if(not os.path.exists(full_file_name)):
             touch(full_file_name)  # Just as the bash command
         fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)

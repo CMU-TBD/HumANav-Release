@@ -46,10 +46,10 @@ class AgentState():
     def to_json(self):
         name_json = SimState.to_json_type(self.name)
         # NOTE: the configs are just being serialized with their 3D positions
-        start_json = SimState.to_json_type(
-            self.get_start_config().to_3D_numpy())
-        goal_json = SimState.to_json_type(
-            self.get_goal_config().to_3D_numpy())
+        # start_json = SimState.to_json_type(
+        #     self.get_start_config().to_3D_numpy())
+        # goal_json = SimState.to_json_type(
+        #     self.get_goal_config().to_3D_numpy())
         current_json = SimState.to_json_type(
             self.get_current_config().to_3D_numpy())
         # SimState.to_json_type( self.get_trajectory().to_numpy_repr())

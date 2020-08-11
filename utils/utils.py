@@ -114,7 +114,7 @@ def conn_recv(connection, buffr_amnt=1024):
     return data, response_len
 
 
-def save_to_gif(IMAGES_DIR, duration=0.05, filename="movie", clear_old_files=True, verbose=False):
+def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files=True, verbose=False):
     """Takes the image directory and naturally sorts the images into a singular movie.gif"""
     images = []
     if(not os.path.exists(IMAGES_DIR)):
@@ -135,7 +135,7 @@ def save_to_gif(IMAGES_DIR, duration=0.05, filename="movie", clear_old_files=Tru
             exit(1)
         print("Movie progress:", i, "out of", num_images, "%.3f" %
               (i / num_images), "\r", end="")
-    output_location = os.path.join(IMAGES_DIR, filename + ".gif")
+    output_location = os.path.join(IMAGES_DIR, gif_filename + ".gif")
     kargs = {'duration': duration}  # 1/fps
     imageio.mimsave(output_location, images, 'GIF', **kargs)
     print('\033[32m', "Rendered gif at", output_location, '\033[0m')
