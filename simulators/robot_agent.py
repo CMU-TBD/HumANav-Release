@@ -104,40 +104,39 @@ class RoboAgent(Agent):
         if (self.params.verbose):
             print(self.get_current_config().to_3D_numpy())
 
+    def execute_backlog(self):
+        while(self.num_executed < len(self.commands) and self.running):
+            self.sense()
+            self.execute(self.num_executed)
+            self.num_executed += 1
+            if(self.get_trajectory().k != self.get_trajectory().position_nk2().shape[1]):
+                # TODO: fix this uncommonly-occuring nonfatal bug
+                print("ERROR: robot_trajectory dimens mismatch")
+            # sleep for robot frequency
+            time.sleep(1. / self.freq)
+
     def update(self):
         print("Robot powering on")
         listen_thread = threading.Thread(target=self.listen_to_joystick)
         listen_thread.start()
         self.running = True
         self.last_command = None
-        num_executed = 0  # keeps track of the latest command that is to be executed
+        self.num_executed = 0  # keeps track of the latest command that is to be executed
         while(self.running):
             # only execute the most recent commands
-            if(num_executed >= len(self.commands)):
+            if(self.num_executed >= len(self.commands)):
                 time.sleep(1. / self.freq)
-                # NOTE: send a command to the joystick letting it know to send another command
             else:
                 # using a loop to carry through the backlock of commands over time
-                while(num_executed < len(self.commands) and self.running):
-                    self.sense()
-                    self.execute(num_executed)
-                    num_executed += 1
-                    if(self.get_trajectory().k != self.get_trajectory().position_nk2().shape[1]):
-                        # TODO: fix this uncommonly-occuring nonfatal bug
-                        print("ERROR: robot_trajectory dimens mismatch")
-                    time.sleep(1. / self.freq)
-            # notify the joystick that the robot can take another input
-            if(self.joystick_requests_world):  # only send when joystick requests
-                self.send_to_joystick(
-                    self.world_state.to_json(robot_on=True, include_map=False))
-                # immediately note that the world has been sent:
-                self.joystick_requests_world = False
+                self.execute_backlog()
+            # send the (JSON serialized) world state per joystick's request
+            self.ping_joystick()
         # notify the joystick to stop sending commands to the robot
         self.send_to_joystick(self.world_state.to_json(robot_on=False))
         print("\nRobot powering off, recieved", len(self.commands), "commands")
         self.power_off()
+        # join the remaining listener thread
         listen_thread.join()
-        sys.exit(0)
 
     def power_off(self):
         if(self.running):
@@ -146,6 +145,12 @@ class RoboAgent(Agent):
             self.joystick_receiver_socket.close()
 
     """BEGIN socket utils"""
+    def ping_joystick(self):
+        if(self.joystick_requests_world):  # only send when joystick requests
+            self.send_to_joystick(
+                self.world_state.to_json(robot_on=True, include_map=False))
+            # immediately note that the world has been sent:
+            self.joystick_requests_world = False
 
     def send_to_joystick(self, message):
         # Create a TCP/IP socket
@@ -167,17 +172,27 @@ class RoboAgent(Agent):
         self.joystick_sender_socket.sendall(bytes(message, "utf-8"))
         self.joystick_sender_socket.close()
 
+    def repeat_command(self, freq):
+        while(self.running):
+            if(self.repeat_joystick):
+                if(len(self.commands) > 0):
+                    last_command = self.commands[-1]
+                    self.commands.append(last_command)
+            time.sleep(1./freq)
+
     def listen_to_joystick(self):
         self.joystick_receiver_socket.listen(10)
         self.running = True  # initialize listener
+        # repeater thread in case of repeating last given command
+        repeat_freq = 10 #hz
+        repeater_thread = threading.Thread(target=self.repeat_command, args=(repeat_freq,))
+        repeater_thread.start()
         while(self.running):
             connection, client = self.joystick_receiver_socket.accept()
             self.joystick_requests_heard += 1  # update number of heard joystick requests
             while(True):
                 data_b, response_len = conn_recv(connection, buffr_amnt=128)
                 if(data_b is not b''):
-                    # TODO: commands can also be a dictionary indexed by time
-                    # NOTE: data is in the form:
                     data_str = data_b.decode("utf-8")  # bytes to str
                     data = json.loads(data_str)
                     if(data["joystick_on"]):
@@ -186,6 +201,7 @@ class RoboAgent(Agent):
                             ang_vel = data["ang_vel"]
                             np_data = np.array(
                                 [lin_vel, ang_vel], dtype=np.float32)
+                            # adds command to local list of commands
                             self.commands.append(np_data)
                         # only sent by joystick when "ready" and needs the map
                         elif data["j_time"] == -1:
@@ -201,6 +217,8 @@ class RoboAgent(Agent):
                     break
             # close connection to be reaccepted when the joystick sends data
             connection.close()
+        # close and join the repeater thread
+        repeater_thread.join()
 
     def establish_joystick_receiver_connection(self):
         """This is akin to a server connection (robot is server)"""
@@ -217,7 +235,6 @@ class RoboAgent(Agent):
 
     def establish_joystick_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
-        # TODO: prior to simply connecting, wait for the joystick to send a "ready to connect" message
         self.joystick_sender_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
         address = ((self.host, self.port_send))

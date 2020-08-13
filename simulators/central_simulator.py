@@ -68,7 +68,7 @@ class CentralSimulator(SimulatorHelper):
         p.dt = dt
         # whether to block on joystick, repeat last joystick command, or neither
         # options being "joystick", "repeat", "none"
-        p.block = "joystick"
+        p.block = "repeat"
         # Much more optimized to only render topview, but can also render Humans
         if(not p.render_3D):
             print("Printing Topview movie with multithreading")
