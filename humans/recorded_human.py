@@ -3,6 +3,7 @@ from humans.human import Human
 from humans.human_configs import HumanConfigs
 from humans.human_appearance import HumanAppearance
 from trajectory.trajectory import SystemConfig, Trajectory
+from simulators.agent import Agent
 import numpy as np
 import socket
 import time
@@ -41,7 +42,7 @@ class PrerecordedHuman(Human):
         self.params = sim_params
         self.obstacle_map = sim_map
         # Initialize system dynamics and planner fields
-        self.system_dynamics = self._init_system_dynamics()
+        self.system_dynamics = Agent._init_system_dynamics(self.params, None)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
 
     def execute(self, state):

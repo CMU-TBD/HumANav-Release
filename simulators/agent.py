@@ -90,18 +90,18 @@ class Agent(object):
         """ Initializes important fields for the CentralSimulator"""
         self.params = sim_params
         self.obstacle_map = sim_map
-        self.obj_fn = self._init_obj_fn()
+        self.obj_fn = Agent._init_obj_fn(self.params, self.obstacle_map)
         # Initialize Fast-Marching-Method map for agent's pathfinding
-        self.fmm_map = self._init_fmm_map()
+        self.fmm_map = Agent._init_fmm_map(self.params, self.obstacle_map, self.goal_config.position_nk2()[0])
         self._update_fmm_map()
         # Initialize system dynamics and planner fields
-        self.system_dynamics = self._init_system_dynamics()
         if(with_planner):
-            self.planner = self._init_planner()
+            self.planner = Agent._init_planner(self.params, self.obj_fn)
             self.vehicle_data = self.planner.empty_data_dict()
         else:
             self.planner = None
             self.vehicle_data = None
+        self.system_dynamics = Agent._init_system_dynamics(self.params, self.planner)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         # the point in the trajectory where the agent collided
         self.collision_point_k = np.inf
@@ -150,7 +150,7 @@ class Agent(object):
             self.commanded_actions_nkf = []
         if(not hasattr(self, 'planner')):
             # create planner if none exists
-            self.planner = self._init_planner()
+            self.planner = Agent._init_planner(self.params, self.obj_fn)
         if(not self.end_episode and not self.end_acting):
             if(self.params.verbose_printing):
                 print("planned next:",
@@ -196,7 +196,6 @@ class Agent(object):
                 return True
         return False
             
-
     def act(self, action_dt, instant_complete=False, world_state=None):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
@@ -241,6 +240,7 @@ class Agent(object):
         # else:
         #     self.update_final()
 
+    # TODO: this should probably be static too
     def _process_planner_data(self):
         """
         Process the planners current plan. This could mean applying
@@ -290,29 +290,57 @@ class Agent(object):
             self.obj_fn.evaluate_function(self.vehicle_trajectory))
         return obj_val
 
-    def _init_obj_fn(self):
+    @staticmethod
+    def _init_obj_fn(params, obstacle_map):
         """
         Initialize the objective function given sim params
         """
-        obj_fn = ObjectiveFunction(self.params.objective_fn_params)
-        if not self.params.avoid_obstacle_objective.empty():
+        obj_fn = ObjectiveFunction(params.objective_fn_params)
+        if not params.avoid_obstacle_objective.empty():
             obj_fn.add_objective(
-                ObstacleAvoidance(params=self.params.avoid_obstacle_objective,
-                                  obstacle_map=self.obstacle_map))
-        if not self.params.goal_distance_objective.empty():
+                ObstacleAvoidance(params=params.avoid_obstacle_objective,
+                                  obstacle_map=obstacle_map))
+        if not params.goal_distance_objective.empty():
             obj_fn.add_objective(
-                GoalDistance(params=self.params.goal_distance_objective,
-                             fmm_map=self.obstacle_map.fmm_map))
-        if not self.params.goal_angle_objective.empty():
+                GoalDistance(params=params.goal_distance_objective,
+                             fmm_map=obstacle_map.fmm_map))
+        if not params.goal_angle_objective.empty():
             obj_fn.add_objective(
-                AngleDistance(params=self.params.goal_angle_objective,
-                              fmm_map=self.obstacle_map.fmm_map))
+                AngleDistance(params=params.goal_angle_objective,
+                              fmm_map=obstacle_map.fmm_map))
         return obj_fn
 
-    def _init_planner(self):
-        p = self.params
-        return p.planner_params.planner(obj_fn=self.obj_fn,
+    @staticmethod
+    def _init_planner(p, obj_fn):
+        return p.planner_params.planner(obj_fn=obj_fn,
                                         params=p.planner_params)
+
+    @staticmethod
+    def _init_fmm_map(p, obstacle_map, goal_pos_n2):
+        obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
+
+        # if goal_pos_n2 is None:
+        #     goal_pos_n2 = self.goal_config.position_nk2()[0]
+
+        return FmmMap.create_fmm_map_based_on_goal_position(
+            goal_positions_n2=goal_pos_n2,
+            map_size_2=np.array(p.obstacle_map_params.map_size_2),
+            dx=p.obstacle_map_params.dx,
+            map_origin_2=p.obstacle_map_params.map_origin_2,
+            mask_grid_mn=obstacle_occupancy_grid)
+
+    @staticmethod
+    def _init_system_dynamics(params, planner):
+        """
+        If there is a control pipeline (i.e. model based method)
+        return its system_dynamics. Else create a new system_dynamics
+        instance.
+        """
+        try:
+            return planner.control_pipeline.system_dynamics
+        except AttributeError:
+            p = params.planner_params.control_pipeline_params.system_dynamics_params
+            return p.system(dt=p.dt, params=p)
 
     def _update_fmm_map(self):
         """
@@ -324,23 +352,12 @@ class Agent(object):
         if self.fmm_map is not None:
             self.fmm_map.change_goal(goal_pos_n2)
         else:
-            self.fmm_map = self._init_fmm_map(goal_pos_n2)
+            self.fmm_map = Agent._init_fmm_map(
+                                    self.params, 
+                                    self.obstacle_map, 
+                                    goal_pos_n2
+                                )
         self._update_obj_fn()
-
-    def _init_fmm_map(self, goal_pos_n2=None):
-        p = self.params
-        self.obstacle_occupancy_grid = \
-            self.obstacle_map.create_occupancy_grid_for_map()
-
-        if goal_pos_n2 is None:
-            goal_pos_n2 = self.goal_config.position_nk2()[0]
-
-        return FmmMap.create_fmm_map_based_on_goal_position(
-            goal_positions_n2=goal_pos_n2,
-            map_size_2=np.array(p.obstacle_map_params.map_size_2),
-            dx=p.obstacle_map_params.dx,
-            map_origin_2=p.obstacle_map_params.map_origin_2,
-            mask_grid_mn=self.obstacle_occupancy_grid)
 
     def _update_obj_fn(self):
         """ 
@@ -355,18 +372,6 @@ class Agent(object):
                 objective.fmm_map = self.fmm_map
             else:
                 assert (False)
-
-    def _init_system_dynamics(self):
-        """
-        If there is a control pipeline (i.e. model based method)
-        return its system_dynamics. Else create a new system_dynamics
-        instance.
-        """
-        try:
-            return self.planner.control_pipeline.system_dynamics
-        except AttributeError:
-            p = self.params.planner_params.control_pipeline_params.system_dynamics_params
-            return p.system(dt=p.dt, params=p)
 
     def _enforce_episode_termination_conditions(self):
         p = self.params

@@ -38,9 +38,28 @@ class Joystick():
         self.requests_world = False  # True whenever the joystick wants data about the world
         print("Initiated joystick at", self.host, self.port_send)
 
-
     def set_host(self, h):
         self.host = h
+
+    def init_control_pipeline(self):
+        assert(self.world_state is not None)
+        self.obstacle_map = self.environment["traversibles"][0]
+        self.obj_fn = self._init_obj_fn()
+        # Initialize Fast-Marching-Method map for agent's pathfinding
+        self.fmm_map = self._init_fmm_map()
+        self._update_fmm_map()
+        # Initialize system dynamics and planner fields
+        self.system_dynamics = self._init_system_dynamics()
+        if(with_planner):
+            self.planner = self._init_planner()
+            self.vehicle_data = self.planner.empty_data_dict()
+        else:
+            self.planner = None
+            self.vehicle_data = None
+        self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        # the point in the trajectory where the agent collided
+        self.collision_point_k = np.inf
+        
 
     def create_message(self, joystick_power: bool, j_time: float = 0.0,
                        lin_vel: float = 0.0, ang_vel: float = 0.0, req_world: bool = False):
