@@ -16,6 +16,11 @@ import matplotlib.pyplot as plt
 from utils.utils import *
 from params.robot_params import create_params
 from params.renderer_params import get_path_to_humanav, get_seed
+# from params.simulator.sbpd_simulator_params import create_params as create_sim_params
+from simulators.agent import Agent
+from trajectory.trajectory import Trajectory
+# from humans.human_configs import HumanConfigs
+
 
 # seed the random number generator
 random.seed(get_seed())
@@ -41,25 +46,24 @@ class Joystick():
     def set_host(self, h):
         self.host = h
 
+    def init_start_goal(self):
+        self.start_config = HumanConfigs.generate_random_config(self.environment)
+        self.goal_config = HumanConfigs.generate_random_config(self.environment)
+        
+
     def init_control_pipeline(self):
         assert(self.world_state is not None)
+        self.agent_params = create_sim_params(render_3D=False)
         self.obstacle_map = self.environment["traversibles"][0]
-        self.obj_fn = self._init_obj_fn()
+        self.obj_fn = Agent._init_obj_fn(self.params, self.obstacle_map)
         # Initialize Fast-Marching-Method map for agent's pathfinding
-        self.fmm_map = self._init_fmm_map()
-        self._update_fmm_map()
+        self.fmm_map = Agent._init_fmm_map(self.params, self.obstacle_map, self.goal_config.position_nk2()[0])
+        Agent._update_fmm_map(self)
         # Initialize system dynamics and planner fields
-        self.system_dynamics = self._init_system_dynamics()
-        if(with_planner):
-            self.planner = self._init_planner()
-            self.vehicle_data = self.planner.empty_data_dict()
-        else:
-            self.planner = None
-            self.vehicle_data = None
+        self.planner = Agent._init_planner(self.params, self.obj_fn)
+        self.vehicle_data = self.planner.empty_data_dict()
+        self.system_dynamics = Agent._init_system_dynamics(self.params, self.planner)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
-        # the point in the trajectory where the agent collided
-        self.collision_point_k = np.inf
-        
 
     def create_message(self, joystick_power: bool, j_time: float = 0.0,
                        lin_vel: float = 0.0, ang_vel: float = 0.0, req_world: bool = False):

@@ -42,7 +42,7 @@ class PrerecordedHuman(Human):
         self.params = sim_params
         self.obstacle_map = sim_map
         # Initialize system dynamics and planner fields
-        self.system_dynamics = Agent._init_system_dynamics(self.params, None)
+        self.system_dynamics = Agent._init_system_dynamics(self)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
 
     def execute(self, state):
