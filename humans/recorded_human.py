@@ -45,7 +45,7 @@ class PrerecordedHuman(Human):
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
 
     def execute(self, state):
-        self.check_collisions(self.world_state)
+        self.check_collisions(self.world_state, include_prerecs=False)
         self.current_step += 1  # Has executed one more step
         self.set_current_config(
             HumanConfigs.generate_config_from_pos_3(state[:3], speed=state[3]))
