@@ -3,9 +3,6 @@ mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import sys
-import math
-from dotmap import DotMap
 from random import seed, random, randint
 import pandas as pd
 import warnings
@@ -15,8 +12,6 @@ with warnings.catch_warnings():
     from tensorflow import keras
     from tensorflow.keras.preprocessing.text import Tokenizer
     tf.enable_eager_execution()
-# print("Suppressed Numpy Incompatability Warnings")
-# import tensorflow as tf
 # Humanav
 from humanav import sbpd
 from humans.human import Human
@@ -31,9 +26,9 @@ from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
 from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
+from params.renderer_params import get_seed
 from params.renderer_params import create_params as create_base_params
 from utils.utils import *
-from params.renderer_params import get_seed
 
 # seed the random number generator
 random.seed(get_seed())
