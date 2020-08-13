@@ -33,7 +33,10 @@ from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
 from params.renderer_params import create_params as create_base_params
 from utils.utils import *
+from params.renderer_params import get_seed
 
+# seed the random number generator
+random.seed(get_seed())
 
 def create_params():
     p = create_base_params()

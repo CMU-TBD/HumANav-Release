@@ -15,8 +15,10 @@ mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 from utils.utils import *
 from params.robot_params import create_params
-from params.renderer_params import get_path_to_humanav
+from params.renderer_params import get_path_to_humanav, get_seed
 
+# seed the random number generator
+random.seed(get_seed())
 
 class Joystick():
     def __init__(self):
@@ -35,6 +37,7 @@ class Joystick():
         self.ready_to_send = False
         self.ready_to_req = False  # True whenever the joystick wants data about the world
         print("Initiated joystick at", self.host, self.port_send)
+
 
     def set_host(self, h):
         self.host = h

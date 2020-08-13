@@ -2,6 +2,8 @@ from dotmap import DotMap
 import numpy as np
 import os
 
+# seed for randomness generation
+seed = 501
 
 def create_params():
     p = DotMap()
@@ -9,6 +11,7 @@ def create_params():
     p.building_name = 'area3'
     p.flip = False
     p.load_meshes = True
+    p.seed = seed
     # False allows users to compute a new traversible when
     # using a new area dataset, True will look for the
     # precomputed traversible from the traversible folder
@@ -68,11 +71,9 @@ def create_params():
 
     return p
 
-# NOTE: this must be the ABSOLUTE path
-
-
+# NOTE: these must be the ABSOLUTE path
 def get_path_to_humanav():
-    PATH_TO_HUMANAV = '/home/gustavo/Documents/tbd_SocNavBenchmark'
+    PATH_TO_HUMANAV = '/home/gsilvera/Documents/tbd_SocNavBenchmark'
     if(not os.path.exists(PATH_TO_HUMANAV)):
         print('\033[31m', "ERROR: Failed to find HumANav installation at",
               PATH_TO_HUMANAV, '\033[0m')
@@ -126,3 +127,6 @@ def get_surreal_texture_dir():
               PATH_TO_SURREAL_TEXTURES, '\033[0m')
         os._exit(1)  # Failure condition
     return PATH_TO_SURREAL_TEXTURES
+
+def get_seed():
+    return seed
