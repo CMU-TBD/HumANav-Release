@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from utils.utils import *
 from params.robot_params import create_params
 from params.renderer_params import get_path_to_humanav, get_seed
-# from params.simulator.sbpd_simulator_params import create_params as create_sim_params
+from params.simulator.sbpd_simulator_params import create_params as create_agent_params
 from simulators.agent import Agent
 from trajectory.trajectory import Trajectory
 
@@ -30,29 +30,40 @@ class Joystick():
         self.latest_state = None
         self.world_state = []
         self.environment = None
-        self.params = create_params()
+        self.joystick_params = create_params()
         # sockets for communication
         self.robot_sender_socket = None
         self.robot_running = False
         self.host = socket.gethostname()
-        self.port_send = self.params.port  # port for sending commands to the robot
+        self.port_send = self.joystick_params.port  # port for sending commands to the robot
         self.port_recv = self.port_send + 1  # port for recieving commands from the robot
         self.frame_num = 0
         self.ready_to_send = False
         self.requests_world = False  # True whenever the joystick wants data about the world
         print("Initiated joystick at", self.host, self.port_send)
+        self.robot_start = None
+        self.robot_goal = None
+        self.robot_current = None
 
     def set_host(self, h):
         self.host = h
 
+    def _init_obstacle_map(self, renderer=0):
+        """ Initializes the sbpd map."""
+        p = self.params.obstacle_map_params
+        return p.obstacle_map(p, renderer, res=float(self.environment["map_scale"])*100., trav=np.array(self.environment["traversibles"][0]))
+
     def init_start_goal(self):
-        self.start_config = generate_random_config(self.environment)
-        self.goal_config = generate_random_config(self.environment)
+        self.robot_start = generate_random_config(self.environment)
+        self.robot_goal = generate_random_config(self.environment)
 
     def init_control_pipeline(self):
         assert(self.world_state is not None)
-        self.agent_params = create_sim_params(render_3D=False)
-        self.obstacle_map = self.environment["traversibles"][0]
+        assert(self.environment is not None)
+        self.init_start_goal()
+        self.params = create_agent_params()
+
+        self.obstacle_map = self._init_obstacle_map() #self.environment["traversibles"][0]
         self.obj_fn = Agent._init_obj_fn(self)
         # Initialize Fast-Marching-Method map for agent's pathfinding
         self.fmm_map = Agent._init_fmm_map(self)
@@ -102,13 +113,15 @@ class Joystick():
                 self.power_off()
                 break
 
+    def planned_robot_joystick(self):
+        pass
+
     def update(self):
         """ Independent process for a user (at a designated host:port) to recieve
         information from the simulation while also sending commands to the robot """
-        listen_thread = threading.Thread(target=self.listen_to_robot)
-        listen_thread.start()
-        self.random_robot_joystick()
-        listen_thread.join()
+        # self.random_robot_joystick()
+        self.planned_robot_joystick()
+        self.listen_thread.join()
         # Close communication channel
         self.robot_sender_socket.close()
         # begin gif (movie) generation
@@ -203,6 +216,12 @@ class Joystick():
         connection, client = self.robot_receiver_socket.accept()
         print("%sRobot---->Joystick connection established%s" %
               (color_green, color_reset))
+        # start the listening thread for recieving world states from robot
+        self.listen_thread = threading.Thread(target=self.listen_to_robot)
+        self.listen_thread.start()
+        while(self.environment is None):
+            # wait until environment is fully sent
+            time.sleep(0.01)
         return connection, client
 
     """ END socket utils """
@@ -236,7 +255,8 @@ class Joystick():
 
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, json_key="current_config", label="Robot",
-                    normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=plot_quiver)
+                    normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=True, 
+                    plot_start_goal=True, new_start=self.robot_start, new_goal=self.robot_goal)
 
         # plot all the simulated prerecorded agents
         plot_agents(ax, ppm, prerecs, json_key="current_config", label="Prerec",

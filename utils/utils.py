@@ -123,7 +123,7 @@ def conn_recv(connection, buffr_amnt=1024):
 
 
 def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color='bo', collided_color='ro',
-                plot_trajectory=True, plot_quiver=False, plot_start_goal=False):
+                plot_trajectory=True, plot_quiver=False, plot_start_goal=False, new_start=None, new_goal=None):
     # plot all the simulated prerecorded agents
     for i, a in enumerate(agents_dict.values()):
         if(json_key is not None):
@@ -140,6 +140,12 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
             if(plot_start_goal):
                 start_3 = a.get_start_config().to_3D_numpy()
                 goal_3 = a.get_goal_config().to_3D_numpy()
+        # replace with new start and goal if applicable
+        if(plot_start_goal and new_start is not None):
+            start_3 = new_start.to_3D_numpy()
+        if(plot_start_goal and new_goal is not None):
+            goal_3 = new_goal.to_3D_numpy()
+        
         start_goal_markersize = markersize * 0.7
         if(plot_trajectory):
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
@@ -270,8 +276,8 @@ def generate_random_pos_3(center, xdiff=3, ydiff=3):
     offset_theta = 2 * np.pi * random.random()  # bound by (0, 2*pi)
     return np.add(center, np.array([offset_x, offset_y, offset_theta]))
 
-def within_traversible(new_pos, traversible, map_scale,
-                        stroked_radius=False):
+def within_traversible(new_pos:np.array, traversible:np.array, map_scale:float,
+                        stroked_radius:bool=False):
     """
     Returns whether or not the position is in a valid spot in the 
     traversible
@@ -283,8 +289,8 @@ def within_traversible(new_pos, traversible, map_scale,
         return False
     return True
 
-def within_traversible_with_radius(new_pos, traversible, map_scale, radius=1,
-                                    stroked_radius=False):
+def within_traversible_with_radius(new_pos:np.array, traversible:np.array, map_scale:float, radius:int=1,
+                                    stroked_radius:bool=False):
     """
     Returns whether or not the position is in a valid spot in the 
     traversible the Radius input can determine how many surrounding 
@@ -302,7 +308,7 @@ def within_traversible_with_radius(new_pos, traversible, map_scale, radius=1,
                 return False
     return True
 
-def generate_random_pos_in_environment(environment, radius=5):
+def generate_random_pos_in_environment(environment:dict, radius:int=5):
     """
     Generate a random position (x : meters, y : meters, theta : radians) 
     and near the 'center' with a nearby valid goal position. 
@@ -313,8 +319,8 @@ def generate_random_pos_in_environment(environment, radius=5):
     - Note that the map_scale primarily refers to the traversible's level
     of precision, it is best to use the dx_m provided in examples.py
     """
-    map_scale = environment["map_scale"]
-    center = environment["room_center"]
+    map_scale = float(environment["map_scale"])
+    center = np.array(environment["room_center"])
     # Combine the occupancy information from the static map
     # and the human
     if len(environment["traversibles"]) > 1:

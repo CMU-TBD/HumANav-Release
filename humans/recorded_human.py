@@ -22,10 +22,8 @@ class PrerecordedHuman(Human):
         self.max_steps = len(self.record_data)
         self.next_step = self.record_data[1]
         self.world_state = None
-        start = generate_config_from_pos_3(
-            record_data[0][:3], speed=0)
-        goal = generate_config_from_pos_3(
-            record_data[-1][:3], speed=0)
+        start = generate_config_from_pos_3(record_data[0][:3], speed=0)
+        goal = generate_config_from_pos_3(record_data[-1][:3], speed=0)
         init_configs = HumanConfigs(start, goal)
         if(generate_appearance):
             appearance = HumanAppearance.generate_random_human_appearance(HumanAppearance)

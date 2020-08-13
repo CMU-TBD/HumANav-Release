@@ -1,7 +1,6 @@
 from obstacles.obstacle_map import ObstacleMap
 import numpy as np
 import tensorflow as tf
-from sbpd.sbpd_renderer import SBPDRenderer
 from utils.fmm_map import FmmMap
 from systems.dubins_car import DubinsCar
 
@@ -9,24 +8,26 @@ from systems.dubins_car import DubinsCar
 class SBPDMap(ObstacleMap):
     name = 'SBPDMap'
 
-    def __init__(self, params, renderer=None):
+    def __init__(self, params, renderer=None, res=None, trav=None):
         """
         Initialize a map for Stanford Building Parser Dataset (SBPD)
         """
         self.p = params
         if renderer is None:
+            from sbpd.sbpd_renderer import SBPDRenderer
             self._r = SBPDRenderer.get_renderer(self.p.renderer_params)
         else:
             self._r = renderer
-        self._initialize_occupancy_grid_for_map()
+        self._initialize_occupancy_grid_for_map(resolution=res, traversible=trav)
         self._initialize_fmm_map()
 
-    def _initialize_occupancy_grid_for_map(self):
+    def _initialize_occupancy_grid_for_map(self, resolution=None, traversible=None):
         """
         Initialize the occupancy grid for the entire map and
         associated parameters/ instance variables
         """
-        resolution, traversible = self._r.get_config()
+        if(resolution is None and traversible is None):
+            resolution, traversible = self._r.get_config()
 
         self.p.dx = resolution / 100.  # To convert to metres.
 

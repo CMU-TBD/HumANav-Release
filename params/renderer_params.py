@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 # seed for randomness generation
-seed = 42
+seed = 3
 
 def create_params():
     p = DotMap()

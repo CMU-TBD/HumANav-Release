@@ -13,9 +13,10 @@ from simulators.joystick import Joystick
 
 def test_joystick():
     J = Joystick()
-    # J.init_control_pipeline()
     J.establish_robot_sender_connection()
     J.establish_robot_receiver_connection()
+    # init control pipeline after recieved map from robot
+    J.init_control_pipeline()
     J.update()
 
 

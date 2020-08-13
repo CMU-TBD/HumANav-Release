@@ -514,7 +514,7 @@ class CentralSimulator(SimulatorHelper):
 
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, label="Robot", normal_color="bo",
-                    collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True)
+                    collided_color="ko", plot_quiver=plot_quiver)
 
         # plot all the simulated prerecorded agents
         plot_agents(ax, ppm, prerecs, label="Prerec", normal_color="yo",
