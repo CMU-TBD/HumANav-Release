@@ -143,20 +143,21 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
         if(plot_trajectory):
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
         color = normal_color  # agents are green and solid unless collided
+        start_goal_col = 'wo' # white circle
         if(collided):
             color = collided_color  # collided agents are drawn red
         if(i == 0):
             # Only add label on the first humans
             ax.plot(pos_3[0], pos_3[1], color, markersize=markersize, label=label)
             if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], 'co', markersize=start_goal_markersize, label=label+" start")
-                ax.plot(goal_3[0], goal_3[1], 'co', markersize=start_goal_markersize, label=label+" goal")
+                ax.plot(start_3[0], start_3[1], start_goal_col, markersize=start_goal_markersize, label=label+" start")
+                ax.plot(goal_3[0], goal_3[1], start_goal_col, markersize=start_goal_markersize, label=label+" goal")
         else:
             ax.plot(pos_3[0], pos_3[1], color,
                     markersize=markersize)
             if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], 'yo', markersize=start_goal_markersize)
-                ax.plot(goal_3[0], goal_3[1], 'go', markersize=start_goal_markersize)
+                ax.plot(start_3[0], start_3[1], start_goal_col, markersize=start_goal_markersize)
+                ax.plot(goal_3[0], goal_3[1], start_goal_col, markersize=start_goal_markersize)
         # plot the surrounding "force field" around the agent
         ax.plot(pos_3[0], pos_3[1], color,
                 alpha=0.2, markersize=2. * markersize)
