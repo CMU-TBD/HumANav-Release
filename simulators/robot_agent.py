@@ -74,15 +74,9 @@ class RoboAgent(Agent):
         """use this to take in a world state and compute obstacles (agents/walls) to affect the robot"""
         # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states
         if(not self.end_episode):
-            if(self.world_state is not None):
-                # check for collisions with other agents
-                own_pos = self.get_current_config().position_nk2().numpy()
-                for a in self.world_state.get_agents().values():
-                    othr_pos = a.get_current_config().position_nk2().numpy()
-                    if(euclidean_dist(own_pos[0][0], othr_pos[0][0]) < self.get_radius() + a.get_radius()):
-                        # instantly collide and stop updating
-                        self.has_collided = True
-                        self.end_acting = True
+            # check for collisions with other agents
+            self.check_collisions(self.world_state)
+            # enforce planning termination upon condition
             self._enforce_episode_termination_conditions()
             # NOTE: enforce_episode_terminator updates the self.end_episode variable
             if(self.end_episode or self.has_collided):

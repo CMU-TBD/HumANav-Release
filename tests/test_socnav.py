@@ -405,4 +405,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(2, 1, starting_prerec=15)
+    test_socnav(5, 5, starting_prerec=15)

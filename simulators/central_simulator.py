@@ -203,11 +203,12 @@ class CentralSimulator(SimulatorHelper):
                 target=a.update, args=(sim_t, t_step, current_state,)))
         return agent_threads
 
-    def init_prerec_threads(self, sim_t: float):
+    def init_prerec_threads(self, sim_t: float, current_state:SimState):
         """Spawns a new prerec thread for each running prerecorded agent
 
         Args:
             sim_t (float): the simulator time in seconds
+            current_state (SimState): the current state of the world
 
         Returns:
             prerec_threads (list): list of all spawned (not started) prerecorded agent threads
@@ -217,7 +218,7 @@ class CentralSimulator(SimulatorHelper):
         for a in prerec_agents:
             if(not a.end_acting):
                 prerec_threads.append(threading.Thread(
-                    target=a.update, args=(sim_t,)))
+                    target=a.update, args=(sim_t,current_state,)))
             else:
                 # remove the agent once it's completed its trajectory
                 self.prerecs.pop(a.get_name())
@@ -277,7 +278,7 @@ class CentralSimulator(SimulatorHelper):
             # Complete thread operations
             agent_threads = self.init_agent_threads(
                 self.t, self.delta_t, current_state)
-            prerec_threads = self.init_prerec_threads(self.t)
+            prerec_threads = self.init_prerec_threads(self.t, current_state)
             # start all thread groups
             self.start_threads(agent_threads)
             self.start_threads(prerec_threads)

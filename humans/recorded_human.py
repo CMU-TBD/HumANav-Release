@@ -19,7 +19,8 @@ class PrerecordedHuman(Human):
         self.t = 0
         self.current_step = 0
         self.max_steps = len(self.record_data)
-        self.next_state = self.record_data[1]
+        self.next_step = self.record_data[1]
+        self.world_state = None
         start = HumanConfigs.generate_config_from_pos_3(
             record_data[0][:3], speed=0)
         goal = HumanConfigs.generate_config_from_pos_3(
@@ -44,6 +45,7 @@ class PrerecordedHuman(Human):
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
 
     def execute(self, state):
+        self.check_collisions(self.world_state)
         self.current_step += 1  # Has executed one more step
         self.set_current_config(
             HumanConfigs.generate_config_from_pos_3(state[:3], speed=state[3]))
@@ -57,16 +59,18 @@ class PrerecordedHuman(Human):
                                                           )
         self.vehicle_trajectory.append_along_time_axis(t_seg)
 
-    def update(self, time):
+    def update(self, time, world_state):
         self.t = time
+        self.world_state = world_state
+        self.has_collided = False
         if(self.current_step < self.max_steps):
             # continue jumping through states until time limit is reached
-            while(self.t > self.next_state[-1]):
-                self.execute(self.next_state)
+            while(not self.has_collided and self.t > self.next_step[-1]):
+                self.execute(self.next_step)
                 try:
-                    self.next_state = self.record_data[self.current_step + 1]
+                    self.next_step = self.record_data[self.current_step + 1]
                 except IndexError:
-                    self.next_state = self.record_data[-1]  # last one
+                    self.next_step = self.record_data[-1]  # last one
                     self.current_step = self.max_steps
                     break
         else:

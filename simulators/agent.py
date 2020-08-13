@@ -175,6 +175,18 @@ class Agent(object):
                           "at t =", self.time, "k=", self.vehicle_trajectory.k,
                           "total time=", self.vehicle_trajectory.k * self.vehicle_trajectory.dt)
 
+    def check_collisions(self, world_state):
+        if(world_state is not None):
+            own_pos = self.get_current_config().to_3D_numpy()
+            for a in world_state.get_agents().values():
+                othr_pos = a.get_current_config().to_3D_numpy()
+                if(a.get_name() is not self.get_name() and
+                        euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
+                    # instantly collide and stop updating
+                    self.has_collided = True
+                    self.collision_point_k = self.vehicle_trajectory.k  # this instant
+                    self.end_acting = True
+
     def act(self, action_dt, instant_complete=False, world_state=None):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
@@ -188,17 +200,9 @@ class Agent(object):
                 self.end_acting = True
             else:
                 # Update through the path traversal incrementally
-                if(world_state is not None):
-                    # first check for collisions with any other agents
-                    own_pos = self.get_current_config().position_nk2().numpy()
-                    for a in world_state.get_agents().values():
-                        othr_pos = a.get_current_config().position_nk2().numpy()
-                        if(a.get_name() is not self.get_name() and
-                                euclidean_dist(own_pos[0][0], othr_pos[0][0]) < self.get_radius() + a.get_radius()):
-                            # instantly collide and stop updating
-                            self.has_collided = True
-                            self.collision_point_k = self.vehicle_trajectory.k  # this instant
-                            self.end_acting = True
+
+                # first check for collisions with any other agents
+                self.check_collisions(world_state)
 
                 # then update the current config
                 self.current_config = \
