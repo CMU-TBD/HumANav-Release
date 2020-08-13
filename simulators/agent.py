@@ -41,7 +41,7 @@ class Agent(object):
         # for collisions with other agents
         self.has_collided = False
         # cosmetic items (for drawing the trajectories)
-        possible_colors = ['b','g','r','c','m','y','k','w']
+        possible_colors = ['b','g','r','c','m','y'] # not white or black
         self.color = random.choice(possible_colors)
         # NOTE: JSON serialization is done within sim_state.py
 

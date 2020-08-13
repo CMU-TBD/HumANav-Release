@@ -138,8 +138,8 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
             if(plot_start_goal):
                 start_3 = a.get_start_config().to_3D_numpy()
                 goal_3 = a.get_goal_config().to_3D_numpy()
+        start_goal_markersize = markersize * 0.5
         if(plot_trajectory):
-            # TODO: make colours of trajectories random rather than hardcoded
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
         color = normal_color  # agents are green and solid unless collided
         if(collided):
@@ -148,14 +148,14 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
             # Only add label on the first humans
             ax.plot(pos_3[0], pos_3[1], color, markersize=markersize, label=label)
             if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], color, markersize=markersize, label=label+" start")
-                ax.plot(goal_3[0], goal_3[1], color, markersize=markersize, label=label+" goal")
+                ax.plot(start_3[0], start_3[1], 'yo', markersize=start_goal_markersize, label=label+" start")
+                ax.plot(goal_3[0], goal_3[1], 'go', markersize=start_goal_markersize, label=label+" goal")
         else:
             ax.plot(pos_3[0], pos_3[1], color,
                     markersize=markersize)
             if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], color, markersize=markersize)
-                ax.plot(goal_3[0], goal_3[1], color, markersize=markersize)
+                ax.plot(start_3[0], start_3[1], 'yo', markersize=start_goal_markersize)
+                ax.plot(goal_3[0], goal_3[1], 'go', markersize=start_goal_markersize)
         # plot the surrounding "force field" around the agent
         ax.plot(pos_3[0], pos_3[1], color,
                 alpha=0.2, markersize=2. * markersize)
@@ -165,9 +165,9 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
                       scale=2, scale_units='inches')
             if(plot_start_goal):
                 ax.quiver(start_3[0], start_3[1], np.cos(start_3[2]), np.sin(start_3[2]),
-                      scale=2, scale_units='inches')
+                      scale=1, scale_units='inches')
                 ax.quiver(goal_3[0], goal_3[1], np.cos(goal_3[2]), np.sin(goal_3[2]),
-                      scale=2, scale_units='inches')
+                      scale=1, scale_units='inches')
 
 
 def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files=True, verbose=False):
