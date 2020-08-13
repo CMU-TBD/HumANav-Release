@@ -213,7 +213,6 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
     start_frame = world_df['frame'][0]  # default start (of data)
     max_peds = max(np.unique(world_df.ped))
     for i in range(num_pedestrians):
-        # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
         ped_id = i + start_ped + 1
         if (ped_id >= max_peds):  # need data to be within the bounds
             print("%sRequested Prerec agent index out of bounds:" %
@@ -227,7 +226,7 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
                 start_frame = f  # update start frame to be representative of "first" pedestrian
             relative_time = (f - start_frame) * (1 / 25.)
             times.append(relative_time)
-        record = []  # NOTE: this has no instance of angles, so i'm assuming i can generate those
+        record = []
         # generate a list of lists of positions (only x)
         for x in ped_i['x']:
             record.append([x + center_offset[0]])
@@ -249,8 +248,7 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
                 last_pos_2 = record[j - 1]
                 # calculating euclidean dist / delta_t
                 delta_t = (times[j] - times[j - 1])
-                speed = np.sqrt((pos_2[1] - last_pos_2[1]) **
-                                2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
+                speed = np.sqrt((pos_2[1] - last_pos_2[1]) **2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
                 record[j].append(speed)  # last element gets last angle
             else:
                 record[0].append(0)  # initial speed is 0

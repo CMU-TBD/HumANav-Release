@@ -66,6 +66,9 @@ class CentralSimulator(SimulatorHelper):
         p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
+        # whether to block on joystick, repeat last joystick command, or neither
+        # options being "joystick", "repeat", "none"
+        p.block = "joystick"
         # Much more optimized to only render topview, but can also render Humans
         if(not p.render_3D):
             print("Printing Topview movie with multithreading")
@@ -246,6 +249,16 @@ class CentralSimulator(SimulatorHelper):
 
     """END thread utils"""
 
+    def simulation_block(self, iteration):
+        # TODO: add fancy docstring
+        if(self.params.block is "joystick"):
+            while(self.robot.running and iteration >= self.robot.joystick_requests_heard):
+                # block on robot<->joystick communication
+                # wait until the joystick sent commands to pass the interval
+                time.sleep(0.01)
+        elif(self.params.block is "repeat"):
+            self.robot.repeat_joystick = True
+
     def simulate(self):
         """ A function that simulates an entire episode. The agents are updated with simultaneous
         threads running their update() functions and updating the robot with commands from the 
@@ -269,7 +282,9 @@ class CentralSimulator(SimulatorHelper):
             print("%sSimulation dt is too small; either lower the agents' dt's" % (color_red),
                   self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
+        iteration = 0 # loop iteration
         while self.exists_running_agent() or self.exists_running_prerec():
+            self.simulation_block(iteration)
             # update "wall clock" time
             wall_clock = time.clock() - start_time
             # Takes screenshot of the simulation state
@@ -288,15 +303,13 @@ class CentralSimulator(SimulatorHelper):
             # capture time after all the agents have updated
             self.t += self.delta_t  # update simulator time
             # print simulation progress
-            iteration = int(self.t * (1. / self.delta_t))
             self.print_sim_progress(iteration)
             if (iteration > 60 * num_agents):
                 # hard limit of 60 frames per agent
                 break
-            while(self.robot.running and iteration >= self.robot.joystick_requests_heard):
-                # block on robot<->joystick communication
-                # wait until the joystick sent commands to pass the interval
-                time.sleep(0.01)
+            # update iteration count
+            iteration += 1
+
 
         # free all the agents
         for a in self.agents.values():

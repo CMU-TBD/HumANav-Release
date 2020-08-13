@@ -175,17 +175,27 @@ class Agent(object):
                           "at t =", self.time, "k=", self.vehicle_trajectory.k,
                           "total time=", self.vehicle_trajectory.k * self.vehicle_trajectory.dt)
 
-    def check_collisions(self, world_state):
+    def _collision_in_group(self, own_pos:np.array, group:list):
+        for a in group:
+            othr_pos = a.get_current_config().to_3D_numpy()
+            if(a.get_name() is not self.get_name() and
+                    euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
+                # instantly collide and stop updating
+                self.has_collided = True
+                self.collision_point_k = self.vehicle_trajectory.k  # this instant
+                self.end_acting = True
+
+    def check_collisions(self, world_state, include_agents=True, include_prerecs=True, include_robots=True):
         if(world_state is not None):
             own_pos = self.get_current_config().to_3D_numpy()
-            for a in world_state.get_agents().values():
-                othr_pos = a.get_current_config().to_3D_numpy()
-                if(a.get_name() is not self.get_name() and
-                        euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
-                    # instantly collide and stop updating
-                    self.has_collided = True
-                    self.collision_point_k = self.vehicle_trajectory.k  # this instant
-                    self.end_acting = True
+            if(include_agents and self._collision_in_group(own_pos, world_state.get_agents().values())):
+                return True
+            if(include_prerecs and self._collision_in_group(own_pos, world_state.get_prerecs().values())):
+                return True
+            if(include_robots and self._collision_in_group(own_pos, world_state.get_robots().values())):
+                return True
+        return False
+            
 
     def act(self, action_dt, instant_complete=False, world_state=None):
         """ A utility method to initialize a config object

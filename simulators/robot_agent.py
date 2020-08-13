@@ -32,6 +32,8 @@ class RoboAgent(Agent):
         self.joystick_ready = False  # josystick is ready once it has been sent an environment
         self.joystick_requests_world = False  # to send the world state
         self.joystick_requests_heard = 0
+        # whether or not to repeat the last joystick input
+        self.repeat_joystick = False
 
     # Getters for the robot class
     def get_name(self):
