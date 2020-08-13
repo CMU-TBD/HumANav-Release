@@ -40,6 +40,9 @@ class Agent(object):
         self.termination_cause = None
         # for collisions with other agents
         self.has_collided = False
+        # cosmetic items (for drawing the trajectories)
+        possible_colors = ['b','g','r','c','m','y','k','w']
+        self.color = random.choice(possible_colors)
         # NOTE: JSON serialization is done within sim_state.py
 
     # Getters for the Agent class
@@ -107,9 +110,6 @@ class Agent(object):
             1]
         self.max_w = self.params.planner_params.control_pipeline_params.system_dynamics_params.w_bounds[
             1]
-        # cosmetic items (for drawing the trajectories)
-        possible_colors = ['b','g','r','c','m','y','k','w']
-        self.color = random.choice(possible_colors)
 
     def update_final(self):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']
