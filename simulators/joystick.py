@@ -61,13 +61,12 @@ class Joystick():
                     lin_command = (randint(10, 100) / 100.)
                     ang_command = (randint(-100, 100) / 100.)
                     for _ in range(repeat):
-                        # TODO: remove robot_running stuff
                         message = self.create_message(self.robot_running, time.clock(),
                                                       lin_command, ang_command, self.ready_to_req)
                         self.send_to_robot(message)
                         print("sent", message)
                         sent_commands += 1
-                    # now wait for robot to ping with "ready"
+                    # now update the robot with the "ready" ping
                     time.sleep(0.5)
                     self.ready_to_send = True
                 # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
@@ -106,7 +105,6 @@ class Joystick():
 
     def send_to_robot(self, json_message: str):
         # Create a TCP/IP socket
-        # TODO: make this use JSON rather than the current solution
         self.robot_sender_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening

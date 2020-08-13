@@ -292,7 +292,7 @@ class CentralSimulator(SimulatorHelper):
             if (iteration > 60 * num_agents):
                 # hard limit of 60 frames per agent
                 break
-            while(iteration >= self.robot.joystick_requests_heard):
+            while(self.robot.running and iteration >= self.robot.joystick_requests_heard):
                 # block on robot<->joystick communication
                 # wait until the joystick sent commands to pass the interval
                 time.sleep(0.01)
@@ -500,7 +500,7 @@ class CentralSimulator(SimulatorHelper):
 
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, label="Robot", normal_color="bo",
-                    collided_color="ko", plot_quiver=plot_quiver)
+                    collided_color="ko", plot_quiver=plot_quiver, plot_stat_goal=True)
 
         # plot all the simulated prerecorded agents
         plot_agents(ax, ppm, prerecs, label="Prerec", normal_color="yo",

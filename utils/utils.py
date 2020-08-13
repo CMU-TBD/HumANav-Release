@@ -122,7 +122,7 @@ def conn_recv(connection, buffr_amnt=1024):
 
 
 def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color='bo', collided_color='ro',
-                plot_trajectory=True, plot_quiver=False):
+                plot_trajectory=True, plot_quiver=False, plot_start_goal=False):
     # plot all the simulated prerecorded agents
     for i, a in enumerate(agents_dict.values()):
         if(json_key is not None):
@@ -133,6 +133,9 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
             collided = a.get_collided()
             markersize = a.get_radius() * ppm
             pos_3 = a.get_current_config().to_3D_numpy()
+            if(plot_start_goal):
+                start_3 = a.get_start_config().to_3D_numpy()
+                goal_3 = a.get_goal_config().to_3D_numpy()
         if(plot_trajectory):
             # TODO: make colours of trajectories random rather than hardcoded
             a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
@@ -141,17 +144,27 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
             color = collided_color  # collided agents are drawn red
         if(i == 0):
             # Only add label on the first humans
-            ax.plot(pos_3[0], pos_3[1],
-                    color, markersize=markersize, label=label)
+            ax.plot(pos_3[0], pos_3[1], color, markersize=markersize, label=label)
+            if(plot_start_goal):
+                ax.plot(start_3[0], start_3[1], color, markersize=markersize, label=label+" start")
+                ax.plot(goal_3[0], goal_3[1], color, markersize=markersize, label=label+" goal")
         else:
             ax.plot(pos_3[0], pos_3[1], color,
                     markersize=markersize)
-        # TODO: use agent radius instead of hardcode
+            if(plot_start_goal):
+                ax.plot(start_3[0], start_3[1], color, markersize=markersize)
+                ax.plot(goal_3[0], goal_3[1], color, markersize=markersize)
+        # plot the surrounding "force field" around the agent
         ax.plot(pos_3[0], pos_3[1], color,
                 alpha=0.2, markersize=2. * markersize)
         if(plot_quiver):
             # Agent heading
             ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
+                      scale=2, scale_units='inches')
+            if(plot_start_goal):
+                ax.quiver(start_3[0], start_3[1], np.cos(start_3[2]), np.sin(start_3[2]),
+                      scale=2, scale_units='inches')
+                ax.quiver(goal_3[0], goal_3[1], np.cos(goal_3[2]), np.sin(goal_3[2]),
                       scale=2, scale_units='inches')
 
 

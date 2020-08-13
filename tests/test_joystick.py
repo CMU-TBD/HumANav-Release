@@ -12,7 +12,6 @@ from simulators.joystick import Joystick
 
 
 def test_joystick():
-    # TODO: rename controller to joystick
     J = Joystick()
     J.establish_robot_sender_connection()
     J.establish_robot_receiver_connection()
