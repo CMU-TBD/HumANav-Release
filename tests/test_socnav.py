@@ -348,10 +348,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     Generate and add a single human with a constant start/end config on every run 
     """
-    known_start = HumanConfigs.generate_config_from_pos_3(
-        np.array([9., 18., 0.]))
-    known_end = HumanConfigs.generate_config_from_pos_3(
-        np.array([13., 10., 0.]))
+    known_start = generate_config_from_pos_3(np.array([9., 18., 0.]))
+    known_end = generate_config_from_pos_3(np.array([13., 10., 0.]))
     known_init_configs = HumanConfigs(known_start, known_end)
     const_human = Human.generate_human_with_configs(known_init_configs)
     simulator.add_agent(const_human)
