@@ -21,6 +21,7 @@ class AgentState():
         self.collided = a.get_collided()
         self.end_acting = a.end_acting
         self.radius = a.get_radius()
+        self.color = a.get_color()
 
     def get_name(self):
         return self.name
@@ -42,6 +43,9 @@ class AgentState():
 
     def get_radius(self):
         return self.radius
+    
+    def get_color(self):
+        return self.color
 
     def to_json(self):
         name_json = SimState.to_json_type(deepcopy(self.name))
@@ -57,6 +61,7 @@ class AgentState():
         collided_json = deepcopy(self.collided)
         end_acting_json = deepcopy(self.end_acting)
         radius_json = deepcopy(self.radius)
+        color_json = deepcopy(self.color)
         json_dict = {}
         json_dict['name'] = name_json
         # NOTE: goal and start can perhaps be optimized to be only sent once
@@ -68,6 +73,7 @@ class AgentState():
         json_dict['collided'] = collided_json
         json_dict['end_acting'] = end_acting_json
         json_dict['radius'] = radius_json
+        json_dict['color'] = color_json
         # returns array (python list) to be json'd in_simstate
         return json_dict
 

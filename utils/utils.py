@@ -129,16 +129,18 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
             collided = a["collided"]
             markersize = a["radius"] * ppm
             pos_3 = a[json_key]
+            traj_col = a["color"]
         else:
             collided = a.get_collided()
             markersize = a.get_radius() * ppm
             pos_3 = a.get_current_config().to_3D_numpy()
+            traj_col = a.get_color()
             if(plot_start_goal):
                 start_3 = a.get_start_config().to_3D_numpy()
                 goal_3 = a.get_goal_config().to_3D_numpy()
         if(plot_trajectory):
             # TODO: make colours of trajectories random rather than hardcoded
-            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
+            a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
         color = normal_color  # agents are green and solid unless collided
         if(collided):
             color = collided_color  # collided agents are drawn red

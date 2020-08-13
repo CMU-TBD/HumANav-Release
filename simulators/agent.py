@@ -80,6 +80,9 @@ class Agent(object):
     def get_radius(self):
         return self.radius
 
+    def get_color(self):
+        return self.color
+
     def simulation_init(self, sim_params, sim_map, with_planner=True):
         """ Initializes important fields for the CentralSimulator"""
         self.params = sim_params
@@ -104,6 +107,9 @@ class Agent(object):
             1]
         self.max_w = self.params.planner_params.control_pipeline_params.system_dynamics_params.w_bounds[
             1]
+        # cosmetic items (for drawing the trajectories)
+        possible_colors = ['b','g','r','c','m','y','k','w']
+        self.color = random.choice(possible_colors)
 
     def update_final(self):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']
