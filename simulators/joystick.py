@@ -41,9 +41,9 @@ class Joystick():
         self.ready_to_send = False
         self.requests_world = False  # True whenever the joystick wants data about the world
         print("Initiated joystick at", self.host, self.port_send)
-        self.robot_start = None
-        self.robot_goal = None
-        self.robot_current = None
+        self.start_config = None
+        self.goal_config = None
+        self.current_config = None
 
     def set_host(self, h):
         self.host = h
@@ -54,15 +54,15 @@ class Joystick():
         return p.obstacle_map(p, renderer, res=float(self.environment["map_scale"])*100., trav=np.array(self.environment["traversibles"][0]))
 
     def init_start_goal(self):
-        self.robot_start = generate_random_config(self.environment)
-        self.robot_goal = generate_random_config(self.environment)
+        self.start_config = generate_random_config(self.environment)
+        self.goal_config = generate_random_config(self.environment)
 
     def init_control_pipeline(self):
         assert(self.world_state is not None)
         assert(self.environment is not None)
         self.init_start_goal()
         self.params = create_agent_params()
-
+        self.params.control_horizon = 1 #one action at a time
         self.obstacle_map = self._init_obstacle_map() #self.environment["traversibles"][0]
         self.obj_fn = Agent._init_obj_fn(self)
         # Initialize Fast-Marching-Method map for agent's pathfinding
@@ -73,6 +73,7 @@ class Joystick():
         self.vehicle_data = self.planner.empty_data_dict()
         self.system_dynamics = Agent._init_system_dynamics(self)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        self.commanded_actions = []
 
     def create_message(self, joystick_power: bool, j_time: float = 0.0,
                        lin_vel: float = 0.0, ang_vel: float = 0.0, req_world: bool = False):
@@ -114,8 +115,30 @@ class Joystick():
                 break
 
     def planned_robot_joystick(self):
-        pass
+        """ Runs the planner for one step from config to generate a
+        subtrajectory, the resulting robot config after the robot executes
+        the subtrajectory, and relevant planner data"""
+        while(self.current_config is None):
+            # wait until robot's current position is known
+            time.sleep(0.01)
+        self.planned_next_config = copy.deepcopy(self.current_config)
+        while(self.robot_running):
+            self.planner_data = self.planner.optimize(self.planned_next_config, self.goal_config)
+            # open loop control
+            t_seg, actions_nk2 = Agent.apply_control_open_loop(self, self.current_config,
+                                                                self.planner_data['optimal_control_nk2'],
+                                                                T=self.params.control_horizon,
+                                                                sim_mode=self.system_dynamics.simulation_params.simulation_mode)
+            self.planned_next_config = \
+                SystemConfig.init_config_from_trajectory_time_index(
+                    t_seg,
+                    t=-1
+                )
+            self.vehicle_trajectory.append_along_time_axis(t_seg)
+            self.commanded_actions.append(self.planner_data['optimal_control_nk2'])
+            print(self.planner_data['optimal_control_nk2'])
 
+                
     def update(self):
         """ Independent process for a user (at a designated host:port) to recieve
         information from the simulation while also sending commands to the robot """
@@ -172,14 +195,17 @@ class Joystick():
                 self.requests_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
                 self.world_state.append(json.loads(data_str))
-                if(self.world_state[-1]['robot_on'] is True):
-                    if(self.world_state[-1]['environment']):  # not empty
+                current_world = self.world_state[-1]
+                if(current_world['robot_on'] is True):
+                    if(current_world['environment']):  # not empty
                         # notify the robot that the joystick received the environment
                         joystick_ready = self.create_message(
                             True, -1, 0, 0, False)
                         self.send_to_robot(joystick_ready)
                         # only update the environment if it is non-empty
-                        self.environment = self.world_state[-1]['environment']
+                        self.environment = current_world['environment']
+                        robot = list(current_world["robots"].values())[0]
+                        self.current_config = generate_config_from_pos_3(robot["current_config"])
                         print("Updated environment from robot")
                     self.generate_frame(self.frame_num)
                 else:
@@ -256,7 +282,7 @@ class Joystick():
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, json_key="current_config", label="Robot",
                     normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=True, 
-                    plot_start_goal=True, new_start=self.robot_start, new_goal=self.robot_goal)
+                    plot_start_goal=True, new_start=self.start_config, new_goal=self.goal_config)
 
         # plot all the simulated prerecorded agents
         plot_agents(ax, ppm, prerecs, json_key="current_config", label="Prerec",

@@ -251,7 +251,7 @@ class Agent(object):
         # The 'plan' is open loop control
         if 'trajectory' not in self.planner_data.keys():
             trajectory, commanded_actions_nkf = \
-                self.apply_control_open_loop(start_config,
+                Agent.apply_control_open_loop(self, start_config,
                                              self.planner_data['optimal_control_nk2'],
                                              T=self.params.control_horizon - 1,
                                              sim_mode=self.system_dynamics.simulation_params.simulation_mode)
@@ -519,6 +519,7 @@ class Agent(object):
             time_idx = tf.constant(np.inf)
         return time_idx
 
+    @staticmethod
     def apply_control_open_loop(self, start_config, control_nk2,
                                 T, sim_mode='ideal'):
         """

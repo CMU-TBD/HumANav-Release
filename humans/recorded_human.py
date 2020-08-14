@@ -51,7 +51,7 @@ class PrerecordedHuman(Human):
         null_command = np.array([[[0, 0]]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-        t_seg, actions_nk2 = self.apply_control_open_loop(self.current_config,
+        t_seg, actions_nk2 = Agent.apply_control_open_loop(self, self.current_config,
                                                           null_command, 1, sim_mode='ideal'
                                                           )
         self.vehicle_trajectory.append_along_time_axis(t_seg)
