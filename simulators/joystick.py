@@ -41,11 +41,12 @@ class Joystick():
         self.port_recv = self.port_send + 1  # port for recieving commands from the robot
         self.frame_num = 0
         self.ready_to_send = False
-        self.requests_world = False  # True whenever the joystick wants data about the world
+        self.request_world = False  # True whenever the joystick wants data about the world
         print("Initiated joystick at", self.host, self.port_send)
         self.start_config = None
         self.goal_config = None
         self.current_config = None
+        self.num_sent = 0
 
     def set_host(self, h):
         self.host = h
@@ -94,6 +95,7 @@ class Joystick():
                                       float(lin_command), float(ang_command), request_world)
         self.send_to_robot(message)
         print("sent", message)
+        self.num_sent += 1
 
     def random_robot_joystick(self):
         sent_commands = 0
@@ -105,7 +107,7 @@ class Joystick():
                     lin_command = (randint(10, 100) / 100.)
                     ang_command = (randint(-100, 100) / 100.)
                     self.robot_input(lin_command, ang_command,
-                                     self.requests_world)
+                                     self.request_world)
                     sent_commands += 1
                     # now update the robot with the "ready" ping
                     time.sleep(2)  # NOTE: this is tunable to ones liking
@@ -146,11 +148,18 @@ class Joystick():
             self.commanded_actions.append(commanded_actions_nkf)
             # print(self.planner_data['optimal_control_nk2'])
             for c in commanded_actions_nkf.numpy()[0]:
+                if(not self.robot_running):
+                    break
                 lin = c[0]
                 ang = c[1]
-                self.robot_input(lin, ang, False)
-                # TODO: get rid of time, make the joystick send all at once instead of one at a time
-                time.sleep(0.01)
+                if(lin != 0 and ang != 0):
+                    if(self.num_sent % 20 == 0):
+                        self.request_world = True
+                    self.robot_input(lin, ang, self.request_world)
+                    # TODO: get rid of time, make the joystick send all at once instead of one at a time
+                    while(self.request_world is True):
+                        # wait until dosent request world
+                        time.sleep(0.01)
             self.current_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
                     self.vehicle_trajectory, t=-1)
@@ -210,7 +219,7 @@ class Joystick():
                   "bytes from server%s" % (color_reset))
             if(data_b is not None):
                 self.ready_to_send = True  # has received a world state from the robot
-                self.requests_world = False
+                self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
                 self.world_state.append(json.loads(data_str))
                 current_world = self.world_state[-1]
@@ -234,7 +243,7 @@ class Joystick():
             else:
                 break
             # this should be a separate thread
-            self.requests_world = True
+            self.request_world = True
 
     def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
@@ -301,7 +310,8 @@ class Joystick():
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, json_key="current_config", label="Robot",
                     normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=True,
-                    plot_start_goal=True, new_start=self.start_config, new_goal=self.goal_config)
+                    plot_start_goal=True, start_3=self.start_config.to_3D_numpy(),
+                    goal_3=self.goal_config.to_3D_numpy())
 
         # plot all the simulated prerecorded agents
         plot_agents(ax, ppm, prerecs, json_key="current_config", label="Prerec",

@@ -123,7 +123,7 @@ def conn_recv(connection, buffr_amnt=1024):
 
 
 def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color='bo', collided_color='ro',
-                plot_trajectory=True, plot_quiver=False, plot_start_goal=False, new_start=None, new_goal=None):
+                plot_trajectory=True, plot_quiver=False, plot_start_goal=False, start_3=None, goal_3=None):
     # plot all the simulated prerecorded agents
     for i, a in enumerate(agents_dict.values()):
         if(json_key is not None):
@@ -140,15 +140,9 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
             if(plot_start_goal):
                 start_3 = a.get_start_config().to_3D_numpy()
                 goal_3 = a.get_goal_config().to_3D_numpy()
-        # replace with new start and goal if applicable
-        if(plot_start_goal and new_start is not None):
-            start_3 = new_start.to_3D_numpy()
-        if(plot_start_goal and new_goal is not None):
-            goal_3 = new_goal.to_3D_numpy()
-        if(json_key is not None and plot_start_goal and (new_start is None or new_goal is None)):
-            # TODO: fix race condition case
-            plot_start_goal = False
-
+        if(plot_start_goal):
+            assert(start_3 is not None)
+            assert(goal_3 is not None)
         start_goal_markersize = markersize * 0.7
         if(plot_trajectory):
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
