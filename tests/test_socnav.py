@@ -3,9 +3,6 @@ mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import sys
-import math
-from dotmap import DotMap
 from random import seed, random, randint
 import pandas as pd
 import warnings
@@ -15,8 +12,6 @@ with warnings.catch_warnings():
     from tensorflow import keras
     from tensorflow.keras.preprocessing.text import Tokenizer
     tf.enable_eager_execution()
-# print("Suppressed Numpy Incompatability Warnings")
-# import tensorflow as tf
 # Humanav
 from humanav import sbpd
 from humans.human import Human
@@ -31,10 +26,12 @@ from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
 from params.planner_params import create_params as create_planner_params
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
+from params.renderer_params import get_seed
 from params.renderer_params import create_params as create_base_params
-# Other
-from utils.utils import touch, print_colors
+from utils.utils import *
 
+# seed the random number generator
+random.seed(get_seed())
 
 def create_params():
     p = create_base_params()
@@ -186,7 +183,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
               '\033[33m', "and therefore it will be created", '\033[0m')
         touch(full_file_name)  # Just as the bash command
     fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
-    print('\033[32m', "Rendered png at", full_file_name, '\033[0m')
+    print("%sRendered png at" % color_green, full_file_name, '\033[0m')
 
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
@@ -216,11 +213,10 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
     start_frame = world_df['frame'][0]  # default start (of data)
     max_peds = max(np.unique(world_df.ped))
     for i in range(num_pedestrians):
-        # TODO: can get all the pedestrians with max(np.unique(world_df.ped))
         ped_id = i + start_ped + 1
         if (ped_id >= max_peds):  # need data to be within the bounds
-            print(print_colors()["red"], "Requested Prerec agent index out of bounds:",
-                  ped_id, print_colors()["reset"])
+            print("%sRequested Prerec agent index out of bounds:" %
+                  (color_red), ped_id, "%s" % (color_reset))
         if(ped_id not in np.unique(world_df.ped)):
             continue
         ped_i = world_df[world_df.ped == ped_id]
@@ -230,7 +226,7 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
                 start_frame = f  # update start frame to be representative of "first" pedestrian
             relative_time = (f - start_frame) * (1 / 25.)
             times.append(relative_time)
-        record = []  # NOTE: this has no instance of angles, so i'm assuming i can generate those
+        record = []
         # generate a list of lists of positions (only x)
         for x in ped_i['x']:
             record.append([x + center_offset[0]])
@@ -252,8 +248,7 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
                 last_pos_2 = record[j - 1]
                 # calculating euclidean dist / delta_t
                 delta_t = (times[j] - times[j - 1])
-                speed = np.sqrt((pos_2[1] - last_pos_2[1]) **
-                                2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
+                speed = np.sqrt((pos_2[1] - last_pos_2[1]) **2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
                 record[j].append(speed)  # last element gets last angle
             else:
                 record[0].append(0)  # initial speed is 0
@@ -353,10 +348,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     Generate and add a single human with a constant start/end config on every run 
     """
-    known_start = HumanConfigs.generate_config_from_pos_3(
-        np.array([9., 18., 0.]))
-    known_end = HumanConfigs.generate_config_from_pos_3(
-        np.array([13., 10., 0.]))
+    known_start = generate_config_from_pos_3(np.array([9., 18., 0.]))
+    known_end = generate_config_from_pos_3(np.array([13., 10., 0.]))
     known_init_configs = HumanConfigs(known_start, known_end)
     const_human = Human.generate_human_with_configs(known_init_configs)
     simulator.add_agent(const_human)
@@ -408,4 +401,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(15, 5, starting_prerec=15)
+    test_socnav(5, 5, starting_prerec=15)

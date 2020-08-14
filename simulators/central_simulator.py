@@ -1,14 +1,10 @@
 import tensorflow as tf
-# with tf.Session() as sess:
-#     sess.run(tf.global_variables_initializer())
 import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
 import copy
 import os
-import glob
-import imageio
 import time
 import threading
 import multiprocessing
@@ -21,13 +17,21 @@ from simulators.simulator_helper import SimulatorHelper
 from simulators.agent import Agent
 from simulators.sim_state import SimState, HumanState, AgentState
 from utils.fmm_map import FmmMap
-from utils.utils import touch, print_colors, natural_sort
+from utils.utils import *
 from params.renderer_params import get_path_to_humanav
 
 
 class CentralSimulator(SimulatorHelper):
+    """The centralized simulator of TBD_SocNavBench """
 
     def __init__(self, params, environment, renderer=None):
+        """ Initializer for the central simulator
+
+        Args:
+            params (DotMap): parameter configuration file from test_socnav.py
+            environment (dict): dictionary housing the obj map (bitmap) and more
+            renderer (optional): OpenGL renderer for 3D models. Defaults to None
+        """
         self.params = CentralSimulator.parse_params(params)
         self.r = renderer
         self.obstacle_map = self._init_obstacle_map(renderer)
@@ -41,14 +45,16 @@ class CentralSimulator(SimulatorHelper):
         # keep a single (important) robot as a value
         self.robot = None
         self.states = {}
-        self.wall_clock_time = 0
-        self.t = 0
-        self.delta_t = 0  # will be updated in simulator based off dt
+        self.wall_clock_time: float = 0
+        self.t: float = 0
+        self.delta_t: float = 0  # will be updated in simulator based off dt
 
     @staticmethod
     def parse_params(p):
-        """
-        Parse the parameters to add some additional helpful parameters.
+        """ Parse the parameters to add some additional helpful parameters.
+
+        Args:
+            p (DotMap): parameter config file from the initializer
         """
         # Parse the dependencies
         p.humanav_dir = get_path_to_humanav()
@@ -60,6 +66,9 @@ class CentralSimulator(SimulatorHelper):
         p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
+        # whether to block on joystick, repeat last joystick command, or neither
+        # options being "joystick", "repeat", "none"
+        p.block = "repeat"
         # Much more optimized to only render topview, but can also render Humans
         if(not p.render_3D):
             print("Printing Topview movie with multithreading")
@@ -72,59 +81,104 @@ class CentralSimulator(SimulatorHelper):
         return p
 
     def add_agent(self, a):
+        """Adds an agent member to the central simulator's pool of agents
+        NOTE: this function works for robots (RoboAgent), prerecorded agents (PrerecordedHuman),
+              and general agents (Agent)
+
+        Args:
+            a (Agent/PrerecordedAgent/RoboAgent): The agent to be added to the simulator
+        """
         name = a.get_name()
         if(isinstance(a, RoboAgent)):
-            # Same simulation init for agents *however* the robot wont include a planner
+            # initialize the robot and add to simulator's known "robot" field
             a.simulation_init(self.params, self.obstacle_map,
                               with_planner=False)
             self.robots[name] = a
             self.robot = a
         elif (isinstance(a, PrerecordedHuman)):
+            # generic agent initializer but without a planner (already have trajectories)
             a.simulation_init(self.params, self.obstacle_map,
                               with_planner=False)
             self.prerecs[name] = a
         else:
-            # assert(isinstance(a, Human))) # TODO: could be a prerecordedAgent
+            # initialize agent and add to simulator
             a.simulation_init(self.params, self.obstacle_map,
                               with_planner=True)
             self.agents[name] = a
 
     def exists_running_agent(self):
+        """Checks whether or not a generated agent is still running (acting)
+
+        Returns:
+            bool: True if there is at least one running agent, False otherwise
+        """
         for a in self.agents.values():
-            # if there is even just a single agent acting
-            if (not a.end_acting):
+            if (not a.end_acting):  # if there is even just a single agent acting
                 return True
         return False
 
     def exists_running_prerec(self):
+        """Checks whether or not a prerecorded agent is still running (acting)
+
+        Returns:
+            bool: True if there is at least one running prerec, False otherwise
+        """
         for a in self.prerecs.values():
-            # if there is even just a single prerec acting
-            if (not a.end_acting):
+            if (not a.end_acting):  # if there is even just a single prerec acting
                 return True
         return False
 
     """BEGIN thread utils"""
 
-    def init_robot_thread(self):
+    def init_robot_thread(self, power_on=True):
+        """Initializes the robot agent by establishing socket connections to 
+        the joystick, transmitting the (constant) obstacle map (environment), 
+        and starting the robot thread.
+
+        Args:
+            power_on (bool, optional): Whether or not the robot should start on. Defaults to True.
+
+        Returns:
+            Thread: The robot's update thread if it exists in the simulator, else None
+        """
         # wait for joystick connection to be established
-        if(self.robot is not None):
-            self.robot.establish_joystick_receiver_connection()
+        r = self.robot
+        if(r is not None):
+            r.establish_joystick_receiver_connection()
             time.sleep(0.01)
-            self.robot.establish_joystick_sender_connection()
-            self.robot.update_time(0)
-            robot_thread = threading.Thread(target=self.robot.update)
-            robot_thread.start()
+            r.establish_joystick_sender_connection()
+            r.update_time(0)
+            assert(r.world_state is not None)
+            # send first transaction to the joystick
+            print("sending map to joystick")
+            r.send_to_joystick(r.world_state.to_json(include_map=True))
+            robot_thread = threading.Thread(target=r.update)
+            if(power_on):
+                robot_thread.start()
+            # wait until joystick is ready
+            while(not r.joystick_ready):
+                # wait until joystick recieves the environment (once)
+                time.sleep(0.01)
             return robot_thread
-        print(print_colors()["red"],
-              "No robot in simulator", print_colors()['reset'])
+        print("%sNo robot in simulator%s" % (color_red, color_reset))
         return None
 
     def update_robot(self, world_state):
+        """Gives the robot a picture of the world through a SimState package
+
+        Args:
+            world_state (SimState): the most recent state of the world
+        """
         if(self.robot is not None):
             self.robot.update_world(world_state)
         return
 
     def decommission_robot(self, thread):
+        """Turns off the robot and joins the robot's update thread
+
+        Args:
+            thread (Thread): the robot update thread to join
+        """
         if(thread is not None):
             assert(self.robot is not None)
             # turn off the robot
@@ -135,68 +189,111 @@ class CentralSimulator(SimulatorHelper):
             del(thread)
         return
 
-    def init_agent_threads(self, time, t_step, current_state):
+    def init_agent_threads(self, sim_t: float, t_step: float, current_state: SimState):
+        """Spawns a new agent thread for each agent (running or finished)
+
+        Args:
+            sim_t (float): the simulator time in seconds
+            t_step (float): the time step (update frequency) of the simulator
+            current_state (SimState): the most recent state of the world
+
+        Returns:
+            agent_threads (list): list of all spawned (not started) agent threads
+        """
         agent_threads = []
         for a in self.agents.values():
             agent_threads.append(threading.Thread(
-                target=a.update, args=(time, t_step, current_state,)))
+                target=a.update, args=(sim_t, t_step, current_state,)))
         return agent_threads
 
-    def init_prerec_threads(self, time):
+    def init_prerec_threads(self, sim_t: float, current_state:SimState):
+        """Spawns a new prerec thread for each running prerecorded agent
+
+        Args:
+            sim_t (float): the simulator time in seconds
+            current_state (SimState): the current state of the world
+
+        Returns:
+            prerec_threads (list): list of all spawned (not started) prerecorded agent threads
+        """
         prerec_threads = []
         prerec_agents = list(self.prerecs.values())
         for a in prerec_agents:
             if(not a.end_acting):
                 prerec_threads.append(threading.Thread(
-                    target=a.update, args=(time,)))
+                    target=a.update, args=(sim_t,current_state,)))
             else:
+                # remove the agent once it's completed its trajectory
                 self.prerecs.pop(a.get_name())
                 del(a)
         return prerec_threads
 
     def start_threads(self, thread_group):
+        """Starts a group of threads at once
+
+        Args:
+            thread_group (list): a group of threads to be started
+        """
         for t in thread_group:
             t.start()
 
     def join_threads(self, thread_group):
+        """Joins a group of threads at once
+
+        Args:
+            thread_group (list): a group of threads to be joined
+        """
         for t in thread_group:
             t.join()
             del(t)
 
     """END thread utils"""
 
+    def simulation_block(self, iteration):
+        # TODO: add fancy docstring
+        if(self.params.block is "joystick"):
+            while(self.robot.running and iteration >= self.robot.joystick_requests_heard):
+                # block on robot<->joystick communication
+                # wait until the joystick sent commands to pass the interval
+                time.sleep(0.01)
+        elif(self.params.block is "repeat"):
+            self.robot.repeat_joystick = True
+
     def simulate(self):
-        """ A function that simulates an entire episode. The agent starts
-        at self.start_config, repeatedly calling _iterate to generate 
-        subtrajectories. Generates a vehicle_trajectory for the episode, 
-        calculates its objective value, and sets the episode_type 
-        (timeout, collision, success) """
-        num_agents = len(self.agents) + len(self.prerecs)
+        """ A function that simulates an entire episode. The agents are updated with simultaneous
+        threads running their update() functions and updating the robot with commands from the 
+        external joystick process. 
+        """
+        num_agents: int = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
+        # get initial state
+        current_state = self.save_state(0, 0)
+        self.update_robot(current_state)
+        # initialize the robot to establish joystick connection
         r_t = self.init_robot_thread()
         # continue to spawn the simulation with an established (independent) connection
         # keep track of wall-time in the simulator
         start_time = time.clock()
         # save initial state before the simulator is spawned
-        self.t = 0
+        self.t = 0.0
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
         self.delta_t = self.params.dt
         if(self.delta_t < self.params.dt):
-            print(print_colors()["red"],
-                  "Simulation dt is too small either lower the agents' dt's",
-                  self.params.dt, "or increase simulation delta_t", print_colors()['reset'])
+            print("%sSimulation dt is too small; either lower the agents' dt's" % (color_red),
+                  self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
+        iteration = 0 # loop iteration
         while self.exists_running_agent() or self.exists_running_prerec():
+            self.simulation_block(iteration)
             # update "wall clock" time
             wall_clock = time.clock() - start_time
-            # Takes screenshot of the simulation state as long as the update is still going
-            # saves to self.states and returns most recent
+            # Takes screenshot of the simulation state
             current_state = self.save_state(self.t, wall_clock)
             self.update_robot(current_state)
             # Complete thread operations
             agent_threads = self.init_agent_threads(
                 self.t, self.delta_t, current_state)
-            prerec_threads = self.init_prerec_threads(self.t)
+            prerec_threads = self.init_prerec_threads(self.t, current_state)
             # start all thread groups
             self.start_threads(agent_threads)
             self.start_threads(prerec_threads)
@@ -204,13 +301,16 @@ class CentralSimulator(SimulatorHelper):
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
             # capture time after all the agents have updated
-            self.t += self.delta_t  # update "simulaiton time"
+            self.t += self.delta_t  # update simulator time
             # print simulation progress
-            iteration = int(self.t * (1. / self.delta_t))
             self.print_sim_progress(iteration)
-            if (iteration > 40 * num_agents):
-                # hard limit of 40 frames per agent
+            if (iteration > 60 * num_agents):
+                # hard limit of 60 frames per agent
                 break
+            # update iteration count
+            iteration += 1
+
+
         # free all the agents
         for a in self.agents.values():
             del(a)
@@ -221,7 +321,7 @@ class CentralSimulator(SimulatorHelper):
 
         self.decommission_robot(r_t)
 
-        # capture wall clock time
+        # capture final wall clock (completion) time
         wall_clock = time.clock() - start_time
 
         print("\nSimulation completed in", wall_clock, "seconds")
@@ -230,38 +330,58 @@ class CentralSimulator(SimulatorHelper):
         self.generate_frames()
 
         # convert all the generated frames into a gif file
-        self.save_to_gif(clear_old_files=True)
-        # Can also save to mp4 using imageio-ffmpeg or this bash script:
-        # ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4
+        self.save_frames_to_gif(clear_old_files=True)
 
-    def num_conditions_in_agents(self, condition):
-        num = 0
+    def _init_obstacle_map(self, renderer=None):
+        """ Initializes the sbpd map."""
+        p = self.params.obstacle_map_params
+        return p.obstacle_map(p, renderer)
+
+    def num_conditions_in_agents(self, condition: str):
+        """Counts the number of termination causes matching condition in all the generated agents
+
+        Args:
+            condition (str): either "green" (success), "red" (collision), or "blue" (timeout)
+
+        Returns:
+            num (int): number of termination causes matching condition
+        """
+        num: int = 0
         for a in self.agents.values():
             if(a.termination_cause is condition):
                 num = num + 1
         return num
 
-    def print_sim_progress(self, rendered_frames):
+    def print_sim_progress(self, rendered_frames: int):
+        """prints an inline simulation progress message based off agent termination
+
+        Args:
+            rendered_frames (int): how many frames have been generated so far
+        """
         print("A:", len(self.agents),
-              print_colors()["green"],
-              "Success:",
+              "%sSuccess:" % (color_green),
               self.num_conditions_in_agents("green"),
-              print_colors()["red"],
-              "Collide:",
+              "%sCollide:" % (color_red),
               self.num_conditions_in_agents("red"),
-              print_colors()["blue"],
-              "Time:",
+              "%sTime:" % (color_blue),
               self.num_conditions_in_agents("blue"),
-              print_colors()["reset"],
-              "Frames:",
+              "%sFrames:" % (color_reset),
               rendered_frames + 1,
               "T = %.3f" % (self.t),
               "\r", end="")
 
-    def save_state(self, simulator_time, wall_clock_time):
-        # TODO: when using a modular environment, make saved_env a deepcopy
+    def save_state(self, sim_t: float, wall_t: float):
+        """Captures the current state of the world to be saved to self.states
+
+        Args:
+            sim_t (float): the current time in the simulator in seconds
+            wall_t (float): the current wall clock time 
+
+        Returns:
+            current_state (SimState): the most recent state of the world 
+        """
+        # NOTE: when using a modular environment, make saved_env a deepcopy
         saved_env = self.environment
-        # deepcopy all agents individually using a HumanState copy
         saved_agents = {}
         for a in self.agents.values():
             saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
@@ -275,55 +395,21 @@ class CentralSimulator(SimulatorHelper):
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
         current_state = SimState(saved_env,
                                  saved_agents, saved_prerecs, saved_robots,
-                                 simulator_time, wall_clock_time
+                                 sim_t, wall_t
                                  )
         # Save current state to a class dictionary indexed by simulator time
-        self.states[simulator_time] = current_state
+        self.states[sim_t] = current_state
         return current_state
 
-    def _reset_obstacle_map(self, rng):
-        """
-        For SBPD the obstacle map does not change
-        between episodes.
-        """
-        return False
+    def generate_frames(self, filename: str = "obs"):
+        """Generates a png frame for each world state saved in self.states. Note, based off the 
+        render_3D options, the function will generate the frames in multiple separate processes to 
+        optimize performance on multicore machines, else it can also be done sequentially.
+        NOTE: the 3D renderer can only be run sequentially at the moment. 
 
-    def _init_obstacle_map(self, renderer=None):
-        """ Initializes the sbpd map."""
-        p = self.params.obstacle_map_params
-        return p.obstacle_map(p, renderer)
-
-    def _render_obstacle_map(self, ax, zoom=0):
-        p = self.params
-        self.obstacle_map.render_with_obstacle_margins(
-            ax,
-            margin0=p.avoid_obstacle_objective.obstacle_margin0,
-            margin1=p.avoid_obstacle_objective.obstacle_margin1,
-            zoom=zoom)
-
-    def get_observation(self, config=None, pos_n3=None, **kwargs):
+        Args:
+            filename (str, optional): name of each png frame (unindexed). Defaults to "obs".
         """
-        Return the robot's observation from configuration config
-        or pos_nk3.
-        """
-        return self.obstacle_map.get_observation(config=config, pos_n3=pos_n3, **kwargs)
-
-    def get_observation_from_data_dict_and_model(self, data_dict, model):
-        """
-        Returns the robot's observation from the data inside data_dict,
-        using parameters specified by the model.
-        """
-        if hasattr(model, 'occupancy_grid_positions_ego_1mk12'):
-            kwargs = {'occupancy_grid_positions_ego_1mk12':
-                      model.occupancy_grid_positions_ego_1mk12}
-        else:
-            kwargs = {}
-        img_nmkd = self.get_observation(
-            pos_n3=data_dict['vehicle_state_nk3'][:, 0],
-            **kwargs)
-        return img_nmkd
-
-    def generate_frames(self, filename="obs"):
         num_frames = len(self.states)
         np.set_printoptions(precision=3)
         if(not self.params.render_3D):
@@ -331,9 +417,9 @@ class CentralSimulator(SimulatorHelper):
             # TODO: put a limit on the maximum number of processes that can be run at once
             gif_processes = []
             for p, s in enumerate(self.states.values()):
-                # pool.apply_async(self.take_snapshot, args=(s, filename + str(p) + ".png"))
+                # pool.apply_async(self.convert_state_to_frame, args=(s, filename + str(p) + ".png"))
                 gif_processes.append(multiprocessing.Process(
-                    target=self.take_snapshot,
+                    target=self.convert_state_to_frame,
                     args=(s, filename + str(p) + ".png"))
                 )
                 gif_processes[-1].start()
@@ -349,7 +435,7 @@ class CentralSimulator(SimulatorHelper):
         else:
             # generate frames sequentially (non multiproceses)
             for frame, s in enumerate(self.states.values()):
-                self.take_snapshot(s, filename + str(frame) + ".png")
+                self.convert_state_to_frame(s, filename + str(frame) + ".png")
                 frame += 1
                 print("Generated Frames:", frame, "out of", num_frames,
                       "%.3f" % (frame / num_frames), "\r", end="")
@@ -358,10 +444,17 @@ class CentralSimulator(SimulatorHelper):
         # newline to not interfere with previous prints
         print("\n")
 
-    def save_to_gif(self, clear_old_files=True, with_multiprocessing=True):
+    def save_frames_to_gif(self, clear_old_files=True, with_multiprocessing=True):
+        """Convert a directory full of png's to a gif movie
+        NOTE: One can also save to mp4 using imageio-ffmpeg or this bash script:
+              "ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4"
+        Args:
+            clear_old_files (bool, optional): Whether or not to clear old image files. Defaults to True.
+            with_multiprocessing (bool, optional): for multiple directories of images, run with multiprocessing. Defaults to True.
+        """
         num_robots = len(self.robots)
         rendering_processes = []
-        # fps = 1. / self.delta_t # based off simulation capture rate
+        # fps = 1 / duration # where the duration is the simulation capture rate
         duration = self.delta_t
         for i in range(num_robots):
             dirname = "tests/socnav/sim_movie" + str(i)
@@ -370,49 +463,35 @@ class CentralSimulator(SimulatorHelper):
                 # little use to use pools here, since this is for multiple robot agents in a scene
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
-                    target=self._save_to_gif,
-                    args=(IMAGES_DIR, duration, clear_old_files))
+                    target=save_to_gif,
+                    args=(IMAGES_DIR, duration, "movie", clear_old_files))
                 )
                 rendering_processes[i].start()
             else:
-                self._save_to_gif(
-                    IMAGES_DIR, duration, clear_old_files=clear_old_files)  # sequentially
+                # sequentially
+                save_to_gif(IMAGES_DIR, duration,
+                            clear_old_files=clear_old_files)
 
         for p in rendering_processes:
             p.join()
 
-    def _save_to_gif(self, IMAGES_DIR, duration, clear_old_files=True):
-        """Takes the image directory and naturally sorts the images into a singular movie.gif"""
-        images = []
-        if(not os.path.exists(IMAGES_DIR)):
-            print('\033[31m', "ERROR: Failed to image directory at",
-                  IMAGES_DIR, '\033[0m')
-            os._exit(1)  # Failure condition
-        files = natural_sort(glob.glob(os.path.join(IMAGES_DIR, '*.png')))
-        num_images = len(files)
-        for i, filename in enumerate(files):
-            if(self.params.verbose_printing):
-                print("appending", filename)
-            try:
-                images.append(imageio.imread(filename))
-            except:
-                print(print_colors()["red"],
-                      "Unable to read file:", filename, "Try clearing the directory of old files and rerunning",
-                      print_colors()["reset"])
-                exit(1)
-            print("Movie progress:", i, "out of", num_images, "%.3f" %
-                  (i / num_images), "\r", end="")
-        output_location = os.path.join(IMAGES_DIR, 'movie.gif')
-        kargs = {'duration': duration}
-        imageio.mimsave(output_location, images, 'GIF', **kargs)
-        print('\033[32m', "Rendered gif at", output_location, '\033[0m')
-        # Clearing remaining files to not affect next render
-        if clear_old_files:
-            for f in files:
-                os.remove(f)
-
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13,
                      agents, prerecs, robots, room_center, plot_quiver=False):
+        """Uses matplotlib to plot a birds-eye-view image of the world by plotting the environment
+        and the agents on every frame. The frame also includes the simulator time and wall clock time
+
+        Args:
+            ax (matplotlib.axes): the axes to plot on
+            extent (np.array): the real_world extent (in meters) of the traversible
+            traversible (np.array): the environment traversible (map bitmap)
+            human_traversible (np.array/None): the human traversibles (or None for non-3D-plots)
+            camera_pos_13 (np.array): the position of the camera (and robot)
+            agents (AgentState dict): the agent states
+            prerecs (HumanState dict): the prerecorded agent states
+            robots (AgentState dict): the robots states
+            room_center (np.array): the center of the "room" to focus the image plot off of
+            plot_quiver (bool, optional): whether or not to plot the quiver (arrow). Defaults to False.
+        """
         # get number of pixels per meter based off the ax plot space
         img_scale = ax.transData.transform(
             (0, 1)) - ax.transData.transform((0, 0))
@@ -434,72 +513,16 @@ class CentralSimulator(SimulatorHelper):
             alphas = np.all(np.invert(human_traversible))
 
         # Plot the camera (robots)
-        for i, r in enumerate(robots.values()):
-            r_pos_3 = r.get_current_config().to_3D_numpy()
-            r.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-            color = 'bo'  # robots are blue and solid unless collided
-            if(r.get_collided()):
-                color = 'ko'  # collided robots are drawn BLACK
-            if i == 0:
-                # only add label on first robot
-                ax.plot(r_pos_3[0], r_pos_3[1], color,
-                        markersize=10, label='Robot')
-            else:
-                ax.plot(r_pos_3[0], r_pos_3[1], color,
-                        markersize=r.get_radius() * ppm)
-            # visual "bubble" around robot base to stay safe
-            ax.plot(r_pos_3[0], r_pos_3[1], color,
-                    alpha=0.2, markersize=r.get_radius() * 2. * ppm)
-            if np.array_equal(camera_pos_13, r_pos_3):
-                # this is the "camera" robot (with quiver)
-                ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
-                    camera_pos_13[2]), np.sin(camera_pos_13[2]))
+        plot_agents(ax, ppm, robots, label="Robot", normal_color="bo",
+                    collided_color="ko", plot_quiver=plot_quiver)
 
         # plot all the simulated prerecorded agents
-        for i, a in enumerate(prerecs.values()):
-            pos_3 = a.get_current_config().to_3D_numpy()
-            # TODO: make colours of trajectories random rather than hardcoded
-            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-            color = 'yo'  # agents are green and solid unless collided
-            if(a.get_collided()):
-                color = 'ro'  # collided agents are drawn red
-            if(i == 0):
-                # Only add label on the first humans
-                ax.plot(pos_3[0], pos_3[1],
-                        color, markersize=10, label='Prerec')
-            else:
-                ax.plot(pos_3[0], pos_3[1], color,
-                        markersize=a.get_radius() * ppm)
-            # TODO: use agent radius instead of hardcode
-            ax.plot(pos_3[0], pos_3[1], color,
-                    alpha=0.2, markersize=a.get_radius() * 2.0 * ppm)
-            if(plot_quiver):
-                # Agent heading
-                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                          scale=2, scale_units='inches')
+        plot_agents(ax, ppm, prerecs, label="Prerec", normal_color="yo",
+                    collided_color="ro", plot_quiver=plot_quiver)
 
         # plot all the randomly generated simulated agents
-        for i, a in enumerate(agents.values()):
-            pos_3 = a.get_current_config().to_3D_numpy()
-            # TODO: make colours of trajectories random rather than hardcoded
-            a.get_trajectory().render(ax, freq=1, color=None, plot_quiver=False)
-            color = 'go'  # agents are green and solid unless collided
-            if(a.get_collided()):
-                color = 'ro'  # collided agents are drawn red
-            if(i == 0):
-                # Only add label on the first humans
-                ax.plot(pos_3[0], pos_3[1],
-                        color, markersize=10, label='Agent')
-            else:
-                ax.plot(pos_3[0], pos_3[1], color,
-                        markersize=a.get_radius() * ppm)
-            # TODO: use agent radius instead of hardcode
-            ax.plot(pos_3[0], pos_3[1], color,
-                    alpha=0.2, markersize=a.get_radius() * 2. * ppm)
-            if(plot_quiver):
-                # Agent heading
-                ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                          scale=2, scale_units='inches')
+        plot_agents(ax, ppm, agents, label="Agent", normal_color="go",
+                    collided_color="ro", plot_quiver=plot_quiver)
 
         # plot other useful informational visuals in the topview
         # such as the key to the length of a "meter" unit
@@ -519,8 +542,24 @@ class CentralSimulator(SimulatorHelper):
                     0.5, "1m", fontsize=14, verticalalignment='top')
 
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment,
-                    camera_pos_13, agents, prerecs, robots, sim_time, wall_time, filename, img_dir):
+                    camera_pos_13, agents, prerecs, robots,
+                    sim_t: float, wall_t: float, filename: str, img_dir: str):
+        """Plots a single frame from information provided about the world state
 
+        Args:
+            p (DotMap): CentralSimulator params
+            rgb_image_1mk3: the RGB image of the world_state to plot
+            depth_image_1mk1: the depth-map image of the world_state to plot
+            environment (dict): dictionary housing the obj map (bitmap) and more
+            camera_pos_13 (np.array): the position of the camera (and robot)
+            agents (AgentState dict): the agent states
+            prerecs (HumanState dict): the prerecorded agent states
+            robots (AgentState dict): the robots states
+            sim_t (float): the simulator time in seconds
+            wall_t (float): the wall clock time in seconds
+            filename (str): the name of the file to save
+            img_dir (str): the name of the directory to save the file
+        """
         map_scale = environment["map_scale"]
         room_center = environment["room_center"]
         # Obstacles/building traversible
@@ -535,7 +574,7 @@ class CentralSimulator(SimulatorHelper):
         extent = np.array(extent) * map_scale
 
         # count used to signify the number of images that will be generated in a single frame
-        plot_count = 2  # default 2, for zoomed topview and normal topview
+        plot_count = 1  # default 2, for zoomed topview and normal topview
         if rgb_image_1mk3 is not None:
             plot_count = plot_count + 1
         if depth_image_1mk1 is not None:
@@ -554,22 +593,23 @@ class CentralSimulator(SimulatorHelper):
         ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
-        time_string = "sim_t=%.3f" % sim_time + " wall_t=%.3f" % wall_time
+        time_string = "sim_t=%.3f" % sim_t + " wall_t=%.3f" % wall_t
         ax.set_title(time_string, fontsize=20)
 
-        # Render entire map-view from the top
-        # to keep square plot
-        outer_zoom = min(traversible.shape[0],
-                         traversible.shape[1]) * map_scale
-        ax = fig.add_subplot(1, plot_count, 2)
-        ax.set_xlim(0., outer_zoom)
-        ax.set_ylim(0., outer_zoom)
-        self.plot_topview(ax, extent, traversible, human_traversible,
-                          camera_pos_13, agents, prerecs, robots, room_center)
-        ax.legend()
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title(time_string, fontsize=20)
+        if(plot_count == 2):
+            # Render entire map-view from the top
+            # to keep square plot
+            outer_zoom = min(traversible.shape[0],
+                             traversible.shape[1]) * map_scale
+            ax = fig.add_subplot(1, plot_count, 2)
+            ax.set_xlim(0., outer_zoom)
+            ax.set_ylim(0., outer_zoom)
+            self.plot_topview(ax, extent, traversible, human_traversible,
+                              camera_pos_13, agents, prerecs, robots, room_center)
+            ax.legend()
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_title(time_string, fontsize=20)
 
         if rgb_image_1mk3 is not None:
             # Plot the RGB Image
@@ -588,9 +628,8 @@ class CentralSimulator(SimulatorHelper):
             ax.set_yticks([])
             ax.set_title('Depth')
 
-        dirname = 'tests/socnav/sim_movie' + str(img_dir)
         full_file_name = os.path.join(
-            self.params.humanav_dir, dirname, filename)
+            self.params.humanav_dir, img_dir, filename)
         if(not os.path.exists(full_file_name)):
             if(self.params.verbose_printing):
                 print('\033[31m', "Failed to find:", full_file_name,
@@ -605,7 +644,19 @@ class CentralSimulator(SimulatorHelper):
             print('\033[32m', "Successfully rendered:",
                   full_file_name, '\033[0m')
 
-    def render_rgb_and_depth(self, r, camera_pos_13, dx_m, human_visible=True):
+    def render_rgb_and_depth(self, r, camera_pos_13, dx_m: float, human_visible=True):
+        """render the rgb and depth images from the openGL renderer
+
+        Args:
+            r: the openGL renderer object
+            camera_pos_13: the 3D (x, y, theta) position of the camera
+            dx_m (float): the delta_x in meters between real world and grid units
+            human_visible (bool, optional): Whether or not the humans are drawn. Defaults to True.
+
+        Returns:
+            rgb_image_1mk3, depth_image_1mk1: the rgb and depth images respectively
+        """
+
         # Convert from real world units to grid world units
         camera_grid_world_pos_12 = camera_pos_13[:, :2] / dx_m
 
@@ -620,20 +671,21 @@ class CentralSimulator(SimulatorHelper):
 
         return rgb_image_1mk3, depth_image_1mk1
 
-    def take_snapshot(self, state, filename):
+    def convert_state_to_frame(self, state: SimState, filename: str):
+        """Converts a state into an image to be later converted to a gif movie
+
+        Args:
+            state (SimState): the state of the world to convert to an image
+            filename (str): the name of the resulting image (unindexed)
         """
-        takes screenshot of a specific state of the world
-        """
-        # TODO: find a way to plot something in the openGL 3D human view representing the robots
-        # as right now they are invisible in all but the topview
         for i, r in enumerate(state.get_robots().values()):
             camera_pos_13 = r.get_current_config().to_3D_numpy()
             rgb_image_1mk3 = None
             depth_image_1mk1 = None
-            # TODO: make the prerecs also generate a random human identity (probably human child)
+            # NOTE: 3d renderer can only be used with sequential plotting, much slower
             if self.params.render_3D:
+                # TODO: Fix multiprocessing for properly deepcopied renderers
                 # only when rendering with opengl
-                # environment holds building and human traversibles
                 assert(len(state.get_environment()["traversibles"]) == 2)
                 for a in state.get_agents().values():
                     self.r.update_human(a)
@@ -648,12 +700,11 @@ class CentralSimulator(SimulatorHelper):
                     self.render_rgb_and_depth(self.r, np.array([camera_pos_13]),
                                               state.get_environment()["map_scale"], human_visible=True)
 
-                # TODO: Fix multiprocessing for properly deepcopied renderers
-
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                              state.get_environment(), camera_pos_13,
                              state.get_agents(), state.get_prerecs(), state.get_robots(),
-                             state.get_sim_t(), state.get_wall_t(), "rob" + str(i) + filename, i)
+                             state.get_sim_t(), state.get_wall_t(), "rob" + str(i) + filename,
+                             'tests/socnav/sim_movie' + str(i))
         # Delete state to save memory after frames are generated
         del(state)

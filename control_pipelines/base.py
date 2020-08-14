@@ -29,7 +29,7 @@ class ControlPipelineBase(object):
         # very memory intensive, set to false to produce a separate control pipeline for each agent/planner
         # which could theoretically allow for true parallelism, but is not as useful in our multithreaded model
         # (due to the python GIL)
-        p.only_one_system = False
+        p.only_one_system = True
         ControlPipelineBase.only_one_system = p.only_one_system
         return p
 
