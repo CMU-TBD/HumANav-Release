@@ -43,7 +43,7 @@ class AgentState():
 
     def get_radius(self):
         return self.radius
-    
+
     def get_color(self):
         return self.color
 

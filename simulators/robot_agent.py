@@ -92,8 +92,8 @@ class RoboAgent(Agent):
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
         t_seg, actions_nk2 = Agent.apply_control_open_loop(self, current_config,
-                                                            command, 1, sim_mode='ideal'
-                                                          )
+                                                           command, 1, sim_mode='ideal'
+                                                           )
         self.vehicle_trajectory.append_along_time_axis(t_seg)
         # act trajectory segment
         self.current_config = \
@@ -145,6 +145,7 @@ class RoboAgent(Agent):
             self.joystick_receiver_socket.close()
 
     """BEGIN socket utils"""
+
     def ping_joystick(self):
         if(self.joystick_requests_world):  # only send when joystick requests
             self.send_to_joystick(
@@ -178,14 +179,15 @@ class RoboAgent(Agent):
                 if(len(self.commands) > 0):
                     last_command = self.commands[-1]
                     self.commands.append(last_command)
-            time.sleep(1./freq)
+            time.sleep(1. / freq)
 
     def listen_to_joystick(self):
         self.joystick_receiver_socket.listen(10)
         self.running = True  # initialize listener
         # repeater thread in case of repeating last given command
-        repeat_freq = 10 #hz
-        repeater_thread = threading.Thread(target=self.repeat_command, args=(repeat_freq,))
+        repeat_freq = 10  # hz
+        repeater_thread = threading.Thread(
+            target=self.repeat_command, args=(repeat_freq,))
         repeater_thread.start()
         while(self.running):
             connection, client = self.joystick_receiver_socket.accept()

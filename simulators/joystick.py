@@ -24,6 +24,7 @@ from trajectory.trajectory import Trajectory
 # seed the random number generator
 random.seed(get_seed())
 
+
 class Joystick():
     def __init__(self):
         self.t = 0
@@ -35,7 +36,8 @@ class Joystick():
         self.robot_sender_socket = None
         self.robot_running = False
         self.host = socket.gethostname()
-        self.port_send = self.joystick_params.port  # port for sending commands to the robot
+        # port for sending commands to the robot
+        self.port_send = self.joystick_params.port
         self.port_recv = self.port_send + 1  # port for recieving commands from the robot
         self.frame_num = 0
         self.ready_to_send = False
@@ -51,7 +53,7 @@ class Joystick():
     def _init_obstacle_map(self, renderer=0):
         """ Initializes the sbpd map."""
         p = self.params.obstacle_map_params
-        return p.obstacle_map(p, renderer, res=float(self.environment["map_scale"])*100., trav=np.array(self.environment["traversibles"][0]))
+        return p.obstacle_map(p, renderer, res=float(self.environment["map_scale"]) * 100., trav=np.array(self.environment["traversibles"][0]))
 
     def init_start_goal(self):
         self.start_config = generate_random_config(self.environment)
@@ -62,8 +64,9 @@ class Joystick():
         assert(self.environment is not None)
         self.init_start_goal()
         self.params = create_agent_params()
-        self.params.control_horizon = 1 #one action at a time
-        self.obstacle_map = self._init_obstacle_map() #self.environment["traversibles"][0]
+        self.params.control_horizon = 200  # based off central_simulator's parse params
+        # self.environment["traversibles"][0]
+        self.obstacle_map = self._init_obstacle_map()
         self.obj_fn = Agent._init_obj_fn(self)
         # Initialize Fast-Marching-Method map for agent's pathfinding
         self.fmm_map = Agent._init_fmm_map(self)
@@ -86,12 +89,11 @@ class Joystick():
             json_dict["req_world"] = req_world
         return json.dumps(json_dict, indent=1)
 
-    def robot_input(self, lin_command:float, ang_command:float, request_world:bool):
+    def robot_input(self, lin_command: float, ang_command: float, request_world: bool):
         message = self.create_message(self.robot_running, time.clock(),
-                                        float(lin_command), float(ang_command), request_world)
+                                      float(lin_command), float(ang_command), request_world)
         self.send_to_robot(message)
         print("sent", message)
-
 
     def random_robot_joystick(self):
         sent_commands = 0
@@ -102,10 +104,11 @@ class Joystick():
                     # robot can only more forwards
                     lin_command = (randint(10, 100) / 100.)
                     ang_command = (randint(-100, 100) / 100.)
-                    self.robot_input(lin_command, ang_command, self.requests_world)
+                    self.robot_input(lin_command, ang_command,
+                                     self.requests_world)
                     sent_commands += 1
                     # now update the robot with the "ready" ping
-                    time.sleep(2) # NOTE: this is tunable to ones liking
+                    time.sleep(2)  # NOTE: this is tunable to ones liking
                     self.ready_to_send = True
                 # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
             except KeyboardInterrupt:
@@ -121,36 +124,44 @@ class Joystick():
         while(self.current_config is None):
             # wait until robot's current position is known
             time.sleep(0.01)
-        self.planned_next_config = copy.deepcopy(self.goal_config)
+        self.planned_next_config = copy.deepcopy(self.current_config)
         while(self.robot_running):
-            self.planner_data = self.planner.optimize(self.planned_next_config, self.goal_config)
-            # open loop control
-            lin = self.planner_data["K_nkfd"].numpy()[0][0][0][0]
-            ang = self.planner_data["k_nkf1"].numpy()[0][0][0][0]
-            command = np.array([[[lin, ang]]], dtype=np.float32)
+            self.planner_data = self.planner.optimize(
+                self.planned_next_config, self.goal_config)
+            # LQR feedback control loop
+            t_seg = Trajectory.new_traj_clip_along_time_axis(self.planner_data['trajectory'],
+                                                             self.params.control_horizon,
+                                                             repeat_second_to_last_speed=True)
+            _, commanded_actions_nkf = self.system_dynamics.parse_trajectory(
+                t_seg)
             # NOTE: the format for the velocity commands to the open loop for the robot is:
             # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-        
-            t_seg, actions_nk2 = Agent.apply_control_open_loop(self, self.current_config,
-                                                                command,
-                                                                T=self.params.control_horizon,
-                                                                sim_mode=self.system_dynamics.simulation_params.simulation_mode)
+
             self.planned_next_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
                     t_seg,
                     t=-1
                 )
             self.vehicle_trajectory.append_along_time_axis(t_seg)
-            self.commanded_actions.append(command)
+            self.commanded_actions.append(commanded_actions_nkf)
             # print(self.planner_data['optimal_control_nk2'])
-            self.robot_input(lin, ang, True)
+            for c in commanded_actions_nkf.numpy()[0]:
+                lin = c[0]
+                ang = c[1]
+                self.robot_input(lin, ang, False)
+                # TODO: get rid of time, make the joystick send all at once instead of one at a time
+                time.sleep(0.01)
+            self.current_config = \
+                SystemConfig.init_config_from_trajectory_time_index(
+                    self.vehicle_trajectory, t=-1)
 
-                
-    def update(self):
+    def update(self, random_commands: bool = True):
         """ Independent process for a user (at a designated host:port) to recieve
         information from the simulation while also sending commands to the robot """
-        # self.random_robot_joystick()
-        self.planned_robot_joystick()
+        if(random_commands):
+            self.random_robot_joystick()
+        else:
+            self.planned_robot_joystick()
         self.listen_thread.join()
         # Close communication channel
         self.robot_sender_socket.close()
@@ -212,7 +223,8 @@ class Joystick():
                         # only update the environment if it is non-empty
                         self.environment = current_world['environment']
                         robot = list(current_world["robots"].values())[0]
-                        self.current_config = generate_config_from_pos_3(robot["current_config"])
+                        self.current_config = generate_config_from_pos_3(
+                            robot["current_config"])
                         print("Updated environment from robot")
                     self.generate_frame(self.frame_num)
                 else:
@@ -288,7 +300,7 @@ class Joystick():
 
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, json_key="current_config", label="Robot",
-                    normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=True, 
+                    normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=True,
                     plot_start_goal=True, new_start=self.start_config, new_goal=self.goal_config)
 
         # plot all the simulated prerecorded agents

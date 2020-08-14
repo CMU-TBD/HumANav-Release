@@ -148,26 +148,31 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
         if(json_key is not None and plot_start_goal and (new_start is None or new_goal is None)):
             # TODO: fix race condition case
             plot_start_goal = False
-        
+
         start_goal_markersize = markersize * 0.7
         if(plot_trajectory):
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
         color = normal_color  # agents are green and solid unless collided
-        start_goal_col = 'wo' # white circle
+        start_goal_col = 'wo'  # white circle
         if(collided):
             color = collided_color  # collided agents are drawn red
         if(i == 0):
             # Only add label on the first humans
-            ax.plot(pos_3[0], pos_3[1], color, markersize=markersize, label=label)
+            ax.plot(pos_3[0], pos_3[1], color,
+                    markersize=markersize, label=label)
             if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], start_goal_col, markersize=start_goal_markersize, label=label+" start")
-                ax.plot(goal_3[0], goal_3[1], start_goal_col, markersize=start_goal_markersize, label=label+" goal")
+                ax.plot(start_3[0], start_3[1], start_goal_col,
+                        markersize=start_goal_markersize, label=label + " start")
+                ax.plot(goal_3[0], goal_3[1], start_goal_col,
+                        markersize=start_goal_markersize, label=label + " goal")
         else:
             ax.plot(pos_3[0], pos_3[1], color,
                     markersize=markersize)
             if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], start_goal_col, markersize=start_goal_markersize)
-                ax.plot(goal_3[0], goal_3[1], start_goal_col, markersize=start_goal_markersize)
+                ax.plot(start_3[0], start_3[1], start_goal_col,
+                        markersize=start_goal_markersize)
+                ax.plot(goal_3[0], goal_3[1], start_goal_col,
+                        markersize=start_goal_markersize)
         # plot the surrounding "force field" around the agent
         ax.plot(pos_3[0], pos_3[1], color,
                 alpha=0.2, markersize=2. * markersize)
@@ -177,9 +182,9 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
                       scale=2, scale_units='inches')
             if(plot_start_goal):
                 ax.quiver(start_3[0], start_3[1], np.cos(start_3[2]), np.sin(start_3[2]),
-                      scale=3, scale_units='inches')
+                          scale=3, scale_units='inches')
                 ax.quiver(goal_3[0], goal_3[1], np.cos(goal_3[2]), np.sin(goal_3[2]),
-                      scale=3, scale_units='inches')
+                          scale=3, scale_units='inches')
 
 
 def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files=True, verbose=False):
@@ -252,7 +257,9 @@ def subplot2(plt, Y_X, sz_y_sz_x=(10, 10), space_y_x=(0.1, 0.1), T=False):
         axes_list = axes.ravel()[::-1].tolist()
     return fig, axes, axes_list
 
+
 """ BEGIN configs functions """
+
 
 def generate_config_from_pos_3(pos_3, dt=0.1, speed=0):
     pos_n11 = tf.constant([[[pos_3[0], pos_3[1]]]], dtype=tf.float32)
@@ -264,23 +271,27 @@ def generate_config_from_pos_3(pos_3, dt=0.1, speed=0):
                         speed_nk1=speed_nk1,
                         variable=False)
 
-def generate_random_config(environment, dt=0.1, 
-                            max_vel=0.6, radius=5.):
+
+def generate_random_config(environment, dt=0.1,
+                           max_vel=0.6, radius=5.):
     pos_3 = generate_random_pos_in_environment(environment, radius)
     return generate_config_from_pos_3(pos_3, dt=dt, speed=max_vel)
 
 # For generating positional arguments in an environment
+
+
 def generate_random_pos_3(center, xdiff=3, ydiff=3):
     """
     Generates a random position near the center within an elliptical radius of xdiff and ydiff
     """
-    offset_x = 2*xdiff * random.random() - xdiff  # bound by (-xdiff, xdiff)
-    offset_y = 2*ydiff * random.random() - ydiff  # bound by (-ydiff, ydiff)
+    offset_x = 2 * xdiff * random.random() - xdiff  # bound by (-xdiff, xdiff)
+    offset_y = 2 * ydiff * random.random() - ydiff  # bound by (-ydiff, ydiff)
     offset_theta = 2 * np.pi * random.random()  # bound by (0, 2*pi)
     return np.add(center, np.array([offset_x, offset_y, offset_theta]))
 
-def within_traversible(new_pos:np.array, traversible:np.array, map_scale:float,
-                        stroked_radius:bool=False):
+
+def within_traversible(new_pos: np.array, traversible: np.array, map_scale: float,
+                       stroked_radius: bool = False):
     """
     Returns whether or not the position is in a valid spot in the 
     traversible
@@ -292,15 +303,16 @@ def within_traversible(new_pos:np.array, traversible:np.array, map_scale:float,
         return False
     return True
 
-def within_traversible_with_radius(new_pos:np.array, traversible:np.array, map_scale:float, radius:int=1,
-                                    stroked_radius:bool=False):
+
+def within_traversible_with_radius(new_pos: np.array, traversible: np.array, map_scale: float, radius: int = 1,
+                                   stroked_radius: bool = False):
     """
     Returns whether or not the position is in a valid spot in the 
     traversible the Radius input can determine how many surrounding 
     spots must also be valid
     """
-    for i in range(2*radius):
-        for j in range(2*radius):
+    for i in range(2 * radius):
+        for j in range(2 * radius):
             if(stroked_radius):
                 if not((i == 0 or i == radius - 1 or j == 0 or j == radius - 1)):
                     continue
@@ -311,7 +323,8 @@ def within_traversible_with_radius(new_pos:np.array, traversible:np.array, map_s
                 return False
     return True
 
-def generate_random_pos_in_environment(environment:dict, radius:int=5):
+
+def generate_random_pos_in_environment(environment: dict, radius: int = 5):
     """
     Generate a random position (x : meters, y : meters, theta : radians) 
     and near the 'center' with a nearby valid goal position. 
@@ -348,5 +361,6 @@ def generate_random_pos_in_environment(environment:dict, radius:int=5):
     pos_3[2] = random.random() * 2 * np.pi
 
     return pos_3
+
 
 """ END configs functions """

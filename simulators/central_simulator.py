@@ -68,7 +68,7 @@ class CentralSimulator(SimulatorHelper):
         p.dt = dt
         # whether to block on joystick, repeat last joystick command, or neither
         # options being "joystick", "repeat", "none"
-        p.block = "repeat"
+        p.block = "joystick"
         # Much more optimized to only render topview, but can also render Humans
         if(not p.render_3D):
             print("Printing Topview movie with multithreading")
@@ -206,7 +206,7 @@ class CentralSimulator(SimulatorHelper):
                 target=a.update, args=(sim_t, t_step, current_state,)))
         return agent_threads
 
-    def init_prerec_threads(self, sim_t: float, current_state:SimState):
+    def init_prerec_threads(self, sim_t: float, current_state: SimState):
         """Spawns a new prerec thread for each running prerecorded agent
 
         Args:
@@ -221,7 +221,7 @@ class CentralSimulator(SimulatorHelper):
         for a in prerec_agents:
             if(not a.end_acting):
                 prerec_threads.append(threading.Thread(
-                    target=a.update, args=(sim_t,current_state,)))
+                    target=a.update, args=(sim_t, current_state,)))
             else:
                 # remove the agent once it's completed its trajectory
                 self.prerecs.pop(a.get_name())
@@ -282,7 +282,7 @@ class CentralSimulator(SimulatorHelper):
             print("%sSimulation dt is too small; either lower the agents' dt's" % (color_red),
                   self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
-        iteration = 0 # loop iteration
+        iteration = 0  # loop iteration
         while self.exists_running_agent() or self.exists_running_prerec():
             self.simulation_block(iteration)
             # update "wall clock" time
@@ -309,7 +309,6 @@ class CentralSimulator(SimulatorHelper):
                 break
             # update iteration count
             iteration += 1
-
 
         # free all the agents
         for a in self.agents.values():
