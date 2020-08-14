@@ -81,14 +81,14 @@ class Joystick():
         json_dict["joystick_on"] = joystick_power
         if(joystick_power):
             json_dict["j_time"] = j_time
-            json_dict["lin_vel"] = lin_vel
-            json_dict["ang_vel"] = ang_vel
+            json_dict["lin_vel"] = float(lin_vel)
+            json_dict["ang_vel"] = float(ang_vel)
             json_dict["req_world"] = req_world
         return json.dumps(json_dict, indent=1)
 
     def robot_input(self, lin_command:float, ang_command:float, request_world:bool):
         message = self.create_message(self.robot_running, time.clock(),
-                                        lin_command, ang_command, request_world)
+                                        float(lin_command), float(ang_command), request_world)
         self.send_to_robot(message)
         print("sent", message)
 
@@ -121,12 +121,18 @@ class Joystick():
         while(self.current_config is None):
             # wait until robot's current position is known
             time.sleep(0.01)
-        self.planned_next_config = copy.deepcopy(self.current_config)
+        self.planned_next_config = copy.deepcopy(self.goal_config)
         while(self.robot_running):
             self.planner_data = self.planner.optimize(self.planned_next_config, self.goal_config)
             # open loop control
+            lin = self.planner_data["K_nkfd"].numpy()[0][0][0][0]
+            ang = self.planner_data["k_nkf1"].numpy()[0][0][0][0]
+            command = np.array([[[lin, ang]]], dtype=np.float32)
+            # NOTE: the format for the velocity commands to the open loop for the robot is:
+            # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
+        
             t_seg, actions_nk2 = Agent.apply_control_open_loop(self, self.current_config,
-                                                                self.planner_data['optimal_control_nk2'],
+                                                                command,
                                                                 T=self.params.control_horizon,
                                                                 sim_mode=self.system_dynamics.simulation_params.simulation_mode)
             self.planned_next_config = \
@@ -135,8 +141,9 @@ class Joystick():
                     t=-1
                 )
             self.vehicle_trajectory.append_along_time_axis(t_seg)
-            self.commanded_actions.append(self.planner_data['optimal_control_nk2'])
-            print(self.planner_data['optimal_control_nk2'])
+            self.commanded_actions.append(command)
+            # print(self.planner_data['optimal_control_nk2'])
+            self.robot_input(lin, ang, True)
 
                 
     def update(self):

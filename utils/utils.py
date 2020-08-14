@@ -145,7 +145,7 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
             start_3 = new_start.to_3D_numpy()
         if(plot_start_goal and new_goal is not None):
             goal_3 = new_goal.to_3D_numpy()
-        if(json_key and plot_start_goal and new_start is None and new_goal is None):
+        if(json_key is not None and plot_start_goal and (new_start is None or new_goal is None)):
             # TODO: fix race condition case
             plot_start_goal = False
         
