@@ -41,7 +41,7 @@ class Agent(object):
         # for collisions with other agents
         self.has_collided = False
         # cosmetic items (for drawing the trajectories)
-        possible_colors = ['b','g','r','c','m','y'] # not white or black
+        possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
         self.color = random.choice(possible_colors)
         # NOTE: JSON serialization is done within sim_state.py
 
@@ -135,11 +135,8 @@ class Agent(object):
         # Generate the next trajectory segment, update next config, update actions/data
 
         self.plan()
-        # NOTE: typically the current planner will have a large difference between lin/ang speed, thus
-        #       there are very few situations where both are at a high point
         action_dt = int(np.floor(t_step / self.params.dt))
-        # NOTE: instant_complete discards any animations and finishes the trajectory segment instantly
-        self.act(action_dt, instant_complete=False, world_state=sim_state)
+        self.act(action_dt, world_state=sim_state)
 
     def plan(self):
         """ Runs the planner for one step from config to generate a
@@ -175,7 +172,7 @@ class Agent(object):
                           "at t =", self.time, "k=", self.vehicle_trajectory.k,
                           "total time=", self.vehicle_trajectory.k * self.vehicle_trajectory.dt)
 
-    def _collision_in_group(self, own_pos:np.array, group:list):
+    def _collision_in_group(self, own_pos: np.array, group: list):
         for a in group:
             othr_pos = a.get_current_config().to_3D_numpy()
             if(a.get_name() is not self.get_name() and
@@ -195,7 +192,7 @@ class Agent(object):
             if(include_robots and self._collision_in_group(own_pos, world_state.get_robots().values())):
                 return True
         return False
-            
+
     def act(self, action_dt, instant_complete=False, world_state=None):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
@@ -252,9 +249,9 @@ class Agent(object):
         if 'trajectory' not in self.planner_data.keys():
             trajectory, commanded_actions_nkf = \
                 Agent.apply_control_open_loop(self, start_config,
-                                             self.planner_data['optimal_control_nk2'],
-                                             T=self.params.control_horizon - 1,
-                                             sim_mode=self.system_dynamics.simulation_params.simulation_mode)
+                                              self.planner_data['optimal_control_nk2'],
+                                              T=self.params.control_horizon - 1,
+                                              sim_mode=self.system_dynamics.simulation_params.simulation_mode)
         # The 'plan' is LQR feedback control
         else:
             # If we are using ideal system dynamics the planned trajectory
@@ -321,7 +318,7 @@ class Agent(object):
                                         params=p.planner_params)
 
     @staticmethod
-    def _init_fmm_map(self, goal_pos_n2 = None):
+    def _init_fmm_map(self, goal_pos_n2=None):
         p = self.params
         obstacle_map = self.obstacle_map
         obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
@@ -350,8 +347,8 @@ class Agent(object):
         except AttributeError:
             p = params.planner_params.control_pipeline_params.system_dynamics_params
             return p.system(dt=p.dt, params=p)
-            
-    @staticmethod        
+
+    @staticmethod
     def _update_obj_fn(self):
         """ 
         Update the objective function to use a new obstacle_map and fmm map
@@ -379,7 +376,6 @@ class Agent(object):
         else:
             self.fmm_map = Agent._init_fmm_map(self)
         Agent._update_obj_fn(self)
-
 
     def _enforce_episode_termination_conditions(self):
         p = self.params

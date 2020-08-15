@@ -15,7 +15,6 @@ class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
         self.commands = []
-        self.running = False
         self.freq = 100.  # update frequency
         self.params = create_params()
         # sockets for communication
@@ -31,9 +30,12 @@ class RoboAgent(Agent):
         self.radius = self.params.radius
         self.joystick_ready = False  # josystick is ready once it has been sent an environment
         self.joystick_requests_world = False  # to send the world state
-        self.joystick_requests_heard = 0
         # whether or not to repeat the last joystick input
         self.repeat_joystick = False
+        # simulation update init
+        self.running = True
+        self.last_command = None
+        self.num_executed = 0  # keeps track of the latest command that is to be executed
 
     # Getters for the robot class
     def get_name(self):
@@ -112,17 +114,11 @@ class RoboAgent(Agent):
             if(self.get_trajectory().k != self.get_trajectory().position_nk2().shape[1]):
                 # TODO: fix this uncommonly-occuring nonfatal bug
                 print("ERROR: robot_trajectory dimens mismatch")
-            # sleep for robot frequency
-            time.sleep(1. / self.freq)
 
     def update(self):
-        print("Robot powering on")
-        listen_thread = threading.Thread(target=self.listen_to_joystick)
-        listen_thread.start()
-        self.running = True
-        self.last_command = None
-        self.num_executed = 0  # keeps track of the latest command that is to be executed
-        while(self.running):
+        # listen_thread = threading.Thread(target=self.listen_to_joystick)
+        # listen_thread.start()
+        if(self.running):
             # only execute the most recent commands
             if(self.num_executed >= len(self.commands)):
                 time.sleep(1. / self.freq)
@@ -131,12 +127,14 @@ class RoboAgent(Agent):
                 self.execute_backlog()
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
-        # notify the joystick to stop sending commands to the robot
-        self.send_to_joystick(self.world_state.to_json(robot_on=False))
-        print("\nRobot powering off, recieved", len(self.commands), "commands")
-        self.power_off()
-        # join the remaining listener thread
-        listen_thread.join()
+        else:
+            # notify the joystick to stop sending commands to the robot
+            self.send_to_joystick(self.world_state.to_json(robot_on=False))
+            print("\nRobot powering off, recieved",
+                  len(self.commands), "commands")
+            self.power_off()
+            # join the remaining listener thread
+            # listen_thread.join()
 
     def power_off(self):
         if(self.running):
@@ -152,6 +150,7 @@ class RoboAgent(Agent):
                 self.world_state.to_json(robot_on=True, include_map=False))
             # immediately note that the world has been sent:
             self.joystick_requests_world = False
+        # NOTE: can send something else otherwise
 
     def send_to_joystick(self, message):
         # Create a TCP/IP socket
@@ -191,7 +190,6 @@ class RoboAgent(Agent):
         repeater_thread.start()
         while(self.running):
             connection, client = self.joystick_receiver_socket.accept()
-            self.joystick_requests_heard += 1  # update number of heard joystick requests
             while(True):
                 data_b, response_len = conn_recv(connection, buffr_amnt=128)
                 if(data_b is not b''):

@@ -130,8 +130,8 @@ class CentralSimulator(SimulatorHelper):
 
     """BEGIN thread utils"""
 
-    def init_robot_thread(self, power_on=True):
-        """Initializes the robot agent by establishing socket connections to 
+    def init_robot_listener_thread(self, power_on=True):
+        """Initializes the robot listener by establishing socket connections to 
         the joystick, transmitting the (constant) obstacle map (environment), 
         and starting the robot thread.
 
@@ -152,18 +152,19 @@ class CentralSimulator(SimulatorHelper):
             # send first transaction to the joystick
             print("sending map to joystick")
             r.send_to_joystick(r.world_state.to_json(include_map=True))
-            robot_thread = threading.Thread(target=r.update)
+            r_listener_thread = threading.Thread(target=r.listen_to_joystick)
             if(power_on):
-                robot_thread.start()
+                r_listener_thread.start()
             # wait until joystick is ready
             while(not r.joystick_ready):
                 # wait until joystick recieves the environment (once)
                 time.sleep(0.01)
-            return robot_thread
+            print("Robot powering on")
+            return r_listener_thread
         print("%sNo robot in simulator%s" % (color_red, color_reset))
         return None
 
-    def update_robot(self, world_state):
+    def robot_sense(self, world_state):
         """Gives the robot a picture of the world through a SimState package
 
         Args:
@@ -173,20 +174,20 @@ class CentralSimulator(SimulatorHelper):
             self.robot.update_world(world_state)
         return
 
-    def decommission_robot(self, thread):
+    def decommission_robot(self, r_listener_thread):
         """Turns off the robot and joins the robot's update thread
 
         Args:
-            thread (Thread): the robot update thread to join
+            r_listener_thread (Thread): the robot update thread to join
         """
-        if(thread is not None):
+        if(r_listener_thread is not None):
             assert(self.robot is not None)
             # turn off the robot
             self.robot.power_off()
-            # close robot agent threads
-            if(thread.is_alive()):
-                thread.join()
-            del(thread)
+            # close robot listener threads
+            if(r_listener_thread.is_alive()):
+                r_listener_thread.join()
+            del(r_listener_thread)
         return
 
     def init_agent_threads(self, sim_t: float, t_step: float, current_state: SimState):
@@ -252,7 +253,7 @@ class CentralSimulator(SimulatorHelper):
     def simulation_block(self, iteration):
         # TODO: add fancy docstring
         if(self.params.block is "joystick"):
-            while(self.robot.running and iteration >= self.robot.joystick_requests_heard):
+            while(self.robot.running and iteration >= len(self.robot.commands)):
                 # block on robot<->joystick communication
                 # wait until the joystick sent commands to pass the interval
                 time.sleep(0.01)
@@ -268,9 +269,10 @@ class CentralSimulator(SimulatorHelper):
         print("Running simulation on", num_agents, "agents")
         # get initial state
         current_state = self.save_state(0, 0)
-        self.update_robot(current_state)
+        # give the robot knowledge of the initial world
+        self.robot_sense(current_state)
         # initialize the robot to establish joystick connection
-        r_t = self.init_robot_thread()
+        r_t = self.init_robot_listener_thread()
         # continue to spawn the simulation with an established (independent) connection
         # keep track of wall-time in the simulator
         start_time = time.clock()
@@ -289,7 +291,8 @@ class CentralSimulator(SimulatorHelper):
             wall_clock = time.clock() - start_time
             # Takes screenshot of the simulation state
             current_state = self.save_state(self.t, wall_clock)
-            self.update_robot(current_state)
+            self.robot_sense(current_state)
+            # calls a single iteration of the robot update
             # Complete thread operations
             agent_threads = self.init_agent_threads(
                 self.t, self.delta_t, current_state)
@@ -297,6 +300,7 @@ class CentralSimulator(SimulatorHelper):
             # start all thread groups
             self.start_threads(agent_threads)
             self.start_threads(prerec_threads)
+            self.robot.update()
             # join all thread groups
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)

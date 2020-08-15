@@ -56,14 +56,9 @@ class Joystick():
         p = self.params.obstacle_map_params
         return p.obstacle_map(p, renderer, res=float(self.environment["map_scale"]) * 100., trav=np.array(self.environment["traversibles"][0]))
 
-    def init_start_goal(self):
-        self.start_config = generate_random_config(self.environment)
-        self.goal_config = generate_random_config(self.environment)
-
     def init_control_pipeline(self):
         assert(self.world_state is not None)
         assert(self.environment is not None)
-        self.init_start_goal()
         self.params = create_agent_params()
         self.params.control_horizon = 200  # based off central_simulator's parse params
         # self.environment["traversibles"][0]
@@ -147,6 +142,8 @@ class Joystick():
             self.vehicle_trajectory.append_along_time_axis(t_seg)
             self.commanded_actions.append(commanded_actions_nkf)
             # print(self.planner_data['optimal_control_nk2'])
+            action_dt = int(np.floor(0.05 / 0.01))
+            # TODO: match the action_dt with the number of signals sent to the robot at once
             for c in commanded_actions_nkf.numpy()[0]:
                 if(not self.robot_running):
                     break
@@ -157,9 +154,9 @@ class Joystick():
                         self.request_world = True
                     self.robot_input(lin, ang, self.request_world)
                     # TODO: get rid of time, make the joystick send all at once instead of one at a time
-                    while(self.request_world is True):
-                        # wait until dosent request world
-                        time.sleep(0.01)
+                    # while(self.request_world is True):
+                    #     # wait until dosent request world
+                    time.sleep(0.5)
             self.current_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
                     self.vehicle_trajectory, t=-1)
@@ -231,11 +228,21 @@ class Joystick():
                         self.send_to_robot(joystick_ready)
                         # only update the environment if it is non-empty
                         self.environment = current_world['environment']
-                        robot = list(current_world["robots"].values())[0]
+                        robots = list(current_world["robots"].values())
+                        assert(len(robots) == 1)  # there should only be one
+                        robot = robots[0]
                         self.current_config = generate_config_from_pos_3(
                             robot["current_config"])
                         print("Updated environment from robot")
-                    self.generate_frame(self.frame_num)
+                        # update the start and goal configs
+                        self.start_config = generate_config_from_pos_3(
+                            robot["start_config"])
+                        self.goal_config = generate_config_from_pos_3(
+                            robot["goal_config"])
+
+                    else:
+                        # render when not receiving a new environment
+                        self.generate_frame(self.frame_num)
                 else:
                     print("powering off joystick")
                     self.power_off()
