@@ -26,7 +26,8 @@ class RoboAgent(Agent):
         # robot's knowledge of the current state of the world
         self.world_state = None
         super().__init__(start_configs.get_start_config(),
-                         start_configs.get_goal_config(), name)
+                         start_configs.get_goal_config(),
+                         name)
         self.radius = self.params.radius
         self.joystick_ready = False  # josystick is ready once it has been sent an environment
         self.joystick_requests_world = False  # to send the world state
@@ -127,14 +128,15 @@ class RoboAgent(Agent):
                 self.execute_backlog()
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
-        else:
-            # notify the joystick to stop sending commands to the robot
-            self.send_to_joystick(self.world_state.to_json(robot_on=False))
-            print("\nRobot powering off, recieved",
-                  len(self.commands), "commands")
-            self.power_off()
-            # join the remaining listener thread
-            # listen_thread.join()
+            # quit the robot if it died
+            if(not self.running):
+                # notify the joystick to stop sending commands to the robot
+                self.send_to_joystick(self.world_state.to_json(robot_on=False))
+                print("\nRobot powering off, recieved",
+                      len(self.commands), "commands")
+                self.power_off()
+                # join the remaining listener thread
+                # listen_thread.join()
 
     def power_off(self):
         if(self.running):
@@ -165,7 +167,7 @@ class RoboAgent(Agent):
             self.joystick_running = False
             print("%sConnection closed by joystick%s" %
                   (color_red, color_reset))
-            exit(1)
+            self.power_off()
         # Send data
         if(not isinstance(message, str)):
             message = str(message)
