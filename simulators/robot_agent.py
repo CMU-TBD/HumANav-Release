@@ -199,12 +199,14 @@ class RoboAgent(Agent):
                     data = json.loads(data_str)
                     if(data["joystick_on"]):
                         if(data["j_time"] >= 0):  # normal command input
-                            lin_vel = data["lin_vel"]
-                            ang_vel = data["ang_vel"]
-                            np_data = np.array(
-                                [lin_vel, ang_vel], dtype=np.float32)
-                            # adds command to local list of commands
-                            self.commands.append(np_data)
+                            lin_vels: list = data["lin_vels"]
+                            ang_vels: list = data["ang_vels"]
+                            assert(len(lin_vels) == len(ang_vels))
+                            for i in range(len(lin_vels)):
+                                np_data = np.array(
+                                    [lin_vels[i], ang_vels[i]], dtype=np.float32)
+                                # adds command to local list of commands
+                                self.commands.append(np_data)
                         # only sent by joystick when "ready" and needs the map
                         elif data["j_time"] == -1:
                             self.joystick_ready = True
