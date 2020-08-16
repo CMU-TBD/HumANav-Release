@@ -80,7 +80,8 @@ class RoboAgent(Agent):
         # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states
         if(not self.end_episode):
             # check for collisions with other agents
-            self.check_collisions(self.world_state)
+            # NOTE: not checking for collisions, TODO add this back!
+            # self.check_collisions(self.world_state)
             # enforce planning termination upon condition
             self._enforce_episode_termination_conditions()
             # NOTE: enforce_episode_terminator updates the self.end_episode variable

@@ -131,9 +131,9 @@ class Joystick():
                 command = self.commanded_actions[self.num_sent]
                 lin = command[0]
                 ang = command[1]
-                # if(lin != 0 and ang != 0):
-                self.lin_vels.append(float(lin))
-                self.ang_vels.append(float(ang))
+                if(lin != 0 and ang != 0):
+                    self.lin_vels.append(float(lin))
+                    self.ang_vels.append(float(ang))
 
                 if(len(self.lin_vels) >= freq):
                     self.robot_input(deepcopy(self.lin_vels),
@@ -171,7 +171,7 @@ class Joystick():
                     t=-1
                 )
             self.vehicle_trajectory.append_along_time_axis(t_seg)
-            self.commanded_actions.append(commanded_actions_nkf.numpy()[0])
+            self.commanded_actions.extend(commanded_actions_nkf.numpy()[0])
             # print(self.planner_data['optimal_control_nk2'])
             # TODO: match the action_dt with the number of signals sent to the robot at once
             self.current_config = \
