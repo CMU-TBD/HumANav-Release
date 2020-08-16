@@ -135,7 +135,7 @@ class Joystick():
                 lin_vels.append(float(lin))
                 ang_vels.append(float(ang))
 
-            if(len(lin_vels) >= freq or c == commands[-1]):
+            if(len(lin_vels) >= freq or (c == commands[-1]).all()):
                 self.robot_input(lin_vels, ang_vels, self.request_world)
                 # reset the containers
                 lin_vels = []
