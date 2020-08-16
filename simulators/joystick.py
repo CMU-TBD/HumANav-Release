@@ -46,7 +46,11 @@ class Joystick():
         self.start_config = None
         self.goal_config = None
         self.current_config = None
+        # planned controls
+        self.commanded_actions = []
         self.num_sent = 0
+        self.lin_vels = []
+        self.ang_vels = []
 
     def set_host(self, h):
         self.host = h
@@ -76,7 +80,6 @@ class Joystick():
         self.vehicle_data = self.planner.empty_data_dict()
         self.system_dynamics = Agent._init_system_dynamics(self)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
-        self.commanded_actions = []
 
     def create_message(self, joystick_power: bool, lin_vels: list, ang_vels: list,
                        j_time: float = 0.0, req_world: bool = False):
@@ -99,7 +102,6 @@ class Joystick():
             self.request_world = False
         self.send_to_robot(message)
         print("sent", message)
-        self.num_sent += len(lin_commands)
 
     def random_robot_joystick(self):
         sent_commands = 0
@@ -123,27 +125,26 @@ class Joystick():
                 self.power_off()
                 break
 
-    def send_robot_group(self, commands, freq=10):
-        lin_vels = []
-        ang_vels = []
-        for c in commands:
-            if(not self.robot_running):
-                break
-            lin = c[0]
-            ang = c[1]
-            if(lin != 0 and ang != 0):
-                lin_vels.append(float(lin))
-                ang_vels.append(float(ang))
+    def send_robot_group(self, freq=10):
+        while(self.robot_running):
+            if(self.num_sent < len(self.commanded_actions)):
+                command = self.commanded_actions[self.num_sent]
+                lin = command[0]
+                ang = command[1]
+                # if(lin != 0 and ang != 0):
+                self.lin_vels.append(float(lin))
+                self.ang_vels.append(float(ang))
 
-            if(len(lin_vels) >= freq or (c == commands[-1]).all()):
-                self.robot_input(deepcopy(lin_vels), deepcopy(
-                    ang_vels), self.request_world)
-                # reset the containers
-                lin_vels = []
-                ang_vels = []
-                time.sleep(0.2)
-            if(self.num_sent % 20 == 0):
-                self.request_world = True
+                if(len(self.lin_vels) >= freq):
+                    self.robot_input(deepcopy(self.lin_vels),
+                                     deepcopy(self.ang_vels), self.request_world)
+                    # reset the containers
+                    self.lin_vels = []
+                    self.ang_vels = []
+                    time.sleep(0.2)
+                if(self.num_sent % 20 == 0):
+                    self.request_world = True
+                self.num_sent += 1
 
     def planned_robot_joystick(self):
         """ Runs the planner for one step from config to generate a
@@ -164,19 +165,15 @@ class Joystick():
                 t_seg)
             # NOTE: the format for the velocity commands to the open loop for the robot is:
             # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-
             self.planned_next_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
                     t_seg,
                     t=-1
                 )
             self.vehicle_trajectory.append_along_time_axis(t_seg)
-            self.commanded_actions.append(commanded_actions_nkf)
+            self.commanded_actions.append(commanded_actions_nkf.numpy()[0])
             # print(self.planner_data['optimal_control_nk2'])
-            action_dt = 10  # int(np.floor(0.05 / 0.01))
             # TODO: match the action_dt with the number of signals sent to the robot at once
-            self.send_robot_group(
-                commanded_actions_nkf.numpy()[0], freq=action_dt)
             self.current_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
                     self.vehicle_trajectory, t=-1)
@@ -184,6 +181,12 @@ class Joystick():
     def update(self, random_commands: bool = False):
         """ Independent process for a user (at a designated host:port) to recieve
         information from the simulation while also sending commands to the robot """
+        action_dt = 10  # int(np.floor(0.05 / 0.01))
+        sender_thread = threading.Thread(
+            target=self.send_robot_group,
+            args=(10,)
+        )
+        sender_thread.start()
         if(random_commands):
             self.random_robot_joystick()
         else:
