@@ -37,6 +37,7 @@ class RoboAgent(Agent):
         self.running = True
         self.last_command = None
         self.num_executed = 0  # keeps track of the latest command that is to be executed
+        self.amnt_per_joystick = 1
 
     # Getters for the robot class
     def get_name(self):
@@ -45,6 +46,9 @@ class RoboAgent(Agent):
     # Setters for the robot class
     def update_world(self, state):
         self.world_state = state
+
+    def get_num_executed(self):
+        return int(len(self.commands) / self.amnt_per_joystick)
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
@@ -92,12 +96,13 @@ class RoboAgent(Agent):
         current_config = self.get_current_config()
         cmd_grp = self.commands[self.num_executed]
         num_cmds_in_grp = len(cmd_grp)
+
         # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
         command = np.array([[cmd_grp]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
         t_seg, actions_nk2 = Agent.apply_control_open_loop(self, current_config,
-                                                           command, 1, sim_mode='ideal'
+                                                           command, num_cmds_in_grp, sim_mode='ideal'
                                                            )
         self.num_executed += 1
         self.vehicle_trajectory.append_along_time_axis(t_seg)
@@ -202,13 +207,12 @@ class RoboAgent(Agent):
                             lin_vels: list = data["lin_vels"]
                             ang_vels: list = data["ang_vels"]
                             assert(len(lin_vels) == len(ang_vels))
-                            command_group = []
-                            for i in range(len(lin_vels)):
+                            self.amnt_per_joystick = len(lin_vels)
+                            for i in range(self.amnt_per_joystick):
                                 np_data = np.array(
                                     [lin_vels[i], ang_vels[i]], dtype=np.float32)
-                                command_group.append(np_data)
-                            # adds command to local list of commands
-                            self.commands.append(np_data)
+                                # adds command to local list of commands
+                                self.commands.append(np_data)
                         # only sent by joystick when "ready" and needs the map
                         elif data["j_time"] == -1:
                             self.joystick_ready = True

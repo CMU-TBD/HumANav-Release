@@ -253,7 +253,7 @@ class CentralSimulator(SimulatorHelper):
     def simulation_block(self, iteration):
         # TODO: add fancy docstring
         if(self.params.block is "joystick"):
-            while(self.robot.running and iteration >= len(self.robot.commands)):
+            while(self.robot.running and iteration >= self.robot.get_num_executed()):
                 # block on robot<->joystick communication
                 # wait until the joystick sent commands to pass the interval
                 time.sleep(0.01)
@@ -267,8 +267,10 @@ class CentralSimulator(SimulatorHelper):
         """
         num_agents: int = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
+        # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
+        self.delta_t = 3 * self.params.dt
         # get initial state
-        current_state = self.save_state(0, 0)
+        current_state = self.save_state(0, self.delta_t, 0)
         # give the robot knowledge of the initial world
         self.robot_sense(current_state)
         # initialize the robot to establish joystick connection
@@ -278,8 +280,6 @@ class CentralSimulator(SimulatorHelper):
         start_time = time.clock()
         # save initial state before the simulator is spawned
         self.t = 0.0
-        # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        self.delta_t = self.params.dt
         if(self.delta_t < self.params.dt):
             print("%sSimulation dt is too small; either lower the agents' dt's" % (color_red),
                   self.params.dt, "or increase simulation delta_t%s" % (color_reset))
@@ -290,7 +290,7 @@ class CentralSimulator(SimulatorHelper):
             # update "wall clock" time
             wall_clock = time.clock() - start_time
             # Takes screenshot of the simulation state
-            current_state = self.save_state(self.t, wall_clock)
+            current_state = self.save_state(self.t, self.delta_t, wall_clock)
             self.robot_sense(current_state)
             # calls a single iteration of the robot update
             # Complete thread operations
@@ -373,7 +373,7 @@ class CentralSimulator(SimulatorHelper):
               "T = %.3f" % (self.t),
               "\r", end="")
 
-    def save_state(self, sim_t: float, wall_t: float):
+    def save_state(self, sim_t: float, delta_t: float, wall_t: float):
         """Captures the current state of the world to be saved to self.states
 
         Args:
@@ -398,7 +398,7 @@ class CentralSimulator(SimulatorHelper):
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
         current_state = SimState(saved_env,
                                  saved_agents, saved_prerecs, saved_robots,
-                                 sim_t, wall_t
+                                 sim_t, wall_t, delta_t
                                  )
         # Save current state to a class dictionary indexed by simulator time
         self.states[sim_t] = current_state

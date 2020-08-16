@@ -51,6 +51,7 @@ class Joystick():
         self.num_sent = 0
         self.lin_vels = []
         self.ang_vels = []
+        self.delta_t = None
 
     def set_host(self, h):
         self.host = h
@@ -68,6 +69,7 @@ class Joystick():
         assert(self.world_state is not None)
         assert(self.environment is not None)
         self.params = create_agent_params()
+        self.params.dt = 0.05
         self.params.control_horizon = 200  # based off central_simulator's parse params
         # self.environment["traversibles"][0]
         self.obstacle_map = self._init_obstacle_map()
@@ -134,17 +136,19 @@ class Joystick():
                 if(lin != 0 and ang != 0):
                     self.lin_vels.append(float(lin))
                     self.ang_vels.append(float(ang))
-
-                if(len(self.lin_vels) >= freq):
-                    self.robot_input(deepcopy(self.lin_vels),
-                                     deepcopy(self.ang_vels), self.request_world)
-                    # reset the containers
-                    self.lin_vels = []
-                    self.ang_vels = []
-                    time.sleep(0.2)
-                if(self.num_sent % 20 == 0):
-                    self.request_world = True
-                self.num_sent += 1
+                    if(len(self.lin_vels) >= freq):
+                        self.robot_input(deepcopy(self.lin_vels),
+                                         deepcopy(self.ang_vels), self.request_world)
+                        # reset the containers
+                        self.lin_vels = []
+                        self.ang_vels = []
+                        time.sleep(0.2)
+                    if(self.num_sent % 20 == 0):
+                        self.request_world = True
+                    self.num_sent += 1
+            else:
+                # NOTE: this can probably be optimized
+                time.sleep(0.005)
 
     def planned_robot_joystick(self):
         """ Runs the planner for one step from config to generate a
@@ -181,7 +185,12 @@ class Joystick():
     def update(self, random_commands: bool = False):
         """ Independent process for a user (at a designated host:port) to recieve
         information from the simulation while also sending commands to the robot """
-        action_dt = 10  # int(np.floor(0.05 / 0.01))
+        while(self.delta_t is None):
+            time.sleep(0.01)
+        action_dt = int(np.floor(self.delta_t / self.params.dt))
+        print(self.delta_t)
+        print(self.params.dt)
+        print(action_dt)
         sender_thread = threading.Thread(
             target=self.send_robot_group,
             args=(action_dt,)
@@ -262,7 +271,7 @@ class Joystick():
                             robot["start_config"])
                         self.goal_config = generate_config_from_pos_3(
                             robot["goal_config"])
-
+                        self.delta_t = current_world["delta_t"]
                     else:
                         # render when not receiving a new environment
                         self.generate_frame(self.frame_num)

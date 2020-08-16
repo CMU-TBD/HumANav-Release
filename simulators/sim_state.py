@@ -91,13 +91,14 @@ class HumanState(AgentState):
 
 
 class SimState():
-    def __init__(self, environment, agents, prerecs, robots, sim_t, wall_t):
+    def __init__(self, environment, agents, prerecs, robots, sim_t, wall_t, delta_t):
         self.environment = environment
         self.agents = agents
         self.prerecs = prerecs
         self.robots = robots
         self.sim_t = sim_t
         self.wall_t = wall_t
+        self.delta_t = delta_t
 
     def to_json(self, robot_on=True, include_map=False):
         json_dict = {}
@@ -106,6 +107,7 @@ class SimState():
             if(include_map):
                 environment_json = SimState.to_json_dict(
                     deepcopy(self.environment))
+                json_dict['delta_t'] = deepcopy(self.delta_t)
             else:
                 environment_json = {}  # empty dictionary
             # serialize all other fields
