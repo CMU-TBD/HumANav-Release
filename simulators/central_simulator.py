@@ -308,9 +308,9 @@ class CentralSimulator(SimulatorHelper):
             self.t += self.delta_t  # update simulator time
             # print simulation progress
             self.print_sim_progress(iteration)
-            if (iteration > 60 * num_agents):
-                # hard limit of 60 frames per agent
-                break
+            # if (iteration > 60 * num_agents):
+            #     # hard limit of 60 frames per agent
+            #     break
             # update iteration count
             iteration += 1
 

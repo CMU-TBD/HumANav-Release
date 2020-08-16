@@ -80,8 +80,7 @@ class RoboAgent(Agent):
         # TODO: make sure these termination conditions ignore any 'success' or 'timeout' states
         if(not self.end_episode):
             # check for collisions with other agents
-            # NOTE: not checking for collisions, TODO add this back!
-            # self.check_collisions(self.world_state)
+            self.check_collisions(self.world_state)
             # enforce planning termination upon condition
             self._enforce_episode_termination_conditions()
             # NOTE: enforce_episode_terminator updates the self.end_episode variable
@@ -89,17 +88,18 @@ class RoboAgent(Agent):
                 self.has_collided = True
                 self.power_off()
 
-    def execute(self, command_indx):
+    def execute(self):
         current_config = self.get_current_config()
-        cmd_grp = self.commands[command_indx]
+        cmd_grp = self.commands[self.num_executed]
         num_cmds_in_grp = len(cmd_grp)
-        # the command is indexed by command_indx and is safe due to the size constraints in the update()
+        # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
         command = np.array([[cmd_grp]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
         t_seg, actions_nk2 = Agent.apply_control_open_loop(self, current_config,
-                                                           command, num_cmds_in_grp, sim_mode='ideal'
+                                                           command, 1, sim_mode='ideal'
                                                            )
+        self.num_executed += 1
         self.vehicle_trajectory.append_along_time_axis(t_seg)
         # act trajectory segment
         self.current_config = \
@@ -113,15 +113,12 @@ class RoboAgent(Agent):
     def execute_backlog(self):
         while(self.num_executed < len(self.commands) and self.running):
             self.sense()
-            self.execute(self.num_executed)
-            self.num_executed += 1
+            self.execute()
             if(self.get_trajectory().k != self.get_trajectory().position_nk2().shape[1]):
                 # TODO: fix this uncommonly-occuring nonfatal bug
                 print("ERROR: robot_trajectory dimens mismatch")
 
     def update(self):
-        # listen_thread = threading.Thread(target=self.listen_to_joystick)
-        # listen_thread.start()
         if(self.running):
             # only execute the most recent commands
             if(self.num_executed >= len(self.commands)):
@@ -135,14 +132,14 @@ class RoboAgent(Agent):
             if(not self.running):
                 # notify the joystick to stop sending commands to the robot
                 self.send_to_joystick(self.world_state.to_json(robot_on=False))
-                print("\nRobot powering off, recieved",
-                      len(self.commands), "commands")
                 self.power_off()
                 # join the remaining listener thread
                 # listen_thread.join()
 
     def power_off(self):
         if(self.running):
+            print("\nRobot powering off, recieved",
+                  len(self.commands), "commands")
             # if the robot is already "off" do nothing
             self.running = False
             self.joystick_receiver_socket.close()

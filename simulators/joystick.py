@@ -184,7 +184,7 @@ class Joystick():
         action_dt = 10  # int(np.floor(0.05 / 0.01))
         sender_thread = threading.Thread(
             target=self.send_robot_group,
-            args=(10,)
+            args=(action_dt,)
         )
         sender_thread.start()
         if(random_commands):
