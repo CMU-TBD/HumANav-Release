@@ -93,7 +93,7 @@ class RoboAgent(Agent):
         cmd_grp = self.commands[command_indx]
         num_cmds_in_grp = len(cmd_grp)
         # the command is indexed by command_indx and is safe due to the size constraints in the update()
-        command = np.array([cmd_grp], dtype=np.float32)
+        command = np.array([[cmd_grp]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
         t_seg, actions_nk2 = Agent.apply_control_open_loop(self, current_config,
