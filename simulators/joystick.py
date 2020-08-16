@@ -99,7 +99,7 @@ class Joystick():
             self.request_world = False
         self.send_to_robot(message)
         print("sent", message)
-        self.num_sent += 1
+        self.num_sent += len(lin_commands)
 
     def random_robot_joystick(self):
         sent_commands = 0
@@ -136,11 +136,12 @@ class Joystick():
                 ang_vels.append(float(ang))
 
             if(len(lin_vels) >= freq or (c == commands[-1]).all()):
-                self.robot_input(lin_vels, ang_vels, self.request_world)
+                self.robot_input(deepcopy(lin_vels), deepcopy(
+                    ang_vels), self.request_world)
                 # reset the containers
                 lin_vels = []
                 ang_vels = []
-                time.sleep(1)
+                time.sleep(0.2)
             if(self.num_sent % 20 == 0):
                 self.request_world = True
 
@@ -172,7 +173,7 @@ class Joystick():
             self.vehicle_trajectory.append_along_time_axis(t_seg)
             self.commanded_actions.append(commanded_actions_nkf)
             # print(self.planner_data['optimal_control_nk2'])
-            action_dt = 5  # int(np.floor(0.05 / 0.01))
+            action_dt = 10  # int(np.floor(0.05 / 0.01))
             # TODO: match the action_dt with the number of signals sent to the robot at once
             self.send_robot_group(
                 commanded_actions_nkf.numpy()[0], freq=action_dt)
@@ -243,7 +244,7 @@ class Joystick():
                     if(current_world['environment']):  # not empty
                         # notify the robot that the joystick received the environment
                         joystick_ready = self.create_message(
-                            True, [], [], -1, False)
+                            True, [], [], -1, True)
                         self.send_to_robot(joystick_ready)
                         # only update the environment if it is non-empty
                         self.environment = current_world['environment']
