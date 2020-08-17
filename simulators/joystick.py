@@ -118,8 +118,8 @@ class Joystick():
                     self.robot_input([lin_command], [ang_command],
                                      self.request_world)
                     sent_commands += 1
+                    time.sleep(2)  # NOTE: Tune this to whatever you'd like
                     # now update the robot with the "ready" ping
-                    time.sleep(2)  # NOTE: this is tunable to ones liking
                     self.ready_to_send = True
                 # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
             except KeyboardInterrupt:
@@ -143,13 +143,14 @@ class Joystick():
                         # reset the containers
                         self.lin_vels = []
                         self.ang_vels = []
-                        time.sleep(1)
+                        # NOTE: this robot sender delay is tunable to ones liking
+                        time.sleep(10)  # planner delay
                     if(self.num_sent % 20 == 0):
                         self.request_world = True
                     self.num_sent += 1
             else:
                 # NOTE: this can probably be optimized
-                time.sleep(0.005)
+                time.sleep(0.001)
 
     def planned_robot_joystick(self):
         """ Runs the planner for one step from config to generate a
@@ -184,7 +185,7 @@ class Joystick():
                     self.vehicle_trajectory, t=-1)
 
     def update(self, random_commands: bool = False):
-        """ Independent process for a user (at a designated host:port) to recieve
+        """ Independent process for a user (at a designated host:port) to receive
         information from the simulation while also sending commands to the robot """
         while(self.delta_t is None):
             time.sleep(0.01)
@@ -252,7 +253,7 @@ class Joystick():
             connection.close()
             print("%sreceived" % (color_blue), response_len,
                   "bytes from server%s" % (color_reset))
-            if(data_b is not None):
+            if(data_b is not None and response_len > 0):
                 self.ready_to_send = True  # has received a world state from the robot
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
@@ -292,8 +293,6 @@ class Joystick():
                     break
             else:
                 break
-            # this should be a separate thread
-            self.request_world = True
 
     def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""

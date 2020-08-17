@@ -251,7 +251,7 @@ class CentralSimulator(SimulatorHelper):
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
         # give the robot knowledge of the initial world
-        self.robot.repeat_joystick = self.params.block_joystick
+        self.robot.repeat_joystick = not self.params.block_joystick
         self.robot.update_world(current_state)
         # initialize the robot to establish joystick connection
         r_t = self.init_robot_listener_thread()
@@ -266,7 +266,6 @@ class CentralSimulator(SimulatorHelper):
             exit(1)
         iteration = 0  # loop iteration
         while self.exists_running_agent() or self.exists_running_prerec():
-            self.simulation_block(iteration)
             # update "wall clock" time
             wall_clock = time.clock() - start_time
             # calls a single iteration of the robot update
@@ -277,7 +276,7 @@ class CentralSimulator(SimulatorHelper):
             # start all thread groups
             self.start_threads(agent_threads)
             self.start_threads(prerec_threads)
-            self.robot.update()
+            self.robot.update(iteration)
             # join all thread groups
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)

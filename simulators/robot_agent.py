@@ -92,29 +92,31 @@ class RoboAgent(Agent):
                 self.power_off()
 
     def execute(self):
-        current_config = self.get_current_config()
-        cmd_grp = self.commands[self.num_executed]
-        num_cmds_in_grp = len(cmd_grp)
+        while(self.num_executed < len(self.commands) and self.running):
+            self.sense()
+            current_config = self.get_current_config()
+            cmd_grp = self.commands[self.num_executed]
+            num_cmds_in_grp = len(cmd_grp)
 
-        # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
-        command = np.array([[cmd_grp]], dtype=np.float32)
-        # NOTE: the format for the acceleration commands to the open loop for the robot is:
-        # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-        t_seg, actions_nk2 = Agent.apply_control_open_loop(self, current_config,
-                                                           command, num_cmds_in_grp, sim_mode='ideal'
-                                                           )
-        self.num_executed += 1
-        self.vehicle_trajectory.append_along_time_axis(t_seg)
-        # act trajectory segment
-        self.current_config = \
-            SystemConfig.init_config_from_trajectory_time_index(
-                t_seg,
-                t=-1
-            )
-        if (self.params.verbose):
-            print(self.get_current_config().to_3D_numpy())
+            # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
+            command = np.array([[cmd_grp]], dtype=np.float32)
+            # NOTE: the format for the acceleration commands to the open loop for the robot is:
+            # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
+            t_seg, actions_nk2 = Agent.apply_control_open_loop(self, current_config,
+                                                               command, num_cmds_in_grp, sim_mode='ideal'
+                                                               )
+            self.num_executed += 1
+            self.vehicle_trajectory.append_along_time_axis(t_seg)
+            # act trajectory segment
+            self.current_config = \
+                SystemConfig.init_config_from_trajectory_time_index(
+                    t_seg,
+                    t=-1
+                )
+            if (self.params.verbose):
+                print(self.get_current_config().to_3D_numpy())
 
-    def update(self):
+    def update(self, iteration):
         if(self.running):
             # only execute the most recent commands
             self.sense()
@@ -126,8 +128,9 @@ class RoboAgent(Agent):
                     self.commands.append(last_command)
                     self.execute()
                 else:
-                    # blocking until recieves a joystick command
-                    time.sleep(0.001)
+                    # blocking until recieves a new joystick command (from another thread)
+                    while(self.running and iteration >= self.get_num_executed()):
+                        time.sleep(0.001)
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
             # quit the robot if it died
