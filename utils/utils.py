@@ -287,7 +287,7 @@ def generate_random_pos_3(center, xdiff=3, ydiff=3):
 def within_traversible(new_pos: np.array, traversible: np.array, map_scale: float,
                        stroked_radius: bool = False):
     """
-    Returns whether or not the position is in a valid spot in the 
+    Returns whether or not the position is in a valid spot in the
     traversible
     """
     pos_x = int(new_pos[0] / map_scale)
@@ -301,8 +301,8 @@ def within_traversible(new_pos: np.array, traversible: np.array, map_scale: floa
 def within_traversible_with_radius(new_pos: np.array, traversible: np.array, map_scale: float, radius: int = 1,
                                    stroked_radius: bool = False):
     """
-    Returns whether or not the position is in a valid spot in the 
-    traversible the Radius input can determine how many surrounding 
+    Returns whether or not the position is in a valid spot in the
+    traversible the Radius input can determine how many surrounding
     spots must also be valid
     """
     for i in range(2 * radius):
@@ -320,11 +320,11 @@ def within_traversible_with_radius(new_pos: np.array, traversible: np.array, map
 
 def generate_random_pos_in_environment(environment: dict, radius: int = 5):
     """
-    Generate a random position (x : meters, y : meters, theta : radians) 
-    and near the 'center' with a nearby valid goal position. 
-    - Note that the obstacle_traversible and human_traversible are both 
-    checked to generate a valid pos_3. 
-    - Note that the "environment" holds the map scale and all the 
+    Generate a random position (x : meters, y : meters, theta : radians)
+    and near the 'center' with a nearby valid goal position.
+    - Note that the obstacle_traversible and human_traversible are both
+    checked to generate a valid pos_3.
+    - Note that the "environment" holds the map scale and all the
     individual traversibles
     - Note that the map_scale primarily refers to the traversible's level
     of precision, it is best to use the dx_m provided in examples.py
@@ -363,10 +363,22 @@ def generate_random_pos_in_environment(environment: dict, radius: int = 5):
 """BEGIN SimState utils"""
 
 
+def get_agent_type(sim_state, agent_type: str):
+    if(callable(getattr(sim_state, 'get_' + agent_type, None))):
+        get_agent_type = getattr(sim_state, 'get_' + agent_type, None)
+        return get_agent_type()
+    elif hasattr(sim_state, agent_type):
+        return sim_state[agent_type]
+    else:
+        return {}  # empty dict
+
+
 def get_all_agents(sim_state):
-    if(callable(getattr(sim_state, 'get_agents', None))):
-        return sim_state.get_agents()
-    return sim_state["agents"]
+    all_agents = {}
+    all_agents.update(get_agent_type(sim_state, "agents"))
+    all_agents.update(get_agent_type(sim_state, "prerecs"))
+    all_agents.update(get_agent_type(sim_state, "robots"))
+    return all_agents
 
 
 def get_sim_t(sim_state):

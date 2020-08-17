@@ -254,8 +254,10 @@ class Joystick():
                 data_str = data_b.decode("utf-8")  # bytes to str
                 self.sim_states.append(json.loads(data_str))
                 current_world = self.sim_states[-1]
-                # self.velocities[current_world['sim_t']] = compute_all_velocities(self.sim_states)
-                # self.accelerations[current_world['sim_t']] = compute_all_accelerations(self.sim_states)
+                self.velocities[current_world['sim_t']
+                                ] = compute_all_velocities(self.sim_states)
+                self.accelerations[current_world['sim_t']
+                                   ] = compute_all_accelerations(self.sim_states)
                 if(current_world['robot_on'] is True):
                     if(current_world['environment']):  # not empty
                         # notify the robot that the joystick received the environment
