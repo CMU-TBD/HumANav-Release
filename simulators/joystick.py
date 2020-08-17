@@ -144,7 +144,7 @@ class Joystick():
                         self.lin_vels = []
                         self.ang_vels = []
                         # NOTE: this robot sender delay is tunable to ones liking
-                        time.sleep(10)  # planner delay
+                        time.sleep(2)  # planner delay
                     if(self.num_sent % 20 == 0):
                         self.request_world = True
                     self.num_sent += 1
@@ -184,15 +184,24 @@ class Joystick():
                 SystemConfig.init_config_from_trajectory_time_index(
                     self.vehicle_trajectory, t=-1)
 
+    def force_close_socket(self):
+        # connect to the socket, closing it, and continuing the thread to completion
+        try:
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+                (self.host, self.port_recv))
+        except:
+            print("%sForce closing socket%s" %
+                  (color_red, color_reset))
+        self.robot_receiver_socket.close()
+
     def update(self, random_commands: bool = False):
         """ Independent process for a user (at a designated host:port) to receive
         information from the simulation while also sending commands to the robot """
         while(self.delta_t is None):
             time.sleep(0.01)
         action_dt = int(np.floor(self.delta_t / self.params.dt))
-        print(self.delta_t)
-        print(self.params.dt)
-        print(action_dt)
+        print("simulator's refresh rate =", self.delta_t)
+        print("joystick's refresh rate  =", self.params.dt)
         sender_thread = threading.Thread(
             target=self.send_robot_group,
             args=(action_dt,)
@@ -202,9 +211,10 @@ class Joystick():
             self.random_robot_joystick()
         else:
             self.planned_robot_joystick()
-        self.listen_thread.join()
-        # Close communication channel
-        self.robot_sender_socket.close()
+        # this point is reached once the planner/randomizer are finished
+        self.force_close_socket()
+        if(self.listen_thread.is_alive()):
+            self.listen_thread.join()
         # begin gif (movie) generation
         try:
             save_to_gif(os.path.join(get_path_to_humanav(), self.dirname))
@@ -215,10 +225,7 @@ class Joystick():
         if(self.robot_running):
             print("%sConnection closed by robot%s" % (color_red, color_reset))
             self.robot_running = False
-            # connect to the socket, closing it, and continuing the thread to completion
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
-                (self.host, self.port_recv))
-            self.robot_receiver_socket.close()
+            self.force_close_socket()
             try:
                 # send one last command to the robot with indication that self.robot_running=False
                 self.robot_input([], [], False, override_power_off=True)
@@ -268,7 +275,7 @@ class Joystick():
                     if(current_world['environment']):  # not empty
                         # notify the robot that the joystick received the environment
                         joystick_ready = self.create_message(
-                            True, [], [], -1, True)
+                            True, [], [], -1, False)
                         self.send_to_robot(joystick_ready)
                         # only update the environment if it is non-empty
                         self.environment = current_world['environment']

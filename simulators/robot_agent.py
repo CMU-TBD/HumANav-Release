@@ -48,7 +48,7 @@ class RoboAgent(Agent):
         self.world_state = state
 
     def get_num_executed(self):
-        return int(len(self.commands) / self.amnt_per_joystick)
+        return int(np.floor(len(self.commands) / self.amnt_per_joystick))
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
@@ -127,10 +127,6 @@ class RoboAgent(Agent):
                     last_command = self.commands[-1]
                     self.commands.append(last_command)
                     self.execute()
-                else:
-                    # blocking until recieves a new joystick command (from another thread)
-                    while(self.running and iteration >= self.get_num_executed()):
-                        time.sleep(0.001)
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
             # quit the robot if it died
@@ -195,8 +191,9 @@ class RoboAgent(Agent):
                             for i in range(self.amnt_per_joystick):
                                 np_data = np.array(
                                     [lin_vels[i], ang_vels[i]], dtype=np.float32)
-                                # adds command to local list of commands
+                                # adds command to local list of individual commands
                                 self.commands.append(np_data)
+                                print("ADDED DATA HERE:", self.commands)
                         # only sent by joystick when "ready" and needs the map
                         elif data["j_time"] == -1:
                             self.joystick_ready = True

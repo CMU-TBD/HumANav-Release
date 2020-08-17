@@ -239,6 +239,14 @@ class CentralSimulator(SimulatorHelper):
 
     """END thread utils"""
 
+    def simulation_block(self, iteration):
+        # TODO: add fancy docstring
+        if(self.params.block_joystick):
+            while(self.robot.running and iteration + 1 >= self.robot.get_num_executed()):
+                # block on robot<->joystick communication
+                # wait until the joystick sent commands to pass the interval
+                time.sleep(0.01)
+
     def simulate(self):
         """ A function that simulates an entire episode. The agents are updated with simultaneous
         threads running their update() functions and updating the robot with commands from the 
@@ -266,6 +274,7 @@ class CentralSimulator(SimulatorHelper):
             exit(1)
         iteration = 0  # loop iteration
         while self.exists_running_agent() or self.exists_running_prerec():
+            self.simulation_block(iteration)
             # update "wall clock" time
             wall_clock = time.clock() - start_time
             # calls a single iteration of the robot update
