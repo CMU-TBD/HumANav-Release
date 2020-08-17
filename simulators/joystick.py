@@ -143,7 +143,7 @@ class Joystick():
                         # reset the containers
                         self.lin_vels = []
                         self.ang_vels = []
-                        time.sleep(0.2)
+                        time.sleep(1)
                     if(self.num_sent % 20 == 0):
                         self.request_world = True
                     self.num_sent += 1
@@ -214,6 +214,10 @@ class Joystick():
         if(self.robot_running):
             print("%sConnection closed by robot%s" % (color_red, color_reset))
             self.robot_running = False
+            # connect to the socket, closing it, and continuing the thread to completion
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+                (self.host, self.port_recv))
+            self.robot_receiver_socket.close()
             try:
                 # send one last command to the robot with indication that self.robot_running=False
                 self.robot_input([], [], False, override_power_off=True)
@@ -257,11 +261,8 @@ class Joystick():
                     return
                 # append new world to storage of all past worlds
                 self.sim_states.append(current_world)
-
-                self.velocities[current_world['sim_t']
-                                ] = compute_all_velocities(self.sim_states)
-                self.accelerations[current_world['sim_t']
-                                   ] = compute_all_accelerations(self.sim_states)
+                # self.velocities[current_world['sim_t']] = compute_all_velocities(self.sim_states)
+                # self.accelerations[current_world['sim_t']] = compute_all_accelerations(self.sim_states)
                 if(current_world['robot_on'] is True):
                     if(current_world['environment']):  # not empty
                         # notify the robot that the joystick received the environment

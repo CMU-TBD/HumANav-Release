@@ -66,9 +66,8 @@ class CentralSimulator(SimulatorHelper):
         p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
-        # whether to block on joystick, repeat last joystick command, or neither
-        # options being "joystick", "repeat", "none"
-        p.block = "joystick"
+        # whether to block on joystick, repeat last joystick command
+        p.block_joystick = True
         # Much more optimized to only render topview, but can also render Humans
         if(not p.render_3D):
             print("Printing Topview movie with multithreading")
@@ -164,16 +163,6 @@ class CentralSimulator(SimulatorHelper):
         print("%sNo robot in simulator%s" % (color_red, color_reset))
         return None
 
-    def robot_sense(self, world_state):
-        """Gives the robot a picture of the world through a SimState package
-
-        Args:
-            world_state (SimState): the most recent state of the world
-        """
-        if(self.robot is not None):
-            self.robot.update_world(world_state)
-        return
-
     def decommission_robot(self, r_listener_thread):
         """Turns off the robot and joins the robot's update thread
 
@@ -250,16 +239,6 @@ class CentralSimulator(SimulatorHelper):
 
     """END thread utils"""
 
-    def simulation_block(self, iteration):
-        # TODO: add fancy docstring
-        if(self.params.block is "joystick"):
-            while(self.robot.running and iteration >= self.robot.get_num_executed()):
-                # block on robot<->joystick communication
-                # wait until the joystick sent commands to pass the interval
-                time.sleep(0.01)
-        elif(self.params.block is "repeat"):
-            self.robot.repeat_joystick = True
-
     def simulate(self):
         """ A function that simulates an entire episode. The agents are updated with simultaneous
         threads running their update() functions and updating the robot with commands from the 
@@ -272,7 +251,8 @@ class CentralSimulator(SimulatorHelper):
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
         # give the robot knowledge of the initial world
-        self.robot_sense(current_state)
+        self.robot.repeat_joystick = self.params.block_joystick
+        self.robot.update_world(current_state)
         # initialize the robot to establish joystick connection
         r_t = self.init_robot_listener_thread()
         # continue to spawn the simulation with an established (independent) connection
@@ -291,8 +271,8 @@ class CentralSimulator(SimulatorHelper):
             wall_clock = time.clock() - start_time
             # calls a single iteration of the robot update
             # Complete thread operations
-            agent_threads = self.init_agent_threads(
-                self.t, self.delta_t, current_state)
+            agent_threads = \
+                self.init_agent_threads(self.t, self.delta_t, current_state)
             prerec_threads = self.init_prerec_threads(self.t, current_state)
             # start all thread groups
             self.start_threads(agent_threads)
@@ -305,7 +285,7 @@ class CentralSimulator(SimulatorHelper):
             self.t += self.delta_t  # update simulator time
             # Takes screenshot of the new simulation state
             current_state = self.save_state(self.t, self.delta_t, wall_clock)
-            self.robot_sense(current_state)
+            self.robot.update_world(current_state)
             # NOTE can add a hard limit to the number of frames the world can use
             # update iteration count
             iteration += 1

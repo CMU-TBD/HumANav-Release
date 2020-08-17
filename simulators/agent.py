@@ -136,11 +136,10 @@ class Agent(AgentHelper):
             print("start: ", self.get_start_config().position_nk2().numpy())
             print("goal: ", self.get_goal_config().position_nk2().numpy())
 
+        # self.velocities[get_sim_t(sim_state)] = compute_all_velocities(self.sim_states)
+        # self.accelerations[get_sim_t(sim_state)] = compute_all_accelerations(self.sim_states)
+
         # Generate the next trajectory segment, update next config, update actions/data
-        self.velocities[get_sim_t(sim_state)] = compute_all_velocities(
-            self.sim_states)
-        self.accelerations[get_sim_t(sim_state)] = compute_all_accelerations(
-            self.sim_states)
         self.plan()
         action_dt = int(np.floor(t_step / self.params.dt))
         self.act(action_dt, world_state=sim_state)
