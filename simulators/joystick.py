@@ -252,8 +252,12 @@ class Joystick():
                 self.ready_to_send = True  # has received a world state from the robot
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
-                self.sim_states.append(json.loads(data_str))
-                current_world = self.sim_states[-1]
+                current_world = json.loads(data_str)
+                if(not current_world['robot_on']):
+                    return
+                # append new world to storage of all past worlds
+                self.sim_states.append(current_world)
+
                 self.velocities[current_world['sim_t']
                                 ] = compute_all_velocities(self.sim_states)
                 self.accelerations[current_world['sim_t']
