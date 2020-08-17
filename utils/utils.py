@@ -418,30 +418,33 @@ def compute_agent_state_velocity(sim_states: list, agent_name: str):
 
 
 def compute_agent_state_acceleration(sim_states: list, agent_name: str, velocities: list = None):
-    # optionally compute velocities as well
-    if(velocities is not None):
-        velocities = compute_agent_state_velocity(sim_states, agent_name)
-    delta_t = compute_delta_t(sim_states)
-    if(agent_name in get_all_agents(sim_states[0]).keys()):
-        agent_accels = []
-        for i, this_vel in enumerate(velocities):
-            if(i < len(sim_states)):
-                next_vel = velocities[i + 1]
-                # calculate distance over time
-                accel = (next_vel - this_vel) / delta_t
-                agent_accels.append(accel)
-            else:
-                # 0 acceleration on the very LAST frame
-                agent_accels.append(0)
-        return agent_accels
+    if(len(sim_states) > 1):  # need at least two to compute differences in velocities
+        # optionally compute velocities as well
+        if(velocities is None):
+            velocities = compute_agent_state_velocity(sim_states, agent_name)
+        delta_t = compute_delta_t(sim_states)
+        if(agent_name in get_all_agents(sim_states[0]).keys()):
+            agent_accels = []
+            for i, this_vel in enumerate(velocities):
+                if(i < len(sim_states)):
+                    next_vel = velocities[i + 1]
+                    # calculate distance over time
+                    accel = (next_vel - this_vel) / delta_t
+                    agent_accels.append(accel)
+                else:
+                    # 0 acceleration on the very LAST frame
+                    agent_accels.append(0)
+            return agent_accels
+        else:
+            print("%sAgent" % color_red, agent_name,
+                  "is not in the SimStates%s" % color_reset)
     else:
-        print("%sAgent" % color_red, agent_name,
-              "is not in the SimStates%s" % color_reset)
+        return []
 
 
 def compute_all_velocities(sim_states: list):
     all_velocities = {}
-    for agent_name in all_agents(sim_states[0]).keys():
+    for agent_name in get_all_agents(sim_states[0]).keys():
         assert(isinstance(agent_name, str))  # keyed by name
         all_velocities[agent_name] = compute_agent_state_velocity(
             sim_states, agent_name)
@@ -451,7 +454,7 @@ def compute_all_velocities(sim_states: list):
 def compute_all_accelerations(sim_states: list):
     all_accels = {}
     # TODO: add option of providing precomputed velocities list
-    for agent_name in all_agents(sim_states[0]).keys():
+    for agent_name in get_all_agents(sim_states[0]).keys():
         assert(isinstance(agent_name, str))  # keyed by name
         all_accels[agent_name] = compute_agent_state_acceleration(
             sim_states, agent_name)

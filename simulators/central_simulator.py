@@ -289,9 +289,6 @@ class CentralSimulator(SimulatorHelper):
             self.simulation_block(iteration)
             # update "wall clock" time
             wall_clock = time.clock() - start_time
-            # Takes screenshot of the simulation state
-            current_state = self.save_state(self.t, self.delta_t, wall_clock)
-            self.robot_sense(current_state)
             # calls a single iteration of the robot update
             # Complete thread operations
             agent_threads = self.init_agent_threads(
@@ -306,11 +303,14 @@ class CentralSimulator(SimulatorHelper):
             self.join_threads(prerec_threads)
             # capture time after all the agents have updated
             self.t += self.delta_t  # update simulator time
-            # print simulation progress
-            self.print_sim_progress(iteration)
+            # Takes screenshot of the new simulation state
+            current_state = self.save_state(self.t, self.delta_t, wall_clock)
+            self.robot_sense(current_state)
             # NOTE can add a hard limit to the number of frames the world can use
             # update iteration count
             iteration += 1
+            # print simulation progress
+            self.print_sim_progress(iteration)
 
         # free all the agents
         for a in self.agents.values():
