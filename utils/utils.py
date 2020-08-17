@@ -363,28 +363,51 @@ def generate_random_pos_in_environment(environment: dict, radius: int = 5):
 """BEGIN SimState utils"""
 
 
+def get_all_agents(sim_state):
+    if(callable(getattr(sim_state, 'get_agents', None))):
+        return sim_state.get_agents()
+    return sim_state["agents"]
+
+
+def get_sim_time(sim_state):
+    if(callable(getattr(sim_state, 'get_sim_t', None))):
+        return sim_state.get_sim_t()
+    return sim_state["sim_t"]
+
+
 def compute_delta_t(sim_states: list):
     if(len(sim_states) <= 1):
         print("%sNeed at least two states to compute delta_t%s" %
               (color_red, color_reset))
     else:
-        delta_t = sim_states[1].get_sim_t() - sim_states[0].get_sim_t()
+        delta_t = get_sim_time(sim_states[1]) - get_sim_time(sim_states[0])
         return delta_t
 
 
+def get_pos3(agent):
+    if(callable(getattr(agent, "get_current_config", None))):
+        return agent.get_current_config().to_3D_numpy()
+    return agent["current_config"]
+
+
+def compute_next_vel(sim_state_prev, sim_state_now, agent_name: str, delta_t: float):
+    old_agent = get_all_agents(sim_state_prev)[agent_name]
+    old_pos = get_pos3(old_agent)
+    new_agent = get_all_agents(sim_state_now)[agent_name]
+    new_pos = get_pos3(new_agent)
+    # calculate distance over time
+    # TODO: add sign to distance (displacement) for velocity?
+    return euclidean_dist2(old_pos, new_pos) / delta_t
+
+
 def compute_agent_state_velocity(sim_states: list, agent_name: str):
-    if(agent_name in sim_states[0].get_agents().keys()):
+    if(agent_name in get_all_agents(sim_states[0]).keys()):
         agent_velocities = []
         delta_t = compute_delta_t(sim_states)
         for i, s in enumerate(sim_states):
             if(i > 0):
-                last_s = sim_states[i - 1]
-                old_pos = last_s.get_agents(
-                )[agent_name]["current_config"].to_3D_numpy()
-                new_pos = s.get_agents()[
-                    agent_name]["current_config"].to_3D_numpy()
-                # calculate distance over time
-                speed = euclidean_dist2(old_pos, new_pos) / delta_t
+                speed = compute_next_vel(
+                    sim_states[i - 1], sim_states[i], agent_name, delta_t)
                 agent_velocities.append(speed)
             else:
                 agent_velocities.append(0)
@@ -399,13 +422,13 @@ def compute_agent_state_acceleration(sim_states: list, agent_name: str, velociti
     if(velocities is not None):
         velocities = compute_agent_state_velocity(sim_states, agent_name)
     delta_t = compute_delta_t(sim_states)
-    if(agent_name in sim_states[0].get_agents().keys()):
+    if(agent_name in get_all_agents(sim_states[0]).keys()):
         agent_accels = []
         for i, this_vel in enumerate(velocities):
             if(i < len(sim_states)):
                 next_vel = velocities[i + 1]
                 # calculate distance over time
-                accel = (this_vel - next_vel) / delta_t
+                accel = (next_vel - this_vel) / delta_t
                 agent_accels.append(accel)
             else:
                 # 0 acceleration on the very LAST frame
@@ -418,19 +441,18 @@ def compute_agent_state_acceleration(sim_states: list, agent_name: str, velociti
 
 def compute_all_velocities(sim_states: list):
     all_velocities = {}
-    for agent_name in sim_states[0].get_agents().keys():
+    for agent_name in all_agents(sim_states[0]).keys():
         assert(isinstance(agent_name, str))  # keyed by name
         all_velocities[agent_name] = compute_agent_state_velocity(
             sim_states, agent_name)
     return all_velocities
 
 
-def compute_all_accels(sim_states: list):
+def compute_all_accelerations(sim_states: list):
     all_accels = {}
     # TODO: add option of providing precomputed velocities list
-    for agent_name in sim_states[0].get_agents().keys():
+    for agent_name in all_agents(sim_states[0]).keys():
         assert(isinstance(agent_name, str))  # keyed by name
         all_accels[agent_name] = compute_agent_state_acceleration(
             sim_states, agent_name)
     return all_accels
-

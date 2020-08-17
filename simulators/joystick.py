@@ -29,7 +29,9 @@ class Joystick():
     def __init__(self):
         self.t = 0
         self.latest_state = None
-        self.world_state = []
+        self.sim_states = []
+        self.velocities = {}     # testing simstate utils
+        self.accelerations = {}  # testing simstate utils
         self.environment = None
         self.joystick_params = create_params()
         # sockets for communication
@@ -66,7 +68,7 @@ class Joystick():
                               )
 
     def init_control_pipeline(self):
-        assert(self.world_state is not None)
+        assert(self.sim_states is not None)
         assert(self.environment is not None)
         self.params = create_agent_params()
         self.params.dt = 0.05
@@ -103,7 +105,6 @@ class Joystick():
             # only a single message being sent
             self.request_world = False
         self.send_to_robot(message)
-        print("sent", message)
 
     def random_robot_joystick(self):
         sent_commands = 0
@@ -235,6 +236,7 @@ class Joystick():
         # Send data
         self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
         self.robot_sender_socket.close()
+        print("sent", json_message)
 
     def listen_to_robot(self):
         self.robot_receiver_socket.listen(10)
@@ -250,8 +252,12 @@ class Joystick():
                 self.ready_to_send = True  # has received a world state from the robot
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
-                self.world_state.append(json.loads(data_str))
-                current_world = self.world_state[-1]
+                self.sim_states.append(json.loads(data_str))
+                current_world = self.sim_states[-1]
+                self.velocities[current_world['sim_t']
+                                ] = compute_all_velocities(self.sim_states)
+                self.accelerations[current_world['sim_t']
+                                   ] = compute_all_accelerations(self.sim_states)
                 if(current_world['robot_on'] is True):
                     if(current_world['environment']):  # not empty
                         # notify the robot that the joystick received the environment
@@ -274,7 +280,7 @@ class Joystick():
                         self.delta_t = current_world["delta_t"]
                     else:
                         # render when not receiving a new environment
-                        self.generate_frame(self.frame_num)
+                        self.generate_frame(current_world, self.frame_num)
                 else:
                     print("powering off joystick")
                     self.power_off()
@@ -319,13 +325,13 @@ class Joystick():
 
     """ END socket utils """
 
-    def generate_frame(self, frame_count, plot_quiver=False):
+    def generate_frame(self, world_state, frame_count, plot_quiver=False):
         # extract the information from the world state
         environment = self.environment
-        agents = self.world_state[-1]['agents']
-        prerecs = self.world_state[-1]['prerecs']
-        robots = self.world_state[-1]['robots']
-        sim_time = self.world_state[-1]['sim_t']
+        agents = world_state['agents']
+        prerecs = world_state['prerecs']
+        robots = world_state['robots']
+        sim_time = world_state['sim_t']
         # process the information
         map_scale = eval(environment["map_scale"])  # float
         room_center = np.array(environment["room_center"])
