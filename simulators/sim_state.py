@@ -145,6 +145,9 @@ class SimState():
     def get_wall_t(self):
         return self.wall_t
 
+    def get_delta_t(self):
+        return self.delta_t
+
     @ staticmethod
     def to_json_type(elem, include_start_goal=False):
         """ Converts an element to a json serializable type. """

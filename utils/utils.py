@@ -369,19 +369,26 @@ def get_all_agents(sim_state):
     return sim_state["agents"]
 
 
-def get_sim_time(sim_state):
+def get_sim_t(sim_state):
     if(callable(getattr(sim_state, 'get_sim_t', None))):
         return sim_state.get_sim_t()
     return sim_state["sim_t"]
 
 
 def compute_delta_t(sim_states: list):
-    if(len(sim_states) <= 1):
-        print("%sNeed at least two states to compute delta_t%s" %
-              (color_red, color_reset))
-    else:
-        delta_t = get_sim_time(sim_states[1]) - get_sim_time(sim_states[0])
-        return delta_t
+    # need at least one (usually the first) to have a delta_t
+    for i in range(len(sim_states)):
+        if(callable(getattr(sim_states[i], 'get_delta_t', None))):
+            return sim_states[i].get_delta_t()
+        # optimized to only have delta_t on the FIRST SimState
+        return sim_states[i]["delta_t"]
+    # or computing it manually with two sim_states:
+    # if(len(sim_states) <= 1):
+    #     print("%sNeed at least two states to compute delta_t%s" %
+    #           (color_red, color_reset))
+    # else:
+    #     delta_t = get_sim_t(sim_states[1]) - get_sim_t(sim_states[0])
+    #     return delta_t
 
 
 def get_pos3(agent):
@@ -401,20 +408,21 @@ def compute_next_vel(sim_state_prev, sim_state_now, agent_name: str, delta_t: fl
 
 
 def compute_agent_state_velocity(sim_states: list, agent_name: str):
-    if(agent_name in get_all_agents(sim_states[0]).keys()):
-        agent_velocities = []
-        delta_t = compute_delta_t(sim_states)
-        for i, s in enumerate(sim_states):
-            if(i > 0):
-                speed = compute_next_vel(
-                    sim_states[i - 1], sim_states[i], agent_name, delta_t)
-                agent_velocities.append(speed)
-            else:
-                agent_velocities.append(0)
-        return agent_velocities
-    else:
-        print("%sAgent" % color_red, agent_name,
-              "is not in the SimStates%s" % color_reset)
+    if(len(sim_states) > 1):  # need at least two to compute differences in positions
+        if(agent_name in get_all_agents(sim_states[0]).keys()):
+            agent_velocities = []
+            delta_t = compute_delta_t(sim_states)
+            for i, s in enumerate(sim_states):
+                if(i > 0):
+                    speed = compute_next_vel(
+                        sim_states[i - 1], sim_states[i], agent_name, delta_t)
+                    agent_velocities.append(speed)
+                else:
+                    agent_velocities.append(0)
+            return agent_velocities
+        else:
+            print("%sAgent" % color_red, agent_name,
+                  "is not in the SimStates%s" % color_reset)
 
 
 def compute_agent_state_acceleration(sim_states: list, agent_name: str, velocities: list = None):
@@ -426,14 +434,15 @@ def compute_agent_state_acceleration(sim_states: list, agent_name: str, velociti
         if(agent_name in get_all_agents(sim_states[0]).keys()):
             agent_accels = []
             for i, this_vel in enumerate(velocities):
-                if(i < len(sim_states)):
-                    next_vel = velocities[i + 1]
-                    # calculate distance over time
-                    accel = (next_vel - this_vel) / delta_t
+                if(i > 0):
+                    last_vel = velocities[i - 1]
+                    # calculate speeds over time
+                    accel = (this_vel - last_vel) / delta_t
                     agent_accels.append(accel)
-                else:
-                    # 0 acceleration on the very LAST frame
-                    agent_accels.append(0)
+                    if(i == len(sim_states) - 1):
+                        # last element gets no acceleration
+                        break
+                        # record[j].append(0)
             return agent_accels
         else:
             print("%sAgent" % color_red, agent_name,

@@ -45,6 +45,9 @@ class Agent(AgentHelper):
         possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
         self.color = random.choice(possible_colors)
         # NOTE: JSON serialization is done within sim_state.py
+        self.velocities = {}
+        self.accelerations = {}
+        self.sim_states = []
 
     # Getters for the Agent class
     def get_name(self):
@@ -127,14 +130,17 @@ class Agent(AgentHelper):
 
     def update(self, t, t_step, sim_state=None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
-        # with lock:
+        self.sim_states.append(sim_state)
         self.update_time(t)
         if(self.params.verbose_printing):
             print("start: ", self.get_start_config().position_nk2().numpy())
             print("goal: ", self.get_goal_config().position_nk2().numpy())
 
         # Generate the next trajectory segment, update next config, update actions/data
-
+        self.velocities[get_sim_t(self.sim_states)] = compute_all_velocities(
+            self.sim_states)
+        self.accelerations[get_sim_t(self.sim_states)] = compute_all_accelerations(
+            self.sim_states)
         self.plan()
         action_dt = int(np.floor(t_step / self.params.dt))
         self.act(action_dt, world_state=sim_state)
