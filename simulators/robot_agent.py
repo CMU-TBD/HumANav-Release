@@ -193,7 +193,6 @@ class RoboAgent(Agent):
                                     [lin_vels[i], ang_vels[i]], dtype=np.float32)
                                 # adds command to local list of individual commands
                                 self.commands.append(np_data)
-                                print("ADDED DATA HERE:", self.commands)
                         # only sent by joystick when "ready" and needs the map
                         elif data["j_time"] == -1:
                             self.joystick_ready = True

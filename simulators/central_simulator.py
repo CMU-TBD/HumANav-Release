@@ -67,7 +67,7 @@ class CentralSimulator(SimulatorHelper):
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
         # whether to block on joystick, repeat last joystick command
-        p.block_joystick = True
+        p.block_joystick = False
         # Much more optimized to only render topview, but can also render Humans
         if(not p.render_3D):
             print("Printing Topview movie with multithreading")
@@ -245,7 +245,7 @@ class CentralSimulator(SimulatorHelper):
             while(self.robot.running and iteration + 1 >= self.robot.get_num_executed()):
                 # block on robot<->joystick communication
                 # wait until the joystick sent commands to pass the interval
-                time.sleep(0.01)
+                time.sleep(0.001)
 
     def simulate(self):
         """ A function that simulates an entire episode. The agents are updated with simultaneous
@@ -273,6 +273,7 @@ class CentralSimulator(SimulatorHelper):
                   self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
         iteration = 0  # loop iteration
+        self.print_sim_progress(iteration)
         while self.exists_running_agent() or self.exists_running_prerec():
             self.simulation_block(iteration)
             # update "wall clock" time
