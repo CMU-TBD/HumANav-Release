@@ -123,7 +123,7 @@ def conn_recv(connection, buffr_amnt=1024):
 
 
 def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color='bo', collided_color='ro',
-                plot_trajectory=True, plot_quiver=False, plot_start_goal=False, new_start=None, new_goal=None):
+                plot_trajectory=True, plot_quiver=False, plot_start_goal=False, start_3=None, goal_3=None):
     # plot all the simulated prerecorded agents
     for i, a in enumerate(agents_dict.values()):
         if(json_key is not None):
@@ -140,34 +140,33 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
             if(plot_start_goal):
                 start_3 = a.get_start_config().to_3D_numpy()
                 goal_3 = a.get_goal_config().to_3D_numpy()
-        # replace with new start and goal if applicable
-        if(plot_start_goal and new_start is not None):
-            start_3 = new_start.to_3D_numpy()
-        if(plot_start_goal and new_goal is not None):
-            goal_3 = new_goal.to_3D_numpy()
-        if(json_key is not None and plot_start_goal and (new_start is None or new_goal is None)):
-            # TODO: fix race condition case
-            plot_start_goal = False
-        
+        if(plot_start_goal):
+            assert(start_3 is not None)
+            assert(goal_3 is not None)
         start_goal_markersize = markersize * 0.7
         if(plot_trajectory):
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
         color = normal_color  # agents are green and solid unless collided
-        start_goal_col = 'wo' # white circle
+        start_goal_col = 'wo'  # white circle
         if(collided):
             color = collided_color  # collided agents are drawn red
         if(i == 0):
             # Only add label on the first humans
-            ax.plot(pos_3[0], pos_3[1], color, markersize=markersize, label=label)
+            ax.plot(pos_3[0], pos_3[1], color,
+                    markersize=markersize, label=label)
             if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], start_goal_col, markersize=start_goal_markersize, label=label+" start")
-                ax.plot(goal_3[0], goal_3[1], start_goal_col, markersize=start_goal_markersize, label=label+" goal")
+                ax.plot(start_3[0], start_3[1], start_goal_col,
+                        markersize=start_goal_markersize, label=label + " start")
+                ax.plot(goal_3[0], goal_3[1], start_goal_col,
+                        markersize=start_goal_markersize, label=label + " goal")
         else:
             ax.plot(pos_3[0], pos_3[1], color,
                     markersize=markersize)
             if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], start_goal_col, markersize=start_goal_markersize)
-                ax.plot(goal_3[0], goal_3[1], start_goal_col, markersize=start_goal_markersize)
+                ax.plot(start_3[0], start_3[1], start_goal_col,
+                        markersize=start_goal_markersize)
+                ax.plot(goal_3[0], goal_3[1], start_goal_col,
+                        markersize=start_goal_markersize)
         # plot the surrounding "force field" around the agent
         ax.plot(pos_3[0], pos_3[1], color,
                 alpha=0.2, markersize=2. * markersize)
@@ -177,9 +176,9 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
                       scale=2, scale_units='inches')
             if(plot_start_goal):
                 ax.quiver(start_3[0], start_3[1], np.cos(start_3[2]), np.sin(start_3[2]),
-                      scale=3, scale_units='inches')
+                          scale=3, scale_units='inches')
                 ax.quiver(goal_3[0], goal_3[1], np.cos(goal_3[2]), np.sin(goal_3[2]),
-                      scale=3, scale_units='inches')
+                          scale=3, scale_units='inches')
 
 
 def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files=True, verbose=False):
@@ -252,7 +251,9 @@ def subplot2(plt, Y_X, sz_y_sz_x=(10, 10), space_y_x=(0.1, 0.1), T=False):
         axes_list = axes.ravel()[::-1].tolist()
     return fig, axes, axes_list
 
+
 """ BEGIN configs functions """
+
 
 def generate_config_from_pos_3(pos_3, dt=0.1, speed=0):
     pos_n11 = tf.constant([[[pos_3[0], pos_3[1]]]], dtype=tf.float32)
@@ -264,25 +265,29 @@ def generate_config_from_pos_3(pos_3, dt=0.1, speed=0):
                         speed_nk1=speed_nk1,
                         variable=False)
 
-def generate_random_config(environment, dt=0.1, 
-                            max_vel=0.6, radius=5.):
+
+def generate_random_config(environment, dt=0.1,
+                           max_vel=0.6, radius=5.):
     pos_3 = generate_random_pos_in_environment(environment, radius)
     return generate_config_from_pos_3(pos_3, dt=dt, speed=max_vel)
 
 # For generating positional arguments in an environment
+
+
 def generate_random_pos_3(center, xdiff=3, ydiff=3):
     """
     Generates a random position near the center within an elliptical radius of xdiff and ydiff
     """
-    offset_x = 2*xdiff * random.random() - xdiff  # bound by (-xdiff, xdiff)
-    offset_y = 2*ydiff * random.random() - ydiff  # bound by (-ydiff, ydiff)
+    offset_x = 2 * xdiff * random.random() - xdiff  # bound by (-xdiff, xdiff)
+    offset_y = 2 * ydiff * random.random() - ydiff  # bound by (-ydiff, ydiff)
     offset_theta = 2 * np.pi * random.random()  # bound by (0, 2*pi)
     return np.add(center, np.array([offset_x, offset_y, offset_theta]))
 
-def within_traversible(new_pos:np.array, traversible:np.array, map_scale:float,
-                        stroked_radius:bool=False):
+
+def within_traversible(new_pos: np.array, traversible: np.array, map_scale: float,
+                       stroked_radius: bool = False):
     """
-    Returns whether or not the position is in a valid spot in the 
+    Returns whether or not the position is in a valid spot in the
     traversible
     """
     pos_x = int(new_pos[0] / map_scale)
@@ -292,15 +297,16 @@ def within_traversible(new_pos:np.array, traversible:np.array, map_scale:float,
         return False
     return True
 
-def within_traversible_with_radius(new_pos:np.array, traversible:np.array, map_scale:float, radius:int=1,
-                                    stroked_radius:bool=False):
+
+def within_traversible_with_radius(new_pos: np.array, traversible: np.array, map_scale: float, radius: int = 1,
+                                   stroked_radius: bool = False):
     """
-    Returns whether or not the position is in a valid spot in the 
-    traversible the Radius input can determine how many surrounding 
+    Returns whether or not the position is in a valid spot in the
+    traversible the Radius input can determine how many surrounding
     spots must also be valid
     """
-    for i in range(2*radius):
-        for j in range(2*radius):
+    for i in range(2 * radius):
+        for j in range(2 * radius):
             if(stroked_radius):
                 if not((i == 0 or i == radius - 1 or j == 0 or j == radius - 1)):
                     continue
@@ -311,13 +317,14 @@ def within_traversible_with_radius(new_pos:np.array, traversible:np.array, map_s
                 return False
     return True
 
-def generate_random_pos_in_environment(environment:dict, radius:int=5):
+
+def generate_random_pos_in_environment(environment: dict, radius: int = 5):
     """
-    Generate a random position (x : meters, y : meters, theta : radians) 
-    and near the 'center' with a nearby valid goal position. 
-    - Note that the obstacle_traversible and human_traversible are both 
-    checked to generate a valid pos_3. 
-    - Note that the "environment" holds the map scale and all the 
+    Generate a random position (x : meters, y : meters, theta : radians)
+    and near the 'center' with a nearby valid goal position.
+    - Note that the obstacle_traversible and human_traversible are both
+    checked to generate a valid pos_3.
+    - Note that the "environment" holds the map scale and all the
     individual traversibles
     - Note that the map_scale primarily refers to the traversible's level
     of precision, it is best to use the dx_m provided in examples.py
@@ -349,4 +356,127 @@ def generate_random_pos_in_environment(environment:dict, radius:int=5):
 
     return pos_3
 
+
 """ END configs functions """
+
+
+"""BEGIN SimState utils"""
+
+
+def get_agent_type(sim_state, agent_type: str):
+    if(callable(getattr(sim_state, 'get_' + agent_type, None))):
+        get_agent_type = getattr(sim_state, 'get_' + agent_type, None)
+        return get_agent_type()
+    elif hasattr(sim_state, agent_type):
+        return sim_state[agent_type]
+    else:
+        return {}  # empty dict
+
+
+def get_all_agents(sim_state):
+    all_agents = {}
+    all_agents.update(get_agent_type(sim_state, "agents"))
+    all_agents.update(get_agent_type(sim_state, "prerecs"))
+    all_agents.update(get_agent_type(sim_state, "robots"))
+    return all_agents
+
+
+def get_sim_t(sim_state):
+    if(callable(getattr(sim_state, 'get_sim_t', None))):
+        return sim_state.get_sim_t()
+    return sim_state["sim_t"]
+
+
+def compute_delta_t(sim_states: list):
+    # need at least one (usually the first) to have a delta_t
+    for i in range(len(sim_states)):
+        if(callable(getattr(sim_states[i], 'get_delta_t', None))):
+            return sim_states[i].get_delta_t()
+        # optimized to only have delta_t on the FIRST SimState
+        return sim_states[i]["delta_t"]
+    # or computing it manually with two sim_states:
+    # if(len(sim_states) <= 1):
+    #     print("%sNeed at least two states to compute delta_t%s" %
+    #           (color_red, color_reset))
+    # else:
+    #     delta_t = get_sim_t(sim_states[1]) - get_sim_t(sim_states[0])
+    #     return delta_t
+
+
+def get_pos3(agent):
+    if(callable(getattr(agent, "get_current_config", None))):
+        return agent.get_current_config().to_3D_numpy()
+    return agent["current_config"]
+
+
+def compute_next_vel(sim_state_prev, sim_state_now, agent_name: str, delta_t: float):
+    old_agent = get_all_agents(sim_state_prev)[agent_name]
+    old_pos = get_pos3(old_agent)
+    new_agent = get_all_agents(sim_state_now)[agent_name]
+    new_pos = get_pos3(new_agent)
+    # calculate distance over time
+    # TODO: add sign to distance (displacement) for velocity?
+    return euclidean_dist2(old_pos, new_pos) / delta_t
+
+
+def compute_agent_state_velocity(sim_states: list, agent_name: str):
+    if(len(sim_states) > 1):  # need at least two to compute differences in positions
+        if(agent_name in get_all_agents(sim_states[0]).keys()):
+            agent_velocities = []
+            delta_t = compute_delta_t(sim_states)
+            for i, s in enumerate(sim_states):
+                if(i > 0):
+                    speed = compute_next_vel(
+                        sim_states[i - 1], sim_states[i], agent_name, delta_t)
+                    agent_velocities.append(speed)
+                else:
+                    agent_velocities.append(0)
+            return agent_velocities
+        else:
+            print("%sAgent" % color_red, agent_name,
+                  "is not in the SimStates%s" % color_reset)
+
+
+def compute_agent_state_acceleration(sim_states: list, agent_name: str, velocities: list = None):
+    if(len(sim_states) > 1):  # need at least two to compute differences in velocities
+        # optionally compute velocities as well
+        if(velocities is None):
+            velocities = compute_agent_state_velocity(sim_states, agent_name)
+        delta_t = compute_delta_t(sim_states)
+        if(agent_name in get_all_agents(sim_states[0]).keys()):
+            agent_accels = []
+            for i, this_vel in enumerate(velocities):
+                if(i > 0):
+                    last_vel = velocities[i - 1]
+                    # calculate speeds over time
+                    accel = (this_vel - last_vel) / delta_t
+                    agent_accels.append(accel)
+                    if(i == len(sim_states) - 1):
+                        # last element gets no acceleration
+                        break
+                        # record[j].append(0)
+            return agent_accels
+        else:
+            print("%sAgent" % color_red, agent_name,
+                  "is not in the SimStates%s" % color_reset)
+    else:
+        return []
+
+
+def compute_all_velocities(sim_states: list):
+    all_velocities = {}
+    for agent_name in get_all_agents(sim_states[0]).keys():
+        assert(isinstance(agent_name, str))  # keyed by name
+        all_velocities[agent_name] = compute_agent_state_velocity(
+            sim_states, agent_name)
+    return all_velocities
+
+
+def compute_all_accelerations(sim_states: list):
+    all_accels = {}
+    # TODO: add option of providing precomputed velocities list
+    for agent_name in get_all_agents(sim_states[0]).keys():
+        assert(isinstance(agent_name, str))  # keyed by name
+        all_accels[agent_name] = compute_agent_state_acceleration(
+            sim_states, agent_name)
+    return all_accels

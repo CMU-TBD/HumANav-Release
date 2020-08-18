@@ -33,6 +33,7 @@ from utils.utils import *
 # seed the random number generator
 random.seed(get_seed())
 
+
 def create_params():
     p = create_base_params()
 
@@ -248,7 +249,9 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
                 last_pos_2 = record[j - 1]
                 # calculating euclidean dist / delta_t
                 delta_t = (times[j] - times[j - 1])
-                speed = np.sqrt((pos_2[1] - last_pos_2[1]) **2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
+                speed = euclidean_dist2(pos_2, last_pos_2) / delta_t
+                # speed = np.sqrt((pos_2[1] - last_pos_2[1]) **
+                #                 2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
                 record[j].append(speed)  # last element gets last angle
             else:
                 record[0].append(0)  # initial speed is 0
@@ -401,4 +404,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(5, 5, starting_prerec=15)
+    test_socnav(0, 0, starting_prerec=15)

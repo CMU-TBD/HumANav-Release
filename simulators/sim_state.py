@@ -43,17 +43,18 @@ class AgentState():
 
     def get_radius(self):
         return self.radius
-    
+
     def get_color(self):
         return self.color
 
-    def to_json(self):
+    def to_json(self, include_start_goal=False):
         name_json = SimState.to_json_type(deepcopy(self.name))
         # NOTE: the configs are just being serialized with their 3D positions
-        # start_json = SimState.to_json_type(
-        #     self.get_start_config().to_3D_numpy())
-        # goal_json = SimState.to_json_type(
-        #     self.get_goal_config().to_3D_numpy())
+        if(include_start_goal):
+            start_json = SimState.to_json_type(
+                self.get_start_config().to_3D_numpy())
+            goal_json = SimState.to_json_type(
+                self.get_goal_config().to_3D_numpy())
         current_json = SimState.to_json_type(
             deepcopy(self.get_current_config().to_3D_numpy()))
         # SimState.to_json_type( self.get_trajectory().to_numpy_repr())
@@ -64,10 +65,10 @@ class AgentState():
         color_json = deepcopy(self.color)
         json_dict = {}
         json_dict['name'] = name_json
-        # NOTE: goal and start can perhaps be optimized to be only sent once
-        # since they don't change over the course of the simulation.
-        # json_dict['start_config'] = start_json
-        # json_dict['goal_config'] = goal_json
+        # NOTE: the start and goal (of the robot) are only sent when the environment is sent
+        if(include_start_goal):
+            json_dict['start_config'] = start_json
+            json_dict['goal_config'] = goal_json
         json_dict['current_config'] = current_json
         # json_dict['trajectory'] = trajectory_json
         json_dict['collided'] = collided_json
@@ -90,13 +91,14 @@ class HumanState(AgentState):
 
 
 class SimState():
-    def __init__(self, environment, agents, prerecs, robots, sim_t, wall_t):
+    def __init__(self, environment, agents, prerecs, robots, sim_t, wall_t, delta_t):
         self.environment = environment
         self.agents = agents
         self.prerecs = prerecs
         self.robots = robots
         self.sim_t = sim_t
         self.wall_t = wall_t
+        self.delta_t = delta_t
 
     def to_json(self, robot_on=True, include_map=False):
         json_dict = {}
@@ -105,15 +107,14 @@ class SimState():
             if(include_map):
                 environment_json = SimState.to_json_dict(
                     deepcopy(self.environment))
+                json_dict['delta_t'] = deepcopy(self.delta_t)
             else:
                 environment_json = {}  # empty dictionary
             # serialize all other fields
-            agents_json = deepcopy(
-                SimState.to_json_dict(deepcopy(self.agents)))
-            prerecs_json = deepcopy(
-                SimState.to_json_dict(deepcopy(self.prerecs)))
-            robots_json = deepcopy(
-                SimState.to_json_dict(deepcopy(self.robots)))
+            agents_json = SimState.to_json_dict(deepcopy(self.agents))
+            prerecs_json = SimState.to_json_dict(deepcopy(self.prerecs))
+            robots_json = SimState.to_json_dict(
+                deepcopy(self.robots), include_start_goal=include_map)
             sim_t_json = deepcopy(self.sim_t)
             # append them to the json dictionary
             json_dict['environment'] = environment_json
@@ -144,8 +145,11 @@ class SimState():
     def get_wall_t(self):
         return self.wall_t
 
+    def get_delta_t(self):
+        return self.delta_t
+
     @ staticmethod
-    def to_json_type(elem):
+    def to_json_type(elem, include_start_goal=False):
         """ Converts an element to a json serializable type. """
         if isinstance(elem, np.int64) or isinstance(elem, np.int32):
             return int(elem)
@@ -155,17 +159,18 @@ class SimState():
             return elem.tolist()
         if isinstance(elem, dict):
             # recursive for dictionaries within dictionaries
-            return SimState.to_json_dict(elem)
+            return SimState.to_json_dict(elem, include_start_goal=include_start_goal)
         if isinstance(elem, AgentState):
-            return elem.to_json()
+            return elem.to_json(include_start_goal=include_start_goal)
         if type(elem) is type:  # elem is a class
             return str(elem)
         else:
             return str(elem)
 
     @ staticmethod
-    def to_json_dict(param_dict):
+    def to_json_dict(param_dict, include_start_goal=False):
         """ Converts params_dict to a json serializable dict."""
         for key in param_dict.keys():
-            param_dict[key] = SimState.to_json_type(param_dict[key])
+            param_dict[key] = SimState.to_json_type(
+                param_dict[key], include_start_goal=include_start_goal)
         return param_dict

@@ -66,9 +66,8 @@ class CentralSimulator(SimulatorHelper):
         p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
-        # whether to block on joystick, repeat last joystick command, or neither
-        # options being "joystick", "repeat", "none"
-        p.block = "repeat"
+        # whether to block on joystick, repeat last joystick command
+        p.block_joystick = True
         # Much more optimized to only render topview, but can also render Humans
         if(not p.render_3D):
             print("Printing Topview movie with multithreading")
@@ -128,137 +127,6 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
-    """BEGIN thread utils"""
-
-    def init_robot_thread(self, power_on=True):
-        """Initializes the robot agent by establishing socket connections to 
-        the joystick, transmitting the (constant) obstacle map (environment), 
-        and starting the robot thread.
-
-        Args:
-            power_on (bool, optional): Whether or not the robot should start on. Defaults to True.
-
-        Returns:
-            Thread: The robot's update thread if it exists in the simulator, else None
-        """
-        # wait for joystick connection to be established
-        r = self.robot
-        if(r is not None):
-            r.establish_joystick_receiver_connection()
-            time.sleep(0.01)
-            r.establish_joystick_sender_connection()
-            r.update_time(0)
-            assert(r.world_state is not None)
-            # send first transaction to the joystick
-            print("sending map to joystick")
-            r.send_to_joystick(r.world_state.to_json(include_map=True))
-            robot_thread = threading.Thread(target=r.update)
-            if(power_on):
-                robot_thread.start()
-            # wait until joystick is ready
-            while(not r.joystick_ready):
-                # wait until joystick recieves the environment (once)
-                time.sleep(0.01)
-            return robot_thread
-        print("%sNo robot in simulator%s" % (color_red, color_reset))
-        return None
-
-    def update_robot(self, world_state):
-        """Gives the robot a picture of the world through a SimState package
-
-        Args:
-            world_state (SimState): the most recent state of the world
-        """
-        if(self.robot is not None):
-            self.robot.update_world(world_state)
-        return
-
-    def decommission_robot(self, thread):
-        """Turns off the robot and joins the robot's update thread
-
-        Args:
-            thread (Thread): the robot update thread to join
-        """
-        if(thread is not None):
-            assert(self.robot is not None)
-            # turn off the robot
-            self.robot.power_off()
-            # close robot agent threads
-            if(thread.is_alive()):
-                thread.join()
-            del(thread)
-        return
-
-    def init_agent_threads(self, sim_t: float, t_step: float, current_state: SimState):
-        """Spawns a new agent thread for each agent (running or finished)
-
-        Args:
-            sim_t (float): the simulator time in seconds
-            t_step (float): the time step (update frequency) of the simulator
-            current_state (SimState): the most recent state of the world
-
-        Returns:
-            agent_threads (list): list of all spawned (not started) agent threads
-        """
-        agent_threads = []
-        for a in self.agents.values():
-            agent_threads.append(threading.Thread(
-                target=a.update, args=(sim_t, t_step, current_state,)))
-        return agent_threads
-
-    def init_prerec_threads(self, sim_t: float, current_state:SimState):
-        """Spawns a new prerec thread for each running prerecorded agent
-
-        Args:
-            sim_t (float): the simulator time in seconds
-            current_state (SimState): the current state of the world
-
-        Returns:
-            prerec_threads (list): list of all spawned (not started) prerecorded agent threads
-        """
-        prerec_threads = []
-        prerec_agents = list(self.prerecs.values())
-        for a in prerec_agents:
-            if(not a.end_acting):
-                prerec_threads.append(threading.Thread(
-                    target=a.update, args=(sim_t,current_state,)))
-            else:
-                # remove the agent once it's completed its trajectory
-                self.prerecs.pop(a.get_name())
-                del(a)
-        return prerec_threads
-
-    def start_threads(self, thread_group):
-        """Starts a group of threads at once
-
-        Args:
-            thread_group (list): a group of threads to be started
-        """
-        for t in thread_group:
-            t.start()
-
-    def join_threads(self, thread_group):
-        """Joins a group of threads at once
-
-        Args:
-            thread_group (list): a group of threads to be joined
-        """
-        for t in thread_group:
-            t.join()
-            del(t)
-
-    """END thread utils"""
-
-    def simulation_block(self, iteration):
-        # TODO: add fancy docstring
-        if(self.params.block is "joystick"):
-            while(self.robot.running and iteration >= self.robot.joystick_requests_heard):
-                # block on robot<->joystick communication
-                # wait until the joystick sent commands to pass the interval
-                time.sleep(0.01)
-        elif(self.params.block is "repeat"):
-            self.robot.repeat_joystick = True
-
     def simulate(self):
         """ A function that simulates an entire episode. The agents are updated with simultaneous
         threads running their update() functions and updating the robot with commands from the 
@@ -266,50 +134,51 @@ class CentralSimulator(SimulatorHelper):
         """
         num_agents: int = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
+        # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
+        self.delta_t = 3 * self.params.dt
         # get initial state
-        current_state = self.save_state(0, 0)
-        self.update_robot(current_state)
+        current_state = self.save_state(0, self.delta_t, 0)
+        # give the robot knowledge of the initial world
+        self.robot.repeat_joystick = not self.params.block_joystick
+        self.robot.update_world(current_state)
         # initialize the robot to establish joystick connection
-        r_t = self.init_robot_thread()
+        r_t = self.init_robot_listener_thread()
         # continue to spawn the simulation with an established (independent) connection
         # keep track of wall-time in the simulator
         start_time = time.clock()
         # save initial state before the simulator is spawned
         self.t = 0.0
-        # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        self.delta_t = self.params.dt
         if(self.delta_t < self.params.dt):
             print("%sSimulation dt is too small; either lower the agents' dt's" % (color_red),
                   self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
-        iteration = 0 # loop iteration
+        iteration = 1  # loop iteration
+        self.print_sim_progress(iteration)
         while self.exists_running_agent() or self.exists_running_prerec():
-            self.simulation_block(iteration)
             # update "wall clock" time
             wall_clock = time.clock() - start_time
-            # Takes screenshot of the simulation state
-            current_state = self.save_state(self.t, wall_clock)
-            self.update_robot(current_state)
             # Complete thread operations
-            agent_threads = self.init_agent_threads(
-                self.t, self.delta_t, current_state)
+            agent_threads = \
+                self.init_agent_threads(self.t, self.delta_t, current_state)
             prerec_threads = self.init_prerec_threads(self.t, current_state)
             # start all thread groups
             self.start_threads(agent_threads)
             self.start_threads(prerec_threads)
+            # calls a single iteration of the robot update
+            self.robot.update(iteration)
             # join all thread groups
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
             # capture time after all the agents have updated
+            # Takes screenshot of the new simulation state
+            current_state = self.save_state(self.t, self.delta_t, wall_clock)
+            self.robot.update_world(current_state)
             self.t += self.delta_t  # update simulator time
-            # print simulation progress
-            self.print_sim_progress(iteration)
-            if (iteration > 60 * num_agents):
-                # hard limit of 60 frames per agent
-                break
+            # NOTE can add a hard limit to the number of frames the world can use
             # update iteration count
             iteration += 1
-
+            # print simulation progress
+            self.print_sim_progress(iteration)
 
         # free all the agents
         for a in self.agents.values():
@@ -353,8 +222,8 @@ class CentralSimulator(SimulatorHelper):
         return num
 
     def print_sim_progress(self, rendered_frames: int):
-        """prints an inline simulation progress message based off agent termination
-
+        """prints an inline simulation progress message based off agent planning termination
+            TODO: account for agent<->agent collisions 
         Args:
             rendered_frames (int): how many frames have been generated so far
         """
@@ -370,7 +239,7 @@ class CentralSimulator(SimulatorHelper):
               "T = %.3f" % (self.t),
               "\r", end="")
 
-    def save_state(self, sim_t: float, wall_t: float):
+    def save_state(self, sim_t: float, delta_t: float, wall_t: float):
         """Captures the current state of the world to be saved to self.states
 
         Args:
@@ -395,7 +264,7 @@ class CentralSimulator(SimulatorHelper):
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
         current_state = SimState(saved_env,
                                  saved_agents, saved_prerecs, saved_robots,
-                                 sim_t, wall_t
+                                 sim_t, wall_t, delta_t
                                  )
         # Save current state to a class dictionary indexed by simulator time
         self.states[sim_t] = current_state
@@ -708,3 +577,115 @@ class CentralSimulator(SimulatorHelper):
                              'tests/socnav/sim_movie' + str(i))
         # Delete state to save memory after frames are generated
         del(state)
+
+    """BEGIN thread utils"""
+
+    def init_robot_listener_thread(self, power_on=True):
+        """Initializes the robot listener by establishing socket connections to 
+        the joystick, transmitting the (constant) obstacle map (environment), 
+        and starting the robot thread.
+
+        Args:
+            power_on (bool, optional): Whether or not the robot should start on. Defaults to True.
+
+        Returns:
+            Thread: The robot's update thread if it exists in the simulator, else None
+        """
+        # wait for joystick connection to be established
+        r = self.robot
+        if(r is not None):
+            r.establish_joystick_receiver_connection()
+            time.sleep(0.01)
+            r.establish_joystick_sender_connection()
+            r.update_time(0)
+            assert(r.world_state is not None)
+            # send first transaction to the joystick
+            print("sending map to joystick")
+            r.send_to_joystick(r.world_state.to_json(include_map=True))
+            r_listener_thread = threading.Thread(target=r.listen_to_joystick)
+            if(power_on):
+                r_listener_thread.start()
+            # wait until joystick is ready
+            while(not r.joystick_ready):
+                # wait until joystick recieves the environment (once)
+                time.sleep(0.01)
+            print("Robot powering on")
+            return r_listener_thread
+        print("%sNo robot in simulator%s" % (color_red, color_reset))
+        return None
+
+    def decommission_robot(self, r_listener_thread):
+        """Turns off the robot and joins the robot's update thread
+
+        Args:
+            r_listener_thread (Thread): the robot update thread to join
+        """
+        if(r_listener_thread is not None):
+            assert(self.robot is not None)
+            # turn off the robot
+            self.robot.power_off()
+            # close robot listener threads
+            if(r_listener_thread.is_alive()):
+                r_listener_thread.join()
+            del(r_listener_thread)
+        return
+
+    def init_agent_threads(self, sim_t: float, t_step: float, current_state: SimState):
+        """Spawns a new agent thread for each agent (running or finished)
+
+        Args:
+            sim_t (float): the simulator time in seconds
+            t_step (float): the time step (update frequency) of the simulator
+            current_state (SimState): the most recent state of the world
+
+        Returns:
+            agent_threads (list): list of all spawned (not started) agent threads
+        """
+        agent_threads = []
+        for a in self.agents.values():
+            agent_threads.append(threading.Thread(
+                target=a.update, args=(sim_t, t_step, current_state,)))
+        return agent_threads
+
+    def init_prerec_threads(self, sim_t: float, current_state: SimState):
+        """Spawns a new prerec thread for each running prerecorded agent
+
+        Args:
+            sim_t (float): the simulator time in seconds
+            current_state (SimState): the current state of the world
+
+        Returns:
+            prerec_threads (list): list of all spawned (not started) prerecorded agent threads
+        """
+        prerec_threads = []
+        prerec_agents = list(self.prerecs.values())
+        for a in prerec_agents:
+            if(not a.end_acting):
+                prerec_threads.append(threading.Thread(
+                    target=a.update, args=(sim_t, current_state,)))
+            else:
+                # remove the agent once it's completed its trajectory
+                self.prerecs.pop(a.get_name())
+                del(a)
+        return prerec_threads
+
+    def start_threads(self, thread_group):
+        """Starts a group of threads at once
+
+        Args:
+            thread_group (list): a group of threads to be started
+        """
+        for t in thread_group:
+            t.start()
+
+    def join_threads(self, thread_group):
+        """Joins a group of threads at once
+
+        Args:
+            thread_group (list): a group of threads to be joined
+        """
+        for t in thread_group:
+            t.join()
+            del(t)
+
+    """END thread utils"""

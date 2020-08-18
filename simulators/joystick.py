@@ -24,26 +24,35 @@ from trajectory.trajectory import Trajectory
 # seed the random number generator
 random.seed(get_seed())
 
+
 class Joystick():
     def __init__(self):
         self.t = 0
         self.latest_state = None
-        self.world_state = []
+        self.sim_states = []
+        self.velocities = {}     # testing simstate utils
+        self.accelerations = {}  # testing simstate utils
         self.environment = None
         self.joystick_params = create_params()
         # sockets for communication
         self.robot_sender_socket = None
         self.robot_running = False
         self.host = socket.gethostname()
-        self.port_send = self.joystick_params.port  # port for sending commands to the robot
+        # port for sending commands to the robot
+        self.port_send = self.joystick_params.port
         self.port_recv = self.port_send + 1  # port for recieving commands from the robot
         self.frame_num = 0
-        self.ready_to_send = False
-        self.requests_world = False  # True whenever the joystick wants data about the world
+        self.request_world = False  # True whenever the joystick wants data about the world
         print("Initiated joystick at", self.host, self.port_send)
         self.start_config = None
         self.goal_config = None
         self.current_config = None
+        # planned controls
+        self.commanded_actions = []
+        self.num_sent = 0
+        self.lin_vels = []
+        self.ang_vels = []
+        self.delta_t = None
 
     def set_host(self, h):
         self.host = h
@@ -51,19 +60,20 @@ class Joystick():
     def _init_obstacle_map(self, renderer=0):
         """ Initializes the sbpd map."""
         p = self.params.obstacle_map_params
-        return p.obstacle_map(p, renderer, res=float(self.environment["map_scale"])*100., trav=np.array(self.environment["traversibles"][0]))
-
-    def init_start_goal(self):
-        self.start_config = generate_random_config(self.environment)
-        self.goal_config = generate_random_config(self.environment)
+        return p.obstacle_map(p, renderer,
+                              res=float(self.environment["map_scale"]) * 100.,
+                              trav=np.array(
+                                  self.environment["traversibles"][0])
+                              )
 
     def init_control_pipeline(self):
-        assert(self.world_state is not None)
+        assert(self.sim_states is not None)
         assert(self.environment is not None)
-        self.init_start_goal()
         self.params = create_agent_params()
-        self.params.control_horizon = 1 #one action at a time
-        self.obstacle_map = self._init_obstacle_map() #self.environment["traversibles"][0]
+        self.params.dt = 0.05
+        self.params.control_horizon = 200  # based off central_simulator's parse params
+        # self.environment["traversibles"][0]
+        self.obstacle_map = self._init_obstacle_map()
         self.obj_fn = Agent._init_obj_fn(self)
         # Initialize Fast-Marching-Method map for agent's pathfinding
         self.fmm_map = Agent._init_fmm_map(self)
@@ -73,46 +83,72 @@ class Joystick():
         self.vehicle_data = self.planner.empty_data_dict()
         self.system_dynamics = Agent._init_system_dynamics(self)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
-        self.commanded_actions = []
 
-    def create_message(self, joystick_power: bool, j_time: float = 0.0,
-                       lin_vel: float = 0.0, ang_vel: float = 0.0, req_world: bool = False):
+    def create_message(self, joystick_power: bool, lin_vels: list, ang_vels: list,
+                       j_time: float = 0.0, req_world: bool = False):
         json_dict = {}
         json_dict["joystick_on"] = joystick_power
         if(joystick_power):
             json_dict["j_time"] = j_time
-            json_dict["lin_vel"] = float(lin_vel)
-            json_dict["ang_vel"] = float(ang_vel)
+            json_dict["lin_vels"] = lin_vels
+            json_dict["ang_vels"] = ang_vels
             json_dict["req_world"] = req_world
         return json.dumps(json_dict, indent=1)
 
-    def robot_input(self, lin_command:float, ang_command:float, request_world:bool):
-        message = self.create_message(self.robot_running, time.clock(),
-                                        float(lin_command), float(ang_command), request_world)
+    def robot_input(self, lin_commands: list, ang_commands: list,
+                    request_world: bool, override_power_off: bool = False):
+        # singular input
+        message = self.create_message(self.robot_running or override_power_off,
+                                      lin_commands, ang_commands, time.clock(), request_world)
+        if(request_world):
+            # only a single message being sent
+            self.request_world = False
         self.send_to_robot(message)
-        print("sent", message)
 
-
-    def random_robot_joystick(self):
-        sent_commands = 0
+    def random_robot_joystick(self, action_dt: int):
         self.robot_running = True
+        assert(self.environment is not None)
         while(self.robot_running is True):
             try:
-                if(self.ready_to_send and self.environment is not None):
-                    # robot can only more forwards
-                    lin_command = (randint(10, 100) / 100.)
-                    ang_command = (randint(-100, 100) / 100.)
-                    self.robot_input(lin_command, ang_command, self.requests_world)
-                    sent_commands += 1
-                    # now update the robot with the "ready" ping
-                    time.sleep(2) # NOTE: this is tunable to ones liking
-                    self.ready_to_send = True
-                # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
+                lin_vels = []
+                ang_vels = []
+                lin = randint(10, 100) / 100.
+                ang = randint(-100, 100) / 100.
+                for i in range(action_dt):
+                    lin_vels.append(lin)
+                    ang_vels.append(ang)
+                self.robot_input(lin_vels, ang_vels, self.request_world)
+                time.sleep(0.5)  # NOTE: Tune this to whatever you'd like
+                # now update the robot with the "ready" ping
             except KeyboardInterrupt:
                 print("%sJoystick disconnected by user%s" %
                       (color_yellow, color_reset))
                 self.power_off()
                 break
+
+    def send_robot_group(self, freq):
+        while(self.robot_running):
+            if(self.num_sent < len(self.commanded_actions)):
+                command = self.commanded_actions[self.num_sent]
+                lin = command[0]
+                ang = command[1]
+                if(lin != 0 and ang != 0):
+                    self.lin_vels.append(float(lin))
+                    self.ang_vels.append(float(ang))
+                    if(len(self.lin_vels) >= freq):
+                        self.robot_input(deepcopy(self.lin_vels),
+                                         deepcopy(self.ang_vels), self.request_world)
+                        # reset the containers
+                        self.lin_vels = []
+                        self.ang_vels = []
+                        # NOTE: this robot sender delay is tunable to ones liking
+                        time.sleep(0.1)  # planner delay
+                    if(self.num_sent % 20 == 0):
+                        self.request_world = True
+                    self.num_sent += 1
+            else:
+                # wait until a new command is added
+                time.sleep(0.001)
 
     def planned_robot_joystick(self):
         """ Runs the planner for one step from config to generate a
@@ -121,39 +157,62 @@ class Joystick():
         while(self.current_config is None):
             # wait until robot's current position is known
             time.sleep(0.01)
-        self.planned_next_config = copy.deepcopy(self.goal_config)
+        self.planned_next_config = copy.deepcopy(self.current_config)
         while(self.robot_running):
-            self.planner_data = self.planner.optimize(self.planned_next_config, self.goal_config)
-            # open loop control
-            lin = self.planner_data["K_nkfd"].numpy()[0][0][0][0]
-            ang = self.planner_data["k_nkf1"].numpy()[0][0][0][0]
-            command = np.array([[[lin, ang]]], dtype=np.float32)
+            self.planner_data = self.planner.optimize(
+                self.planned_next_config, self.goal_config)
+            # LQR feedback control loop
+            t_seg = Trajectory.new_traj_clip_along_time_axis(self.planner_data['trajectory'],
+                                                             self.params.control_horizon,
+                                                             repeat_second_to_last_speed=True)
+            _, commanded_actions_nkf = self.system_dynamics.parse_trajectory(
+                t_seg)
             # NOTE: the format for the velocity commands to the open loop for the robot is:
             # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-        
-            t_seg, actions_nk2 = Agent.apply_control_open_loop(self, self.current_config,
-                                                                command,
-                                                                T=self.params.control_horizon,
-                                                                sim_mode=self.system_dynamics.simulation_params.simulation_mode)
             self.planned_next_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
                     t_seg,
                     t=-1
                 )
             self.vehicle_trajectory.append_along_time_axis(t_seg)
-            self.commanded_actions.append(command)
+            self.commanded_actions.extend(commanded_actions_nkf.numpy()[0])
             # print(self.planner_data['optimal_control_nk2'])
-            self.robot_input(lin, ang, True)
+            # TODO: match the action_dt with the number of signals sent to the robot at once
+            self.current_config = \
+                SystemConfig.init_config_from_trajectory_time_index(
+                    self.vehicle_trajectory, t=-1)
 
-                
-    def update(self):
-        """ Independent process for a user (at a designated host:port) to recieve
+    def force_close_socket(self):
+        # connect to the socket, closing it, and continuing the thread to completion
+        try:
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+                (self.host, self.port_recv))
+        except:
+            print("%sForce closing socket%s" %
+                  (color_red, color_reset))
+        self.robot_receiver_socket.close()
+
+    def update(self, random_commands: bool = False):
+        """ Independent process for a user (at a designated host:port) to receive
         information from the simulation while also sending commands to the robot """
-        # self.random_robot_joystick()
-        self.planned_robot_joystick()
-        self.listen_thread.join()
-        # Close communication channel
-        self.robot_sender_socket.close()
+        while(self.delta_t is None):
+            time.sleep(0.01)
+        action_dt = int(np.floor(self.delta_t / self.params.dt))
+        print("simulator's refresh rate =", self.delta_t)
+        print("joystick's refresh rate  =", self.params.dt)
+        sender_thread = threading.Thread(
+            target=self.send_robot_group,
+            args=(action_dt,)
+        )
+        sender_thread.start()
+        if(random_commands):
+            self.random_robot_joystick(action_dt)
+        else:
+            self.planned_robot_joystick()
+        # this point is reached once the planner/randomizer are finished
+        self.force_close_socket()
+        if(self.listen_thread.is_alive()):
+            self.listen_thread.join()
         # begin gif (movie) generation
         try:
             save_to_gif(os.path.join(get_path_to_humanav(), self.dirname))
@@ -164,9 +223,10 @@ class Joystick():
         if(self.robot_running):
             print("%sConnection closed by robot%s" % (color_red, color_reset))
             self.robot_running = False
+            self.force_close_socket()
             try:
-                quit_message = self.create_message(False)
-                self.send_to_robot(quit_message)  # stop
+                # send one last command to the robot with indication that self.robot_running=False
+                self.robot_input([], [], False, override_power_off=True)
             except:
                 pass
 
@@ -186,6 +246,7 @@ class Joystick():
         # Send data
         self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
         self.robot_sender_socket.close()
+        print("sent", json_message)
 
     def listen_to_robot(self):
         self.robot_receiver_socket.listen(10)
@@ -197,32 +258,45 @@ class Joystick():
             connection.close()
             print("%sreceived" % (color_blue), response_len,
                   "bytes from server%s" % (color_reset))
-            if(data_b is not None):
-                self.ready_to_send = True  # has received a world state from the robot
-                self.requests_world = False
+            if(data_b is not None and response_len > 0):
+                self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
-                self.world_state.append(json.loads(data_str))
-                current_world = self.world_state[-1]
+                current_world = json.loads(data_str)
+                if(not current_world['robot_on']):
+                    return
+                # append new world to storage of all past worlds
+                self.sim_states.append(current_world)
+                # self.velocities[current_world['sim_t']] = compute_all_velocities(self.sim_states)
+                # self.accelerations[current_world['sim_t']] = compute_all_accelerations(self.sim_states)
                 if(current_world['robot_on'] is True):
                     if(current_world['environment']):  # not empty
                         # notify the robot that the joystick received the environment
                         joystick_ready = self.create_message(
-                            True, -1, 0, 0, False)
+                            True, [], [], -1, False)
                         self.send_to_robot(joystick_ready)
                         # only update the environment if it is non-empty
                         self.environment = current_world['environment']
-                        robot = list(current_world["robots"].values())[0]
-                        self.current_config = generate_config_from_pos_3(robot["current_config"])
+                        robots = list(current_world["robots"].values())
+                        assert(len(robots) == 1)  # there should only be one
+                        robot = robots[0]
+                        self.current_config = generate_config_from_pos_3(
+                            robot["current_config"])
                         print("Updated environment from robot")
-                    self.generate_frame(self.frame_num)
+                        # update the start and goal configs
+                        self.start_config = generate_config_from_pos_3(
+                            robot["start_config"])
+                        self.goal_config = generate_config_from_pos_3(
+                            robot["goal_config"])
+                        self.delta_t = current_world["delta_t"]
+                    else:
+                        # render when not receiving a new environment
+                        self.generate_frame(current_world, self.frame_num)
                 else:
                     print("powering off joystick")
                     self.power_off()
                     break
             else:
                 break
-            # this should be a separate thread
-            self.requests_world = True
 
     def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
@@ -259,13 +333,13 @@ class Joystick():
 
     """ END socket utils """
 
-    def generate_frame(self, frame_count, plot_quiver=False):
+    def generate_frame(self, world_state, frame_count, plot_quiver=False):
         # extract the information from the world state
         environment = self.environment
-        agents = self.world_state[-1]['agents']
-        prerecs = self.world_state[-1]['prerecs']
-        robots = self.world_state[-1]['robots']
-        sim_time = self.world_state[-1]['sim_t']
+        agents = world_state['agents']
+        prerecs = world_state['prerecs']
+        robots = world_state['robots']
+        sim_time = world_state['sim_t']
         # process the information
         map_scale = eval(environment["map_scale"])  # float
         room_center = np.array(environment["room_center"])
@@ -288,8 +362,9 @@ class Joystick():
 
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, json_key="current_config", label="Robot",
-                    normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=True, 
-                    plot_start_goal=True, new_start=self.start_config, new_goal=self.goal_config)
+                    normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=True,
+                    plot_start_goal=True, start_3=self.start_config.to_3D_numpy(),
+                    goal_3=self.goal_config.to_3D_numpy())
 
         # plot all the simulated prerecorded agents
         plot_agents(ax, ppm, prerecs, json_key="current_config", label="Prerec",

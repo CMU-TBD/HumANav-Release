@@ -3,7 +3,8 @@ import numpy as np
 import os
 
 # seed for randomness generation
-seed = 3
+seed = 10
+
 
 def create_params():
     p = DotMap()
@@ -72,8 +73,10 @@ def create_params():
     return p
 
 # NOTE: these must be the ABSOLUTE path
+
+
 def get_path_to_humanav():
-    PATH_TO_HUMANAV = '/home/gsilvera/Documents/tbd_SocNavBenchmark'
+    PATH_TO_HUMANAV = '/home/gustavo/Documents/tbd_SocNavBenchmark'
     if(not os.path.exists(PATH_TO_HUMANAV)):
         print('\033[31m', "ERROR: Failed to find HumANav installation at",
               PATH_TO_HUMANAV, '\033[0m')
@@ -127,6 +130,7 @@ def get_surreal_texture_dir():
               PATH_TO_SURREAL_TEXTURES, '\033[0m')
         os._exit(1)  # Failure condition
     return PATH_TO_SURREAL_TEXTURES
+
 
 def get_seed():
     return seed
