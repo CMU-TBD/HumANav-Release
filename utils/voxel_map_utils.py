@@ -54,11 +54,31 @@ class VoxelMap(object):
         # Voxel function values at corner points
         data = self.voxel_function_mn
         indices_1 = voxel_indices_int64_nk4[:, :, [1, 0]]
-        try:
-            data11_nk = data[indices_1[1]]
-        except:
-            data11_nk = np.zeros(
+        # try:
+        if(indices_1.size == 0):
+            # edge case in tf.gather_nd
+            print("GOOD_0")
+            data11_nk = np.empty(
                 shape=(indices_1.shape[0], indices_1.shape[1]))
+        else:
+            # normal case
+            try:
+                print("GOOD_X")
+                data11_nk = data[indices_1[1]]
+            except:
+                data11_nk = []
+                print("GOOD_Y")
+                for i in range(indices_1[0].shape[0]):
+                    data11_nk.append(
+                        data[indices_1[0][i][0], indices_1[0][i][1]])
+                data11_nk = np.array([data11_nk])
+                # data11_nk = tf.gather_nd(data, indices_1)
+        # except:
+        #     print("BAD")
+        #     # .reshape(indices_1.shape[0], indices_1.shape[1])
+        #     data11_nk = tf.gather_nd(data, indices_1)
+        #     print(data11_nk)
+
         indices_2 = voxel_indices_int64_nk4[:, :, [1, 2]]
         data21_nk = tf.gather_nd(data, indices_2)
         # equivalent to np.take (since its a 3D matrix)
