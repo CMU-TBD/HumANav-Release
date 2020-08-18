@@ -67,9 +67,9 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
 
     # Plot the humans (added support for multiple humans)
     for i, human in enumerate(humans):
-        human_pos_2 = human.get_start_config().position_nk2().numpy()[0][0]
-        human_heading = (human.get_start_config().heading_nk1().numpy())[0][0]
-        human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
+        human_pos_2 = human.get_start_config().position_nk2()[0][0]
+        human_heading = (human.get_start_config().heading_nk1())[0][0]
+        human_goal_2 = human.get_goal_config().position_nk2()[0][0]
 
         if(i == 0):
             ax.plot(human_pos_2[0], human_pos_2[1],
@@ -83,8 +83,8 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
             human_heading), scale=2, scale_units='inches')
 
     ax.legend()
-    ax.set_xlim([camera_pos_13[0, 0]-5., camera_pos_13[0, 0]+5.])
-    ax.set_ylim([camera_pos_13[0, 1]-5., camera_pos_13[0, 1]+5.])
+    ax.set_xlim([camera_pos_13[0, 0] - 5., camera_pos_13[0, 0] + 5.])
+    ax.set_ylim([camera_pos_13[0, 1] - 5., camera_pos_13[0, 1] + 5.])
     ax.set_xticks([])
     ax.set_yticks([])
     ax.set_title('Topview')
@@ -114,7 +114,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, camera_pos_13,
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
     # Convert from real world units to grid world units
-    camera_grid_world_pos_12 = camera_pos_13[:, :2]/dx_m
+    camera_grid_world_pos_12 = camera_pos_13[:, :2] / dx_m
 
     # Render RGB and Depth Images. The shape of the resulting
     # image is (1 (batch), m (width), k (height), c (number channels))
@@ -151,14 +151,14 @@ def test_1(num_humans):
     human_traversible = np.empty(traversible.shape)
     human_traversible.fill(True)  # initially all good
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-    dx_m = dx_cm/100.
+    dx_m = dx_cm / 100.
 
     # Camera (robot) position modeled as (x, y, theta) in 2D array
     # Multiple entries yield multiple shots
     camera_pos_13 = np.array([
-        [9., 22., -np.pi/4],
+        [9., 22., -np.pi / 4],
         [16., 17., -np.pi],
-        [9., 15., np.pi/2.],
+        [9., 15., np.pi / 2.],
 
     ])
 
@@ -171,9 +171,9 @@ def test_1(num_humans):
             for k in range(num_dots):
                 if (j == 0 or j == num_dots - 1 or k == 0 or k == num_dots - 1):
                     camera_x = int(
-                        camera_pos_13[i][0]/dx_m) - int(skip/2.*num_dots) + skip*j
+                        camera_pos_13[i][0] / dx_m) - int(skip / 2. * num_dots) + skip * j
                     camera_y = int(
-                        camera_pos_13[i][1]/dx_m) - int(skip/2.*num_dots) + skip*k
+                        camera_pos_13[i][1] / dx_m) - int(skip / 2. * num_dots) + skip * k
                     traversible[camera_y][camera_x] = False
 
     # In order to print more readable arrays

@@ -132,8 +132,8 @@ class Agent(AgentHelper):
         self.sim_states.append(sim_state)
         self.update_time(t)
         if(self.params.verbose_printing):
-            print("start: ", self.get_start_config().position_nk2().numpy())
-            print("goal: ", self.get_goal_config().position_nk2().numpy())
+            print("start: ", self.get_start_config().position_nk2())
+            print("goal: ", self.get_goal_config().position_nk2())
 
         # self.velocities[get_sim_t(sim_state)] = compute_all_velocities(self.sim_states)
         # self.accelerations[get_sim_t(sim_state)] = compute_all_accelerations(self.sim_states)
@@ -156,7 +156,7 @@ class Agent(AgentHelper):
         if(not self.end_episode and not self.end_acting):
             if(self.params.verbose_printing):
                 print("planned next:",
-                      self.planned_next_config.position_nk2().numpy())
+                      self.planned_next_config.position_nk2())
             self.planner_data = self.planner.optimize(
                 self.planned_next_config, self.goal_config)
             traj_segment, trajectory_data, commands_1kf = self._process_planner_data()

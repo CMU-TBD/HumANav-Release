@@ -122,7 +122,7 @@ class LQRSolver:
             # turning tensors into numpy arrays is a hack around this.
             error_t_n1d = np.concatenate([error_t_n1d[:, :, :angle_dims],
                                           angle_normalize(error_t_n1d[:, :,
-                                                                      angle_dims:angle_dims + 1].numpy()),
+                                                                      angle_dims:angle_dims + 1]),
                                           error_t_n1d[:, :, angle_dims + 1:]],
                                          axis=2)
             fdback_nf1 = np.matmul(K_array_nTfd[:, t],
@@ -171,7 +171,7 @@ class LQRSolver:
             error_t_nd = lqr_sys['f_nkd'][:, t] - x_nkd[:, t + 1]
             error_t_nd = np.concatenate([error_t_nd[:, :angle_dims],
                                          angle_normalize(error_t_nd[:,
-                                                                    angle_dims:angle_dims + 1].numpy()),
+                                                                    angle_dims:angle_dims + 1]),
                                          error_t_nd[:, angle_dims + 1:]],
                                         axis=1)
             error_t_nd1 = error_t_nd[:, :, None]

@@ -97,7 +97,7 @@ class SBPDMap(ObstacleMap):
         assert((config is None) != (pos_n3 is None))
 
         if config is not None:
-            pos_n3 = config.position_and_heading_nk3()[:, 0].numpy()
+            pos_n3 = config.position_and_heading_nk3()[:, 0]
 
         if 'occupancy_grid' in self.p.renderer_params.camera_params.modalities:
             occupancy_grid_world_1mk12 = kwargs['occupancy_grid_positions_ego_1mk12']
@@ -136,7 +136,7 @@ class SBPDMap(ObstacleMap):
                   vmax=1.5, vmin=-.5, origin='lower')
 
         if start_config is not None:
-            start_2 = start_config.position_nk2()[0, 0].numpy()
+            start_2 = start_config.position_nk2()[0, 0]
             delta = p.plotting_grid_steps * p.dx
             ax.set_xlim(start_2[0] - delta, start_2[0] + delta)
             ax.set_ylim(start_2[1] - delta, start_2[1] + delta)
@@ -159,7 +159,7 @@ class SBPDMap(ObstacleMap):
         if start_config is not None:
             if(zoom is not 0):
                 # Render map around the start by a certain amount
-                start_2 = start_config.position_nk2()[0, 0].numpy()
+                start_2 = start_config.position_nk2()[0, 0]
                 delta = p.plotting_grid_steps * p.dx * 2
                 ax.set_xlim(start_2[0] - zoom, start_2[0] + zoom)
                 ax.set_ylim(start_2[1] - zoom, start_2[1] + zoom)
@@ -180,7 +180,7 @@ class SBPDMap(ObstacleMap):
         xs = xs.ravel()
         ys = ys.ravel()
         pos_n12 = np.stack([xs, ys], axis=1)[:, None]
-        dists_nk = self.dist_to_nearest_obs(pos_n12).numpy()
+        dists_nk = self.dist_to_nearest_obs(pos_n12)
 
         margin_mask_n = (dists_nk < margin)[:, 0]
         margin_mask_mn = margin_mask_n.reshape(self.occupancy_grid_map.shape)
