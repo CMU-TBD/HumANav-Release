@@ -180,6 +180,9 @@ class RoboAgent(Agent):
         self.joystick_sender_socket.close()
 
     def listen_to_joystick(self):
+        """Constantly connects to the robot listener socket and receives information from the
+        joystick about the input commands as well as the world requests
+        """
         self.joystick_receiver_socket.listen(10)
         self.running = True  # initialize listener
         while(self.running):
