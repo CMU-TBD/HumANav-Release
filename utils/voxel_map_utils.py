@@ -53,15 +53,15 @@ class VoxelMap(object):
 
         # Voxel function values at corner points
         data = self.voxel_function_mn
-        indices_1 = np.take(voxel_indices_int64_nk4, [1, 0], axis=2)
+        indices_1 = voxel_indices_int64_nk4[:, :, [1, 0]]
         # data[indices[1]]
         data11_nk = tf.gather_nd(data, indices_1)
-        indices_2 = np.take(voxel_indices_int64_nk4, [1, 2], axis=2)
+        indices_2 = voxel_indices_int64_nk4[:, :, [1, 2]]
         data21_nk = tf.gather_nd(data, indices_2)
         # equivalent to np.take (since its a 3D matrix)
         indices_3 = voxel_indices_int64_nk4[:, :, [3, 0]]
         data12_nk = tf.gather_nd(data, indices_3)
-        indices_4 = np.take(voxel_indices_int64_nk4, [3, 2], axis=2)
+        indices_4 = voxel_indices_int64_nk4[:, :, [3, 2]]
         data22_nk = tf.gather_nd(data, indices_4)
 
         # Define gammas for x interpolation

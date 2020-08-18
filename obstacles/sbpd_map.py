@@ -1,6 +1,5 @@
 from obstacles.obstacle_map import ObstacleMap
 import numpy as np
-import tensorflow as tf
 from utils.fmm_map import FmmMap
 from systems.dubins_car import DubinsCar
 

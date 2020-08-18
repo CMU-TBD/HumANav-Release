@@ -63,8 +63,8 @@ class RoboAgent(Agent):
             robot_name = name
         # In order to print more readable arrays
         np.set_printoptions(precision=2)
-        pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
-        goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
+        pos_2 = configs.get_start_config().to_3D_numpy()
+        goal_2 = configs.get_goal_config().to_3D_numpy()
         if(verbose):
             print("Robot", robot_name, "at", pos_2, "with goal", goal_2)
         return RoboAgent(robot_name, configs)

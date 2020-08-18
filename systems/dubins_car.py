@@ -48,8 +48,8 @@ class DubinsCar(Dynamics):
         mode is new a new trajectory object is returned."""
 
         ego_position_and_heading_nk3 = DubinsCar.convert_position_and_heading_to_ego_coordinates(
-            ref_config.position_and_heading_nk3().numpy(),
-            traj_world.position_and_heading_nk3().numpy())
+            ref_config.position_and_heading_nk3(),
+            traj_world.position_and_heading_nk3())
         position_nk2 = ego_position_and_heading_nk3[:, :, :2]
         heading_nk1 = ego_position_and_heading_nk3[:, :, 2:3]
 
@@ -89,8 +89,8 @@ class DubinsCar(Dynamics):
         in the world coordinate frame. If mode is assign the result is assigned to
         traj_world, else a new trajectory object is created"""
         world_position_and_heading_nk3 = DubinsCar.convert_position_and_heading_to_world_coordinates(
-            ref_config.position_and_heading_nk3().numpy(),
-            traj_egocentric.position_and_heading_nk3().numpy())
+            ref_config.position_and_heading_nk3(),
+            traj_egocentric.position_and_heading_nk3())
         position_nk2 = world_position_and_heading_nk3[:, :, :2]
         heading_nk1 = world_position_and_heading_nk3[:, :, 2:3]
 

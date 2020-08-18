@@ -21,5 +21,5 @@ class AngleDistance(Objective):
         optimal_angular_orientation_nk = self.fmm_map.fmm_angle_map.compute_voxel_function(
             trajectory.position_nk2())
         angular_dist_to_optimal_path_nk = angle_normalize(
-            trajectory.heading_nk1()[:, :, 0].numpy() - optimal_angular_orientation_nk)
+            trajectory.heading_nk1()[:, :, 0] - optimal_angular_orientation_nk)
         return self.p.angle_cost * np.power(np.abs(angular_dist_to_optimal_path_nk), self.p.power)
