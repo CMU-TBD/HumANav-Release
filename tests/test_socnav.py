@@ -5,13 +5,6 @@ import numpy as np
 import os
 from random import seed, random, randint
 import pandas as pd
-import warnings
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import tensorflow as tf
-    from tensorflow import keras
-    from tensorflow.keras.preprocessing.text import Tokenizer
-    tf.enable_eager_execution()
 # Humanav
 from humanav import sbpd
 from humans.human import Human
