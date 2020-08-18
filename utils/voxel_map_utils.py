@@ -51,48 +51,17 @@ class VoxelMap(object):
         # the cpu. This is potentially slowing things down as it copies to cpu
         voxel_indices_int64_nk4 = voxel_indices_nk4.astype(np.int64)
 
-        def gather_nd2(params, indices):
-            '''
-            the input indices must be a 2d tensor in the form of [[a,b,..,c],...],
-            which represents the location of the elements.
-            '''
-            # Normalize indices values
-            params_size = list(params.shape)
-            print(params_size, indices.shape[2])
-            assert len(params_size) == indices.shape[2]
-
-            indices[indices < 0] = 0
-            for idx, ps in enumerate(params_size):
-                indices[indices[:, idx] >= ps] = 0
-
-            # Generate indices
-            indices = np.transpose(indices)
-            ndim = indices.shape[0]
-            idx = np.zeros_like(indices[0])
-            m = 1
-
-            for i in range(ndim)[::-1]:
-                idx += indices[i] * m
-                m *= params.shape[i]
-
-            return np.take(params, idx)
-
-        def gather_nd(params, indices):
-            """params is of "n" dimensions and has size [x1, x2, x3, ..., xn], indices is of 2 dimensions  and has size [num_samples, m] (m <= n)"""
-            return params[indices.T]
         # Voxel function values at corner points
         data = self.voxel_function_mn
         indices_1 = np.take(voxel_indices_int64_nk4, [1, 0], axis=2)
-        # data11_nk = np.take(data, indices_1.T)
+        # data[indices[1]]
         data11_nk = tf.gather_nd(data, indices_1)
         indices_2 = np.take(voxel_indices_int64_nk4, [1, 2], axis=2)
-        # data21_nk = np.take(data, indices_2.T)
         data21_nk = tf.gather_nd(data, indices_2)
-        indices_3 = np.take(voxel_indices_int64_nk4, [3, 0], axis=2)
-        # data12_nk = np.take(data, indices_3.T)
+        # equivalent to np.take (since its a 3D matrix)
+        indices_3 = voxel_indices_int64_nk4[:, :, [3, 0]]
         data12_nk = tf.gather_nd(data, indices_3)
         indices_4 = np.take(voxel_indices_int64_nk4, [3, 2], axis=2)
-        # data22_nk = np.take(data, indices_4.T)
         data22_nk = tf.gather_nd(data, indices_4)
 
         # Define gammas for x interpolation
