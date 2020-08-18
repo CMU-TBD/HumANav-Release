@@ -1,4 +1,4 @@
-import tensorflow as tf
+import numpy as np
 from trajectory.trajectory import Trajectory
 
 
@@ -14,11 +14,12 @@ class Spline(Trajectory):
         where ts_nk is in unnormalized time"""
         self.ts_nk = ts_nk
         # Compute the normalized time for spline evaluation
-        ts_normalized_nk = tf.clip_by_value(ts_nk/self.final_times_n1, 0., 1.)
+        ts_normalized_nk = np.clip(ts_nk / self.final_times_n1, 0., 1.)
         self._eval_spline(ts_normalized_nk, calculate_speeds)
 
         # Convert velocities and accelerations to real world time
-        self.rescale_velocity_and_acceleration(tf.ones((self.n, 1)), self.final_times_n1)
+        self.rescale_velocity_and_acceleration(
+            np.ones((self.n, 1)), self.final_times_n1)
 
     def _eval_spline(self, ts_nk, calculate_speeds=True):
         """ Evaluates the spline on points in ts_nk
@@ -32,8 +33,11 @@ class Spline(Trajectory):
         assuming the current numbers are consistent with time_horizon_old_n1
         """
         # Convert velocities and accelerations to real world time
-        time_scaling_factor_n11 = time_horizon_new_n1[:, tf.newaxis, :]/time_horizon_old_n1[:, tf.newaxis, :]
+        time_scaling_factor_n11 = time_horizon_new_n1[:,
+                                                      np.newaxis, :] / time_horizon_old_n1[:, np.newaxis, :]
         self._speed_nk1 = self._speed_nk1 / time_scaling_factor_n11
         self._angular_speed_nk1 = self._angular_speed_nk1 / time_scaling_factor_n11
-        self._acceleration_nk1 = self._acceleration_nk1 / (time_scaling_factor_n11 ** 2)
-        self._angular_acceleration_nk1 = self._angular_acceleration_nk1 / (time_scaling_factor_n11 ** 2)
+        self._acceleration_nk1 = self._acceleration_nk1 / \
+            (time_scaling_factor_n11 ** 2)
+        self._angular_acceleration_nk1 = self._angular_acceleration_nk1 / \
+            (time_scaling_factor_n11 ** 2)
