@@ -1,6 +1,6 @@
-import tensorflow as tf
 from trajectory.trajectory import Trajectory
 from systems.dubins_car import DubinsCar
+import numpy as np
 
 
 class Dubins3D(DubinsCar):
@@ -17,50 +17,57 @@ class Dubins3D(DubinsCar):
         self._angle_dims = 2
         self.simulation_params = simulation_params
         if self.simulation_params.noise_params.is_noisy:
-            print('This Dubins car model has some noise. Please turn off the noise if this was not intended.')
+            print(
+                'This Dubins car model has some noise. Please turn off the noise if this was not intended.')
 
     def _simulate_ideal(self, x_nk3, u_nk2, t=None):
-        with tf.name_scope('simulate'):
-            delta_x_nk3 = tf.stack([self._saturate_linear_velocity(u_nk2[:, :, 0])*tf.cos(x_nk3[:, :, 2]),
-                                    self._saturate_linear_velocity(u_nk2[:, :, 0])*tf.sin(x_nk3[:, :, 2]),
-                                    self._saturate_angular_velocity(u_nk2[:, :, 1])], axis=2)
-            
-            # Add noise (or disturbance) if required
-            if self.simulation_params.noise_params.is_noisy:
-                noise_component = self.compute_noise_component(required_shape=tf.shape(x_nk3), data_type=x_nk3.dtype)
-                return x_nk3 + self._dt * delta_x_nk3 + noise_component
-            else:
-                return x_nk3 + self._dt * delta_x_nk3
+        # with tf.name_scope('simulate'):
+        delta_x_nk3 = np.stack([self._saturate_linear_velocity(u_nk2[:, :, 0]) * np.cos(x_nk3[:, :, 2]),
+                                self._saturate_linear_velocity(
+                                    u_nk2[:, :, 0]) * np.sin(x_nk3[:, :, 2]),
+                                self._saturate_angular_velocity(u_nk2[:, :, 1])], axis=2)
+
+        # Add noise (or disturbance) if required
+        if self.simulation_params.noise_params.is_noisy:
+            noise_component = self.compute_noise_component(
+                required_shape=np.shape(x_nk3), data_type=x_nk3.dtype)
+            return x_nk3 + self._dt * delta_x_nk3 + noise_component
+        else:
+            return x_nk3 + self._dt * delta_x_nk3
 
     def jac_x(self, trajectory):
         x_nk3, u_nk2 = self.parse_trajectory(trajectory)
-        with tf.name_scope('jac_x'):
-            # Rightmost Column
-            update_nk3 = tf.stack([-self._saturate_linear_velocity(u_nk2[:, :, 0])*tf.sin(x_nk3[:, :, 2]),
-                                   self._saturate_linear_velocity(u_nk2[:, :, 0])*tf.cos(x_nk3[:, :, 2]),
-                                   tf.zeros(shape=x_nk3.shape[:2])], axis=2)
-            update_nk33 = tf.stack([tf.zeros_like(x_nk3),
-                                   tf.zeros_like(x_nk3),
-                                   update_nk3], axis=3)
-            return tf.eye(3, batch_shape=x_nk3.shape[:2]) + self._dt*update_nk33
+        # with tf.name_scope('jac_x'):
+        # Rightmost Column
+        update_nk3 = np.stack([-self._saturate_linear_velocity(u_nk2[:, :, 0]) * np.sin(x_nk3[:, :, 2]),
+                               self._saturate_linear_velocity(
+            u_nk2[:, :, 0]) * np.cos(x_nk3[:, :, 2]),
+            np.zeros(shape=x_nk3.shape[:2])], axis=2)
+        update_nk33 = np.stack([np.zeros_like(x_nk3),
+                                np.zeros_like(x_nk3),
+                                update_nk3], axis=3)
+        batch_shape = x_nk3.shape[:2]  # ????? tf.eye(2, batch_shape)
+        return np.eye(3) + self._dt * update_nk33
 
     def jac_u(self, trajectory):
         x_nk3, u_nk2 = self.parse_trajectory(trajectory)
-        with tf.name_scope('jac_u'):
-            vtilde_prime_nk = self._saturate_linear_velocity_prime(u_nk2[:, :, 0])
-            wtilde_prime_nk = self._saturate_angular_velocity_prime(u_nk2[:, :, 1])
-            zeros_nk = tf.zeros(shape=x_nk3.shape[:2], dtype=tf.float32)
+        # with tf.name_scope('jac_u'):
+        vtilde_prime_nk = self._saturate_linear_velocity_prime(
+            u_nk2[:, :, 0])
+        wtilde_prime_nk = self._saturate_angular_velocity_prime(
+            u_nk2[:, :, 1])
+        zeros_nk = np.zeros(shape=x_nk3.shape[:2], dtype=np.float32)
 
-            # Columns
-            b1_nk3 = tf.stack([vtilde_prime_nk*tf.cos(x_nk3[:, :, 2]),
-                               vtilde_prime_nk*tf.sin(x_nk3[:, :, 2]),
-                               zeros_nk], axis=2)
-            b2_nk3 = tf.stack([zeros_nk,
-                               zeros_nk,
-                               wtilde_prime_nk], axis=2)
+        # Columns
+        b1_nk3 = np.stack([vtilde_prime_nk * np.cos(x_nk3[:, :, 2]),
+                           vtilde_prime_nk * np.sin(x_nk3[:, :, 2]),
+                           zeros_nk], axis=2)
+        b2_nk3 = np.stack([zeros_nk,
+                           zeros_nk,
+                           wtilde_prime_nk], axis=2)
 
-            B_nk32 = tf.stack([b1_nk3, b2_nk3], axis=3)
-            return B_nk32*self._dt
+        B_nk32 = np.stack([b1_nk3, b2_nk3], axis=3)
+        return B_nk32 * self._dt
 
     def parse_trajectory(self, trajectory):
         """ A utility function for parsing a trajectory object.
@@ -82,17 +89,16 @@ class Dubins3D(DubinsCar):
         return Trajectory(dt=self._dt, n=n, k=k, position_nk2=position_nk2,
                           heading_nk1=heading_nk1, speed_nk1=speed_nk1,
                           angular_speed_nk1=angular_speed_nk1, variable=False)
-    
+
     def compute_noise_component(self, required_shape, data_type):
         """
         Compute a noise component for the Dubins car.
         """
         if self.simulation_params.noise_params.noise_type == 'uniform':
-            return tf.random_uniform(required_shape, self.simulation_params.noise_params.noise_lb,
-                                     self.simulation_params.noise_params.noise_ub,
-                                     dtype=data_type)
+            return np.random.uniform(required_shape, self.simulation_params.noise_params.noise_lb,
+                                     self.simulation_params.noise_params.noise_ub).astype(data_type)
         elif self.simulation_params.noise_params.noise_type == 'gaussian':
-            return tf.random_normal(required_shape, mean=self.simulation_params.noise_params.noise_mean,
-                                    stddev=self.simulation_params.noise_params.noise_std, dtype=data_type)
+            return np.random.normal(size=required_shape, loc=self.simulation_params.noise_params.noise_mean,
+                                    scale=self.simulation_params.noise_params.noise_std).astype(data_type)
         else:
             raise NotImplementedError('Unknown noise type.')

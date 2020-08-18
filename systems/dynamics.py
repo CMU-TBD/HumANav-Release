@@ -1,4 +1,4 @@
-import tensorflow as tf
+import numpy as np
 
 
 class Dynamics(object):
@@ -59,11 +59,11 @@ class Dynamics(object):
         Apply T actions from state x_n1d
         return the resulting trajectory object.
         """
-        states = [x_n1d*1.]
+        states = [x_n1d * 1.]
         for t in range(T):
-            x_n1d = self.simulate(x_n1d, u_nkf[:, t:t+1], mode=mode)
+            x_n1d = self.simulate(x_n1d, u_nkf[:, t:t + 1], mode=mode)
             states.append(x_n1d)
-        trajectory = self.assemble_trajectory(tf.concat(states, axis=1), u_nkf,
+        trajectory = self.assemble_trajectory(np.concatenate(states, axis=1), u_nkf,
                                               pad_mode=pad_mode)
         return trajectory
 
@@ -100,16 +100,16 @@ class Dynamics(object):
         zero padding or repeating the last control sequence."""
         n = u_nkf.shape[0].value
         if pad_mode == 'zero':  # the last action is 0
-            if u_nkf.shape[1]+1 == k:
-                u_nkf = tf.concat([u_nkf, tf.zeros((n, 1, self._u_dim))],
-                                  axis=1)
+            if u_nkf.shape[1] + 1 == k:
+                u_nkf = np.concatenate([u_nkf, np.zeros((n, 1, self._u_dim))],
+                                       axis=1)
             else:
                 assert(u_nkf.shape[1] == k)
         # the last action is the same as the second to last action
         elif pad_mode == 'repeat':
-            if u_nkf.shape[1]+1 == k:
-                u_end_n12 = tf.zeros((n, 1, self._u_dim)) + u_nkf[:, -1:]
-                u_nkf = tf.concat([u_nkf, u_end_n12], axis=1)
+            if u_nkf.shape[1] + 1 == k:
+                u_end_n12 = np.zeros((n, 1, self._u_dim)) + u_nkf[:, -1:]
+                u_nkf = np.concatenate([u_nkf, u_end_n12], axis=1)
             else:
                 assert(u_nkf.shape[1] == k)
         else:

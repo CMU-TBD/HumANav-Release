@@ -116,7 +116,6 @@ class RoboAgent(Agent):
                     t_seg,
                     t=-1
                 )
-            print(self.current_config)
             if (self.params.verbose):
                 print(self.get_current_config().to_3D_numpy())
 

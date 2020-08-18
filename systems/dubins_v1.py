@@ -1,5 +1,5 @@
 from systems.dubins_3d import Dubins3D
-import tensorflow as tf
+import numpy as np
 
 
 class DubinsV1(Dubins3D):
@@ -7,7 +7,7 @@ class DubinsV1(Dubins3D):
     functions (i.e. no saturation) on linear or angular velocity.
     """
     name = 'dubins_v1'
-    
+
     def __init__(self, dt, params):
         super().__init__(dt, params.noise_params)
 
@@ -18,13 +18,11 @@ class DubinsV1(Dubins3D):
     def _saturate_angular_velocity(self, wtilde_nk):
         """ Identity saturation function for angular velocity"""
         return wtilde_nk
-    
+
     def _saturate_linear_velocity_prime(self, vtilde_nk):
         """ Time derivative of identity function"""
-        return tf.ones_like(vtilde_nk)
+        return np.ones_like(vtilde_nk)
 
     def _saturate_angular_velocity_prime(self, wtilde_nk):
         """ Time derivative of identity function"""
-        return tf.ones_like(wtilde_nk)
-
-
+        return np.ones_like(wtilde_nk)
