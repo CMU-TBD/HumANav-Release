@@ -1,6 +1,5 @@
 import pickle
 from trajectory.trajectory import Trajectory, SystemConfig
-import tensorflow as tf
 import numpy as np
 import os
 from utils.angle_utils import angle_normalize

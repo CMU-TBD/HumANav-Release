@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 import sys
 import os
@@ -290,7 +289,7 @@ class Agent(AgentHelper):
             self.vehicle_trajectory.update_valid_mask_nk()
         else:
             assert (p.obj_type in ['valid_mean', 'mean'])
-        obj_val = tf.squeeze(
+        obj_val = np.squeeze(
             self.obj_fn.evaluate_function(self.vehicle_trajectory))
         return obj_val
 

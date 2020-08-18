@@ -2,7 +2,6 @@ import os
 import json
 import copy
 import numpy as np
-import tensorflow as tf
 import dotmap
 import shutil
 from dotmap import DotMap
@@ -20,20 +19,6 @@ color_red = '\033[31m'
 color_blue = '\033[36m'
 color_yellow = '\033[35m'
 color_reset = '\033[00m'
-
-
-def tf_session_config():
-    config = tf.ConfigProto()
-
-    # Allows for memory growth so the process only uses the amount of memory it needs
-    config.gpu_options.allow_growth = True
-
-    # Allows for tensors to be copied onto cpu when no cuda gpu kernel is available
-    device_policy = tf.contrib.eager.DEVICE_PLACEMENT_SILENT
-
-    tf_config = {'config': config,
-                 'device_policy': device_policy}
-    return tf_config
 
 
 def ensure_odd(integer):
@@ -64,8 +49,6 @@ def _to_json_serializable_dict(param_dict):
         """ Converts an element to a json serializable type. """
         if isinstance(elem, np.int64) or isinstance(elem, np.int32):
             return int(elem)
-        if isinstance(elem, tf.Tensor):
-            return elem.numpy().tolist()
         if isinstance(elem, np.ndarray):
             return elem.tolist()
         if isinstance(elem, dict):
@@ -256,9 +239,9 @@ def subplot2(plt, Y_X, sz_y_sz_x=(10, 10), space_y_x=(0.1, 0.1), T=False):
 
 
 def generate_config_from_pos_3(pos_3, dt=0.1, speed=0):
-    pos_n11 = tf.constant([[[pos_3[0], pos_3[1]]]], dtype=tf.float32)
-    heading_n11 = tf.constant([[[pos_3[2]]]], dtype=tf.float32)
-    speed_nk1 = tf.ones((1, 1, 1), dtype=tf.float32) * speed
+    pos_n11 = np.array([[[pos_3[0], pos_3[1]]]], dtype=np.float32)
+    heading_n11 = np.array([[[pos_3[2]]]], dtype=np.float32)
+    speed_nk1 = np.ones((1, 1, 1), dtype=np.float32) * speed
     return SystemConfig(dt, 1, 1,
                         position_nk2=pos_n11,
                         heading_nk1=heading_n11,
