@@ -8,8 +8,11 @@ class DubinsV1(Dubins3D):
     """
     name = 'dubins_v1'
 
-    def __init__(self, dt, params):
-        super().__init__(dt, params.noise_params)
+    def __init__(self, dt, params=None):
+        if(params is not None):
+            super().__init__(dt, params.noise_params)
+        else:
+            super().__init__(dt)
 
     def _saturate_linear_velocity(self, vtilde_nk):
         """ Identity saturation function for linear velocity"""
