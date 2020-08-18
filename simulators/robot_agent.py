@@ -29,6 +29,7 @@ class RoboAgent(Agent):
                          start_configs.get_goal_config(),
                          name)
         self.radius = self.params.radius
+        self.repeat_freq = self.params.repeat_freq
         self.joystick_ready = False  # josystick is ready once it has been sent an environment
         self.joystick_requests_world = False  # to send the world state
         # whether or not to repeat the last joystick input
@@ -92,7 +93,9 @@ class RoboAgent(Agent):
                 self.power_off()
 
     def execute(self):
-        while(self.num_executed < len(self.commands) and self.running):
+        for _ in range(self.amnt_per_joystick):
+            if(not self.running):
+                break
             self.sense()
             current_config = self.get_current_config()
             cmd_grp = self.commands[self.num_executed]
@@ -120,13 +123,16 @@ class RoboAgent(Agent):
         if(self.running):
             # only execute the most recent commands
             self.sense()
-            if(self.num_executed < len(self.commands)):
+            if(iteration < self.get_num_executed()):
+                print(self.num_executed, len(self.commands))
                 self.execute()
-            else:
-                if(self.repeat_joystick and len(self.commands) > 0):
-                    last_command = self.commands[-1]
-                    self.commands.append(last_command)
-                    self.execute()
+            # block joystick until recieves next command
+            while(iteration >= self.get_num_executed()):
+                time.sleep(0.001)
+            #     if(self.repeat_joystick and len(self.commands) > 0):
+            #         last_command = self.commands[-1]
+            #         self.commands.append(last_command)
+            #         self.execute()
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
             # quit the robot if it died
@@ -191,8 +197,12 @@ class RoboAgent(Agent):
                             for i in range(self.amnt_per_joystick):
                                 np_data = np.array(
                                     [lin_vels[i], ang_vels[i]], dtype=np.float32)
-                                # adds command to local list of individual commands
+                                # add at least one command
                                 self.commands.append(np_data)
+                                if(self.repeat_joystick):  # if need be, repeat n-1 times
+                                    for i in range(int(np.floor((self.repeat_freq / self.amnt_per_joystick) - 1))):
+                                        # adds command to local list of individual commands
+                                        self.commands.append(np_data)
                         # only sent by joystick when "ready" and needs the map
                         elif data["j_time"] == -1:
                             self.joystick_ready = True

@@ -13,4 +13,7 @@ def create_params():
     # radius of robot, we are basing the drive of the robot off of a pr2 robot
     # more info here: https://robots.ieee.org/robots/pr2/
     p.radius: float = 0.668 / 2.0  # meters
+
+    # number of times to repeat a command (if repeat is on)
+    p.repeat_freq: int = 9  # number of frames to repeat last command
     return p

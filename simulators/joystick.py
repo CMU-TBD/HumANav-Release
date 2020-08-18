@@ -42,7 +42,6 @@ class Joystick():
         self.port_send = self.joystick_params.port
         self.port_recv = self.port_send + 1  # port for recieving commands from the robot
         self.frame_num = 0
-        self.ready_to_send = False
         self.request_world = False  # True whenever the joystick wants data about the world
         print("Initiated joystick at", self.host, self.port_send)
         self.start_config = None
@@ -106,29 +105,28 @@ class Joystick():
             self.request_world = False
         self.send_to_robot(message)
 
-    def random_robot_joystick(self):
-        sent_commands = 0
+    def random_robot_joystick(self, action_dt: int):
         self.robot_running = True
+        assert(self.environment is not None)
         while(self.robot_running is True):
             try:
-                if(self.ready_to_send and self.environment is not None):
-                    # robot can only more forwards
-                    lin_command = (randint(10, 100) / 100.)
-                    ang_command = (randint(-100, 100) / 100.)
-                    self.robot_input([lin_command], [ang_command],
-                                     self.request_world)
-                    sent_commands += 1
-                    time.sleep(2)  # NOTE: Tune this to whatever you'd like
-                    # now update the robot with the "ready" ping
-                    self.ready_to_send = True
-                # TODO: create a backlog of commands that were not sent bc the robot wasn't ready
+                lin_vels = []
+                ang_vels = []
+                lin = randint(10, 100) / 100.
+                ang = randint(-100, 100) / 100.
+                for i in range(action_dt):
+                    lin_vels.append(lin)
+                    ang_vels.append(ang)
+                self.robot_input(lin_vels, ang_vels, self.request_world)
+                time.sleep(0.5)  # NOTE: Tune this to whatever you'd like
+                # now update the robot with the "ready" ping
             except KeyboardInterrupt:
                 print("%sJoystick disconnected by user%s" %
                       (color_yellow, color_reset))
                 self.power_off()
                 break
 
-    def send_robot_group(self, freq=10):
+    def send_robot_group(self, freq):
         while(self.robot_running):
             if(self.num_sent < len(self.commanded_actions)):
                 command = self.commanded_actions[self.num_sent]
@@ -149,7 +147,7 @@ class Joystick():
                         self.request_world = True
                     self.num_sent += 1
             else:
-                # NOTE: this can probably be optimized
+                # wait until a new command is added
                 time.sleep(0.001)
 
     def planned_robot_joystick(self):
@@ -208,7 +206,7 @@ class Joystick():
         )
         sender_thread.start()
         if(random_commands):
-            self.random_robot_joystick()
+            self.random_robot_joystick(action_dt)
         else:
             self.planned_robot_joystick()
         # this point is reached once the planner/randomizer are finished
@@ -261,7 +259,6 @@ class Joystick():
             print("%sreceived" % (color_blue), response_len,
                   "bytes from server%s" % (color_reset))
             if(data_b is not None and response_len > 0):
-                self.ready_to_send = True  # has received a world state from the robot
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
                 current_world = json.loads(data_str)
