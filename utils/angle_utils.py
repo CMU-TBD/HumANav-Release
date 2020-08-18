@@ -12,7 +12,7 @@ def rotate_pos_nk2(pos_nk2, theta_n11):
     does not vary over time (hence theta_n11 not theta_nk1)."""
     # Broadcast theta_n11 to size nk1. broadcast_to does not track gradients so addition is used
     # here instead
-    #theta_nk1 = theta_n11 + 0. * pos_nk2[:, :, 0:1]
+    # theta_nk1 = theta_n11 + 0. * pos_nk2[:, :, 0:1]
     t_0 = theta_n11[0][0]  # since theta_n11 is nx1x1 matrix
     # (element wise vector multiplication)
     theta_nk1 = np.ones_like(pos_nk2) * t_0

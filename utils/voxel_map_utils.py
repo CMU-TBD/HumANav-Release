@@ -49,13 +49,16 @@ class VoxelMap(object):
         # TODO: Casting as int64 because tfe.DEVICE_PLACEMENT_SILENT
         # is not working to place non-gpu ops (i.e. gather for (int32, int 32)) on
         # the cpu. This is potentially slowing things down as it copies to cpu
-        voxel_indices_int64_nk4 = voxel_indices_nk4.astype(np.int64)
+        voxel_indices_int64_nk4 = voxel_indices_nk4.astype(np.int32)
 
         # Voxel function values at corner points
         data = self.voxel_function_mn
         indices_1 = voxel_indices_int64_nk4[:, :, [1, 0]]
-        # data[indices[1]]
-        data11_nk = tf.gather_nd(data, indices_1)
+        try:
+            data11_nk = data[indices_1[1]]
+        except:
+            data11_nk = np.zeros(
+                shape=(indices_1.shape[0], indices_1.shape[1]))
         indices_2 = voxel_indices_int64_nk4[:, :, [1, 2]]
         data21_nk = tf.gather_nd(data, indices_2)
         # equivalent to np.take (since its a 3D matrix)

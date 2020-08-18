@@ -8,7 +8,6 @@ class Dynamics(object):
         self._x_dim = x_dim
         self._u_dim = u_dim
         self.ctrlBounds = ctrlBounds
-
         self.isStochastic = False
         self.isNonlinear = True
         self.isContinuous = False
