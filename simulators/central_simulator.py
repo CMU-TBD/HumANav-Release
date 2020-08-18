@@ -67,7 +67,7 @@ class CentralSimulator(SimulatorHelper):
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
         # whether to block on joystick, repeat last joystick command
-        p.block_joystick = False
+        p.block_joystick = True
         # Much more optimized to only render topview, but can also render Humans
         if(not p.render_3D):
             print("Printing Topview movie with multithreading")
@@ -135,7 +135,7 @@ class CentralSimulator(SimulatorHelper):
         num_agents: int = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "agents")
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        self.delta_t = self.params.dt
+        self.delta_t = 3 * self.params.dt
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
         # give the robot knowledge of the initial world

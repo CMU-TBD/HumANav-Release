@@ -116,6 +116,7 @@ class RoboAgent(Agent):
                     t_seg,
                     t=-1
                 )
+            print(self.current_config)
             if (self.params.verbose):
                 print(self.get_current_config().to_3D_numpy())
 
@@ -123,8 +124,8 @@ class RoboAgent(Agent):
         if(self.running):
             # only execute the most recent commands
             self.sense()
-            if(iteration < self.get_num_executed()):
-                print(self.num_executed, len(self.commands))
+            if(self.num_executed < len(self.commands)):
+                # print(self.num_executed, len(self.commands))
                 self.execute()
             # block joystick until recieves next command
             while(iteration >= self.get_num_executed()):

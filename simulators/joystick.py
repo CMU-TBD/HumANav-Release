@@ -142,7 +142,7 @@ class Joystick():
                         self.lin_vels = []
                         self.ang_vels = []
                         # NOTE: this robot sender delay is tunable to ones liking
-                        time.sleep(2)  # planner delay
+                        time.sleep(0.1)  # planner delay
                     if(self.num_sent % 20 == 0):
                         self.request_world = True
                     self.num_sent += 1
