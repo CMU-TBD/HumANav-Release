@@ -78,11 +78,11 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
 
     # Plot the humans (added support for multiple humans) and their trajectories
     for i, human in enumerate(humans):
-        human_pos_2 = human.get_current_config().position_nk2().numpy()[0][0]
+        human_pos_2 = human.get_current_config().position_nk2()[0][0]
         human_heading = (
-            human.get_current_config().heading_nk1().numpy())[0][0]
-        human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
-        goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
+            human.get_current_config().heading_nk1())[0][0]
+        human_goal_2 = human.get_goal_config().position_nk2()[0][0]
+        goal_heading = (human.get_goal_config().heading_nk1())[0][0]
         color = 'go'  # humand are green and solid unless collided
         trajectory_color = "green"
         if(human.get_collided()):
