@@ -39,14 +39,13 @@ class QuadraticRegulatorRef(DiscreteCost):
 
         x_dim, u_dim = self._x_dim, self._u_dim
 
-        C_gg = np.linalg.diag(p.quad_coeffs, name='lqr_coeffs_quad')
-        c_g = np.constant(
-            p.linear_coeffs, name='lqr_coeffs_linear', dtype=np.float32)
+        C_gg = np.diag(p.quad_coeffs)
+        c_g = np.array(p.linear_coeffs, dtype=np.float32)
         # Check dimensions
-        assert ((np.reduce_all(
+        assert ((np.all(
             np.equal(C_gg[:x_dim, x_dim:], np.transpose(C_gg[x_dim:, :x_dim])))))
         assert ((x_dim + u_dim) ==
-                C_gg.shape[0].value == C_gg.shape[1].value == c_g.shape[0].value)
+                C_gg.shape[0] == C_gg.shape[1] == c_g.shape[0])
 
         trajectory_ref = self.trajectory_ref
         n, k, g = trajectory_ref.n, trajectory_ref.k, C_gg.shape[0]

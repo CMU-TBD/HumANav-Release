@@ -16,7 +16,7 @@ def rotate_pos_nk2(pos_nk2, theta_n11):
     t_0 = theta_n11[0][0]  # since theta_n11 is nx1x1 matrix
     # (element wise vector multiplication)
     theta_nk1 = np.ones_like(pos_nk2) * t_0
-    #theta_nk1 = theta_n11 + 0. * pos_nk2[:, :, 0:1]
+    # theta_nk1 = theta_n11 + 0. * pos_nk2[:, :, 0:1]
     if type(theta_nk1) is np.ndarray:
         n, k, _ = [x for x in theta_nk1.shape]
     else:
@@ -53,7 +53,12 @@ def padded_rotation_matrix(theta_n11, shape, lower_identity=False):
     # If lower_identity is true, make the lower right
     # e x e matrix the identity matrix
     if lower_identity:
-        identity_block_nkee = np.eye(e, dtype=dtype).reshape(n, k)
+        # identity_block_nkee = np.eye(e, dtype=dtype).reshape(n, k)
+        identity_block_nkee = []
+        identity_block_nkee.append([])
+        for i in range(k):
+            identity_block_nkee[0].append([[1]])
+        identity_block_nkee = np.array(identity_block_nkee, dtype=dtype)
         remaining_rows_nkde = np.concatenate([np.zeros((n, k, 2, e), dtype=dtype),
                                               identity_block_nkee], axis=2)
     else:

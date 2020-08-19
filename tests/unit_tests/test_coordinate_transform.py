@@ -67,7 +67,7 @@ def test_coordinate_transform():
         ref_config, traj_global, traj_egocentric)
 
     # Test 0 transform
-    assert((pos_nk2 == traj_egocentric.position_nk2().numpy()).all())
+    assert((pos_nk2 == traj_egocentric.position_nk2()).all())
 
     ref_config_pos_112 = np.array([[[5.0, 5.0]]], dtype=np.float32)
     ref_config_pos_n12 = np.repeat(ref_config_pos_112, repeats=n, axis=0)
@@ -76,7 +76,7 @@ def test_coordinate_transform():
     traj_egocentric = dubins_car.to_egocentric_coordinates(ref_config,
                                                            traj_global, traj_egocentric)
     # Test translation
-    assert((pos_nk2 - 5.0 == traj_egocentric.position_nk2().numpy()).all())
+    assert((pos_nk2 - 5.0 == traj_egocentric.position_nk2()).all())
 
     ref_config_heading_111 = np.array([[[3. * np.pi / 4.]]], dtype=np.float32)
     ref_config_heading_nk1 = np.repeat(
@@ -89,9 +89,8 @@ def test_coordinate_transform():
                                                            traj_global, traj_egocentric)
     traj_global_new = dubins_car.to_world_coordinates(ref_config,
                                                       traj_egocentric, traj_global_new)
-
-    assert(np.allclose(traj_global.position_nk2().numpy(),
-                       traj_global_new.position_nk2().numpy()))
+    assert(np.allclose(traj_global.position_nk2(),
+                       traj_global_new.position_nk2()))
 
 
 def visualize_coordinate_transform():
@@ -182,14 +181,14 @@ def test_lqr_feedback_coordinate_transform():
     # Check that the LQR Trajectory computed using K_array_egocentric
     # then transformed to world (traj_lqr_world) matches the
     # LQR Trajectory computed directly using K_array_world
-    assert((np.norm(traj_lqr_world.position_nk2() -
-                    traj_test_world.position_nk2(), axis=2).numpy() < 1e-4).all())
-    assert((np.norm(angle_normalize(traj_lqr_world.heading_nk1() -
-                                    traj_test_world.heading_nk1()), axis=2).numpy() < 1e-4).all())
-    assert((np.norm(traj_lqr_world.speed_nk1() -
-                    traj_test_world.speed_nk1(), axis=2).numpy() < 1e-4).all())
-    assert((np.norm(traj_lqr_world.angular_speed_nk1() -
-                    traj_test_world.angular_speed_nk1(), axis=2).numpy() < 1e-4).all())
+    assert((np.linalg.norm(traj_lqr_world.position_nk2() -
+                           traj_test_world.position_nk2(), axis=2) < 1e-4).all())
+    assert((np.linalg.norm(angle_normalize(traj_lqr_world.heading_nk1() -
+                                           traj_test_world.heading_nk1()), axis=2) < 1e-4).all())
+    assert((np.linalg.norm(traj_lqr_world.speed_nk1() -
+                           traj_test_world.speed_nk1(), axis=2) < 1e-4).all())
+    assert((np.linalg.norm(traj_lqr_world.angular_speed_nk1() -
+                           traj_test_world.angular_speed_nk1(), axis=2) < 1e-4).all())
 
 
 if __name__ == '__main__':

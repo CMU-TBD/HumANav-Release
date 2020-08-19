@@ -125,10 +125,10 @@ class LQRSolver:
                                                                       angle_dims:angle_dims + 1]),
                                           error_t_n1d[:, :, angle_dims + 1:]],
                                          axis=2)
-            fdback_nf1 = np.matmul(K_array_nTfd[:, t],
-                                   np.transpose(error_t_n1d, perm=[0, 2, 1]))
+            fdback_nf1 = np.matmul(
+                K_array_nTfd[:, t], np.transpose(error_t_n1d, axes=[0, 2, 1]))
             u_n1f = u_ref_n1f + np.transpose(k_array_nTf1[:, t] + fdback_nf1,
-                                             perm=[0, 2, 1])
+                                             axes=[0, 2, 1])
             x_next_n1d = self.fwdSim(x_next_n1d, u_n1f, mode=sim_mode)
             actions.append(u_n1f)
             states.append(x_next_n1d)
@@ -178,8 +178,8 @@ class LQRSolver:
 
             dfdx_ndd = lqr_sys['dfdx_nkdd'][:, t]
             dfdu_ndf = lqr_sys['dfdu_nkdf'][:, t]
-            dfdx_T_ndd = np.transpose(dfdx_ndd, perm=[0, 2, 1])
-            dfdu_T_ndf = np.transpose(dfdu_ndf, perm=[0, 2, 1])
+            dfdx_T_ndd = np.transpose(dfdx_ndd, axes=[0, 2, 1])
+            dfdu_T_ndf = np.transpose(dfdu_ndf, axes=[0, 2, 1])
 
             dfdx_T_dot_Vxx_ndd = np.matmul(dfdx_T_ndd, Vxx_ndd)
             dfdu_T_dot_Vxx_nfd = np.matmul(dfdu_T_ndf, Vxx_ndd)
@@ -203,7 +203,7 @@ class LQRSolver:
             fdfwd_Tnf1[t] = np.matmul(-inv_Quu_nff, Qu_nf1)
             fdbck_gain_Tnfd[t] = np.matmul(-inv_Quu_nff, Qux_nfd)
             fdbck_gain_nfd = np.transpose(
-                fdbck_gain_Tnfd[t], perm=[0, 2, 1])
+                fdbck_gain_Tnfd[t], axes=[0, 2, 1])
 
             # update value function for the previous time step
             Vxx_ndd = Qxx_ndd - np.matmul(np.matmul(fdbck_gain_nfd, Quu_nff),
@@ -212,11 +212,11 @@ class LQRSolver:
                 np.matmul(np.matmul(fdbck_gain_nfd,
                                     Quu_nff), fdfwd_Tnf1[t])
 
-            # Stack the outer time dimension as dimension 1
-            # in the tensors
-            fdfwd_nTf1 = np.stack(fdfwd_Tnf1, axis=1)
-            fdbck_gain_nTfd = np.stack(fdbck_gain_Tnfd, axis=1)
-            return fdfwd_nTf1, fdbck_gain_nTfd
+        # Stack the outer time dimension as dimension 1
+        # in the tensors (tf.stack is equivalent to np.asarray)
+        fdfwd_nTf1 = np.stack(fdfwd_Tnf1, axis=1)
+        fdbck_gain_nTfd = np.stack(fdbck_gain_Tnfd, axis=1)
+        return fdfwd_nTf1, fdbck_gain_nTfd
 
     def build_lqr_system(self, trajectory):
         """Given a trajectory returns the first order
@@ -229,7 +229,7 @@ class LQRSolver:
         # Second order approximation of cost/loss (l)
         dldxx_nkdd, dldxu_nkdf, dlduu_nkff, dldx_nkd, dldu_nkf = self.cost.quad_coeffs(
             trajectory)
-        dldux_nkfd = np.transpose(dldxu_nkdf, perm=[0, 1, 3, 2])
+        dldux_nkfd = np.transpose(dldxu_nkdf, axes=[0, 1, 3, 2])
 
         lqr_sys = {
             'f_nkd': f_nkd,
@@ -249,6 +249,6 @@ class LQRSolver:
         to ensure its positive-definite properties
         """
         if self.inv:
-            return np.matrix_inverse(mat)
+            return np.linalg.inv(mat)
         else:
             raise NotImplementedError
