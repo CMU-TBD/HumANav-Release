@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 from copy import deepcopy
 import json
@@ -153,8 +152,6 @@ class SimState():
         """ Converts an element to a json serializable type. """
         if isinstance(elem, np.int64) or isinstance(elem, np.int32):
             return int(elem)
-        if isinstance(elem, tf.Tensor):
-            return elem.numpy().tolist()
         if isinstance(elem, np.ndarray):
             return elem.tolist()
         if isinstance(elem, dict):

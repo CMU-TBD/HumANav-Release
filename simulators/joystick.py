@@ -1,4 +1,3 @@
-import tensorflow as tf
 import socket
 import threading
 import multiprocessing
@@ -175,7 +174,7 @@ class Joystick():
                     t=-1
                 )
             self.vehicle_trajectory.append_along_time_axis(t_seg)
-            self.commanded_actions.extend(commanded_actions_nkf.numpy()[0])
+            self.commanded_actions.extend(commanded_actions_nkf[0])
             # print(self.planner_data['optimal_control_nk2'])
             # TODO: match the action_dt with the number of signals sent to the robot at once
             self.current_config = \

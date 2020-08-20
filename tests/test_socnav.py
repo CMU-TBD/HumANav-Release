@@ -5,22 +5,13 @@ import numpy as np
 import os
 from random import seed, random, randint
 import pandas as pd
-import warnings
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
-    import tensorflow as tf
-    from tensorflow import keras
-    from tensorflow.keras.preprocessing.text import Tokenizer
-    tf.enable_eager_execution()
 # Humanav
-from humanav import sbpd
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
 from humans.human_configs import HumanConfigs
 from humans.human_appearance import HumanAppearance
 from simulators.robot_agent import RoboAgent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
-from simulators.agent import Agent
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
@@ -85,11 +76,11 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
 
     # Plot the humans (added support for multiple humans) and their trajectories
     for i, human in enumerate(humans):
-        human_pos_2 = human.get_current_config().position_nk2().numpy()[0][0]
+        human_pos_2 = human.get_current_config().position_nk2()[0][0]
         human_heading = (
-            human.get_current_config().heading_nk1().numpy())[0][0]
-        human_goal_2 = human.get_goal_config().position_nk2().numpy()[0][0]
-        goal_heading = (human.get_goal_config().heading_nk1().numpy())[0][0]
+            human.get_current_config().heading_nk1())[0][0]
+        human_goal_2 = human.get_goal_config().position_nk2()[0][0]
+        goal_heading = (human.get_goal_config().heading_nk1())[0][0]
         color = 'go'  # humand are green and solid unless collided
         trajectory_color = "green"
         if(human.get_collided()):
@@ -404,4 +395,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(0, 0, starting_prerec=15)
+    test_socnav(5, 5, starting_prerec=15)

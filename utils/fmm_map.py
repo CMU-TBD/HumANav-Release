@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 import skfmm
 import sys
@@ -13,7 +12,7 @@ class FmmMap(object):
     Maintain a FMM distance and angle map corresponding to a given goal and occupancy grid.
     """
 
-    def __init__(self, goal_grid_mn, dx=1, map_origin_2=tf.zeros([2], dtype=tf.float32), mask_grid_mn=None):
+    def __init__(self, goal_grid_mn, dx=1, map_origin_2=np.zeros([2], dtype=np.float32), mask_grid_mn=None):
         """
         Args:
             goal_grid_mn: A mxn grid containing the goal positions. Typically, it should have 0s at the goal positions
@@ -32,13 +31,13 @@ class FmmMap(object):
         # generate blank distance/angle voxel (3d pixel) maps
         self.fmm_distance_map = VoxelMap(scale=dx,
                                          origin_2=map_origin_2,
-                                         map_size_2=tf.constant(
-                                             [n, m], dtype=tf.float32),
+                                         map_size_2=np.array(
+                                             [n, m], dtype=np.float32),
                                          function_array_mn=None)
         self.fmm_angle_map = VoxelMap(scale=dx,
                                       origin_2=map_origin_2,
-                                      map_size_2=tf.constant(
-                                          [n, m], dtype=tf.float32),
+                                      map_size_2=np.array(
+                                          [n, m], dtype=np.float32),
                                       function_array_mn=None)
         self.compute_fmm_distance_and_angle()
 
@@ -56,7 +55,7 @@ class FmmMap(object):
 
         # Compute the fmm distance
         fmm_distance = skfmm.distance(
-            phi, dx=self.fmm_distance_map.map_scale*np.ones(2))
+            phi, dx=self.fmm_distance_map.map_scale * np.ones(2))
 
         # Assign some distance at the mask
         if self.mask_grid_mn is not None:  # Dont think I want to do this
@@ -68,10 +67,10 @@ class FmmMap(object):
         fmm_angle = np.arctan2(-gradient_y, -gradient_x)
 
         # Assign fmm distance map and angle
-        self.fmm_distance_map.voxel_function_mn = tf.constant(
-            fmm_distance, dtype=tf.float32)
-        self.fmm_angle_map.voxel_function_mn = tf.constant(
-            fmm_angle, dtype=tf.float32)
+        self.fmm_distance_map.voxel_function_mn = np.array(
+            fmm_distance, dtype=np.float32)
+        self.fmm_angle_map.voxel_function_mn = np.array(
+            fmm_angle, dtype=np.float32)
 
     def change_goal(self, goal_positions_n2, mask_value=1000):
         """
@@ -94,7 +93,7 @@ class FmmMap(object):
         ax.set_title('Fmm Angle')
 
     @staticmethod
-    def _create_fmm_map_goal_array_mn(goal_positions_n2, map_size_2, dx=1, map_origin_2=tf.zeros([2], dtype=tf.float32), mask_grid_mn=None):
+    def _create_fmm_map_goal_array_mn(goal_positions_n2, map_size_2, dx=1, map_origin_2=np.zeros([2], dtype=np.float32), mask_grid_mn=None):
         """
         Create a new **goal array** where the goals are marked as -1 as
         given by goal_positions_n2 and map_origin_2, with dx. 
@@ -109,7 +108,7 @@ class FmmMap(object):
         return goal_array_mn
 
     @classmethod
-    def create_fmm_map_based_on_goal_position(cls, goal_positions_n2, map_size_2, dx=1, map_origin_2=tf.zeros([2], dtype=tf.float32), mask_grid_mn=None):
+    def create_fmm_map_based_on_goal_position(cls, goal_positions_n2, map_size_2, dx=1, map_origin_2=np.zeros([2], dtype=np.float32), mask_grid_mn=None):
         """
         Create a new fmm map instance based on a given goal position.
         """

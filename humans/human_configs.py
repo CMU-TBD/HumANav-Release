@@ -1,20 +1,5 @@
-from random import seed, random, randint
-import random
-import string
-import math
-import numpy as np
-import sys
-import os
-import pickle
-import tensorflow as tf
-# tf.enable_eager_execution()
-from humanav import sbpd
-from humanav import depth_utils as du
-from humanav import utils
-from params.renderer_params import get_surreal_texture_dir
-from mp_env import map_utils as mu
-from mp_env.render import swiftshader_renderer as sr
 from utils.utils import *
+
 
 class HumanConfigs():
     # NOTE: these are primarily used for the "initial" configs of the Human/Agent
@@ -39,7 +24,7 @@ class HumanConfigs():
         return HumanConfigs(start_config, goal_config)
 
     @staticmethod
-    def generate_random_human_config_from_start(start_config, 
+    def generate_random_human_config_from_start(start_config,
                                                 environment):
         """
         Generate a human with a random goal config given a known start
@@ -49,7 +34,7 @@ class HumanConfigs():
         return HumanConfigs.generate_human_config(start_config, goal_config)
 
     @staticmethod
-    def generate_random_human_config_with_goal(goal_config, 
+    def generate_random_human_config_with_goal(goal_config,
                                                environment):
         """
         Generate a human with a random start config given a known goal

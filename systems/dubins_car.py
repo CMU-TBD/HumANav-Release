@@ -1,7 +1,6 @@
 from systems.dynamics import Dynamics
 from trajectory.trajectory import Trajectory, SystemConfig
 from utils.angle_utils import angle_normalize, rotate_pos_nk2, padded_rotation_matrix
-import tensorflow as tf
 import numpy as np
 
 
@@ -17,7 +16,7 @@ class DubinsCar(Dynamics):
     def _saturate_angular_velocity(self, wtilde_nk):
         """ Saturation function for angular velocity"""
         raise NotImplementedError
-    
+
     def _saturate_linear_velocity_prime(self, vtilde_nk):
         """ Time derivative of linear velocity saturation"""
         raise NotImplementedError
@@ -27,14 +26,14 @@ class DubinsCar(Dynamics):
         raise NotImplementedError
 
     @staticmethod
-    def init_egocentric_robot_config(dt, n, v=0.0, w=0.0, dtype=tf.float32):
+    def init_egocentric_robot_config(dt, n, v=0.0, w=0.0, dtype=np.float32):
         """ A utility function initializing the robot at
         x=0, y=0, theta=0, v=v, w=w, a=0, alpha=0."""
         k = 1
-        position_nk2 = tf.zeros((n, k, 2), dtype=dtype)
-        heading_nk1 = tf.zeros((n, k, 1), dtype=dtype)
-        speed_nk1 = v*tf.ones((n, k, 1), dtype=dtype)
-        angular_speed_nk1 = w*tf.ones((n, k, 1), dtype=dtype)
+        position_nk2 = np.zeros((n, k, 2), dtype=dtype)
+        heading_nk1 = np.zeros((n, k, 1), dtype=dtype)
+        speed_nk1 = v * np.ones((n, k, 1), dtype=dtype)
+        angular_speed_nk1 = w * np.ones((n, k, 1), dtype=dtype)
         return SystemConfig(dt=dt, n=n, k=k, position_nk2=position_nk2,
                             heading_nk1=heading_nk1, speed_nk1=speed_nk1,
                             angular_speed_nk1=angular_speed_nk1, variable=False)
@@ -49,8 +48,8 @@ class DubinsCar(Dynamics):
         mode is new a new trajectory object is returned."""
 
         ego_position_and_heading_nk3 = DubinsCar.convert_position_and_heading_to_ego_coordinates(
-            ref_config.position_and_heading_nk3().numpy(),
-            traj_world.position_and_heading_nk3().numpy())
+            ref_config.position_and_heading_nk3(),
+            traj_world.position_and_heading_nk3())
         position_nk2 = ego_position_and_heading_nk3[:, :, :2]
         heading_nk1 = ego_position_and_heading_nk3[:, :, 2:3]
 
@@ -90,8 +89,8 @@ class DubinsCar(Dynamics):
         in the world coordinate frame. If mode is assign the result is assigned to
         traj_world, else a new trajectory object is created"""
         world_position_and_heading_nk3 = DubinsCar.convert_position_and_heading_to_world_coordinates(
-            ref_config.position_and_heading_nk3().numpy(),
-            traj_egocentric.position_and_heading_nk3().numpy())
+            ref_config.position_and_heading_nk3(),
+            traj_egocentric.position_and_heading_nk3())
         position_nk2 = world_position_and_heading_nk3[:, :, :2]
         heading_nk1 = world_position_and_heading_nk3[:, :, 2:3]
 
@@ -131,12 +130,14 @@ class DubinsCar(Dynamics):
         in the world coordinate frame. If mode is assign the result is assigned to
         K_world_nkfd, else a new tensor is created."""
         theta_n11 = -ref_config.heading_nk1()
-        n, k, f, d = [x.value for x in K_egocentric_nkfd.shape]
-        rot_matrix_nkdd = padded_rotation_matrix(theta_n11, shape=(n, k, d), lower_identity=True)
+        n, k, f, d = [x for x in K_egocentric_nkfd.shape]
+        rot_matrix_nkdd = padded_rotation_matrix(
+            theta_n11, shape=(n, k, d), lower_identity=True)
         if mode == 'assign':
-            tf.assign(K_world_nkfd, tf.matmul(K_egocentric_nkfd, rot_matrix_nkdd))
+            np.concatenate(K_world_nkfd, np.matmul(
+                K_egocentric_nkfd, rot_matrix_nkdd))
         else:
-            K_world_nkfd = tf.matmul(K_egocentric_nkfd, rot_matrix_nkdd)
+            K_world_nkfd = np.matmul(K_egocentric_nkfd, rot_matrix_nkdd)
         return K_world_nkfd
 
     @staticmethod
@@ -147,22 +148,26 @@ class DubinsCar(Dynamics):
         K_world_nkfd, else a new tensor is created."""
         theta_n11 = ref_config.heading_nk1()
         n, k, f, d = [x.value for x in K_world_nkfd.shape]
-        rot_matrix_nkdd = padded_rotation_matrix(theta_n11, shape=(n, k, d), lower_identity=True)
+        rot_matrix_nkdd = padded_rotation_matrix(
+            theta_n11, shape=(n, k, d), lower_identity=True)
         if mode == 'assign':
-            tf.assign(K_world_nkfd, tf.matmul(K_world_nkfd, rot_matrix_nkdd))
+            np.concatenate(K_world_nkfd, np.matmul(
+                K_world_nkfd, rot_matrix_nkdd))
         else:
-            K_world_nkfd = tf.matmul(K_world_nkfd, rot_matrix_nkdd)
+            K_world_nkfd = np.matmul(K_world_nkfd, rot_matrix_nkdd)
         return K_world_nkfd
 
     @staticmethod
     def convert_position_and_heading_to_ego_coordinates(ref_position_and_heading_n13,
                                                         world_position_and_heading_nk3):
         """ Converts a sequence of position and headings to the ego frame."""
-        position_nk2 = world_position_and_heading_nk3[:, :, :2] - ref_position_and_heading_n13[:, :, :2]
-        position_nk2 = rotate_pos_nk2(position_nk2, -ref_position_and_heading_n13[:, :, 2:3])
+        position_nk2 = world_position_and_heading_nk3[:,
+                                                      :, :2] - ref_position_and_heading_n13[:, :, :2]
+        position_nk2 = rotate_pos_nk2(
+            position_nk2, -ref_position_and_heading_n13[:, :, 2:3])
         heading_nk1 = angle_normalize(world_position_and_heading_nk3[:, :, 2:3] -
                                       ref_position_and_heading_n13[:, :, 2:3])
-        return tf.concat([position_nk2, heading_nk1], axis=2)
+        return np.concatenate([position_nk2, heading_nk1], axis=2)
 
     @staticmethod
     def convert_position_and_heading_to_world_coordinates(ref_position_and_heading_n13,
@@ -170,13 +175,18 @@ class DubinsCar(Dynamics):
         """ Converts a sequence of position and headings to the world frame.
         the ref_position_and_heading_n13 is the base parameters for the world frame [0,0,0]
         """
-        position_nk2 = rotate_pos_nk2(ego_position_and_heading_nk3[:, :, :2], ref_position_and_heading_n13[:, :, 2:3])
-        ref_position_n12 = ref_position_and_heading_n13[:, :, :2] # x and y coordinates
+        position_nk2 = rotate_pos_nk2(
+            ego_position_and_heading_nk3[:, :, :2], ref_position_and_heading_n13[:, :, 2:3])
+        # x and y coordinates
+        ref_position_n12 = ref_position_and_heading_n13[:, :, :2]
         ref_position_0 = ref_position_n12[0]
-        ref_position_nk2 = np.broadcast_to(ref_position_0, ego_position_and_heading_nk3[:, :, :2].shape)
+        ref_position_nk2 = np.broadcast_to(
+            ref_position_0, ego_position_and_heading_nk3[:, :, :2].shape)
         ref_heading_n11 = ref_position_and_heading_n13[:, :, 2:3]
         ref_heading_0 = ref_heading_n11[0]
-        ref_heading_nk1 = np.broadcast_to(ref_heading_0, ego_position_and_heading_nk3[:, :, 2:3].shape)
+        ref_heading_nk1 = np.broadcast_to(
+            ref_heading_0, ego_position_and_heading_nk3[:, :, 2:3].shape)
         position_nk2 = position_nk2 + ref_position_nk2
-        heading_nk1 = angle_normalize(ego_position_and_heading_nk3[:, :, 2:3] + ref_heading_nk1)
-        return tf.concat([position_nk2, heading_nk1], axis=2)
+        heading_nk1 = angle_normalize(
+            ego_position_and_heading_nk3[:, :, 2:3] + ref_heading_nk1)
+        return np.concatenate([position_nk2, heading_nk1], axis=2)

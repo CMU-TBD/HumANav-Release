@@ -1,4 +1,4 @@
-import tensorflow as tf
+import numpy as np
 from utils.angle_utils import angle_normalize
 # Algorithms from Somil Init trajectory optimizer, variant of the classic LQR
 #######################################################################################################################
@@ -25,8 +25,8 @@ class LQRSolver:
             T- self.T (LQR Planning Horizon)
 
     """
-    def __init__(self, T, dynamics, cost):
 
+    def __init__(self, T, dynamics, cost):
         """
         T:              Length of horizon
         dynamics:       Discrete time plant dynamics, can be nonlinear
@@ -68,33 +68,33 @@ class LQRSolver:
         trajectory:     The trajectory around which to linearize
         verbose:        Whether to print the status or not
         """
-        with tf.name_scope('lqr'):
-            # initialize the regularization term
-            self.reg = 1
+        # with tf.name_scope('lqr'):
+        # initialize the regularization term
+        self.reg = 1
 
-            # initialize current trajectory cost
-            J_opt_n = self.evaluate_trajectory_cost(trajectory)
-            J_hist = [J_opt_n]
+        # initialize current trajectory cost
+        J_opt_n = self.evaluate_trajectory_cost(trajectory)
+        J_hist = [J_opt_n]
 
-            # k_array, and K_array are tensors of dimension
-            # (n, self.T-1, u_dim, 1) and (n, self.T-1, u_dim, x_dim) respectively
-            k_array_nTf1, K_array_nTfd = self.back_propagation(trajectory)
-            trajectory_new = self.apply_control(start_config, trajectory,
-                                                k_array_nTf1, K_array_nTfd,
-                                                sim_mode=sim_mode)
+        # k_array, and K_array are tensors of dimension
+        # (n, self.T-1, u_dim, 1) and (n, self.T-1, u_dim, x_dim) respectively
+        k_array_nTf1, K_array_nTfd = self.back_propagation(trajectory)
+        trajectory_new = self.apply_control(start_config, trajectory,
+                                            k_array_nTf1, K_array_nTfd,
+                                            sim_mode=sim_mode)
 
-            # evaluate the cost of this trial
-            J_new_n = self.evaluate_trajectory_cost(trajectory_new)
-            J_hist.append(J_new_n)
+        # evaluate the cost of this trial
+        J_new_n = self.evaluate_trajectory_cost(trajectory_new)
+        J_hist.append(J_new_n)
 
-            # prepare result dictionary
-            res_dict = {
-                'J_hist': J_hist,
-                'trajectory_opt': trajectory_new,
-                'k_opt_nkf1': k_array_nTf1,
-                'K_opt_nkfd': K_array_nTfd
-            }
-            return res_dict
+        # prepare result dictionary
+        res_dict = {
+            'J_hist': J_hist,
+            'trajectory_opt': trajectory_new,
+            'k_opt_nkf1': k_array_nTf1,
+            'K_opt_nkfd': K_array_nTfd
+        }
+        return res_dict
 
     def apply_control(self, start_config, trajectory,
                       k_array_nTf1, K_array_nTfd,
@@ -104,39 +104,40 @@ class LQRSolver:
         trajectory. Here k_array_nTf1 and K_aaray_nTfd are
         tensors of dimension (n, self.T-1, f, 1) and (n, self.T-1, f, d) respectively.
         """
-        with tf.name_scope('apply_control'):
-            x0_n1d, _ = self.plant_dyn.parse_trajectory(start_config)
-            assert(len(x0_n1d.shape) == 3)  # [n,1,x_dim]
-            angle_dims = self.plant_dyn._angle_dims
-            actions = []
-            states = [x0_n1d*1.]
-            x_ref_nkd, u_ref_nkf = self.plant_dyn.parse_trajectory(trajectory)
-            x_next_n1d = x0_n1d*1.
-            for t in range(self.T):
-                x_ref_n1d, u_ref_n1f = x_ref_nkd[:, t:t+1], u_ref_nkf[:, t:t+1]
-                error_t_n1d = x_next_n1d - x_ref_n1d
-            
-                # TODO: Currently calling numpy() here as tfe.DEVICE_PLACEMENT_SILENT
-                # is not working to place non-gpu ops (i.e. mod) on the cpu
-                # turning tensors into numpy arrays is a hack around this.
-                error_t_n1d = tf.concat([error_t_n1d[:, :, :angle_dims],
-                                         angle_normalize(error_t_n1d[:, :,
-                                                                     angle_dims:angle_dims+1].numpy()),
-                                         error_t_n1d[:, :, angle_dims+1:]],
-                                        axis=2)
-                fdback_nf1 = tf.matmul(K_array_nTfd[:, t],
-                                       tf.transpose(error_t_n1d, perm=[0, 2, 1]))
-                u_n1f = u_ref_n1f + tf.transpose(k_array_nTf1[:, t] + fdback_nf1,
-                                                 perm=[0, 2, 1])
-                x_next_n1d = self.fwdSim(x_next_n1d, u_n1f, mode=sim_mode)
-                actions.append(u_n1f)
-                states.append(x_next_n1d)
-            u_nkf = tf.concat(actions, axis=1)
-            x_nkd = tf.concat(states, axis=1)
-            trajectory = self.plant_dyn.assemble_trajectory(x_nkd,
-                                                            u_nkf,
-                                                            pad_mode='repeat')
-            return trajectory
+        # with tf.name_scope('apply_control'):
+        x0_n1d, _ = self.plant_dyn.parse_trajectory(start_config)
+        assert(len(x0_n1d.shape) == 3)  # [n,1,x_dim]
+        angle_dims = self.plant_dyn._angle_dims
+        actions = []
+        states = [x0_n1d * 1.]
+        x_ref_nkd, u_ref_nkf = self.plant_dyn.parse_trajectory(trajectory)
+        x_next_n1d = x0_n1d * 1.
+        for t in range(self.T):
+            x_ref_n1d, u_ref_n1f = x_ref_nkd[:,
+                                             t:t + 1], u_ref_nkf[:, t:t + 1]
+            error_t_n1d = x_next_n1d - x_ref_n1d
+
+            # TODO: Currently calling numpy() here as tfe.DEVICE_PLACEMENT_SILENT
+            # is not working to place non-gpu ops (i.e. mod) on the cpu
+            # turning tensors into numpy arrays is a hack around this.
+            error_t_n1d = np.concatenate([error_t_n1d[:, :, :angle_dims],
+                                          angle_normalize(error_t_n1d[:, :,
+                                                                      angle_dims:angle_dims + 1]),
+                                          error_t_n1d[:, :, angle_dims + 1:]],
+                                         axis=2)
+            fdback_nf1 = np.matmul(
+                K_array_nTfd[:, t], np.transpose(error_t_n1d, axes=[0, 2, 1]))
+            u_n1f = u_ref_n1f + np.transpose(k_array_nTf1[:, t] + fdback_nf1,
+                                             axes=[0, 2, 1])
+            x_next_n1d = self.fwdSim(x_next_n1d, u_n1f, mode=sim_mode)
+            actions.append(u_n1f)
+            states.append(x_next_n1d)
+        u_nkf = np.concatenate(actions, axis=1)
+        x_nkd = np.concatenate(states, axis=1)
+        trajectory = self.plant_dyn.assemble_trajectory(x_nkd,
+                                                        u_nkf,
+                                                        pad_mode='repeat')
+        return trajectory
 
     def back_propagation(self, trajectory):
         """
@@ -146,69 +147,76 @@ class LQRSolver:
         Need to approximate the dynamics/costs along the given trajectory.
         Dynamics needs a time-varying first-order approximation.
         Costs need time-varying second-order approximation. """
-        with tf.name_scope('back_prop'):
-            angle_dims = self.plant_dyn._angle_dims
-            lqr_sys = self.build_lqr_system(trajectory)
-            x_nkd, u_nkf = self.plant_dyn.parse_trajectory(trajectory)
+        # with tf.name_scope('back_prop'):
+        angle_dims = self.plant_dyn._angle_dims
+        lqr_sys = self.build_lqr_system(trajectory)
+        x_nkd, u_nkf = self.plant_dyn.parse_trajectory(trajectory)
 
-            # k (feedforward) and K (feedback) are lists of length self.T
-            # where each element is a tensor of dimension (n, f, 1)
-            # and (n, f, d) respectively.
-            fdfwd_Tnf1 = [None] * self.T
-            fdbck_gain_Tnfd = [None] * self.T
+        # k (feedforward) and K (feedback) are lists of length self.T
+        # where each element is a tensor of dimension (n, f, 1)
+        # and (n, f, d) respectively.
+        fdfwd_Tnf1 = [None] * self.T
+        fdbck_gain_Tnfd = [None] * self.T
 
-            # initialize with the terminal cost parameters
-            # to prepare the backpropagation
-            Vxx_ndd = lqr_sys['dldxx_nkdd'][:, -1]
-            Vx_nd1 = lqr_sys['dldx_nkd'][:, -1, :, None]
+        # initialize with the terminal cost parameters
+        # to prepare the backpropagation
+        Vxx_ndd = lqr_sys['dldxx_nkdd'][:, -1]
+        Vx_nd1 = lqr_sys['dldx_nkd'][:, -1, :, None]
 
-            # TODO: Currently calling numpy() here as tfe.DEVICE_PLACEMENT_SILENT
-            # is not working to place non-gpu ops (i.e. mod) on the cpu
-            # turning tensors into numpy arrays is a hack around this.
+        # TODO: Currently calling numpy() here as tfe.DEVICE_PLACEMENT_SILENT
+        # is not working to place non-gpu ops (i.e. mod) on the cpu
+        # turning tensors into numpy arrays is a hack around this.
 
-            for t in reversed(range(self.T)):
-                error_t_nd = lqr_sys['f_nkd'][:, t]-x_nkd[:, t+1]
-                error_t_nd = tf.concat([error_t_nd[:, :angle_dims],
-                                        angle_normalize(error_t_nd[:,
-                                                                   angle_dims:angle_dims+1].numpy()),
-                                        error_t_nd[:, angle_dims+1:]],
-                                       axis=1)
-                error_t_nd1 = error_t_nd[:, :, None]
+        for t in reversed(range(self.T)):
+            error_t_nd = lqr_sys['f_nkd'][:, t] - x_nkd[:, t + 1]
+            error_t_nd = np.concatenate([error_t_nd[:, :angle_dims],
+                                         angle_normalize(error_t_nd[:,
+                                                                    angle_dims:angle_dims + 1]),
+                                         error_t_nd[:, angle_dims + 1:]],
+                                        axis=1)
+            error_t_nd1 = error_t_nd[:, :, None]
 
-                dfdx_ndd = lqr_sys['dfdx_nkdd'][:, t]
-                dfdu_ndf = lqr_sys['dfdu_nkdf'][:, t]
-                dfdx_T_ndd = tf.transpose(dfdx_ndd, perm=[0, 2, 1])
-                dfdu_T_ndf = tf.transpose(dfdu_ndf, perm=[0, 2, 1])
+            dfdx_ndd = lqr_sys['dfdx_nkdd'][:, t]
+            dfdu_ndf = lqr_sys['dfdu_nkdf'][:, t]
+            dfdx_T_ndd = np.transpose(dfdx_ndd, axes=[0, 2, 1])
+            dfdu_T_ndf = np.transpose(dfdu_ndf, axes=[0, 2, 1])
 
-                dfdx_T_dot_Vxx_ndd = tf.matmul(dfdx_T_ndd, Vxx_ndd)
-                dfdu_T_dot_Vxx_nfd = tf.matmul(dfdu_T_ndf, Vxx_ndd)
+            dfdx_T_dot_Vxx_ndd = np.matmul(dfdx_T_ndd, Vxx_ndd)
+            dfdu_T_dot_Vxx_nfd = np.matmul(dfdu_T_ndf, Vxx_ndd)
 
-                Qx_nd1 = (lqr_sys['dldx_nkd'][:, t][:, :, None] + tf.matmul(dfdx_T_ndd, Vx_nd1)
-                          + tf.matmul(dfdx_T_dot_Vxx_ndd, error_t_nd1))
-                Qu_nf1 = (lqr_sys['dldu_nkf'][:, t][:, :, None] + tf.matmul(dfdu_T_ndf, Vx_nd1)
-                          + tf.matmul(dfdu_T_dot_Vxx_nfd, error_t_nd1))
-                Qxx_ndd = lqr_sys['dldxx_nkdd'][:, t] + tf.matmul(dfdx_T_dot_Vxx_ndd, dfdx_ndd)
-                Qux_nfd = lqr_sys['dldux_nkfd'][:, t] + tf.matmul(dfdu_T_dot_Vxx_nfd, dfdx_ndd)
-                Quu_nff = lqr_sys['dlduu_nkff'][:, t] + tf.matmul(dfdu_T_dot_Vxx_nfd, dfdu_ndf)
+            Qx_nd1 = (lqr_sys['dldx_nkd'][:, t][:, :, None] + np.matmul(dfdx_T_ndd, Vx_nd1)
+                      + np.matmul(dfdx_T_dot_Vxx_ndd, error_t_nd1))
+            Qu_nf1 = (lqr_sys['dldu_nkf'][:, t][:, :, None] + np.matmul(dfdu_T_ndf, Vx_nd1)
+                      + np.matmul(dfdu_T_dot_Vxx_nfd, error_t_nd1))
+            Qxx_ndd = lqr_sys['dldxx_nkdd'][:, t] + \
+                np.matmul(dfdx_T_dot_Vxx_ndd, dfdx_ndd)
+            Qux_nfd = lqr_sys['dldux_nkfd'][:, t] + \
+                np.matmul(dfdu_T_dot_Vxx_nfd, dfdx_ndd)
+            Quu_nff = lqr_sys['dlduu_nkff'][:, t] + \
+                np.matmul(dfdu_T_dot_Vxx_nfd, dfdu_ndf)
 
-                # use regularized inverse for numerical stability
-                inv_Quu_nff = self.regularized_pseudo_inverse_(Quu_nff, reg=self.reg)
+            # use regularized inverse for numerical stability
+            inv_Quu_nff = self.regularized_pseudo_inverse_(
+                Quu_nff, reg=self.reg)
 
-                # get k and K
-                fdfwd_Tnf1[t] = tf.matmul(-inv_Quu_nff, Qu_nf1)
-                fdbck_gain_Tnfd[t] = tf.matmul(-inv_Quu_nff, Qux_nfd)
-                fdbck_gain_nfd = tf.transpose(fdbck_gain_Tnfd[t], perm=[0, 2, 1])
+            # get k and K
+            fdfwd_Tnf1[t] = np.matmul(-inv_Quu_nff, Qu_nf1)
+            fdbck_gain_Tnfd[t] = np.matmul(-inv_Quu_nff, Qux_nfd)
+            fdbck_gain_nfd = np.transpose(
+                fdbck_gain_Tnfd[t], axes=[0, 2, 1])
 
-                # update value function for the previous time step
-                Vxx_ndd = Qxx_ndd - tf.matmul(tf.matmul(fdbck_gain_nfd, Quu_nff),
-                                              fdbck_gain_Tnfd[t])
-                Vx_nd1 = Qx_nd1 - tf.matmul(tf.matmul(fdbck_gain_nfd, Quu_nff), fdfwd_Tnf1[t])
+            # update value function for the previous time step
+            Vxx_ndd = Qxx_ndd - np.matmul(np.matmul(fdbck_gain_nfd, Quu_nff),
+                                          fdbck_gain_Tnfd[t])
+            Vx_nd1 = Qx_nd1 - \
+                np.matmul(np.matmul(fdbck_gain_nfd,
+                                    Quu_nff), fdfwd_Tnf1[t])
 
-            # Stack the outer time dimension as dimension 1
-            # in the tensors
-            fdfwd_nTf1 = tf.stack(fdfwd_Tnf1, axis=1)
-            fdbck_gain_nTfd = tf.stack(fdbck_gain_Tnfd, axis=1)
-            return fdfwd_nTf1, fdbck_gain_nTfd
+        # Stack the outer time dimension as dimension 1
+        # in the tensors (tf.stack is equivalent to np.asarray)
+        fdfwd_nTf1 = np.stack(fdfwd_Tnf1, axis=1)
+        fdbck_gain_nTfd = np.stack(fdbck_gain_Tnfd, axis=1)
+        return fdfwd_nTf1, fdbck_gain_nTfd
 
     def build_lqr_system(self, trajectory):
         """Given a trajectory returns the first order
@@ -219,8 +227,9 @@ class LQRSolver:
         dfdx_nkdd, dfdu_nkdf, f_nkd = self.plant_dyn.affine_factors(trajectory)
 
         # Second order approximation of cost/loss (l)
-        dldxx_nkdd, dldxu_nkdf, dlduu_nkff, dldx_nkd, dldu_nkf = self.cost.quad_coeffs(trajectory)
-        dldux_nkfd = tf.transpose(dldxu_nkdf, perm=[0, 1, 3, 2])
+        dldxx_nkdd, dldxu_nkdf, dlduu_nkff, dldx_nkd, dldu_nkf = self.cost.quad_coeffs(
+            trajectory)
+        dldux_nkfd = np.transpose(dldxu_nkdf, axes=[0, 1, 3, 2])
 
         lqr_sys = {
             'f_nkd': f_nkd,
@@ -240,6 +249,6 @@ class LQRSolver:
         to ensure its positive-definite properties
         """
         if self.inv:
-            return tf.matrix_inverse(mat)
+            return np.linalg.inv(mat)
         else:
             raise NotImplementedError

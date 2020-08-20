@@ -1,4 +1,3 @@
-import tensorflow as tf
 import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
