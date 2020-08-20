@@ -46,8 +46,8 @@ class Spline3rdOrder(Spline):
         goal_pos_n12 = goal_config.position_nk2()
 
         # Multiple solutions if start and goal are the same x,y coordinates
-        assert(np.reduce_all(np.norm(goal_pos_n12 - start_pos_n12, axis=2) >=
-                             self.params.epsilon))
+        assert(np.all(np.linalg.norm(goal_pos_n12 - start_pos_n12, axis=2) >=
+                      self.params.epsilon))
 
         x0_n1, y0_n1 = start_pos_n12[:, :, 0], start_pos_n12[:, :, 1]
         t0_n1 = start_config.heading_nk1()[:, :, 0]
@@ -90,13 +90,13 @@ class Spline3rdOrder(Spline):
         p_coeffs_n14 = self.p_coeffs_n14
 
         # with tf.name_scope('eval_spline'):
-        ts_n4k = np.stack([np.pow(ts_nk, 3), np.pow(ts_nk, 2),
+        ts_n4k = np.stack([np.power(ts_nk, 3), np.power(ts_nk, 2),
                            ts_nk, np.ones_like(ts_nk)], axis=1)
         ps_nk = np.squeeze(np.matmul(p_coeffs_n14, ts_n4k), axis=1)
 
-        ps_n4k = np.stack([np.pow(ps_nk, 3), np.pow(ps_nk, 2),
+        ps_n4k = np.stack([np.power(ps_nk, 3), np.power(ps_nk, 2),
                            ps_nk, np.ones_like(ps_nk)], axis=1)
-        ps_dot_n4k = np.stack([3.0 * np.pow(ps_nk, 2), 2.0 * ps_nk,
+        ps_dot_n4k = np.stack([3.0 * np.power(ps_nk, 2), 2.0 * ps_nk,
                                np.ones_like(ps_nk), np.zeros_like(ps_nk)],
                               axis=1)
 
@@ -107,10 +107,10 @@ class Spline3rdOrder(Spline):
         ys_dot_nk = np.squeeze(np.matmul(y_coeffs_n14, ps_dot_n4k), axis=1)
 
         self._position_nk2 = np.stack([xs_nk, ys_nk], axis=2)
-        self._heading_nk1 = np.atan2(ys_dot_nk, xs_dot_nk)[:, :, None]
+        self._heading_nk1 = np.arctan2(ys_dot_nk, xs_dot_nk)[:, :, None]
 
         if calculate_speeds:
-            ts_dot_n4k = np.stack([3.0 * np.pow(ts_nk, 2), 2.0 * ts_nk,
+            ts_dot_n4k = np.stack([3.0 * np.power(ts_nk, 2), 2.0 * ts_nk,
                                    np.ones_like(ts_nk), np.zeros_like(ts_nk)],
                                   axis=1)
             ps_ddot_n4k = np.stack([6.0 * ps_nk, 2.0 * np.ones_like(ps_nk),
@@ -157,11 +157,11 @@ class Spline3rdOrder(Spline):
         Angular speed assumed to be in [-angular_speed_max_system, angular_speed_max_system]
         """
         # Compute the horizon required to make sure that we satisfy the speed constraints at all times
-        max_speed_n1 = np.reduce_max(self.speed_nk1(), axis=1)
+        max_speed_n1 = np.amax(self.speed_nk1(), axis=1)
         required_horizon_speed_n1 = self.final_times_n1 * max_speed_n1 / speed_max_system
 
         # Compute the horizon required to make sure that we satisfy the angular speed constraints at all times
-        max_angular_speed_n1 = np.reduce_max(
+        max_angular_speed_n1 = np.amax(
             np.abs(self.angular_speed_nk1()), axis=1)
         required_horizon_angular_speed_n1 = self.final_times_n1 * \
             max_angular_speed_n1 / angular_speed_max_system
@@ -197,7 +197,7 @@ class Spline3rdOrder(Spline):
         """
         Find the indices of splines whose final time is within the horizon [0, horizon_s].
         """
-        valid_idxs_n = np.where(self.final_times_n1 <= horizon_s)[:, 0]
+        valid_idxs_n = np.where(self.final_times_n1 <= horizon_s)[0]
         return valid_idxs_n.astype(np.int32)
 
     @staticmethod
