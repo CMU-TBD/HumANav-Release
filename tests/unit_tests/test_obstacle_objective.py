@@ -5,6 +5,7 @@ from obstacles.sbpd_map import SBPDMap
 from objectives.obstacle_avoidance import ObstacleAvoidance
 from trajectory.trajectory import Trajectory
 from dotmap import DotMap
+from utils.utils import *
 
 
 def create_params():
@@ -148,6 +149,10 @@ def test_avoid_obstacle(visualize=False):
                     bbox_inches='tight', pad_inches=0)
 
 
-if __name__ == '__main__':
+def main_test():
     test_avoid_obstacle(False)
-    print("All tests passed!")
+    print("%sObstacle objective tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

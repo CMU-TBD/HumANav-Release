@@ -4,6 +4,7 @@ from costs.quad_cost_with_wrapping import QuadraticRegulatorRef
 from optCtrl.lqr import LQRSolver
 from systems.dubins_v1 import DubinsV1
 from dotmap import DotMap
+from utils.utils import *
 
 
 def create_params():
@@ -79,8 +80,6 @@ def test_lqr0(visualize=False):
         # plt.show()
         fig.savefig('./tests/lqr/test_lqr0.png',
                     bbox_inches='tight', pad_inches=0)
-    else:
-        print('rerun test_lqr0 with visualize=True to visualize the test')
 
 
 def test_lqr1(visualize=False):
@@ -133,8 +132,6 @@ def test_lqr1(visualize=False):
         # plt.show()
         fig.savefig('./tests/lqr/test_lqr1.png',
                     bbox_inches='tight', pad_inches=0)
-    else:
-        print('rerun test_lqr1 with visualize=True to visualize the test')
 
 
 def test_lqr2(visualize=False):
@@ -214,13 +211,14 @@ def test_lqr2(visualize=False):
         fig.savefig('./tests/lqr/test_lqr2.png',
                     bbox_inches='tight', pad_inches=0)
 
-    else:
-        print('rerun test_lqr2 with visualize=True to visualize the test')
 
-
-if __name__ == '__main__':
+def main_test():
     # robot should move to goal in 1 step and stay there
     test_lqr0(visualize=False)
     test_lqr1(visualize=False)  # robot should track a trajectory
     test_lqr2(visualize=False)  # LQR should track 2 trajectories in a batch
-    print("All tests passed!")
+    print("%sLqr tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

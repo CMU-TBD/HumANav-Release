@@ -9,6 +9,7 @@ from trajectory.trajectory import Trajectory
 from systems.dubins_v3 import DubinsV3
 from utils.fmm_map import FmmMap
 from dotmap import DotMap
+from utils.utils import *
 
 
 def create_renderer_params():
@@ -152,6 +153,10 @@ def test_cost_function(plot=False):
                     bbox_inches='tight', pad_inches=0)
 
 
-if __name__ == '__main__':
+def main_test():
     test_cost_function(plot=False)
-    print("All tests passed!")
+    print("%sCost function tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

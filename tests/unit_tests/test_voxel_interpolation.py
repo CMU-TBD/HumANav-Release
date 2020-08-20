@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import interpolate
 from utils.voxel_map_utils import VoxelMap
+from utils.utils import *
 
 
 def test_voxel_interpolation():
@@ -51,7 +52,11 @@ def test_voxel_interpolation():
                       interpolated_values) <= 0.01) == 6
 
 
-if __name__ == '__main__':
+def main_test():
     np.random.seed(seed=1)
     test_voxel_interpolation()
-    print("All tests passed!")
+    print("%sVoxel interpolation tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

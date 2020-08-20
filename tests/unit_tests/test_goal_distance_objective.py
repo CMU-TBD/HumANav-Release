@@ -5,6 +5,7 @@ from objectives.goal_distance import GoalDistance
 from trajectory.trajectory import Trajectory
 from utils.fmm_map import FmmMap
 from dotmap import DotMap
+from utils.utils import *
 
 
 def create_renderer_params():
@@ -117,6 +118,10 @@ def test_goal_distance():
     assert numerical_error <= .01
 
 
-if __name__ == '__main__':
+def main_test():
     test_goal_distance()
-    print("All tests passed!")
+    print("%sGoal-distance tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

@@ -4,6 +4,7 @@ from systems.dubins_v1 import DubinsV1
 from systems.dubins_v2 import DubinsV2
 from systems.dubins_v3 import DubinsV3
 from dotmap import DotMap
+from utils.utils import *
 
 
 def create_system_dynamics_params():
@@ -102,8 +103,6 @@ def test_dubins_v1(visualize=False):
         # plt.show()
         fig.savefig("./tests/dynamics/test_dynamics1.png",
                     bbox_inches='tight', pad_inches=0)
-    else:
-        print('rerun with visualize=True to visualize the test')
 
 
 def rand_array(from_range, size, decimals=3):
@@ -217,9 +216,6 @@ def test_dubins_v2(visualize=False):
         fig.savefig("./tests/dynamics/test_dynamics2.png",
                     bbox_inches='tight', pad_inches=0)
 
-    else:
-        print('rerun with visualize=True to visualize the test')
-
 
 def test_dubins_v3():
     np.random.seed(seed=1)
@@ -274,9 +270,13 @@ def test_dubins_v3():
     assert(np.allclose(B2, B2_c))
 
 
-if __name__ == '__main__':
+def main_test():
     test_dubins_v1(visualize=False)
     test_custom_dubins_v1()
     test_dubins_v2(visualize=False)
     test_dubins_v3()
-    print("All tests passed!")
+    print("%sDynamics tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

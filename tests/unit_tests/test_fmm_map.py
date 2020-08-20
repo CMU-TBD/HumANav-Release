@@ -1,4 +1,5 @@
 import numpy as np
+from utils.utils import *
 
 
 def test_fmm_map():
@@ -36,7 +37,11 @@ def test_fmm_map():
     assert np.sum(abs(expected_angles - angles) <= 0.01) == 6
 
 
-if __name__ == '__main__':
+def main_test():
     np.random.seed(seed=1)
     test_fmm_map()
-    print("All tests passed!")
+    print("%sFmm_map tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from dotmap import DotMap
 from costs.quad_cost_with_wrapping import QuadraticRegulatorRef
 from optCtrl.lqr import LQRSolver
+from utils.utils import *
 
 
 def create_params():
@@ -191,9 +192,14 @@ def test_lqr_feedback_coordinate_transform():
                            traj_test_world.angular_speed_nk1(), axis=2) < 1e-4).all())
 
 
-if __name__ == '__main__':
+def main_test():
     plt.style.use('ggplot')
     test_rotate()
     test_coordinate_transform()
     test_lqr_feedback_coordinate_transform()
-    print("All tests passed!")
+    print("%sCoordinate transform tests passed!%s" %
+          (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

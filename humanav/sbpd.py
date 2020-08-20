@@ -27,6 +27,10 @@ from humanav import utils
 from mp_env import mp_env
 from params.renderer_params import get_sbpd_data_dir
 from utils.utils import *
+try:
+    from mp_env.render import swiftshader_renderer as renderer
+except:
+    pass
 
 
 def get_dataset(dataset_name, imset, data_dir, surreal_params=None):
@@ -41,9 +45,6 @@ def get_dataset(dataset_name, imset, data_dir, surreal_params=None):
 
 
 class Loader():
-    def __init__(self,):
-        from mp_env.render import swiftshader_renderer as renderer
-
     def load_building(self, name, data_dir=None):
         if data_dir is None:
             data_dir = get_sbpd_data_dir()  # when not using surreal

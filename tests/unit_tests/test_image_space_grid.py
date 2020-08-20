@@ -1,6 +1,6 @@
 import numpy as np
 from dotmap import DotMap
-
+from utils.utils import *
 from waypoint_grids.projected_image_space_grid import ProjectedImageSpaceGrid
 
 
@@ -102,8 +102,12 @@ def visualize_world_space_grid():
     fig.savefig('projected_waypoints.pdf')
 
 
-if __name__ == '__main__':
+def main_test():
     np.random.seed(seed=1)
     test_image_space_grid()
     # visualize_world_space_grid()
-    print("All tests passed!")
+    print("%sImage space grid tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

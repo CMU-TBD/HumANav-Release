@@ -3,6 +3,7 @@ from dotmap import DotMap
 import matplotlib.pyplot as plt
 from trajectory.trajectory import Trajectory
 from obstacles.sbpd_map import SBPDMap
+from utils.utils import *
 
 
 def create_renderer_params():
@@ -89,6 +90,10 @@ def test_sbpd_map(visualize=False):
                     bbox_inches='tight', pad_inches=0)
 
 
-if __name__ == '__main__':
+def main_test():
     test_sbpd_map(visualize=False)
-    print("All tests passed!")
+    print("%sObstacle map tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

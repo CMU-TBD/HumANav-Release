@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from trajectory.spline.spline_3rd_order import Spline3rdOrder
 from trajectory.trajectory import SystemConfig
 from dotmap import DotMap
+from utils.utils import *
 
 
 def test_spline_3rd_order(visualize=False):
@@ -217,8 +218,12 @@ def test_spline_rescaling():
     assert valid_idxs_n[0] == 0
 
 
-if __name__ == '__main__':
+def main_test():
     test_spline_3rd_order(visualize=False)
     test_spline_rescaling()
     test_piecewise_spline(visualize=False)
-    print("All tests passed!")
+    print("%sSpline tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

@@ -2,6 +2,7 @@ import numpy as np
 from costs.quad_cost_with_wrapping import QuadraticRegulatorRef
 from systems.dubins_v1 import DubinsV1
 from dotmap import DotMap
+from utils.utils import *
 
 
 def create_params():
@@ -64,6 +65,10 @@ def test_quad_cost_with_wrapping():
     assert(np.equal(H_uu_nkff[0, 0], np.eye(u_dim) * b).all())
 
 
-if __name__ == '__main__':
+def main_test():
     test_quad_cost_with_wrapping()
-    print("All tests passed!")
+    print("%sQuad costs tests passed!%s" % (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()

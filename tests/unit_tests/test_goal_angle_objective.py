@@ -5,6 +5,7 @@ from objectives.angle_distance import AngleDistance
 from trajectory.trajectory import Trajectory
 from utils.fmm_map import FmmMap
 from dotmap import DotMap
+from utils.utils import *
 
 
 def create_renderer_params():
@@ -109,6 +110,11 @@ def test_goal_angle_distance():
                        19.634956, 29.616005, 74.31618], atol=1e-2)
 
 
-if __name__ == '__main__':
+def main_test():
     test_goal_angle_distance()
-    print("All tests passed!")
+    print("%sGoal-angle objective tests passed!%s" %
+          (color_green, color_reset))
+
+
+if __name__ == '__main__':
+    main_test()
