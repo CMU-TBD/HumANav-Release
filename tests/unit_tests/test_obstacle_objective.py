@@ -1,7 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
-tf.enable_eager_execution()
 
 from obstacles.sbpd_map import SBPDMap
 from objectives.obstacle_avoidance import ObstacleAvoidance
@@ -33,7 +31,8 @@ def create_renderer_params():
     from params.renderer_params import get_traversible_dir, get_sbpd_data_dir
     p = DotMap()
     p.dataset_name = 'sbpd'   # Stanford Building Parser Dataset (SBPD)
-    p.building_name = 'area3' # Name of the building (change to whatever is downloaded on your system)
+    # Name of the building (change to whatever is downloaded on your system)
+    p.building_name = 'area3'
     p.flip = False
 
     p.camera_params = DotMap(modalities=['occupancy_grid'],  # occupancy_grid, rgb, or depth
@@ -44,7 +43,7 @@ def create_renderer_params():
     # of height, 'height', with radius, 'radius',
     # base at height 'base' above the ground
     # The robot has a camera at height
-    # 'sensor_height' pointing at 
+    # 'sensor_height' pointing at
     # camera_elevation_degree degrees vertically
     # from the horizontal plane.
     p.robot_params = DotMap(radius=18,
@@ -72,14 +71,22 @@ def test_avoid_obstacle(visualize=False):
     p = create_params()
 
     # Create an SBPD Map
-    obstacle_map = SBPDMap(p.obstacle_map_params)
+    from humanav.humanav_renderer_multi import HumANavRendererMulti
+    r = HumANavRendererMulti.get_renderer(
+        p.obstacle_map_params.renderer_params, deepcpy=False)
+    # obtain "resolution and traversible of building"
+    dx_cm, traversible = r.get_config()
+
+    obstacle_map = SBPDMap(p.obstacle_map_params,
+                           renderer=0, res=dx_cm, trav=traversible)
 
     # Define the objective
     objective = ObstacleAvoidance(params=p.avoid_obstacle_objective,
                                   obstacle_map=obstacle_map)
 
     # Define a set of positions and evaluate objective
-    pos_nk2 = tf.constant([[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=tf.float32)
+    pos_nk2 = np.array(
+        [[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=np.float32)
     trajectory = Trajectory(dt=0.1, n=1, k=3, position_nk2=pos_nk2)
 
     # Compute the objective
@@ -90,50 +97,57 @@ def test_avoid_obstacle(visualize=False):
     distance_map = obstacle_map.fmm_map.fmm_distance_map.voxel_function_mn
     angle_map = obstacle_map.fmm_map.fmm_angle_map.voxel_function_mn
 
-    idxs_xy_n2 = pos_nk2[0]/.05
-    idxs_yx_n2 = idxs_xy_n2[:, ::-1].numpy().astype(np.int32)
+    idxs_xy_n2 = pos_nk2[0] / .05
+    idxs_yx_n2 = idxs_xy_n2[:, ::-1].astype(np.int32)
     expected_min_dist_to_obs = np.array([distance_map[idxs_yx_n2[0][0], idxs_yx_n2[0][1]],
-                                         distance_map[idxs_yx_n2[1][0], idxs_yx_n2[1][1]],
+                                         distance_map[idxs_yx_n2[1]
+                                                      [0], idxs_yx_n2[1][1]],
                                          distance_map[idxs_yx_n2[2][0], idxs_yx_n2[2][1]]],
                                         dtype=np.float32)
 
     m0 = p.avoid_obstacle_objective.obstacle_margin0
     m1 = p.avoid_obstacle_objective.obstacle_margin1
     expected_infringement = m1 - expected_min_dist_to_obs
-    expected_infringement = np.clip(expected_infringement, a_min=0, a_max=None)  # ReLU
-    expected_infringement /= (m1-m0)
+    expected_infringement = np.clip(
+        expected_infringement, a_min=0, a_max=None)  # ReLU
+    expected_infringement /= (m1 - m0)
     expected_objective = 25. * expected_infringement * expected_infringement
 
-    assert np.allclose(objective_values_13.numpy()[0], expected_objective, atol=1e-4)
-    assert np.allclose(objective_values_13.numpy()[0], [0., 0., 0.54201907], atol=1e-4)
+    assert np.allclose(objective_values_13[
+                       0], expected_objective, atol=1e-4)
+    assert np.allclose(objective_values_13[0], [
+                       0., 0., 119.46702], atol=1e-4)
     if(visualize):
         """
         create a 1 x 3 (or 1 x 4) image of the obstacle map itself (as a traversible plot), 
         next to its corresponding angle_map, and distance_map. Optionally plotting the trajectory
         """
         fig = plt.figure()
-        ax = fig.add_subplot(1,3,1)
+        ax = fig.add_subplot(1, 3, 1)
         obstacle_map.render(ax)
-        ax.plot(pos_nk2[0, :, 0].numpy(), pos_nk2[0, :, 1].numpy(), 'r.')
+        ax.plot(pos_nk2[0, :, 0], pos_nk2[0, :, 1], 'r.')
         # ax.plot(objective[0, 0], objective[0, 1], 'k*')
         ax.set_title('obstacle map')
 
         # Plotting the "angle map"
-        ax = fig.add_subplot(1,3,2)
+        ax = fig.add_subplot(1, 3, 2)
         ax.imshow(angle_map, origin='lower')
         ax.set_title('angle map')
 
         # Plotting the "distance map"
-        ax = fig.add_subplot(1,3,3)
+        ax = fig.add_subplot(1, 3, 3)
         ax.imshow(distance_map, origin='lower')
         ax.set_title('distance map')
 
         # Plotting the trajectory
         #ax = fig.add_subplot(1,4,4)
-        #trajectory.render(ax)
-        #ax.set_title('trajectory')
+        # trajectory.render(ax)
+        # ax.set_title('trajectory')
 
-        fig.savefig('./tests/obstacles/test_obstacle_objective.png', bbox_inches='tight', pad_inches=0)
+        fig.savefig('./tests/obstacles/test_obstacle_objective.png',
+                    bbox_inches='tight', pad_inches=0)
+
 
 if __name__ == '__main__':
-    test_avoid_obstacle(True)
+    test_avoid_obstacle(False)
+    print("All tests passed!")
