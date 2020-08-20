@@ -23,7 +23,6 @@ import sys
 import pickle
 import numpy as np
 
-from mp_env.render import swiftshader_renderer as renderer
 from humanav import utils
 from mp_env import mp_env
 from params.renderer_params import get_sbpd_data_dir
@@ -42,6 +41,8 @@ def get_dataset(dataset_name, imset, data_dir, surreal_params=None):
 
 
 class Loader():
+    def __init__(self,):
+        from mp_env.render import swiftshader_renderer as renderer
 
     def load_building(self, name, data_dir=None):
         if data_dir is None:

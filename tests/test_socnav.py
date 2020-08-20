@@ -6,14 +6,12 @@ import os
 from random import seed, random, randint
 import pandas as pd
 # Humanav
-from humanav import sbpd
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
 from humans.human_configs import HumanConfigs
 from humans.human_appearance import HumanAppearance
 from simulators.robot_agent import RoboAgent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
-from simulators.agent import Agent
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner

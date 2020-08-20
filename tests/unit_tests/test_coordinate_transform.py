@@ -196,3 +196,4 @@ if __name__ == '__main__':
     test_rotate()
     test_coordinate_transform()
     test_lqr_feedback_coordinate_transform()
+    print("All tests passed!")

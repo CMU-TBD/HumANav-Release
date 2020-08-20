@@ -1,16 +1,3 @@
-from random import seed, random, randint
-import random
-import string
-import math
-import numpy as np
-import sys
-import os
-from humanav import sbpd
-from humanav import depth_utils as du
-from humanav import utils
-from params.renderer_params import get_surreal_texture_dir
-from mp_env import map_utils as mu
-from mp_env.render import swiftshader_renderer as sr
 from utils.utils import *
 
 

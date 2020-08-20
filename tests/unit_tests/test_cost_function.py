@@ -1,7 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import tensorflow as tf
-tf.enable_eager_execution()
 from obstacles.sbpd_map import SBPDMap
 from objectives.obstacle_avoidance import ObstacleAvoidance
 from objectives.goal_distance import GoalDistance
@@ -28,7 +26,7 @@ def create_renderer_params():
     # of height, 'height', with radius, 'radius',
     # base at height 'base' above the ground
     # The robot has a camera at height
-    # 'sensor_height' pointing at 
+    # 'sensor_height' pointing at
     # camera_elevation_degree degrees vertically
     # from the horizontal plane.
     p.robot_params = DotMap(radius=18,
@@ -79,60 +77,81 @@ def test_cost_function(plot=False):
     """
     # Create parameters
     p = create_params()
+    from humanav.humanav_renderer_multi import HumANavRendererMulti
+    r = HumANavRendererMulti.get_renderer(
+        p.obstacle_map_params.renderer_params, deepcpy=False)
+    # obtain "resolution and traversible of building"
+    dx_cm, traversible = r.get_config()
 
-    obstacle_map = SBPDMap(p.obstacle_map_params)
+    obstacle_map = SBPDMap(p.obstacle_map_params,
+                           renderer=0, res=dx_cm, trav=traversible)
+    # obstacle_map = SBPDMap(p.obstacle_map_params)
     obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
     map_size_2 = obstacle_occupancy_grid.shape[::-1]
 
     # Define a goal position and compute the corresponding fmm map
-    goal_pos_n2 = np.array([[20., 16.5]])
+    goal_pos_n2 = np.array([[9., 15]])
     fmm_map = FmmMap.create_fmm_map_based_on_goal_position(goal_positions_n2=goal_pos_n2,
                                                            map_size_2=map_size_2,
                                                            dx=0.05,
-                                                           map_origin_2=[0., 0.],
+                                                           map_origin_2=[
+                                                               0., 0.],
                                                            mask_grid_mn=obstacle_occupancy_grid)
     # Define the cost function
     objective_function = ObjectiveFunction(p.objective_fn_params)
-    objective_function.add_objective(ObstacleAvoidance(params=p.avoid_obstacle_objective, obstacle_map=obstacle_map))
-    objective_function.add_objective(GoalDistance(params=p.goal_distance_objective, fmm_map=fmm_map))
-    objective_function.add_objective(AngleDistance(params=p.goal_angle_objective, fmm_map=fmm_map))
-    
+    objective_function.add_objective(ObstacleAvoidance(
+        params=p.avoid_obstacle_objective, obstacle_map=obstacle_map))
+    objective_function.add_objective(GoalDistance(
+        params=p.goal_distance_objective, fmm_map=fmm_map))
+    objective_function.add_objective(AngleDistance(
+        params=p.goal_angle_objective, fmm_map=fmm_map))
+
     # Define each objective separately
-    objective1 = ObstacleAvoidance(params=p.avoid_obstacle_objective, obstacle_map=obstacle_map)
-    objective2 = GoalDistance(params=p.goal_distance_objective, fmm_map=fmm_map)
+    objective1 = ObstacleAvoidance(
+        params=p.avoid_obstacle_objective, obstacle_map=obstacle_map)
+    objective2 = GoalDistance(
+        params=p.goal_distance_objective, fmm_map=fmm_map)
     objective3 = AngleDistance(params=p.goal_angle_objective, fmm_map=fmm_map)
-    
+
     # Define a set of positions and evaluate objective
-    pos_nk2 = tf.constant([[[8., 12.5], [8., 16.], [18., 16.5]]], dtype=tf.float32)
-    heading_nk2 = tf.constant([[[np.pi/2.0], [0.1], [0.1]]], dtype=tf.float32)
-    trajectory = Trajectory(dt=0.1, n=1, k=3, position_nk2=pos_nk2, heading_nk1=heading_nk2)
+    pos_nk2 = np.array(
+        [[[8., 12.5], [8., 16.], [18., 16.5]]], dtype=np.float32)
+    heading_nk2 = np.array([[[np.pi / 2.0], [0.1], [0.1]]], dtype=np.float32)
+    trajectory = Trajectory(
+        dt=0.1, n=1, k=3, position_nk2=pos_nk2, heading_nk1=heading_nk2)
 
     # Compute the objective function
-    values_by_objective = objective_function.evaluate_function_by_objective(trajectory)
+    values_by_objective = objective_function.evaluate_function_by_objective(
+        trajectory)
     overall_objective = objective_function.evaluate_function(trajectory)
-    
+
     # Expected objective values
     expected_objective1 = objective1.evaluate_objective(trajectory)
     expected_objective2 = objective2.evaluate_objective(trajectory)
     expected_objective3 = objective3.evaluate_objective(trajectory)
-    # expected_overall_objective = tf.reduce_mean(expected_objective1 + expected_objective2 + expected_objective3, axis=1)
-    expected_overall_objective = np.mean(expected_objective1 + expected_objective2 + expected_objective3, axis=1)
+    # expected_overall_objective = tf.reduce_mean(
+    #     expected_objective1 + expected_objective2 + expected_objective3, axis=1)
+    expected_overall_objective = np.mean(
+        expected_objective1 + expected_objective2 + expected_objective3, axis=1)
     assert len(values_by_objective) == 3
     assert values_by_objective[0][1].shape == (1, 3)
     assert overall_objective.shape == (1,)
     # assert np.allclose(overall_objective.numpy(), expected_overall_objective.numpy(), atol=1e-2)
-    assert np.allclose(overall_objective.numpy(), expected_overall_objective, atol=1e-2)
+    assert np.allclose(overall_objective,
+                       expected_overall_objective, atol=1e-2)
 
     # Optionally visualize the traversable and the points on which
     # we compute the objective function
     if plot:
         fig = plt.figure()
-        ax = fig.add_subplot(1,1,1)
+        ax = fig.add_subplot(1, 1, 1)
         obstacle_map.render(ax)
         ax.plot(pos_nk2[0, :, 0].numpy(), pos_nk2[0, :, 1].numpy(), 'r.')
         ax.plot(goal_pos_n2[0, 0], goal_pos_n2[0, 1], 'k*')
-        fig.savefig('./tests/cost/test_cost_function.png', bbox_inches='tight', pad_inches=0)
+        fig.savefig('./tests/cost/test_cost_function.png',
+                    bbox_inches='tight', pad_inches=0)
 
 
 if __name__ == '__main__':
-    test_cost_function(plot=True)
+    test_cost_function(plot=False)
+    print("All tests passed!")

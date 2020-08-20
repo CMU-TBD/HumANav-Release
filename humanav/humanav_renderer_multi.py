@@ -3,7 +3,6 @@ from humanav import depth_utils as du
 from humans.human import Human
 from humanav import utils
 from mp_env import map_utils as mu
-from mp_env.render import swiftshader_renderer as sr
 import numpy as np
 import sys
 import os
@@ -36,6 +35,7 @@ class HumANavRendererMulti():
             # Instantiating a camera/ shader object is only needed
             # for rgb and depth images
             if 'rgb' in self.p.camera_params.modalities or 'disparity' in self.p.camera_params.modalities:
+                from mp_env.render import swiftshader_renderer as sr
                 # Note: Resizing disparity images messes up the depth measurement.
                 # So if we are rendering disparity we restrict resize to be 1.0.
                 if 'disparity' in self.p.camera_params.modalities:
