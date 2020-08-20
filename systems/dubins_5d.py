@@ -63,8 +63,15 @@ class Dubins5D(DubinsCar):
                                 column2_nk5,
                                 column3_nk5,
                                 column4_nk5], axis=3)
-
-        return np.diag(diag_nk5) + self._dt * update_nk55
+        # simple multidimensional tensorflow diag implementation for np
+        res = []
+        for i in range(diag_nk5.shape[0]):
+            res_1 = []
+            for j in range(diag_nk5.shape[1]):
+                res_1.append(np.diag(diag_nk5[i][j]))
+            res.append(res_1)
+        res = np.array(res)
+        return res + self._dt * update_nk55
 
     def jac_u(self, trajectory):
         x_nk5, u_nk2 = self.parse_trajectory(trajectory)
@@ -95,8 +102,8 @@ class Dubins5D(DubinsCar):
         """ A utility function for assembling a trajectory object
         from x_nkd, u_nkf, a list of states and actions for the system.
         Here d=5=state dimension and u=2=action dimension. """
-        n = x_nkd.shape[0].value
-        k = x_nkd.shape[1].value
+        n = x_nkd.shape[0]
+        k = x_nkd.shape[1]
         u_nkf = self._pad_control_vector(u_nkf, k, pad_mode=pad_mode)
         position_nk2, heading_nk1 = x_nkd[:, :, :2], x_nkd[:, :, 2:3]
         speed_nk1, angular_speed_nk1 = x_nkd[:, :, 3:4], x_nkd[:, :, 4:]
