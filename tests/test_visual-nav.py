@@ -4,13 +4,12 @@ import sys
 import math
 import matplotlib.pyplot as plt
 
-from params.simulator.sbpd_simulator_params import create_params as create_sim_params
+from params.central_params import create_sbpd_simulator_params, create_base_params
 from trajectory.trajectory import SystemConfig
 from simulators.sbpd_simulator import SBPDSimulator
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humans.human import Human
 from humanav import sbpd
-from params.renderer_params import create_params as create_base_params
 from random import seed, random, randint
 from dotmap import DotMap
 from utils.utils import touch
@@ -26,7 +25,7 @@ def create_params():
 def test_planner():
     p = create_params()
     # Create planner parameters
-    sim_params = create_sim_params()
+    sim_params = create_simulator_params()
     sim = SBPDSimulator(sim_params)
 
     # Spline trajectory params

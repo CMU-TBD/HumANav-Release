@@ -2,7 +2,7 @@ from utils.utils import *
 from simulators.agent import Agent
 from humans.human_configs import HumanConfigs
 from trajectory.trajectory import SystemConfig
-from params.robot_params import create_params
+from params.central_params import create_robot_params
 import numpy as np
 import socket
 import ast
@@ -16,7 +16,7 @@ class RoboAgent(Agent):
         self.name = name
         self.commands = []
         self.freq = 100.  # update frequency
-        self.params = create_params()
+        self.params = create_robot_params()
         # sockets for communication
         self.joystick_receiver_socket = None
         self.joystick_sender_socket = None

@@ -2,22 +2,14 @@ import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
-import copy
 import os
 import time
 import threading
 import multiprocessing
-from humans.human import Human
-from humans.recorded_human import PrerecordedHuman
-from humanav.humanav_renderer_multi import HumANavRendererMulti
-from simulators.robot_agent import RoboAgent
-from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
-from simulators.agent import Agent
 from simulators.sim_state import SimState, HumanState, AgentState
-from utils.fmm_map import FmmMap
+from params.central_params import get_path_to_humanav
 from utils.utils import *
-from params.renderer_params import get_path_to_humanav
 
 
 class CentralSimulator(SimulatorHelper):
@@ -87,6 +79,8 @@ class CentralSimulator(SimulatorHelper):
             a (Agent/PrerecordedAgent/RoboAgent): The agent to be added to the simulator
         """
         name = a.get_name()
+        from simulators.robot_agent import RoboAgent
+        from humans.recorded_human import PrerecordedHuman
         if(isinstance(a, RoboAgent)):
             # initialize the robot and add to simulator's known "robot" field
             a.simulation_init(self.params, self.obstacle_map,

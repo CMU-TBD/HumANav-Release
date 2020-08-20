@@ -2,7 +2,6 @@ from dotmap import DotMap
 import numpy as np
 import os
 
-
 # seed for randomness generation
 seed = 10
 
@@ -401,7 +400,7 @@ def create_obstacle_map_params():
     return p
 
 
-def create_params(render_3D=None):
+def create_sbpd_simulator_params(render_3D=None):
     p = create_simulator_params()
 
     p.render_3D = render_3D

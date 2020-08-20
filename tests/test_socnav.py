@@ -15,10 +15,7 @@ from humanav.humanav_renderer_multi import HumANavRendererMulti
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
-from params.planner_params import create_params as create_planner_params
-from params.simulator.sbpd_simulator_params import create_params as create_sim_params
-from params.renderer_params import get_seed
-from params.renderer_params import create_params as create_base_params
+from params.central_params import get_seed, create_base_params, create_sbpd_simulator_params
 from utils.utils import *
 
 # seed the random number generator
@@ -317,8 +314,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
 
     # Create planner parameters
-    # planner_params = create_planner_params()
-    sim_params = create_sim_params(render_3D=p.render_3D)
+    sim_params = create_sbpd_simulator_params(render_3D=p.render_3D)
     simulator = CentralSimulator(sim_params, environment, renderer=r)
 
     """

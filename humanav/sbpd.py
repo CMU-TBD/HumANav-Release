@@ -25,9 +25,10 @@ import numpy as np
 
 from humanav import utils
 from mp_env import mp_env
-from params.renderer_params import get_sbpd_data_dir
+from params.central_params import get_sbpd_data_dir
 from utils.utils import *
 try:
+    # wont work on headless displays
     from mp_env.render import swiftshader_renderer as renderer
 except:
     pass
