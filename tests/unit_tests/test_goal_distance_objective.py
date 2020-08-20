@@ -1,6 +1,4 @@
 import numpy as np
-import tensorflow as tf
-tf.enable_eager_execution()
 
 from obstacles.sbpd_map import SBPDMap
 from objectives.goal_distance import GoalDistance
@@ -24,7 +22,7 @@ def create_renderer_params():
     # of height, 'height', with radius, 'radius',
     # base at height 'base' above the ground
     # The robot has a camera at height
-    # 'sensor_height' pointing at 
+    # 'sensor_height' pointing at
     # camera_elevation_degree degrees vertically
     # from the horizontal plane.
     p.robot_params = DotMap(radius=18,
@@ -61,25 +59,35 @@ def create_params():
 def test_goal_distance():
     # Create parameters
     p = create_params()
- 
+
     # Create an SBPD Map
-    obstacle_map = SBPDMap(p.obstacle_map_params)
+    from humanav.humanav_renderer_multi import HumANavRendererMulti
+    r = HumANavRendererMulti.get_renderer(
+        p.obstacle_map_params.renderer_params, deepcpy=False)
+    # obtain "resolution and traversible of building"
+    dx_cm, traversible = r.get_config()
+
+    obstacle_map = SBPDMap(p.obstacle_map_params,
+                           renderer=0, res=dx_cm, trav=traversible)
+    # obstacle_map = SBPDMap(p.obstacle_map_params)
     obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
     map_size_2 = obstacle_occupancy_grid.shape[::-1]
 
     # Define a goal position and compute the corresponding fmm map
-    goal_pos_n2 = np.array([[20, 16.5]])
+    goal_pos_n2 = np.array([[9., 15.]])
     fmm_map = FmmMap.create_fmm_map_based_on_goal_position(goal_positions_n2=goal_pos_n2,
                                                            map_size_2=map_size_2,
                                                            dx=0.05,
-                                                           map_origin_2=[0., 0.],
+                                                           map_origin_2=[
+                                                               0., 0.],
                                                            mask_grid_mn=obstacle_occupancy_grid)
-   
+
     # Define the objective
     objective = GoalDistance(params=p.goal_distance_objective, fmm_map=fmm_map)
-  
+
     # Define a set of positions and evaluate objective
-    pos_nk2 = tf.constant([[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=tf.float32)
+    pos_nk2 = np.array(
+        [[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=np.float32)
     trajectory = Trajectory(dt=0.1, n=1, k=3, position_nk2=pos_nk2)
 
     # Compute the objective
@@ -88,10 +96,11 @@ def test_goal_distance():
 
     # Expected objective values
     distance_map = fmm_map.fmm_distance_map.voxel_function_mn
-    idxs_xy_n2 = pos_nk2[0]/.05
-    idxs_yx_n2 = idxs_xy_n2[:, ::-1].numpy().astype(np.int32)
+    idxs_xy_n2 = pos_nk2[0] / .05
+    idxs_yx_n2 = idxs_xy_n2[:, ::-1].astype(np.int32)
     expected_distance = np.array([distance_map[idxs_yx_n2[0][0], idxs_yx_n2[0][1]],
-                                  distance_map[idxs_yx_n2[1][0], idxs_yx_n2[1][1]],
+                                  distance_map[idxs_yx_n2[1]
+                                               [0], idxs_yx_n2[1][1]],
                                   distance_map[idxs_yx_n2[2][0], idxs_yx_n2[2][1]]],
                                  dtype=np.float32)
     cost_at_margin = 25. * p.goal_distance_objective.goal_margin**2
@@ -99,12 +108,15 @@ def test_goal_distance():
 
     # Error in objectives
     # We have to allow a little bit of leeway in this test because the computation of FMM distance is not exact.
-    objetive_error = abs(expected_objective - objective_values_13.numpy()[0]) / (expected_objective + 1e-6)
+    objetive_error = abs(
+        expected_objective - objective_values_13[0]) / (expected_objective + 1e-6)
     assert max(objetive_error) <= 0.1
 
-    numerical_error = max(abs(objective_values_13[0].numpy() - [3590.4614 , 4975.554,   97.15442]))
+    numerical_error = max(
+        abs(objective_values_13[0] - [49.088074, 179.12201, 2071.5808]))
     assert numerical_error <= .01
 
 
 if __name__ == '__main__':
     test_goal_distance()
+    print("All tests passed!")
