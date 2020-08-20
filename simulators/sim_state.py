@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 from copy import deepcopy
 import json
@@ -153,8 +152,6 @@ class SimState():
         """ Converts an element to a json serializable type. """
         if isinstance(elem, np.int64) or isinstance(elem, np.int32):
             return int(elem)
-        if isinstance(elem, tf.Tensor):
-            return elem.numpy().tolist()
         if isinstance(elem, np.ndarray):
             return elem.tolist()
         if isinstance(elem, dict):
@@ -174,3 +171,126 @@ class SimState():
             param_dict[key] = SimState.to_json_type(
                 param_dict[key], include_start_goal=include_start_goal)
         return param_dict
+
+
+"""BEGIN SimState utils"""
+
+
+def get_agent_type(sim_state, agent_type: str):
+    if(callable(getattr(sim_state, 'get_' + agent_type, None))):
+        get_agent_type = getattr(sim_state, 'get_' + agent_type, None)
+        return get_agent_type()
+    elif hasattr(sim_state, agent_type):
+        return sim_state[agent_type]
+    else:
+        return {}  # empty dict
+
+
+def get_all_agents(sim_state):
+    all_agents = {}
+    all_agents.update(get_agent_type(sim_state, "agents"))
+    all_agents.update(get_agent_type(sim_state, "prerecs"))
+    all_agents.update(get_agent_type(sim_state, "robots"))
+    return all_agents
+
+
+def get_sim_t(sim_state):
+    if(callable(getattr(sim_state, 'get_sim_t', None))):
+        return sim_state.get_sim_t()
+    return sim_state["sim_t"]
+
+
+def compute_delta_t(sim_states: list):
+    # need at least one (usually the first) to have a delta_t
+    for i in range(len(sim_states)):
+        if(callable(getattr(sim_states[i], 'get_delta_t', None))):
+            return sim_states[i].get_delta_t()
+        # optimized to only have delta_t on the FIRST SimState
+        return sim_states[i]["delta_t"]
+    # or computing it manually with two sim_states:
+    # if(len(sim_states) <= 1):
+    #     print("%sNeed at least two states to compute delta_t%s" %
+    #           (color_red, color_reset))
+    # else:
+    #     delta_t = get_sim_t(sim_states[1]) - get_sim_t(sim_states[0])
+    #     return delta_t
+
+
+def get_pos3(agent):
+    if(callable(getattr(agent, "get_current_config", None))):
+        return agent.get_current_config().to_3D_numpy()
+    return agent["current_config"]
+
+
+def compute_next_vel(sim_state_prev, sim_state_now, agent_name: str, delta_t: float):
+    old_agent = get_all_agents(sim_state_prev)[agent_name]
+    old_pos = get_pos3(old_agent)
+    new_agent = get_all_agents(sim_state_now)[agent_name]
+    new_pos = get_pos3(new_agent)
+    # calculate distance over time
+    # TODO: add sign to distance (displacement) for velocity?
+    return euclidean_dist2(old_pos, new_pos) / delta_t
+
+
+def compute_agent_state_velocity(sim_states: list, agent_name: str):
+    if(len(sim_states) > 1):  # need at least two to compute differences in positions
+        if(agent_name in get_all_agents(sim_states[0]).keys()):
+            agent_velocities = []
+            delta_t = compute_delta_t(sim_states)
+            for i, s in enumerate(sim_states):
+                if(i > 0):
+                    speed = compute_next_vel(
+                        sim_states[i - 1], sim_states[i], agent_name, delta_t)
+                    agent_velocities.append(speed)
+                else:
+                    agent_velocities.append(0)
+            return agent_velocities
+        else:
+            print("%sAgent" % color_red, agent_name,
+                  "is not in the SimStates%s" % color_reset)
+
+
+def compute_agent_state_acceleration(sim_states: list, agent_name: str, velocities: list = None):
+    if(len(sim_states) > 1):  # need at least two to compute differences in velocities
+        # optionally compute velocities as well
+        if(velocities is None):
+            velocities = compute_agent_state_velocity(
+                sim_states, agent_name)
+        delta_t = compute_delta_t(sim_states)
+        if(agent_name in get_all_agents(sim_states[0]).keys()):
+            agent_accels = []
+            for i, this_vel in enumerate(velocities):
+                if(i > 0):
+                    last_vel = velocities[i - 1]
+                    # calculate speeds over time
+                    accel = (this_vel - last_vel) / delta_t
+                    agent_accels.append(accel)
+                    if(i == len(sim_states) - 1):
+                        # last element gets no acceleration
+                        break
+                        # record[j].append(0)
+            return agent_accels
+        else:
+            print("%sAgent" % color_red, agent_name,
+                  "is not in the SimStates%s" % color_reset)
+    else:
+        return []
+
+
+def compute_all_velocities(sim_states: list):
+    all_velocities = {}
+    for agent_name in get_all_agents(sim_states[0]).keys():
+        assert(isinstance(agent_name, str))  # keyed by name
+        all_velocities[agent_name] = compute_agent_state_velocity(
+            sim_states, agent_name)
+    return all_velocities
+
+
+def compute_all_accelerations(sim_states: list):
+    all_accels = {}
+    # TODO: add option of providing precomputed velocities list
+    for agent_name in get_all_agents(sim_states[0]).keys():
+        assert(isinstance(agent_name, str))  # keyed by name
+        all_accels[agent_name] = compute_agent_state_acceleration(
+            sim_states, agent_name)
+    return all_accels

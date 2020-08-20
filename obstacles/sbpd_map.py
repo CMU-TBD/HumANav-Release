@@ -1,6 +1,5 @@
 from obstacles.obstacle_map import ObstacleMap
 import numpy as np
-import tensorflow as tf
 from utils.fmm_map import FmmMap
 from systems.dubins_car import DubinsCar
 
@@ -18,7 +17,8 @@ class SBPDMap(ObstacleMap):
             self._r = SBPDRenderer.get_renderer(self.p.renderer_params)
         else:
             self._r = renderer
-        self._initialize_occupancy_grid_for_map(resolution=res, traversible=trav)
+        self._initialize_occupancy_grid_for_map(
+            resolution=res, traversible=trav)
         self._initialize_fmm_map()
 
     def _initialize_occupancy_grid_for_map(self, resolution=None, traversible=None):
@@ -35,12 +35,12 @@ class SBPDMap(ObstacleMap):
         self.p.map_size_2 = np.array(traversible.shape[::-1])
 
         # [[min_x, min_y], [max_x, max_y]]
-        self.map_bounds = np.array([[0., 0.],  self.p.map_size_2*self.p.dx])
+        self.map_bounds = np.array([[0., 0.], self.p.map_size_2 * self.p.dx])
 
         free_xy = np.array(np.where(traversible)).T
         self.free_xy_map_m2 = free_xy[:, ::-1]
         # Swap the traversible to have 1's where the building is traversable
-        self.occupancy_grid_map = np.logical_not(traversible)*1.
+        self.occupancy_grid_map = np.logical_not(traversible) * 1.
 
     def _initialize_fmm_map(self):
         """
@@ -64,10 +64,10 @@ class SBPDMap(ObstacleMap):
         Utilize the FMM Map's ability to compute nearest distances
         from a given position to return just that. 
         """
-        with tf.name_scope('dist_to_obs'):
-            distance_nk = self.fmm_map.fmm_distance_map.compute_voxel_function(
-                pos_nk2)
-            return distance_nk
+        # with tf.name_scope('dist_to_obs'):
+        distance_nk = self.fmm_map.fmm_distance_map.compute_voxel_function(
+            pos_nk2)
+        return distance_nk
 
     def sample_point_112(self, rng, free_xy_map_m2=None):
         """
@@ -97,27 +97,27 @@ class SBPDMap(ObstacleMap):
         assert((config is None) != (pos_n3 is None))
 
         if config is not None:
-            pos_n3 = config.position_and_heading_nk3()[:, 0].numpy()
+            pos_n3 = config.position_and_heading_nk3()[:, 0]
 
         if 'occupancy_grid' in self.p.renderer_params.camera_params.modalities:
             occupancy_grid_world_1mk12 = kwargs['occupancy_grid_positions_ego_1mk12']
             _, m, k, _, _ = [x.value for x in occupancy_grid_world_1mk12.shape]
-            occupancy_grid_nk2 = tf.reshape(
+            occupancy_grid_nk2 = np.reshape(
                 occupancy_grid_world_1mk12, (1, -1, 2))
 
             # Broadcast the occupancy grid to batch size n if needed
             n = pos_n3.shape[0]
             if n != 1:
-                occupancy_grid_nk2 = tf.broadcast_to(occupancy_grid_nk2, (n,
+                occupancy_grid_nk2 = np.broadcast_to(occupancy_grid_nk2, (n,
                                                                           occupancy_grid_nk2.shape[1].value,
                                                                           2))
             occupancy_grid_world_nk2 = DubinsCar.convert_position_and_heading_to_world_coordinates(pos_n3[:, None, :],
-                                                                                                   occupancy_grid_nk2.numpy())
+                                                                                                   occupancy_grid_nk2)
             dist_to_nearest_obs_nk2 = self.dist_to_nearest_obs(
                 occupancy_grid_world_nk2)
-            dist_to_nearest_obs_nmk1 = tf.reshape(
+            dist_to_nearest_obs_nmk1 = np.reshape(
                 dist_to_nearest_obs_nk2, (n, m, k, 1))
-            imgs = 0.5 * (1. - tf.sign(dist_to_nearest_obs_nmk1)).numpy()
+            imgs = 0.5 * (1. - np.sign(dist_to_nearest_obs_nmk1))
         else:
             starts_n2 = self._point_to_map(pos_n3[:, :2])
             thetas_n1 = pos_n3[:, 2:3]
@@ -136,10 +136,10 @@ class SBPDMap(ObstacleMap):
                   vmax=1.5, vmin=-.5, origin='lower')
 
         if start_config is not None:
-            start_2 = start_config.position_nk2()[0, 0].numpy()
+            start_2 = start_config.position_nk2()[0, 0]
             delta = p.plotting_grid_steps * p.dx
-            ax.set_xlim(start_2[0]-delta, start_2[0]+delta)
-            ax.set_ylim(start_2[1]-delta, start_2[1]+delta)
+            ax.set_xlim(start_2[0] - delta, start_2[0] + delta)
+            ax.set_ylim(start_2[1] - delta, start_2[1] + delta)
 
     def render_with_obstacle_margins(self, ax, start_config=None, margin0=.3, margin1=.5, zoom=0):
         """
@@ -159,10 +159,10 @@ class SBPDMap(ObstacleMap):
         if start_config is not None:
             if(zoom is not 0):
                 # Render map around the start by a certain amount
-                start_2 = start_config.position_nk2()[0, 0].numpy()
+                start_2 = start_config.position_nk2()[0, 0]
                 delta = p.plotting_grid_steps * p.dx * 2
-                ax.set_xlim(start_2[0]-zoom, start_2[0]+zoom)
-                ax.set_ylim(start_2[1]-zoom, start_2[1]+zoom)
+                ax.set_xlim(start_2[0] - zoom, start_2[0] + zoom)
+                ax.set_ylim(start_2[1] - zoom, start_2[1] + zoom)
             else:
                 # Render map fully
                 ax.set_xlim(self.map_bounds[0][0], self.map_bounds[1][0])
@@ -180,7 +180,7 @@ class SBPDMap(ObstacleMap):
         xs = xs.ravel()
         ys = ys.ravel()
         pos_n12 = np.stack([xs, ys], axis=1)[:, None]
-        dists_nk = self.dist_to_nearest_obs(pos_n12).numpy()
+        dists_nk = self.dist_to_nearest_obs(pos_n12)
 
         margin_mask_n = (dists_nk < margin)[:, 0]
         margin_mask_mn = margin_mask_n.reshape(self.occupancy_grid_map.shape)

@@ -1,6 +1,4 @@
 import numpy as np
-import tensorflow as tf
-import tensorflow.contrib.eager as tfe
 import matplotlib.pyplot as plt
 import copy
 
@@ -13,7 +11,7 @@ class Trajectory(object):
 
     def __init__(self, dt, n, k, position_nk2=None, speed_nk1=None, acceleration_nk1=None, heading_nk1=None,
                  angular_speed_nk1=None, angular_acceleration_nk1=None,
-                 dtype=tf.float32, variable=True, direct_init=False,
+                 dtype=np.float32, variable=True, direct_init=False,
                  valid_horizons_n1=None,
                  track_trajectory_acceleration=True,
                  check_dimens=True):
@@ -33,9 +31,9 @@ class Trajectory(object):
         # Number of timesteps
         self.k = k
         if valid_horizons_n1 is None:
-            self.valid_horizons_n1 = tf.ones((n, 1), dtype=tf.float32) * k
+            self.valid_horizons_n1 = np.ones((n, 1), dtype=np.float32) * k
         else:
-            self.valid_horizons_n1 = tf.constant(valid_horizons_n1)
+            self.valid_horizons_n1 = np.array(valid_horizons_n1)
 
         # Batch Size
         self.n = n
@@ -57,43 +55,21 @@ class Trajectory(object):
             self._angular_speed_nk1 = angular_speed_nk1
             self._angular_acceleration_nk1 = angular_acceleration_nk1
         else:
-            if variable:
-                # Translational trajectories
-                self._position_nk2 = tfe.Variable(tf.zeros([n, k, 2], dtype=dtype) if position_nk2 is None
-                                                  else position_nk2)
-                self._speed_nk1 = tfe.Variable(tf.zeros([n, k, 1], dtype=dtype) if speed_nk1 is None
-                                               else tf.constant(speed_nk1, dtype=dtype))
-                self._acceleration_nk1 = tfe.Variable(tf.zeros([n, k, 1], dtype=dtype) if acceleration_nk1 is None
-                                                      else tf.constant(acceleration_nk1, dtype=dtype))
+            # Translational trajectories
+            self._position_nk2 = np.zeros([n, k, 2], dtype=dtype) if position_nk2 is None \
+                else np.array(position_nk2, dtype=dtype)
+            self._speed_nk1 = np.zeros([n, k, 1], dtype=dtype) if speed_nk1 is None \
+                else np.array(speed_nk1, dtype=dtype)
+            self._acceleration_nk1 = np.zeros([n, k, 1], dtype=dtype) if acceleration_nk1 is None \
+                else np.array(acceleration_nk1, dtype=dtype)
 
-                # Rotational trajectories
-                self._heading_nk1 = tfe.Variable(tf.zeros([n, k, 1], dtype=dtype) if heading_nk1 is None
-                                                 else tf.constant(heading_nk1, dtype=dtype))
-                self._angular_speed_nk1 = tfe.Variable(tf.zeros([n, k, 1], dtype=dtype) if angular_speed_nk1 is None
-                                                       else tf.constant(angular_speed_nk1, dtype=dtype))
-                self._angular_acceleration_nk1 = tfe.Variable(
-                    tf.zeros([n, k, 1], dtype=dtype) if angular_acceleration_nk1 is None
-                    else tf.constant(angular_acceleration_nk1, dtype=dtype))
-
-                self.vars = [self._position_nk2, self._speed_nk1,
-                             self._acceleration_nk1, self._heading_nk1,
-                             self._angular_speed_nk1, self._angular_acceleration_nk1]
-            else:
-                # Translational trajectories
-                self._position_nk2 = tf.zeros([n, k, 2], dtype=dtype) if position_nk2 is None \
-                    else tf.constant(position_nk2, dtype=dtype)
-                self._speed_nk1 = tf.zeros([n, k, 1], dtype=dtype) if speed_nk1 is None \
-                    else tf.constant(speed_nk1, dtype=dtype)
-                self._acceleration_nk1 = tf.zeros([n, k, 1], dtype=dtype) if acceleration_nk1 is None \
-                    else tf.constant(acceleration_nk1, dtype=dtype)
-
-                # Rotational trajectories
-                self._heading_nk1 = tf.zeros([n, k, 1], dtype=dtype) if heading_nk1 is None \
-                    else tf.constant(heading_nk1, dtype=dtype)
-                self._angular_speed_nk1 = tf.zeros([n, k, 1], dtype=dtype) if angular_speed_nk1 is None \
-                    else tf.constant(angular_speed_nk1, dtype=dtype)
-                self._angular_acceleration_nk1 = tf.zeros([n, k, 1], dtype=dtype) if angular_acceleration_nk1 is None \
-                    else tf.constant(angular_acceleration_nk1, dtype=dtype)
+            # Rotational trajectories
+            self._heading_nk1 = np.zeros([n, k, 1], dtype=dtype) if heading_nk1 is None \
+                else np.array(heading_nk1, dtype=dtype)
+            self._angular_speed_nk1 = np.zeros([n, k, 1], dtype=dtype) if angular_speed_nk1 is None \
+                else np.array(angular_speed_nk1, dtype=dtype)
+            self._angular_acceleration_nk1 = np.zeros([n, k, 1], dtype=dtype) if angular_acceleration_nk1 is None \
+                else np.array(angular_acceleration_nk1, dtype=dtype)
 
     def memory_usage_bytes(self):
         """
@@ -125,10 +101,10 @@ class Trajectory(object):
         """Update this trajectories valid mask. The valid mask is a mask of 1's
         and 0's at the trajectories sampling interval where 1's represent
         trajectory data within the valid horizon and 0's otherwise."""
-        all_valid_nk = tf.broadcast_to(
-            tf.range(self.k, dtype=tf.float32) + 1, (self.n, self.k))
-        self.valid_mask_nk = tf.cast(
-            all_valid_nk <= self.valid_horizons_n1, dtype=tf.float32)
+        all_valid_nk = np.broadcast_to(
+            np.arange(self.k, dtype=np.float32) + 1, (self.n, self.k))
+        self.valid_mask_nk = (
+            all_valid_nk <= self.valid_horizons_n1).astype(np.float32)
 
     def assign_from_trajectory_batch_idx(self, trajectory, batch_idx):
         """Assigns a trajectory object's instance variables from the trajectory stored
@@ -149,39 +125,40 @@ class Trajectory(object):
     def assign_trajectory_from_tensors(self, position_nk2, speed_nk1, acceleration_nk1,
                                        heading_nk1, angular_speed_nk1, angular_acceleration_nk1,
                                        valid_horizons_n1):
-        tf.assign(self.position_nk2(), position_nk2)
-        tf.assign(self.speed_nk1(), speed_nk1)
-        tf.assign(self.acceleration_nk1(), acceleration_nk1)
-        tf.assign(self.heading_nk1(), heading_nk1)
-        tf.assign(self.angular_speed_nk1(), angular_speed_nk1)
-        tf.assign(self.angular_acceleration_nk1(), angular_acceleration_nk1)
+        self._position_nk2 = position_nk2
+        self._speed_nk1 = speed_nk1
+        self._acceleration_nk1 = acceleration_nk1
+        self._heading_nk1 = heading_nk1
+        self._angular_speed_nk1 = angular_speed_nk1
+        self._angular_acceleration_nk1 = angular_acceleration_nk1
         self.valid_horizons_n1 = valid_horizons_n1
 
     def gather_across_batch_dim(self, idxs):
         """Given a tensor of indexes to gather in the batch dimension,
         update this trajectories instance variables and shape."""
-        self.n = len(idxs.numpy())
-        self._position_nk2 = tf.gather(self._position_nk2, idxs)
-        self._speed_nk1 = tf.gather(self._speed_nk1, idxs)
-        self._acceleration_nk1 = tf.gather(self._acceleration_nk1, idxs)
-        self._heading_nk1 = tf.gather(self._heading_nk1, idxs)
-        self._angular_speed_nk1 = tf.gather(self._angular_speed_nk1, idxs)
-        self._angular_acceleration_nk1 = tf.gather(
+        self.n = idxs.size
+        self._position_nk2 = np.gather(self._position_nk2, idxs)
+        self._speed_nk1 = np.gather(self._speed_nk1, idxs)
+        self._acceleration_nk1 = np.gather(self._acceleration_nk1, idxs)
+        self._heading_nk1 = np.gather(self._heading_nk1, idxs)
+        self._angular_speed_nk1 = np.gather(self._angular_speed_nk1, idxs)
+        self._angular_acceleration_nk1 = np.gather(
             self._angular_acceleration_nk1, idxs)
-        self.valid_horizons_n1 = tf.gather(self.valid_horizons_n1, idxs)
+        self.valid_horizons_n1 = np.gather(self.valid_horizons_n1, idxs)
         return self
 
     def to_numpy_repr(self):
+        # TODO; remove this because its ALL numpy
         """Utility function to return a representation of the trajectory using
         numpy arrays. Useful for pickling trajectories."""
         numpy_dict = {'dt': self.dt, 'n': self.n, 'k': self.k,
-                      'position_nk2': self.position_nk2().numpy(),
-                      'speed_nk1': self.speed_nk1().numpy(),
-                      'acceleration_nk1': self.acceleration_nk1().numpy(),
-                      'heading_nk1': self.heading_nk1().numpy(),
-                      'angular_speed_nk1': self.angular_speed_nk1().numpy(),
-                      'angular_acceleration_nk1': self.angular_acceleration_nk1().numpy(),
-                      'valid_horizons_n1': self.valid_horizons_n1.numpy()}
+                      'position_nk2': self.position_nk2(),
+                      'speed_nk1': self.speed_nk1(),
+                      'acceleration_nk1': self.acceleration_nk1(),
+                      'heading_nk1': self.heading_nk1(),
+                      'angular_speed_nk1': self.angular_speed_nk1(),
+                      'angular_acceleration_nk1': self.angular_acceleration_nk1(),
+                      'valid_horizons_n1': self.valid_horizons_n1}
         return numpy_dict
 
     @classmethod
@@ -192,22 +169,24 @@ class Trajectory(object):
         if len(trajs) == 0:
             return None
 
-        position_nk2 = tf.concat([traj.position_nk2()
-                                  for traj in trajs], axis=0)
-        speed_nk1 = tf.concat([traj.speed_nk1() for traj in trajs], axis=0)
-        acceleration_nk1 = tf.concat(
+        position_nk2 = np.concatenate([traj.position_nk2()
+                                       for traj in trajs], axis=0)
+        speed_nk1 = np.concatenate([traj.speed_nk1()
+                                    for traj in trajs], axis=0)
+        acceleration_nk1 = np.concatenate(
             [traj.acceleration_nk1() for traj in trajs], axis=0)
-        heading_nk1 = tf.concat([traj.heading_nk1() for traj in trajs], axis=0)
-        angular_speed_nk1 = tf.concat(
+        heading_nk1 = np.concatenate(
+            [traj.heading_nk1() for traj in trajs], axis=0)
+        angular_speed_nk1 = np.concatenate(
             [traj.angular_speed_nk1() for traj in trajs], axis=0)
-        angular_acceleration_nk1 = tf.concat(
+        angular_acceleration_nk1 = np.concatenate(
             [traj.angular_acceleration_nk1() for traj in trajs], axis=0)
-        valid_horizons_n1 = tf.concat(
+        valid_horizons_n1 = np.concatenate(
             [traj.valid_horizons_n1 for traj in trajs], axis=0)
 
         dt = trajs[0].dt
         k = trajs[0].k
-        n = position_nk2.shape[0].value
+        n = position_nk2.shape[0]
         return cls(dt=dt, n=n, k=k, position_nk2=position_nk2,
                    speed_nk1=speed_nk1, acceleration_nk1=acceleration_nk1,
                    heading_nk1=heading_nk1, angular_speed_nk1=angular_speed_nk1,
@@ -220,17 +199,17 @@ class Trajectory(object):
         gather traj's instance variables across the batch dimension
         creating a new trajectory object."""
         dt = traj.dt
-        n = len(idxs.numpy())
+        n = idxs.size
         k = traj.k
 
-        position_nk2 = tf.gather(traj.position_nk2(), idxs)
-        speed_nk1 = tf.gather(traj.speed_nk1(), idxs)
-        acceleration_nk1 = tf.gather(traj.acceleration_nk1(), idxs)
-        heading_nk1 = tf.gather(traj.heading_nk1(), idxs)
-        angular_speed_nk1 = tf.gather(traj.angular_speed_nk1(), idxs)
-        angular_acceleration_nk1 = tf.gather(
+        position_nk2 = np.gather(traj.position_nk2(), idxs)
+        speed_nk1 = np.gather(traj.speed_nk1(), idxs)
+        acceleration_nk1 = np.gather(traj.acceleration_nk1(), idxs)
+        heading_nk1 = np.gather(traj.heading_nk1(), idxs)
+        angular_speed_nk1 = np.gather(traj.angular_speed_nk1(), idxs)
+        angular_acceleration_nk1 = np.gather(
             traj.angular_acceleration_nk1(), idxs)
-        valid_horizons_n1 = tf.gather(traj.valid_horizons_n1, idxs)
+        valid_horizons_n1 = np.gather(traj.valid_horizons_n1, idxs)
         return cls(dt=dt, n=n, k=k, position_nk2=position_nk2,
                    speed_nk1=speed_nk1, acceleration_nk1=acceleration_nk1,
                    heading_nk1=heading_nk1, angular_speed_nk1=angular_speed_nk1,
@@ -261,43 +240,43 @@ class Trajectory(object):
         return self._angular_speed_nk1
 
     def to_3D_numpy(self):
-        pos_2 = self.position_nk2().numpy()[0][0]
-        heading = self.heading_nk1().numpy()[0][0]
+        pos_2 = self.position_nk2()[0][0]
+        heading = self.heading_nk1()[0][0]
         return np.append(pos_2, heading)
 
     def angular_acceleration_nk1(self):
         return self._angular_acceleration_nk1
 
     def position_and_heading_nk3(self):
-        return tf.concat([self.position_nk2(), self.heading_nk1()], axis=2)
+        return np.concatenate([self.position_nk2(), self.heading_nk1()], axis=2)
 
     def speed_and_angular_speed_nk2(self):
-        return tf.concat([self.speed_nk1(), self.angular_speed_nk1()], axis=2)
+        return np.concatenate([self.speed_nk1(), self.angular_speed_nk1()], axis=2)
 
     def position_heading_speed_and_angular_speed_nk5(self):
-        return tf.concat([self.position_and_heading_nk3(),
-                          self.speed_and_angular_speed_nk2()], axis=2)
+        return np.concatenate([self.position_and_heading_nk3(),
+                               self.speed_and_angular_speed_nk2()], axis=2)
 
     def append_along_time_axis(self, trajectory):
         """ Utility function to concatenate trajectory
         over time. Useful for assembling an entire
         trajectory from multiple sub-trajectories. """
-        self._position_nk2 = tf.concat([self.position_nk2(),
-                                        trajectory.position_nk2()],
-                                       axis=1)
-        self._speed_nk1 = tf.concat([self.speed_nk1(), trajectory.speed_nk1()],
-                                    axis=1)
-        self._acceleration_nk1 = tf.concat([self.acceleration_nk1(),
-                                            trajectory.acceleration_nk1()],
-                                           axis=1)
-        self._heading_nk1 = tf.concat([self.heading_nk1(),
-                                       trajectory.heading_nk1()], axis=1)
-        self._angular_speed_nk1 = tf.concat([self.angular_speed_nk1(),
-                                             trajectory.angular_speed_nk1()],
+        self._position_nk2 = np.concatenate([self.position_nk2(),
+                                             trajectory.position_nk2()],
                                             axis=1)
-        self._angular_acceleration_nk1 = tf.concat([self.angular_acceleration_nk1(),
-                                                    trajectory.angular_acceleration_nk1()],
-                                                   axis=1)
+        self._speed_nk1 = np.concatenate([self.speed_nk1(), trajectory.speed_nk1()],
+                                         axis=1)
+        self._acceleration_nk1 = np.concatenate([self.acceleration_nk1(),
+                                                 trajectory.acceleration_nk1()],
+                                                axis=1)
+        self._heading_nk1 = np.concatenate([self.heading_nk1(),
+                                            trajectory.heading_nk1()], axis=1)
+        self._angular_speed_nk1 = np.concatenate([self.angular_speed_nk1(),
+                                                  trajectory.angular_speed_nk1()],
+                                                 axis=1)
+        self._angular_acceleration_nk1 = np.concatenate([self.angular_acceleration_nk1(),
+                                                         trajectory.angular_acceleration_nk1()],
+                                                        axis=1)
         self.k = self.k + trajectory.k
         self.valid_horizons_n1 = self.valid_horizons_n1 + trajectory.valid_horizons_n1
 
@@ -315,7 +294,7 @@ class Trajectory(object):
         self._angular_speed_nk1 = self._angular_speed_nk1[:, :horizon]
         self._angular_acceleration_nk1 = self._angular_acceleration_nk1[:, :horizon]
         self.k = horizon
-        self.valid_horizons_n1 = tf.clip_by_value(
+        self.valid_horizons_n1 = np.clip_by_value(
             self.valid_horizons_n1, 0, horizon)
 
     @classmethod
@@ -333,18 +312,19 @@ class Trajectory(object):
         dt = trajectories[0].dt
         k = sum([x.k for x in trajectories])
 
-        position_nk2 = tf.concat([x.position_nk2()
-                                  for x in trajectories], axis=1)
-        speed_nk1 = tf.concat([x.speed_nk1() for x in trajectories], axis=1)
-        acceleration_nk1 = tf.concat(
+        position_nk2 = np.concatenate([x.position_nk2()
+                                       for x in trajectories], axis=1)
+        speed_nk1 = np.concatenate([x.speed_nk1()
+                                    for x in trajectories], axis=1)
+        acceleration_nk1 = np.concatenate(
             [x.acceleration_nk1() for x in trajectories], axis=1)
-        heading_nk1 = tf.concat([x.heading_nk1()
-                                 for x in trajectories], axis=1)
-        angular_speed_nk1 = tf.concat(
+        heading_nk1 = np.concatenate([x.heading_nk1()
+                                      for x in trajectories], axis=1)
+        angular_speed_nk1 = np.concatenate(
             [x.angular_speed_nk1() for x in trajectories], axis=1)
-        angular_acceleration_nk1 = tf.concat(
+        angular_acceleration_nk1 = np.concatenate(
             [x.angular_acceleration_nk1() for x in trajectories], axis=1)
-        valid_horizons_n1 = tf.reduce_sum(
+        valid_horizons_n1 = np.reduce_sum(
             [x.valid_horizons_n1 for x in trajectories], axis=0)
         return cls(dt=dt, n=n, k=k,
                    position_nk2=position_nk2,
@@ -384,10 +364,10 @@ class Trajectory(object):
         angular_speed_nk1 = trajectory.angular_speed_nk1()[:, :horizon]
 
         if repeat_second_to_last_speed:
-            speed_nk1 = tf.concat(
+            speed_nk1 = np.concatenate(
                 [speed_nk1[:, :-1], speed_nk1[:, -2:-1]], axis=1)
-            angular_speed_nk1 = tf.concat([angular_speed_nk1[:, :-1],
-                                           angular_speed_nk1[:, -2:-1]], axis=1)
+            angular_speed_nk1 = np.concatenate([angular_speed_nk1[:, :-1],
+                                                angular_speed_nk1[:, -2:-1]], axis=1)
 
         return cls(dt=trajectory.dt, n=trajectory.n, k=horizon,
                    position_nk2=trajectory.position_nk2()[:, :horizon],
@@ -429,8 +409,8 @@ class Trajectory(object):
         thetas = self._heading_nk1[batch_idx]
 
         if plot_quiver:
-            ax.quiver(xs[::freq], ys[::freq], tf.cos(
-                thetas[::freq]), tf.sin(thetas[::freq]))
+            ax.quiver(xs[::freq], ys[::freq], np.cos(
+                thetas[::freq]), np.sin(thetas[::freq]))
         title_str = '{:s} Trajectory'.format(name)
         ax.plot(xs, ys, '-', color=color, linewidth=linewidth)
         if label_start_and_end:
@@ -446,7 +426,7 @@ class Trajectory(object):
             print('\033[33m', "Plotting Heading", '\033[0m')
             ax = axs[1]  # [0]
             ax.plot(np.r_[:self.k] * self.dt,
-                    self._heading_nk1[batch_idx, :, 0].numpy(), 'r-')
+                    self._heading_nk1[batch_idx, :, 0], 'r-')
             ax.set_title('Theta')
 
         if plot_velocity:
@@ -454,12 +434,12 @@ class Trajectory(object):
             time = np.r_[:self.k] * self.dt
 
             ax = axs[2]  # [0]
-            ax.plot(time, self._speed_nk1[batch_idx, :, 0].numpy(), 'r-')
+            ax.plot(time, self._speed_nk1[batch_idx, :, 0], 'r-')
             ax.set_title('Linear Velocity')
 
             ax = axs[3]  # [0]
             ax.plot(
-                time, self._angular_speed_nk1[batch_idx, :, 0].numpy(), 'r-')
+                time, self._angular_speed_nk1[batch_idx, :, 0], 'r-')
             ax.set_title('Angular Velocity')
 
 
@@ -471,14 +451,14 @@ class SystemConfig(Trajectory):
 
     def __init__(self, dt, n, k, position_nk2=None, speed_nk1=None, acceleration_nk1=None, heading_nk1=None,
                  angular_speed_nk1=None, angular_acceleration_nk1=None,
-                 dtype=tf.float32, variable=True, direct_init=False,
+                 dtype=np.float32, variable=True, direct_init=False,
                  valid_horizons_n1=None,
                  track_trajectory_acceleration=True, check_dimens=True):
         assert(k == 1)
         # Don't pass on valid_horizons_n1 as a SystemConfig has no horizon
         super(SystemConfig, self).__init__(dt, n, k, position_nk2, speed_nk1, acceleration_nk1,
                                            heading_nk1, angular_speed_nk1,
-                                           angular_acceleration_nk1, dtype=tf.float32,
+                                           angular_acceleration_nk1, dtype=np.float32,
                                            variable=variable, direct_init=direct_init,
                                            track_trajectory_acceleration=track_trajectory_acceleration,
                                            check_dimens=check_dimens)
@@ -487,16 +467,16 @@ class SystemConfig(Trajectory):
         """ Assigns a SystemConfig's variables by broadcasting a given config to
         batch size n """
         k = config.k
-        self.assign_config_from_tensors(position_nk2=tf.broadcast_to(config.position_nk2(), (n, k, 2)),
-                                        speed_nk1=tf.broadcast_to(
+        self.assign_config_from_tensors(position_nk2=np.broadcast_to(config.position_nk2(), (n, k, 2)),
+                                        speed_nk1=np.broadcast_to(
                                             config.speed_nk1(), (n, k, 1)),
-                                        acceleration_nk1=tf.broadcast_to(
+                                        acceleration_nk1=np.broadcast_to(
                                             config.acceleration_nk1(), (n, k, 1)),
-                                        heading_nk1=tf.broadcast_to(
+                                        heading_nk1=np.broadcast_to(
                                             config.heading_nk1(), (n, k, 1)),
-                                        angular_speed_nk1=tf.broadcast_to(
+                                        angular_speed_nk1=np.broadcast_to(
                                             config.angular_speed_nk1(), (n, k, 1)),
-                                        angular_acceleration_nk1=tf.broadcast_to(config.angular_acceleration_nk1(), (n, k, 1)))
+                                        angular_acceleration_nk1=np.broadcast_to(config.angular_acceleration_nk1(), (n, k, 1)))
 
     @classmethod
     def init_config_from_trajectory_time_index(cls, trajectory, t):
@@ -542,18 +522,18 @@ class SystemConfig(Trajectory):
         ax.plot(pos_3[0], pos_3[1], **kwargs)
         if plot_quiver:
             ax.quiver([pos_3[0]], [pos_3[1]],
-                      tf.cos([pos_3[2]]), tf.sin([pos_3[2]]))
+                      np.cos([pos_3[2]]), np.sin([pos_3[2]]))
 
     def render_with_boundary(self, ax, batch_idx, boundary_params, **kwargs):
         self.render(ax, batch_idx, **kwargs)
         if boundary_params['norm'] == 2:
-            center = self.position_nk2()[batch_idx, 0].numpy()
+            center = self.position_nk2()[batch_idx, 0]
             radius = boundary_params['cutoff']
             c = plt.Circle(center, radius, color=boundary_params['color'])
             ax.add_artist(c)
         else:
             # assert(False)
-            center = self.position_nk2()[batch_idx, 0].numpy()
+            center = self.position_nk2()[batch_idx, 0]
             radius = boundary_params['cutoff']
             c = plt.Circle(center, radius, color=boundary_params['color'])
             ax.add_artist(c)
