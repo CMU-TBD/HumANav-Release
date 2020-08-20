@@ -3,8 +3,6 @@ import os
 import sys
 import math
 import matplotlib.pyplot as plt
-import tensorflow as tf
-tf.enable_eager_execution()
 
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
 from trajectory.trajectory import SystemConfig
@@ -24,6 +22,7 @@ def create_params():
     # Set any custom parameters
     return p
 
+
 def test_planner():
     p = create_params()
     # Create planner parameters
@@ -35,14 +34,14 @@ def test_planner():
     dt = 0.1
 
     # Goal states and initial speeds
-    goal_pos_n11 = tf.constant([[[12., 18.75]]
-                                ])  # Goal position (must be 1x1x2 array)
-    goal_heading_n11 = tf.constant([[[-np.pi / 2.]]])
+    goal_pos_n11 = np.array([[[12., 18.75]]
+                             ])  # Goal position (must be 1x1x2 array)
+    goal_heading_n11 = np.array([[[-np.pi / 2.]]])
     # Start states and initial speeds
-    start_pos_n11 = tf.constant([[[27.75, 25.]]
-                                 ])  # Goal position (must be 1x1x2 array)
-    start_heading_n11 = tf.constant([[[np.pi]]])
-    start_speed_nk1 = tf.ones((1, 1, 1), dtype=tf.float32)
+    start_pos_n11 = np.array([[[27.75, 25.]]
+                              ])  # Goal position (must be 1x1x2 array)
+    start_heading_n11 = np.array([[[np.pi]]])
+    start_speed_nk1 = np.ones((1, 1, 1), dtype=np.float32)
     # Define start and goal configurations
     start_config = SystemConfig(dt,
                                 n,

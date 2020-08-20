@@ -5,7 +5,6 @@ from simulators.agent import Agent
 import math
 import sys
 import os
-import pickle
 import numpy as np
 
 
@@ -37,8 +36,8 @@ class Human(Agent):
         if(verbose):
             # In order to print more readable arrays
             np.set_printoptions(precision=2)
-            pos_2 = (configs.get_start_config().position_nk2().numpy())[0][0]
-            goal_2 = (configs.get_goal_config().position_nk2().numpy())[0][0]
+            pos_2 = (configs.get_start_config().position_nk2())[0][0]
+            goal_2 = (configs.get_goal_config().position_nk2())[0][0]
             print(" Human", human_name, "at", pos_2, "with goal", goal_2)
         return Human(human_name, appearance, configs)
 

@@ -1,14 +1,12 @@
-from random import seed, random, randint
-import random, os
-import string
-import math
+from random import randint
 import numpy as np
 
 
 class HumanAppearance():
     # Static variable shared amongst all human appearances
     # This dataset holds all the SURREAL human textures and meshes
-    dataset = None 
+    dataset = None
+
     def __init__(self, gender, texture, shape, mesh_rng):
         self.gender = gender
         self.shape = shape
@@ -46,7 +44,7 @@ class HumanAppearance():
         dataset = HumanAppearance.dataset
         if(dataset is None):
             print('\033[31m', "ERROR: can't find Surreal Dataset", '\033[0m')
-            os._exit(1) # Failure condition
+            exit(1)  # Failure condition
         # Using the SBPD dataset to generate a random gender, texture, and body shape
         human_gender, human_texture, body_shape = \
             dataset.get_random_human_gender_texture_and_body_shape(

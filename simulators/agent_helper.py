@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 import sys
 import os
@@ -17,17 +16,17 @@ class AgentHelper(object):
         try:
             idx = np.argmin(time_idxs)
         except ValueError:
-            idx = np.argmin([time_idx.numpy() for time_idx in time_idxs])
+            idx = np.argmin([time_idx for time_idx in time_idxs])
 
         try:
-            termination_time = time_idxs[idx].numpy()
+            termination_time = time_idxs[idx]
         except ValueError:
             termination_time = time_idxs[idx]
 
         if termination_time != np.inf:
             end_episode = True
             for i, condition in enumerate(p.episode_termination_reasons):
-                if (time_idxs[i].numpy() != np.inf):
+                if (time_idxs[i] != np.inf):
                     color = "green"
                     if (condition is "Timeout"):
                         color = "blue"
@@ -42,8 +41,8 @@ class AgentHelper(object):
                         self.planner_data,
                         k=termination_time
                     )
-                commanded_actions_1kf = tf.concat(self.commanded_actions_nkf,
-                                                  axis=1)[:, :termination_time]
+                commanded_actions_1kf = np.concatenate(self.commanded_actions_nkf,
+                                                       axis=1)[:, :termination_time]
 
                 # If all of the data was masked then
                 # the episode simulated is not valid
@@ -90,9 +89,9 @@ class AgentHelper(object):
         return episode_horizon, else return infinity.
         """
         if self.vehicle_trajectory.k >= self.params.episode_horizon:
-            time_idx = tf.constant(self.params.episode_horizon)
+            time_idx = np.array(self.params.episode_horizon)
         else:
-            time_idx = tf.constant(np.inf)
+            time_idx = np.array(np.inf)
         return time_idx
 
     def _compute_time_idx_for_collision(self, use_current_config=None):
@@ -105,13 +104,13 @@ class AgentHelper(object):
         else:
             pos_1k2 = self.get_current_config().position_nk2()
         obstacle_dists_1k = self.obstacle_map.dist_to_nearest_obs(pos_1k2)
-        collisions = tf.where(tf.less(obstacle_dists_1k, 0.0))
-        collision_idxs = collisions[:, 1]
-        if tf.size(collision_idxs).numpy() != 0:
+        collisions = np.where(np.less(obstacle_dists_1k, 0.0))
+        collision_idxs = collisions[1]
+        if np.size(collision_idxs) != 0:
             time_idx = collision_idxs[0]
             self.collision_point_k = self.vehicle_trajectory.k
         else:
-            time_idx = tf.constant(np.inf)
+            time_idx = np.array(np.inf)
         return time_idx
 
     def _dist_to_goal(self, use_euclidean=False):
@@ -137,13 +136,13 @@ class AgentHelper(object):
         in vehicle trajectory. If there is no collision return infinity.
         """
         dist_to_goal_1k = self._dist_to_goal(use_euclidean=False)
-        successes = tf.where(
-            tf.less(dist_to_goal_1k, self.params.goal_cutoff_dist))
-        success_idxs = successes[:, 1]
-        if tf.size(success_idxs).numpy() != 0:
+        successes = np.where(
+            np.less(dist_to_goal_1k, self.params.goal_cutoff_dist))
+        success_idxs = successes[1]
+        if np.size(success_idxs) != 0:
             time_idx = success_idxs[0]
         else:
-            time_idx = tf.constant(np.inf)
+            time_idx = np.array(np.inf)
         return time_idx
 
     @staticmethod
@@ -177,9 +176,10 @@ class AgentHelper(object):
 
             states.append(x_next_n1d)
 
-        commanded_actions_nkf = tf.concat([control_nk2[:, :T], u_n1f], axis=1)
-        u_nkf = tf.concat(applied_actions, axis=1)
-        x_nkd = tf.concat(states, axis=1)
+        commanded_actions_nkf = np.concatenate(
+            [control_nk2[:, :T], u_n1f], axis=1)
+        u_nkf = np.concatenate(applied_actions, axis=1)
+        x_nkd = np.concatenate(states, axis=1)
         trajectory = self.system_dynamics.assemble_trajectory(x_nkd,
                                                               u_nkf,
                                                               pad_mode='repeat')
@@ -193,7 +193,7 @@ class AgentHelper(object):
         Here k_array_nTf1 and K_array_nTfd are tensors of dimension
         (n, self.T-1, f, 1) and (n, self.T-1, f, d) respectively.
         """
-        with tf.name_scope('apply_control'):
+        with np.name_scope('apply_control'):
             x0_n1d, _ = self.system_dynamics.parse_trajectory(start_config)
             assert(len(x0_n1d.shape) == 3)  # [n,1,x_dim]
             angle_dims = self.system_dynamics._angle_dims
@@ -211,14 +211,14 @@ class AgentHelper(object):
                 # TODO: Currently calling numpy() here as tfe.DEVICE_PLACEMENT_SILENT
                 # is not working to place non-gpu ops (i.e. mod) on the cpu
                 # turning tensors into numpy arrays is a hack around this.
-                error_t_n1d = tf.concat([error_t_n1d[:, :, :angle_dims],
-                                         angle_normalize(
-                                             error_t_n1d[:, :, angle_dims:angle_dims + 1].numpy()),
-                                         error_t_n1d[:, :, angle_dims + 1:]],
-                                        axis=2)
-                fdback_nf1 = tf.matmul(K_array_nTfd[:, t],
-                                       tf.transpose(error_t_n1d, perm=[0, 2, 1]))
-                u_n1f = u_ref_n1f + tf.transpose(k_array_nTf1[:, t] + fdback_nf1,
+                error_t_n1d = np.concatenate([error_t_n1d[:, :, :angle_dims],
+                                              angle_normalize(
+                                             error_t_n1d[:, :, angle_dims:angle_dims + 1]),
+                    error_t_n1d[:, :, angle_dims + 1:]],
+                    axis=2)
+                fdback_nf1 = np.matmul(K_array_nTfd[:, t],
+                                       np.transpose(error_t_n1d, perm=[0, 2, 1]))
+                u_n1f = u_ref_n1f + np.transpose(k_array_nTf1[:, t] + fdback_nf1,
                                                  perm=[0, 2, 1])
 
                 x_next_n1d = self.system_dynamics.simulate(
@@ -241,9 +241,10 @@ class AgentHelper(object):
                 states.append(x_next_n1d)
 
             commanded_actions_nkf.append(u_n1f)
-            commanded_actions_nkf = tf.concat(commanded_actions_nkf, axis=1)
-            u_nkf = tf.concat(applied_actions, axis=1)
-            x_nkd = tf.concat(states, axis=1)
+            commanded_actions_nkf = np.concatenate(
+                commanded_actions_nkf, axis=1)
+            u_nkf = np.concatenate(applied_actions, axis=1)
+            x_nkd = np.concatenate(states, axis=1)
             trajectory = self.system_dynamics.assemble_trajectory(x_nkd,
                                                                   u_nkf,
                                                                   pad_mode='repeat')

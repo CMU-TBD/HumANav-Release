@@ -1,4 +1,4 @@
-import tensorflow as tf
+import numpy as np
 from planners.planner import Planner
 from trajectory.trajectory import Trajectory, SystemConfig
 
@@ -34,8 +34,8 @@ class SamplingPlanner(Planner):
             3. Return the minimum cost waypoint, trajectory, and cost
         """
         obj_vals, data = self.eval_objective(start_config, goal_config)
-        min_idx = tf.argmin(obj_vals)
-        min_cost = obj_vals[min_idx]
+        min_idx = np.argmin(obj_vals)
+        # min_cost = obj_vals[min_idx]
         waypts, horizons_s, trajectories_lqr, trajectories_spline, controllers = data
 
         self.opt_waypt.assign_from_config_batch_idx(waypts, min_idx)
@@ -43,8 +43,7 @@ class SamplingPlanner(Planner):
             trajectories_lqr, min_idx)
 
         # Convert horizon in seconds to horizon in # of steps
-        min_horizon = int(
-            tf.ceil(horizons_s[min_idx, 0] / self.params.dt).numpy())
+        min_horizon = int(np.ceil(horizons_s[min_idx, 0] / self.params.dt))
 
         # If the real LQR data has been discarded just take the first element
         # since it will be all zeros

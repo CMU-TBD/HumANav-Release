@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 from trajectory.trajectory import Trajectory, SystemConfig
 import threading
@@ -148,10 +147,10 @@ class Planner(object):
                 np.array([data['spline_trajectory']]))
             data['planning_horizon_n1'] = data[
                 'planning_horizon']  # [valid_mask][:, None]
-            data['K_nkfd'] = tf.boolean_mask(tf.concat(data['K_nkfd'], axis=0),
-                                             valid_mask)
-            data['k_nkf1'] = tf.boolean_mask(tf.concat(data['k_nkf1'], axis=0),
-                                             valid_mask)
+            data['K_nkfd'] = np.ma.masked_array(np.concatenate(data['K_nkfd'], axis=0),
+                                                valid_mask)
+            data['k_nkf1'] = np.ma.masked_array(np.concatenate(data['k_nkf1'], axis=0),
+                                                valid_mask)
             data['img_nmkd'] = []
         else:
             data['system_config'] = SystemConfig.concat_across_batch_dim(
@@ -164,10 +163,10 @@ class Planner(object):
                 np.array(data['spline_trajectory'])[valid_mask])
             data['planning_horizon_n1'] = np.array(
                 data['planning_horizon'])[valid_mask][:, None]
-            data['K_nkfd'] = tf.boolean_mask(tf.concat(data['K_nkfd'], axis=0),
-                                             valid_mask)
-            data['k_nkf1'] = tf.boolean_mask(tf.concat(data['k_nkf1'], axis=0),
-                                             valid_mask)
+            data['K_nkfd'] = np.ma.masked_array(np.concatenate(data['K_nkfd'], axis=0),
+                                                valid_mask)
+            data['k_nkf1'] = np.ma.masked_array(np.concatenate(data['k_nkf1'], axis=0),
+                                                valid_mask)
             data['img_nmkd'] = [
             ]  # np.array(np.concatenate(data['img_nmkd'], axis=0))[valid_mask] # Dont think we need for our purposes
         return data, data_last, last_data_valid
