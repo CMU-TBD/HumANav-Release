@@ -1,6 +1,4 @@
 import numpy as np
-import tensorflow as tf
-tf.enable_eager_execution()
 from dotmap import DotMap
 import matplotlib.pyplot as plt
 from trajectory.trajectory import Trajectory
@@ -22,7 +20,7 @@ def create_renderer_params():
     # of height, 'height', with radius, 'radius',
     # base at height 'base' above the ground
     # The robot has a camera at height
-    # 'sensor_height' pointing at 
+    # 'sensor_height' pointing at
     # camera_elevation_degree degrees vertically
     # from the horizontal plane.
     p.robot_params = DotMap(radius=18,
@@ -56,17 +54,25 @@ def test_sbpd_map(visualize=False):
     np.random.seed(seed=1)
 
     # Define a set of positions and evaluate objective
-    pos_nk2 = tf.constant([[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=tf.float32)
+    pos_nk2 = np.array(
+        [[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=np.float32)
     trajectory = Trajectory(dt=0.1, n=1, k=3, position_nk2=pos_nk2)
 
     p = create_params()
 
     # Create an SBPD Map
-    obstacle_map = SBPDMap(p.obstacle_map_params)
+    from humanav.humanav_renderer_multi import HumANavRendererMulti
+    r = HumANavRendererMulti.get_renderer(
+        p.obstacle_map_params.renderer_params, deepcpy=False)
+    # obtain "resolution and traversible of building"
+    dx_cm, traversible = r.get_config()
+
+    obstacle_map = SBPDMap(p.obstacle_map_params,
+                           renderer=0, res=dx_cm, trav=traversible)
 
     obs_dists_nk = obstacle_map.dist_to_nearest_obs(trajectory.position_nk2())
 
-    assert(np.allclose(obs_dists_nk, [0.59727454, 1.3223624, 0.47055122]))
+    assert(np.allclose(obs_dists_nk[0], [0.9958652, 1.3232646, 0.06279612]))
 
     if visualize:
         #occupancy_grid_nn = obstacle_map.create_occupancy_grid(trajectory.position_nk2())
@@ -79,7 +85,10 @@ def test_sbpd_map(visualize=False):
         # ax.imshow(occupancy_grid_nn, cmap='gray', origin='lower')
         ax.set_axis_off()
         # plt.show()
-        fig.savefig('./tests/obstacles/test_obstacle_map.png', bbox_inches='tight', pad_inches=0)
+        fig.savefig('./tests/obstacles/test_obstacle_map.png',
+                    bbox_inches='tight', pad_inches=0)
+
 
 if __name__ == '__main__':
-    test_sbpd_map(visualize=True)
+    test_sbpd_map(visualize=False)
+    print("All tests passed!")
