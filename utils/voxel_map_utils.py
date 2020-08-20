@@ -52,10 +52,12 @@ class VoxelMap(object):
 
         def gather_nd(data, indices):
             params = []
-            for i in range(indices[0].shape[0]):
-                params.append(data[indices[0][i][0], indices[0][i][1]])
-            params = np.array([params])
-            return params
+            for j in range(indices.shape[0]):
+                params_i = []
+                for i in range(indices[j].shape[0]):
+                    params_i.append(data[indices[j][i][0], indices[j][i][1]])
+                params.append(params_i)
+            return np.array(params)
         # Voxel function values at corner points
         data = self.voxel_function_mn
         indices_1 = voxel_indices_int64_nk4[:, :, [1, 0]]
