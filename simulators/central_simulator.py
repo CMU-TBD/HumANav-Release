@@ -381,7 +381,7 @@ class CentralSimulator(SimulatorHelper):
 
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment,
                     camera_pos_13, agents, prerecs, robots,
-                    sim_t: float, wall_t: float, filename: str, img_dir: str):
+                    sim_t: float, wall_t: float, filename: str, img_dir: str, with_zoom=False):
         """Plots a single frame from information provided about the world state
 
         Args:
@@ -412,11 +412,17 @@ class CentralSimulator(SimulatorHelper):
         extent = np.array(extent) * map_scale
 
         # count used to signify the number of images that will be generated in a single frame
-        plot_count = 1  # default 2, for zoomed topview and normal topview
+        # default 1, for normal view (can add a second for zoomed view)
+        plot_count = 1
+        if(with_zoom):
+            plot_count += 1
+            zoomed_img_plt_indx = plot_count
         if rgb_image_1mk3 is not None:
             plot_count = plot_count + 1
+            rgb_img_plt_indx = plot_count
         if depth_image_1mk1 is not None:
             plot_count = plot_count + 1
+            depth_img_plt_indx = plot_count
 
         img_size = 10
         fig = plt.figure(figsize=(plot_count * img_size, img_size))
@@ -434,12 +440,12 @@ class CentralSimulator(SimulatorHelper):
         time_string = "sim_t=%.3f" % sim_t + " wall_t=%.3f" % wall_t
         ax.set_title(time_string, fontsize=20)
 
-        if(plot_count == 2):
+        if(with_zoom):
             # Render entire map-view from the top
             # to keep square plot
             outer_zoom = min(traversible.shape[0],
                              traversible.shape[1]) * map_scale
-            ax = fig.add_subplot(1, plot_count, 2)
+            ax = fig.add_subplot(1, plot_count, zoomed_img_plt_indx)
             ax.set_xlim(0., outer_zoom)
             ax.set_ylim(0., outer_zoom)
             self.plot_topview(ax, extent, traversible, human_traversible,
@@ -451,7 +457,7 @@ class CentralSimulator(SimulatorHelper):
 
         if rgb_image_1mk3 is not None:
             # Plot the RGB Image
-            ax = fig.add_subplot(1, plot_count, 3)
+            ax = fig.add_subplot(1, plot_count, rgb_img_plt_indx)
             ax.imshow(rgb_image_1mk3[0].astype(np.uint8))
             ax.set_xticks([])
             ax.set_yticks([])
@@ -459,7 +465,7 @@ class CentralSimulator(SimulatorHelper):
 
         if depth_image_1mk1 is not None:
             # Plot the Depth Image
-            ax = fig.add_subplot(1, plot_count, 4)
+            ax = fig.add_subplot(1, plot_count, depth_img_plt_indx)
             ax.imshow(depth_image_1mk1[0, :, :, 0].astype(
                 np.uint8), cmap='gray')
             ax.set_xticks([])

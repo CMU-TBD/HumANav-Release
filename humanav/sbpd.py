@@ -59,7 +59,7 @@ class Loader():
         mesh_file_name = glob.glob1(dir_name, '*.obj')[0]
         mesh_file_name_full = os.path.join(dir_name, mesh_file_name)
         #logging.error('Loading building from obj file: %s', mesh_file_name_full)
-        print("%sLoading building from obj file:" % (color_blue),
+        print("%sLoading building mesh from obj:" % (color_blue),
               mesh_file_name_full, "%s" % (color_reset))
         shape = renderer.Shape(mesh_file_name_full, load_materials=True,
                                name_prefix=building['name'] + '_', materials_scale=materials_scale)

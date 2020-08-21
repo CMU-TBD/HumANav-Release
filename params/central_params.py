@@ -20,7 +20,7 @@ def create_base_params():
 
     # Depending on computer, those equipped with an X graphical instance (or other display)
     # can set this to True to use the openGL renderer and render the 3D humans/scene
-    p.render_3D = False
+    p.render_3D = True
     # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
 
     p.camera_params = Map(modalities=['rgb'],  # rgb or disparity

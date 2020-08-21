@@ -342,7 +342,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     known_start = generate_config_from_pos_3(np.array([9., 18., 0.]))
     known_end = generate_config_from_pos_3(np.array([13., 10., 0.]))
     known_init_configs = HumanConfigs(known_start, known_end)
-    const_human = Human.generate_human_with_configs(known_init_configs)
+    const_human = Human.generate_human_with_configs(
+        known_init_configs, generate_appearance=p.render_3D)
     simulator.add_agent(const_human)
 
     """
@@ -392,4 +393,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(5, 5, starting_prerec=15)
+    test_socnav(3, 3, starting_prerec=15)

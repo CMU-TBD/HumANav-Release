@@ -108,7 +108,6 @@ class Shape():
             i = 0
             all_files = sorted(glob.glob1(dir_name, '*.jpg'))
             for m in self.meshes:
-                #file_name = os.path.join(dir_name, m.material.properties[('file', 0)])
                 try:
                     file_name = os.path.join(dir_name, all_files[i])
                 except:
@@ -152,7 +151,7 @@ class Shape():
 
     def _filter_triangles(self, meshes):
         select = []
-        for i in range(len(meshes) - 1):  # TODO: fix -1
+        for i in range(len(meshes)):
             if meshes[i].primitivetypes == 4:
                 select.append(i)
         return select
