@@ -8,14 +8,16 @@ import threading
 import multiprocessing
 from simulators.simulator_helper import SimulatorHelper
 from simulators.sim_state import SimState, HumanState, AgentState
-from params.central_params import get_path_to_humanav
+from params.central_params import get_path_to_humanav, create_sbpd_simulator_params
 from utils.utils import *
 
 
 class CentralSimulator(SimulatorHelper):
     """The centralized simulator of TBD_SocNavBench """
 
-    def __init__(self, params, environment, renderer=None, render_3D=None):
+    obstacle_map = None
+
+    def __init__(self, environment, renderer=None, render_3D=None):
         """ Initializer for the central simulator
 
         Args:
@@ -23,11 +25,10 @@ class CentralSimulator(SimulatorHelper):
             environment (dict): dictionary housing the obj map (bitmap) and more
             renderer (optional): OpenGL renderer for 3D models. Defaults to None
         """
-        self.params = CentralSimulator.parse_params(
-            params, render_3D=render_3D)
         self.r = renderer
-        self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
+        self.params = create_sbpd_simulator_params(render_3D=render_3D)
+        CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
         # keep track of all robots in dictionary with names as the key
@@ -41,39 +42,6 @@ class CentralSimulator(SimulatorHelper):
         self.t: float = 0
         self.delta_t: float = 0  # will be updated in simulator based off dt
 
-    @staticmethod
-    def parse_params(p, render_3D=False):
-        """ Parse the parameters to add some additional helpful parameters.
-
-        Args:
-            p (Map): parameter config file from the initializer
-        """
-        # Parse the dependencies
-        if(p is None):
-            from params.central_params import create_sbpd_simulator_params
-            p = create_sbpd_simulator_params(render_3D=render_3D)
-        p.humanav_dir = get_path_to_humanav()
-        p.planner_params.planner.parse_params(p.planner_params)
-        p.obstacle_map_params.obstacle_map.parse_params(p.obstacle_map_params)
-        # Time discretization step
-        dt = p.planner_params.control_pipeline_params.system_dynamics_params.dt
-        # Updating horizons
-        p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
-        p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
-        p.dt = dt
-        # whether to block on joystick, repeat last joystick command
-        p.block_joystick = True
-        # Much more optimized to only render topview, but can also render Humans
-        if(not p.render_3D):
-            print("Printing Topview movie with multithreading")
-        else:
-            print("Printing 3D movie sequentially")
-        # verbose printing
-        p.verbose_printing = False
-        # Save memory by updating renderer rather than deepcopying it, but very slow & sequential
-        # p.use_one_renderer = True
-        return p
-
     def add_agent(self, a):
         """Adds an agent member to the central simulator's pool of agents
         NOTE: this function works for robots (RoboAgent), prerecorded agents (PrerecordedHuman),
@@ -82,23 +50,24 @@ class CentralSimulator(SimulatorHelper):
         Args:
             a (Agent/PrerecordedAgent/RoboAgent): The agent to be added to the simulator
         """
+        assert(CentralSimulator.obstacle_map is not None)
         name = a.get_name()
         from simulators.robot_agent import RoboAgent
         from humans.recorded_human import PrerecordedHuman
         if(isinstance(a, RoboAgent)):
             # initialize the robot and add to simulator's known "robot" field
-            a.simulation_init(self.params, self.obstacle_map,
+            a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False)
             self.robots[name] = a
             self.robot = a
         elif (isinstance(a, PrerecordedHuman)):
             # generic agent initializer but without a planner (already have trajectories)
-            a.simulation_init(self.params, self.obstacle_map,
+            a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False)
             self.prerecs[name] = a
         else:
             # initialize agent and add to simulator
-            a.simulation_init(self.params, self.obstacle_map,
+            a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=True)
             self.agents[name] = a
 
@@ -198,10 +167,12 @@ class CentralSimulator(SimulatorHelper):
         # convert all the generated frames into a gif file
         self.save_frames_to_gif(clear_old_files=True)
 
-    def _init_obstacle_map(self, renderer=None):
+    def _init_obstacle_map(self, renderer=None, ):
         """ Initializes the sbpd map."""
         p = self.params.obstacle_map_params
-        return p.obstacle_map(p, renderer)
+        return p.obstacle_map(p, renderer,
+                              res=self.environment["map_scale"] * 100,
+                              trav=self.environment["traversibles"][0])
 
     def num_conditions_in_agents(self, condition: str):
         """Counts the number of termination causes matching condition in all the generated agents
@@ -324,7 +295,8 @@ class CentralSimulator(SimulatorHelper):
         duration = self.delta_t
         for i in range(num_robots):
             dirname = "tests/socnav/sim_movie" + str(i)
-            IMAGES_DIR = os.path.join(self.params.humanav_dir, dirname)
+            IMAGES_DIR = os.path.join(
+                self.params.humanav_params.humanav_dir, dirname)
             if(with_multiprocessing):
                 # little use to use pools here, since this is for multiple robot agents in a scene
                 # and the assumption here is that is a small number
@@ -495,7 +467,7 @@ class CentralSimulator(SimulatorHelper):
             ax.set_title('Depth')
 
         full_file_name = os.path.join(
-            self.params.humanav_dir, img_dir, filename)
+            self.params.humanav_params.humanav_dir, img_dir, filename)
         if(not os.path.exists(full_file_name)):
             if(self.params.verbose_printing):
                 print('\033[31m', "Failed to find:", full_file_name,

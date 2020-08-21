@@ -88,8 +88,11 @@ class AgentHelper(object):
         If vehicle_trajectory has exceeded episode_horizon,
         return episode_horizon, else return infinity.
         """
-        if self.vehicle_trajectory.k >= self.params.episode_horizon:
-            time_idx = np.array(self.params.episode_horizon)
+        if(self.planner is not None):
+            if self.vehicle_trajectory.k >= self.params.episode_horizon:
+                time_idx = np.array(self.params.episode_horizon)
+            else:
+                time_idx = np.array(np.inf)
         else:
             time_idx = np.array(np.inf)
         return time_idx

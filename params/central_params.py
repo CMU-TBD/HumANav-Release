@@ -285,25 +285,62 @@ def create_control_pipeline_params():
 def create_simulator_params():
     p = Map()
 
-    # Load the dependencies
-    p.planner_params = create_planner_params()
+    p.block_joystick = True
 
     # Load HumANav dependencies
     p.humanav_params = create_base_params()
+    return p
 
-    # seed for the simulator (different than for numpy and tf) # default 10
-    p.seed = 10
 
+def create_sbpd_simulator_params(render_3D=False):
+    p = create_simulator_params()
+
+    p.render_3D = render_3D
+
+    # Load the dependencies
+
+    # Load obstacle map params
+    p.obstacle_map_params = create_obstacle_map_params()
+
+    # much faster to only render the topview rather than use the 3D renderer
+    if(not p.render_3D):
+        print("Printing Topview movie with multithreading")
+    else:
+        print("Printing 3D movie sequentially")
+    # verbose printing
+    p.verbose_printing = False
+
+    # simulation tick rate
+    p.dt = create_system_dynamics_params().dt
+    return p
+
+
+def create_agent_params(with_planner=True):
+    p = Map()
     # Horizons in seconds
     p.episode_horizon_s = 200  # more time to simulate a feasable path # default 200
     p.control_horizon_s = 0.5  # time used on every iteration of the controller
 
-    # Whether to log videos taken during trajectories
-    p.record_video = False
+    # Whether to log videos (in GIF format) taken during trajectories
+    p.record_video = True
 
     # Whether or not to log all trajectory data to pickle
     # files when running this simulator
     p.save_trajectory_data = False
+
+    # Load system dynamics params
+    p.system_dynamics_params = create_system_dynamics_params()
+    if(with_planner):
+        # Load the dependencies
+        p.planner_params = create_planner_params()
+
+        # Time discretization step
+        dt = p.planner_params.control_pipeline_params.system_dynamics_params.dt
+
+        # Updating horizons
+        p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
+        p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
+        p.dt = dt
 
     # Define the Objectives
 
@@ -321,49 +358,6 @@ def create_simulator_params():
                                     goal_margin=0.3)  # cutoff distance for the goal
 
     p.objective_fn_params = Map(obj_type='valid_mean')
-    p.reset_params = Map(
-        obstacle_map=Map(reset_type='random',
-                         params=Map(min_n=4, max_n=7,
-                                    min_r=.3, max_r=.8)),
-        start_config=Map(
-            position=Map(
-                # There could be different reset types
-                # 'random': the position is initialized randomly on the
-                # map but at least at a distance of the obstacle margin from the
-                # obstacle.
-                reset_type='random'
-            ),
-            heading=Map(
-                # 'zero': the heading is initialized to zero.
-                # 'random': the heading is initialized randomly within the given
-                # bounds.
-                reset_type='zero',
-                bounds=[-np.pi,
-                        np.pi - 1e-10]
-            ),
-            speed=Map(
-                # For description of reset types see heading parameters above.
-                reset_type='zero',
-                bounds=[0., 0.6]
-            ),
-            ang_speed=Map(
-                # For description of reset types see heading parameters above.
-                reset_type='zero',
-                bounds=[-0.5, 0.5],
-                # [mean, variance]
-                gaussian_params=[0.0, .5]
-            )
-        ),
-
-        goal_config=Map(
-            position=Map(
-                # For description of reset types see position parameters in the
-                # start_config above.
-                reset_type='random'
-            )
-        )
-    )
-
     p.goal_cutoff_dist = p.goal_distance_objective.goal_margin
     p.goal_dist_norm = p.goal_distance_objective.power  # Default is l2 norm
     p.episode_termination_reasons = ['Timeout', 'Collision', 'Success']
@@ -397,29 +391,4 @@ def create_obstacle_map_params():
 
     # Number of grid steps around the start position to use for plotting
     p.plotting_grid_steps = 100
-    return p
-
-
-def create_sbpd_simulator_params(render_3D=None):
-    p = create_simulator_params()
-
-    p.render_3D = render_3D
-
-    # Load the dependencies
-    p.obstacle_map_params = create_obstacle_map_params()
-
-    # p.simulator = CentralSimulator
-
-    # Custom goal reset parameters
-    # 'random_v1 ': the goal position is initialized randomly on the
-    # map but at least at a distance of the obstacle margin from the
-    # obstacle and at most max_dist from the start. Additionally
-    # the difference between fmm and l2 distance between goal and
-    # start must be greater than some threshold (sampled based on
-    # max_dist_diff)
-    p.reset_params.goal_config = Map(position=Map(
-        reset_type='random_v1',
-        max_dist_diff=.5,
-        max_fmm_dist=6.0
-    ))
     return p
