@@ -1,4 +1,4 @@
-from dotmap import DotMap
+from params.map import Map
 import numpy as np
 import os
 
@@ -7,7 +7,7 @@ seed = 10
 
 
 def create_base_params():
-    p = DotMap()
+    p = Map()
     p.dataset_name = 'sbpd'
     p.building_name = 'area3'
     p.flip = False
@@ -23,16 +23,16 @@ def create_base_params():
     p.render_3D = False
     # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
 
-    p.camera_params = DotMap(modalities=['rgb'],  # rgb or disparity
-                             width=64,
-                             height=64,
-                             z_near=.01,  # near plane clipping distance
-                             z_far=20.0,  # far plane clipping distance
-                             fov_horizontal=90.,
-                             fov_vertical=90.,
-                             img_channels=3,
-                             im_resize=1.,
-                             max_depth_meters=np.inf)
+    p.camera_params = Map(modalities=['rgb'],  # rgb or disparity
+                          width=64,
+                          height=64,
+                          z_near=.01,  # near plane clipping distance
+                          z_far=20.0,  # far plane clipping distance
+                          fov_horizontal=90.,
+                          fov_vertical=90.,
+                          img_channels=3,
+                          im_resize=1.,
+                          max_depth_meters=np.inf)
 
     # The robot is modeled as a solid cylinder
     # of height, 'height', with radius, 'radius',
@@ -41,12 +41,12 @@ def create_base_params():
     # 'sensor_height' pointing at
     # camera_elevation_degree degrees vertically
     # from the horizontal plane.
-    p.robot_params = DotMap(radius=18,
-                            base=5,
-                            height=100,
-                            sensor_height=80,
-                            camera_elevation_degree=-45,  # camera tilt
-                            delta_theta=1.0)
+    p.robot_params = Map(radius=18,
+                         base=5,
+                         height=100,
+                         sensor_height=80,
+                         camera_elevation_degree=-45,  # camera tilt
+                         delta_theta=1.0)
 
     # HumANav dir
     p.humanav_dir = get_path_to_humanav()
@@ -59,16 +59,16 @@ def create_base_params():
         p.sbpd_data_dir = get_sbpd_data_dir()
 
         # Surreal Parameters
-        p.surreal = DotMap(mode='train',
-                           data_dir=get_surreal_mesh_dir(),
-                           texture_dir=get_surreal_texture_dir(),
-                           body_shapes_train=[519, 1320,
-                                              521, 523, 779, 365, 1198, 368],
-                           body_shapes_test=[
-                               337, 944, 1333, 502, 344, 538, 413],
-                           compute_human_traversible=True,
-                           render_humans_in_gray_only=False
-                           )
+        p.surreal = Map(mode='train',
+                        data_dir=get_surreal_mesh_dir(),
+                        texture_dir=get_surreal_texture_dir(),
+                        body_shapes_train=[519, 1320,
+                                           521, 523, 779, 365, 1198, 368],
+                        body_shapes_test=[
+                            337, 944, 1333, 502, 344, 538, 413],
+                        compute_human_traversible=True,
+                        render_humans_in_gray_only=False
+                        )
 
     return p
 
@@ -137,7 +137,7 @@ def get_seed():
 
 
 def create_robot_params():
-    p = DotMap()
+    p = Map()
 
     # can be any valid port, this is an arbitrary choice
     p.port = 6000
@@ -153,7 +153,7 @@ def create_robot_params():
 
 
 def create_planner_params():
-    p = DotMap()
+    p = Map()
 
     # Load the dependencies
     p.control_pipeline_params = create_control_pipeline_params()
@@ -164,7 +164,7 @@ def create_planner_params():
 
 
 def create_waypoint_params():
-    p = DotMap()
+    p = Map()
     from waypoint_grids.projected_image_space_grid import ProjectedImageSpaceGrid
     p.grid = ProjectedImageSpaceGrid
 
@@ -187,7 +187,7 @@ def create_waypoint_params():
     assert(camera_params.fov_horizontal == camera_params.fov_vertical)
 
     # Additional parameters for the projected grid from the image space to the world coordinates
-    p.projected_grid_params = DotMap(
+    p.projected_grid_params = Map(
         # Focal length in meters
         # OpenGL default uses the near clipping plane
         f=camera_params.z_near,
@@ -206,7 +206,7 @@ def create_waypoint_params():
 
 
 def create_system_dynamics_params():
-    p = DotMap()
+    p = Map()
     from systems.dubins_v2 import DubinsV2
     p.system = DubinsV2
     p.dt = 0.05
@@ -218,20 +218,20 @@ def create_system_dynamics_params():
     p.linear_acc_max = 10e7
     p.angular_acc_max = 10e7
 
-    p.simulation_params = DotMap(simulation_mode='ideal',
-                                 noise_params=DotMap(is_noisy=False,
-                                                     noise_type='uniform',
-                                                     noise_lb=[-0.02, -
-                                                               0.02, 0.],
-                                                     noise_ub=[
-                                                         0.02, 0.02, 0.],
-                                                     noise_mean=[0., 0., 0.],
-                                                     noise_std=[0.02, 0.02, 0.]))
+    p.simulation_params = Map(simulation_mode='ideal',
+                              noise_params=Map(is_noisy=False,
+                                               noise_type='uniform',
+                                               noise_lb=[-0.02, -
+                                                         0.02, 0.],
+                                               noise_ub=[
+                                                   0.02, 0.02, 0.],
+                                               noise_mean=[0., 0., 0.],
+                                               noise_std=[0.02, 0.02, 0.]))
     return p
 
 
 def create_control_pipeline_params():
-    p = DotMap()
+    p = Map()
 
     # Load the dependencies
     p.system_dynamics_params = create_system_dynamics_params()
@@ -245,22 +245,22 @@ def create_control_pipeline_params():
 
     # Spline parameters
     from trajectory.spline.spline_3rd_order import Spline3rdOrder
-    p.spline_params = DotMap(spline=Spline3rdOrder,
-                             max_final_time=10.0,  # 60 crashes pc with 32Gb ram, 6 is default
-                             epsilon=1e-5)
+    p.spline_params = Map(spline=Spline3rdOrder,
+                          max_final_time=10.0,  # 60 crashes pc with 32Gb ram, 6 is default
+                          epsilon=1e-5)
     p.minimum_spline_horizon = 1.5  # default 1.5
 
     # LQR setting parameters
     from costs.quad_cost_with_wrapping import QuadraticRegulatorRef
-    p.lqr_params = DotMap(cost_fn=QuadraticRegulatorRef,
-                          quad_coeffs=np.array(
-                              [1.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32),
-                          linear_coeffs=np.zeros((5), dtype=np.float32))
+    p.lqr_params = Map(cost_fn=QuadraticRegulatorRef,
+                       quad_coeffs=np.array(
+                           [1.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32),
+                       linear_coeffs=np.zeros((5), dtype=np.float32))
 
     # Velocity binning parameters
-    p.binning_parameters = DotMap(num_bins=20,  # 61 crashes pc with 32gb ram, 15 is slow
-                                  min_speed=p.system_dynamics_params.v_bounds[0],
-                                  max_speed=p.system_dynamics_params.v_bounds[1])
+    p.binning_parameters = Map(num_bins=20,  # 61 crashes pc with 32gb ram, 15 is slow
+                               min_speed=p.system_dynamics_params.v_bounds[0],
+                               max_speed=p.system_dynamics_params.v_bounds[1])
 
     # Converting K to world coordinates is slow
     # so only set this to true when LQR data is needed
@@ -283,7 +283,7 @@ def create_control_pipeline_params():
 
 
 def create_simulator_params():
-    p = DotMap()
+    p = Map()
 
     # Load the dependencies
     p.planner_params = create_planner_params()
@@ -308,32 +308,32 @@ def create_simulator_params():
     # Define the Objectives
 
     # Obstacle Avoidance Objective
-    p.avoid_obstacle_objective = DotMap(obstacle_margin0=0.3,
-                                        obstacle_margin1=0.5,
-                                        power=3,  # exponential cost constant
-                                        obstacle_cost=1.0)  # scalar cost multiple
+    p.avoid_obstacle_objective = Map(obstacle_margin0=0.3,
+                                     obstacle_margin1=0.5,
+                                     power=3,  # exponential cost constant
+                                     obstacle_cost=1.0)  # scalar cost multiple
     # Angle Distance parameters
-    p.goal_angle_objective = DotMap(power=1,
-                                    angle_cost=.008)
+    p.goal_angle_objective = Map(power=1,
+                                 angle_cost=.008)
     # Goal Distance parameters
-    p.goal_distance_objective = DotMap(power=2,
-                                       goal_cost=.08,
-                                       goal_margin=0.3)  # cutoff distance for the goal
+    p.goal_distance_objective = Map(power=2,
+                                    goal_cost=.08,
+                                    goal_margin=0.3)  # cutoff distance for the goal
 
-    p.objective_fn_params = DotMap(obj_type='valid_mean')
-    p.reset_params = DotMap(
-        obstacle_map=DotMap(reset_type='random',
-                            params=DotMap(min_n=4, max_n=7,
-                                          min_r=.3, max_r=.8)),
-        start_config=DotMap(
-            position=DotMap(
+    p.objective_fn_params = Map(obj_type='valid_mean')
+    p.reset_params = Map(
+        obstacle_map=Map(reset_type='random',
+                         params=Map(min_n=4, max_n=7,
+                                    min_r=.3, max_r=.8)),
+        start_config=Map(
+            position=Map(
                 # There could be different reset types
                 # 'random': the position is initialized randomly on the
                 # map but at least at a distance of the obstacle margin from the
                 # obstacle.
                 reset_type='random'
             ),
-            heading=DotMap(
+            heading=Map(
                 # 'zero': the heading is initialized to zero.
                 # 'random': the heading is initialized randomly within the given
                 # bounds.
@@ -341,12 +341,12 @@ def create_simulator_params():
                 bounds=[-np.pi,
                         np.pi - 1e-10]
             ),
-            speed=DotMap(
+            speed=Map(
                 # For description of reset types see heading parameters above.
                 reset_type='zero',
                 bounds=[0., 0.6]
             ),
-            ang_speed=DotMap(
+            ang_speed=Map(
                 # For description of reset types see heading parameters above.
                 reset_type='zero',
                 bounds=[-0.5, 0.5],
@@ -355,8 +355,8 @@ def create_simulator_params():
             )
         ),
 
-        goal_config=DotMap(
-            position=DotMap(
+        goal_config=Map(
+            position=Map(
                 # For description of reset types see position parameters in the
                 # start_config above.
                 reset_type='random'
@@ -375,7 +375,7 @@ def create_simulator_params():
 
 
 def create_obstacle_map_params():
-    p = DotMap()
+    p = Map()
 
     # Load the dependencies
     p.renderer_params = create_base_params()
@@ -417,7 +417,7 @@ def create_sbpd_simulator_params(render_3D=None):
     # the difference between fmm and l2 distance between goal and
     # start must be greater than some threshold (sampled based on
     # max_dist_diff)
-    p.reset_params.goal_config = DotMap(position=DotMap(
+    p.reset_params.goal_config = Map(position=Map(
         reset_type='random_v1',
         max_dist_diff=.5,
         max_fmm_dist=6.0
