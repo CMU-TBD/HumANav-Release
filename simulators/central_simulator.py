@@ -19,7 +19,7 @@ class CentralSimulator(SimulatorHelper):
         """ Initializer for the central simulator
 
         Args:
-            params (DotMap): parameter configuration file from test_socnav.py
+            params (Map): parameter configuration file from test_socnav.py
             environment (dict): dictionary housing the obj map (bitmap) and more
             renderer (optional): OpenGL renderer for 3D models. Defaults to None
         """
@@ -45,7 +45,7 @@ class CentralSimulator(SimulatorHelper):
         """ Parse the parameters to add some additional helpful parameters.
 
         Args:
-            p (DotMap): parameter config file from the initializer
+            p (Map): parameter config file from the initializer
         """
         # Parse the dependencies
         p.humanav_dir = get_path_to_humanav()
@@ -409,7 +409,7 @@ class CentralSimulator(SimulatorHelper):
         """Plots a single frame from information provided about the world state
 
         Args:
-            p (DotMap): CentralSimulator params
+            p (Map): CentralSimulator params
             rgb_image_1mk3: the RGB image of the world_state to plot
             depth_image_1mk1: the depth-map image of the world_state to plot
             environment (dict): dictionary housing the obj map (bitmap) and more

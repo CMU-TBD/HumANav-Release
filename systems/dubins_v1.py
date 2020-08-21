@@ -10,7 +10,7 @@ class DubinsV1(Dubins3D):
 
     def __init__(self, dt, params=None):
         if(params is not None):
-            super().__init__(dt, params.noise_params)
+            super().__init__(dt, params.simulation_params)
         else:
             super().__init__(dt)
 

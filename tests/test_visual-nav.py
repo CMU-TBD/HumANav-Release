@@ -11,7 +11,6 @@ from humanav.humanav_renderer_multi import HumANavRendererMulti
 from humans.human import Human
 from humanav import sbpd
 from random import seed, random, randint
-from dotmap import DotMap
 from utils.utils import touch
 
 

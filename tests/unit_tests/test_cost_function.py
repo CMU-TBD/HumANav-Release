@@ -8,20 +8,20 @@ from objectives.objective_function import ObjectiveFunction
 from trajectory.trajectory import Trajectory
 from systems.dubins_v3 import DubinsV3
 from utils.fmm_map import FmmMap
-from dotmap import DotMap
+from params.map import Map
 from utils.utils import *
 
 
 def create_renderer_params():
     from params.central_params import get_traversible_dir, get_sbpd_data_dir
-    p = DotMap()
+    p = Map()
     p.dataset_name = 'sbpd'
     p.building_name = 'area3'
     p.flip = False
 
-    p.camera_params = DotMap(modalities=['occupancy_grid'],  # occupancy_grid, rgb, or depth
-                             width=64,
-                             height=64)
+    p.camera_params = Map(modalities=['occupancy_grid'],  # occupancy_grid, rgb, or depth
+                          width=64,
+                          height=64)
 
     # The robot is modeled as a solid cylinder
     # of height, 'height', with radius, 'radius',
@@ -30,12 +30,12 @@ def create_renderer_params():
     # 'sensor_height' pointing at
     # camera_elevation_degree degrees vertically
     # from the horizontal plane.
-    p.robot_params = DotMap(radius=18,
-                            base=10,
-                            height=100,
-                            sensor_height=80,
-                            camera_elevation_degree=-45,  # camera tilt
-                            delta_theta=1.0)
+    p.robot_params = Map(radius=18,
+                         base=10,
+                         height=100,
+                         sensor_height=80,
+                         camera_elevation_degree=-45,  # camera tilt
+                         delta_theta=1.0)
 
     # Traversible dir
     p.traversible_dir = get_traversible_dir()
@@ -47,25 +47,25 @@ def create_renderer_params():
 
 
 def create_params():
-    p = DotMap()
+    p = Map()
     # Obstacle avoidance parameters
-    p.avoid_obstacle_objective = DotMap(obstacle_margin0=0.3,
-                                        obstacle_margin1=.5,
-                                        power=2,
-                                        obstacle_cost=25.0)
+    p.avoid_obstacle_objective = Map(obstacle_margin0=0.3,
+                                     obstacle_margin1=.5,
+                                     power=2,
+                                     obstacle_cost=25.0)
     # Angle Distance parameters
-    p.goal_angle_objective = DotMap(power=1,
-                                    angle_cost=25.0)
+    p.goal_angle_objective = Map(power=1,
+                                 angle_cost=25.0)
     # Goal Distance parameters
-    p.goal_distance_objective = DotMap(power=2,
-                                       goal_cost=25.0,
-                                       goal_margin=0.0)
+    p.goal_distance_objective = Map(power=2,
+                                    goal_cost=25.0,
+                                    goal_margin=0.0)
 
-    p.objective_fn_params = DotMap(obj_type='mean')
-    p.obstacle_map_params = DotMap(obstacle_map=SBPDMap,
-                                   map_origin_2=[0, 0],
-                                   sampling_thres=2,
-                                   plotting_grid_steps=100)
+    p.objective_fn_params = Map(obj_type='mean')
+    p.obstacle_map_params = Map(obstacle_map=SBPDMap,
+                                map_origin_2=[0, 0],
+                                sampling_thres=2,
+                                plotting_grid_steps=100)
     p.obstacle_map_params.renderer_params = create_renderer_params()
     return p
 

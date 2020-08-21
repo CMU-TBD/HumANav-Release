@@ -1,12 +1,12 @@
 import numpy as np
 from costs.quad_cost_with_wrapping import QuadraticRegulatorRef
 from systems.dubins_v1 import DubinsV1
-from dotmap import DotMap
+from params.map import Map
 from utils.utils import *
 
 
 def create_params():
-    p = DotMap()
+    p = Map()
     p.seed = 1
     p.n = 2
     p.k = 3
@@ -20,17 +20,17 @@ def create_params():
 
 
 def create_system_dynamics_params():
-    p = DotMap()
+    p = Map()
 
-    p.simulation_params = DotMap(simulation_mode='ideal',
-                                 noise_params=DotMap(is_noisy=False,
-                                                     noise_type='uniform',
-                                                     noise_lb=[-0.02, -
-                                                               0.02, 0.],
-                                                     noise_ub=[
-                                                         0.02, 0.02, 0.],
-                                                     noise_mean=[0., 0., 0.],
-                                                     noise_std=[0.02, 0.02, 0.]))
+    p.simulation_params = Map(simulation_mode='ideal',
+                              noise_params=Map(is_noisy=False,
+                                               noise_type='uniform',
+                                               noise_lb=[-0.02, -
+                                                         0.02, 0.],
+                                               noise_ub=[
+                                                   0.02, 0.02, 0.],
+                                               noise_mean=[0., 0., 0.],
+                                               noise_std=[0.02, 0.02, 0.]))
     return p
 
 
