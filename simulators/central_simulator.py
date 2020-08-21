@@ -15,7 +15,7 @@ from utils.utils import *
 class CentralSimulator(SimulatorHelper):
     """The centralized simulator of TBD_SocNavBench """
 
-    def __init__(self, params, environment, renderer=None):
+    def __init__(self, params, environment, renderer=None, render_3D=None):
         """ Initializer for the central simulator
 
         Args:
@@ -23,7 +23,8 @@ class CentralSimulator(SimulatorHelper):
             environment (dict): dictionary housing the obj map (bitmap) and more
             renderer (optional): OpenGL renderer for 3D models. Defaults to None
         """
-        self.params = CentralSimulator.parse_params(params)
+        self.params = CentralSimulator.parse_params(
+            params, render_3D=render_3D)
         self.r = renderer
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
@@ -41,13 +42,16 @@ class CentralSimulator(SimulatorHelper):
         self.delta_t: float = 0  # will be updated in simulator based off dt
 
     @staticmethod
-    def parse_params(p):
+    def parse_params(p, render_3D=False):
         """ Parse the parameters to add some additional helpful parameters.
 
         Args:
             p (Map): parameter config file from the initializer
         """
         # Parse the dependencies
+        if(p is None):
+            from params.central_params import create_sbpd_simulator_params
+            p = create_sbpd_simulator_params(render_3D=render_3D)
         p.humanav_dir = get_path_to_humanav()
         p.planner_params.planner.parse_params(p.planner_params)
         p.obstacle_map_params.obstacle_map.parse_params(p.obstacle_map_params)

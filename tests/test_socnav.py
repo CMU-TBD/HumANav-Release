@@ -315,7 +315,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
     # Create planner parameters
     sim_params = create_sbpd_simulator_params(render_3D=p.render_3D)
-    simulator = CentralSimulator(sim_params, environment, renderer=r)
+    simulator = CentralSimulator(
+        sim_params, environment, renderer=r, render_3D=p.render_3D)
 
     """
     Generate the humans and run the simulation on every human
