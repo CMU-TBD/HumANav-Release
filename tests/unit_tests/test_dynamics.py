@@ -3,25 +3,25 @@ import matplotlib.pyplot as plt
 from systems.dubins_v1 import DubinsV1
 from systems.dubins_v2 import DubinsV2
 from systems.dubins_v3 import DubinsV3
-from params.map import Map
+from dotmap import DotMap
 from utils.utils import *
 
 
 def create_system_dynamics_params():
-    p = Map()
+    p = DotMap()
 
     p.v_bounds = [0.0, .6]
     p.w_bounds = [-1.1, 1.1]
 
-    p.simulation_params = Map(simulation_mode='ideal',
-                              noise_params=Map(is_noisy=False,
-                                               noise_type='uniform',
-                                               noise_lb=[-0.02, -
-                                                         0.02, 0.],
-                                               noise_ub=[
-                                                   0.02, 0.02, 0.],
-                                               noise_mean=[0., 0., 0.],
-                                               noise_std=[0.02, 0.02, 0.]))
+    p.simulation_params = DotMap(simulation_mode='ideal',
+                                 noise_params=DotMap(is_noisy=False,
+                                                     noise_type='uniform',
+                                                     noise_lb=[-0.02, -
+                                                               0.02, 0.],
+                                                     noise_ub=[
+                                                         0.02, 0.02, 0.],
+                                                     noise_mean=[0., 0., 0.],
+                                                     noise_std=[0.02, 0.02, 0.]))
     return p
 
 

@@ -81,7 +81,6 @@ class AgentState():
 class HumanState(AgentState):
     def __init__(self, human, deepcpy=False):
         self.appearance = human.get_appearance()
-        assert(self.appearance is not None)
         # Initialize the agent state class
         super().__init__(human, deepcpy=deepcpy)
 

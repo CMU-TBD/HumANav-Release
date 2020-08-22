@@ -1,23 +1,22 @@
 import numpy as np
-
 from obstacles.sbpd_map import SBPDMap
 from objectives.angle_distance import AngleDistance
 from trajectory.trajectory import Trajectory
 from utils.fmm_map import FmmMap
-from params.map import Map
+from dotmap import DotMap
 from utils.utils import *
 
 
 def create_renderer_params():
     from params.central_params import get_traversible_dir, get_sbpd_data_dir
-    p = Map()
+    p = DotMap()
     p.dataset_name = 'sbpd'
     p.building_name = 'area3'
     p.flip = False
 
-    p.camera_params = Map(modalities=['occupancy_grid'],  # occupancy_grid, rgb, or depth
-                          width=64,
-                          height=64)
+    p.camera_params = DotMap(modalities=['occupancy_grid'],  # occupancy_grid, rgb, or depth
+                             width=64,
+                             height=64)
 
     # The robot is modeled as a solid cylinder
     # of height, 'height', with radius, 'radius',
@@ -26,12 +25,12 @@ def create_renderer_params():
     # 'sensor_height' pointing at
     # camera_elevation_degree degrees vertically
     # from the horizontal plane.
-    p.robot_params = Map(radius=18,
-                         base=10,
-                         height=100,
-                         sensor_height=80,
-                         camera_elevation_degree=-45,  # camera tilt
-                         delta_theta=1.0)
+    p.robot_params = DotMap(radius=18,
+                            base=10,
+                            height=100,
+                            sensor_height=80,
+                            camera_elevation_degree=-45,  # camera tilt
+                            delta_theta=1.0)
 
     # Traversible dir
     p.traversible_dir = get_traversible_dir()
@@ -42,14 +41,14 @@ def create_renderer_params():
 
 
 def create_params():
-    p = Map()
+    p = DotMap()
     # Angle Distance parameters
-    p.goal_angle_objective = Map(power=1,
-                                 angle_cost=25.0)
-    p.obstacle_map_params = Map(obstacle_map=SBPDMap,
-                                map_origin_2=[0., 0.],
-                                sampling_thres=2,
-                                plotting_grid_steps=100)
+    p.goal_angle_objective = DotMap(power=1,
+                                    angle_cost=25.0)
+    p.obstacle_map_params = DotMap(obstacle_map=SBPDMap,
+                                   map_origin_2=[0., 0.],
+                                   sampling_thres=2,
+                                   plotting_grid_steps=100)
     p.obstacle_map_params.renderer_params = create_renderer_params()
 
     return p

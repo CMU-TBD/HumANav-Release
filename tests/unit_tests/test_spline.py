@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from trajectory.spline.spline_3rd_order import Spline3rdOrder
 from trajectory.trajectory import SystemConfig
-from params.map import Map
+from dotmap import DotMap
 from utils.utils import *
 
 
@@ -42,7 +42,7 @@ def test_spline_3rd_order(visualize=False):
     goal_nk5 = goal_config.position_heading_speed_and_angular_speed_nk5()
     goal_n5 = goal_nk5[:, 0]
 
-    p = Map(spline_params=Map(epsilon=1e-5))
+    p = DotMap(spline_params=DotMap(epsilon=1e-5))
     ts_nk = np.tile(np.linspace(0., dt * k, k)[None], [n, 1])
     spline_traj = Spline3rdOrder(dt=dt, k=k, n=n, params=p.spline_params)
     spline_traj.fit(start_config, goal_config, factors=None)
@@ -87,7 +87,7 @@ def test_piecewise_spline(visualize=False):
         (18, 16.5, np.pi / 2.0, 0.2)  # Goal State (x, y, theta, vel)
     ]
 
-    p = Map(spline_params=Map(epsilon=1e-5))
+    p = DotMap(spline_params=DotMap(epsilon=1e-5))
     ts_nk = np.tile(np.linspace(0., dt * k, k)[None], [n, 1])
     splines = []
     prev_config = None
@@ -172,7 +172,7 @@ def test_spline_rescaling():
                                variable=True)
 
     # Fit the splines
-    p = Map(spline_params=Map(epsilon=1e-5))
+    p = DotMap(spline_params=DotMap(epsilon=1e-5))
     spline_trajs = Spline3rdOrder(dt=dt, k=k, n=n, params=p.spline_params)
     spline_trajs.fit(start_config, goal_config, final_times_n1, factors=None)
 

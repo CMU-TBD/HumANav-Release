@@ -32,7 +32,7 @@ class ControlPipelineV0(ControlPipelineBase):
         if cls.pipeline is None:
             cls.pipeline = cls(params)
         else:
-            assert(utils.check_map_equality(cls.pipeline.params, params))
+            assert(utils.check_dotmap_equality(cls.pipeline.params, params))
         # can deepcopy for true parallelism, but due to the GIL (since our agents are threaded)
         # it would be better to simply use the same pipeline
         if(cls.only_one_system):  # part of the base

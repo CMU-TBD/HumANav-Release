@@ -1,11 +1,11 @@
 import numpy as np
 from utils.utils import *
 from waypoint_grids.projected_image_space_grid import ProjectedImageSpaceGrid
-from params.map import Map
+from dotmap import DotMap
 
 
 def create_params():
-    p = Map()
+    p = DotMap()
 
     p.grid = ProjectedImageSpaceGrid
 
@@ -16,7 +16,7 @@ def create_params():
     p.bound_max = [0., 0., 0.]
 
     # Additional parameters for the projected grid from the image space to the world coordinates
-    p.projected_grid_params = Map(
+    p.projected_grid_params = DotMap(
         # Focal length in meters
         f=1.,
 

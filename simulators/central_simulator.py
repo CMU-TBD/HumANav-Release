@@ -104,6 +104,9 @@ class CentralSimulator(SimulatorHelper):
         self.delta_t = 3 * self.params.dt
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
+        if(self.robot is None):
+            print("%sNo robot in simulator%s" % (color_red, color_reset))
+            return
         # give the robot knowledge of the initial world
         self.robot.repeat_joystick = not self.params.block_joystick
         self.robot.update_world(current_state)

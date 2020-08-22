@@ -3,6 +3,7 @@ import json
 import copy
 import numpy as np
 import shutil
+from dotmap import DotMap
 from random import seed, random, randint
 import string
 import random
@@ -10,7 +11,6 @@ import glob
 import imageio
 import socket
 from trajectory.trajectory import SystemConfig
-from params.map import Map
 
 color_orange = '\033[33m'
 color_green = '\033[32m'
@@ -33,9 +33,9 @@ def render_angle_frequency(p):
 
 
 def log_dict_as_json(params, filename):
-    """Save params (either a Map object or a python dictionary) to a file in json format"""
+    """Save params (either a DotMap object or a python dictionary) to a file in json format"""
     with open(filename, 'w') as f:
-        if isinstance(params, Map):
+        if isinstance(params, DotMap):
             params = params.toDict()
         param_dict_serializable = _to_json_serializable_dict(
             copy.deepcopy(params))
@@ -203,15 +203,15 @@ def delete_if_exists(dirname):
         shutil.rmtree(dirname)
 
 
-def check_map_equality(d1, d2):
+def check_dotmap_equality(d1, d2):
     """Check equality on nested map objects that all keys and values match."""
     assert(len(set(d1.keys()).difference(set(d2.keys()))) == 0)
     equality = [True] * len(d1.keys())
     for i, key in enumerate(d1.keys()):
         d1_attr = getattr(d1, key)
         d2_attr = getattr(d2, key)
-        if type(d1_attr) is Map:
-            equality[i] = check_map_equality(d1_attr, d2_attr)
+        if type(d1_attr) is DotMap:
+            equality[i] = check_dotmap_equality(d1_attr, d2_attr)
     return np.array(equality).all()
 
 
