@@ -163,7 +163,9 @@ class Agent(AgentHelper):
             # Append to Vehicle Data
             for key in self.vehicle_data.keys():
                 self.vehicle_data[key].append(trajectory_data[key])
-            self.vehicle_trajectory.append_along_time_axis(traj_segment)
+            self.vehicle_trajectory.append_along_time_axis(
+                traj_segment,
+                track_trajectory_acceleration=self.params.planner_params.track_accel)
             self.commanded_actions_nkf.append(commands_1kf)
             self._enforce_episode_termination_conditions()
             if(self.end_episode or self.end_acting):

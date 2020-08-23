@@ -15,7 +15,7 @@ from humanav.humanav_renderer_multi import HumANavRendererMulti
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
-from params.central_params import get_seed, create_base_params
+from params.central_params import get_seed, create_base_params, create_robot_params
 from utils.utils import *
 
 # seed the random number generator
@@ -28,16 +28,18 @@ def create_params():
     # Set any custom parameters
     p.building_name = 'area3'
 
+    # The camera is assumed to be mounted on a robot at fixed height
+    # and fixed pitch. See params/central_params.py for more information
     p.camera_params.width = 1024
     p.camera_params.height = 1024
     p.camera_params.fov_vertical = 75.
     p.camera_params.fov_horizontal = 75.
 
-    # The camera is assumed to be mounted on a robot at fixed height
-    # and fixed pitch. See humanav/renderer_params.py for more information
+    # Introduce the robot params
+    p.robot_params = create_robot_params()
 
     # Tilt the camera 10 degree down from the horizontal axis
-    p.robot_params.camera_elevation_degree = -10
+    p.robot_params.physical_params.camera_elevation_degree = -10
 
     if p.render_3D:
         # Can only render rgb and depth then host pc has an available display

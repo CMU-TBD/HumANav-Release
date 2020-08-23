@@ -2,8 +2,8 @@ from dotmap import DotMap
 import numpy as np
 import os
 
-# seed for randomness generation
-seed = 10
+# Explicit seed for randomness generation
+seed = 99
 
 
 def create_base_params():
@@ -13,16 +13,19 @@ def create_base_params():
     p.flip = False
     p.load_meshes = True
     p.seed = seed
+
     # False allows users to compute a new traversible when
     # using a new area dataset, True will look for the
     # precomputed traversible from the traversible folder
-    p.load_traversible_from_pickle_file = False
+    p.load_traversible_from_pickle_file = True
 
     # Depending on computer, those equipped with an X graphical instance (or other display)
     # can set this to True to use the openGL renderer and render the 3D humans/scene
-    p.render_3D = False
     # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
+    p.render_3D = False
 
+    # The camera is assumed to be mounted on a robot at fixed height
+    # and fixed pitch.
     p.camera_params = DotMap(modalities=['rgb'],  # rgb or disparity
                              width=64,
                              height=64,
@@ -33,20 +36,6 @@ def create_base_params():
                              img_channels=3,
                              im_resize=1.,
                              max_depth_meters=np.inf)
-
-    # The robot is modeled as a solid cylinder
-    # of height, 'height', with radius, 'radius',
-    # base at height 'base' above the ground
-    # The robot has a camera at height
-    # 'sensor_height' pointing at
-    # camera_elevation_degree degrees vertically
-    # from the horizontal plane.
-    p.robot_params = DotMap(radius=18,
-                            base=5,
-                            height=100,
-                            sensor_height=80,
-                            camera_elevation_degree=-45,  # camera tilt
-                            delta_theta=1.0)
 
     # HumANav dir
     p.humanav_dir = get_path_to_humanav()
@@ -149,6 +138,20 @@ def create_robot_params():
 
     # number of times to repeat a command (if repeat is on)
     p.repeat_freq: int = 9  # number of frames to repeat last command
+
+    # The robot is modeled as a solid cylinder
+    # of height, 'height', with radius, 'radius',
+    # base at height 'base' above the ground
+    # The robot has a camera at height
+    # 'sensor_height' pointing at
+    # camera_elevation_degree degrees vertically
+    # from the horizontal plane.
+    p.physical_params = DotMap(radius=p.radius,
+                               base=5,
+                               height=100,
+                               sensor_height=80,
+                               camera_elevation_degree=-45,  # camera tilt
+                               delta_theta=1.0)
     return p
 
 
@@ -159,7 +162,9 @@ def create_planner_params():
     p.control_pipeline_params = create_control_pipeline_params()
 
     from planners.sampling_planner import SamplingPlanner
+    # our use of a planner
     p.planner = SamplingPlanner
+
     return p
 
 
@@ -177,9 +182,8 @@ def create_waypoint_params():
     p.bound_min = [0., -2.5, -np.pi]
     p.bound_max = [2.5, 2.5, 0.]
 
-    renderer_params = create_base_params()
-    camera_params = renderer_params.camera_params
-    robot_params = renderer_params.robot_params
+    camera_params = create_base_params().camera_params
+    robot_params = create_robot_params().physical_params
 
     # Ensure square image and aspect ratio = 1
     # as ProjectedImageSpaceGrid assumes this
@@ -246,7 +250,7 @@ def create_control_pipeline_params():
     # Spline parameters
     from trajectory.spline.spline_3rd_order import Spline3rdOrder
     p.spline_params = DotMap(spline=Spline3rdOrder,
-                             max_final_time=10.0,  # 60 crashes pc with 32Gb ram, 6 is default
+                             max_final_time=10.0,
                              epsilon=1e-5)
     p.minimum_spline_horizon = 1.5  # default 1.5
 
@@ -258,7 +262,7 @@ def create_control_pipeline_params():
                           linear_coeffs=np.zeros((5), dtype=np.float32))
 
     # Velocity binning parameters
-    p.binning_parameters = DotMap(num_bins=20,  # 61 crashes pc with 32gb ram, 15 is slow
+    p.binning_parameters = DotMap(num_bins=20,
                                   min_speed=p.system_dynamics_params.v_bounds[0],
                                   max_speed=p.system_dynamics_params.v_bounds[1])
 
@@ -276,7 +280,7 @@ def create_control_pipeline_params():
 
     # Set this to true if you want trajectory objects to track
     # linear and angular acceleration. If not set to false to save memory
-    p.track_trajectory_acceleration = True
+    p.track_trajectory_acceleration = False
 
     p.verbose = False
     return p
@@ -285,6 +289,7 @@ def create_control_pipeline_params():
 def create_simulator_params():
     p = DotMap()
 
+    # whether or not to wait for joystick inputs or set a repeat frame count
     p.block_joystick = True
 
     # Load HumANav dependencies
@@ -336,6 +341,9 @@ def create_agent_params(with_planner=True):
 
         # Time discretization step
         dt = p.planner_params.control_pipeline_params.system_dynamics_params.dt
+
+        # Whether or not to track acceleration
+        p.track_accel = p.planner_params.control_pipeline_params.track_trajectory_acceleration
 
         # Updating horizons
         p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
