@@ -15,21 +15,17 @@ class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
         self.commands = []
-        self.freq = 100.  # update frequency
         self.params = create_robot_params()
+        self.parse_params()
         # sockets for communication
         self.joystick_receiver_socket = None
         self.joystick_sender_socket = None
         self.host = socket.gethostname()
-        self.port_recv = self.params.port  # port for recieving commands from the joystick
-        self.port_send = self.port_recv + 1  # port for sending commands to the joystick
         # robot's knowledge of the current state of the world
         self.world_state = None
         super().__init__(start_configs.get_start_config(),
                          start_configs.get_goal_config(),
                          name)
-        self.radius = self.params.radius
-        self.repeat_freq = self.params.repeat_freq
         self.joystick_ready = False  # josystick is ready once it has been sent an environment
         self.joystick_requests_world = False  # to send the world state
         # whether or not to repeat the last joystick input
@@ -40,7 +36,14 @@ class RoboAgent(Agent):
         self.num_executed = 0  # keeps track of the latest command that is to be executed
         self.amnt_per_joystick = 1
 
+    def parse_params(self):
+        self.port_recv = self.params.port  # port for recieving commands from the joystick
+        self.port_send = self.port_recv + 1  # port for sending commands to the joystick
+        self.radius = self.params.radius
+        self.repeat_freq = self.params.repeat_freq
+
     # Getters for the robot class
+
     def get_name(self):
         return self.name
 

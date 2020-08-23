@@ -213,7 +213,7 @@ def create_system_dynamics_params():
     p = DotMap()
     from systems.dubins_v2 import DubinsV2
     p.system = DubinsV2
-    p.dt = 0.05
+    p.dt = 0.05  # set as default over all of tbd_socnavbench
     p.v_bounds = [0.0, 0.6]
     p.w_bounds = [-1.1, 1.1]
 
