@@ -320,7 +320,7 @@ def create_sbpd_simulator_params(render_3D=False):
     return p
 
 
-def create_agent_params(with_planner=True):
+def create_agent_params(with_planner=True, with_obstacle_map=False):
     p = DotMap()
     # Horizons in seconds
     p.episode_horizon_s = 200  # more time to simulate a feasable path # default 200
@@ -349,6 +349,9 @@ def create_agent_params(with_planner=True):
         p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
         p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
         p.dt = dt
+
+    if(with_obstacle_map):
+        p.obstacle_map_params = create_obstacle_map_params()
 
     # Define the Objectives
 
@@ -380,7 +383,7 @@ def create_obstacle_map_params():
     p = DotMap()
 
     # Load the dependencies
-    p.renderer_params = create_base_params()
+    # p.renderer_params = create_base_params()
 
     from obstacles.sbpd_map import SBPDMap
     p.obstacle_map = SBPDMap

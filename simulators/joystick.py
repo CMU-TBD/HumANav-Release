@@ -13,9 +13,7 @@ import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 from utils.utils import *
-from params.robot_params import create_params
-from params.renderer_params import get_path_to_humanav, get_seed
-from params.simulator.sbpd_simulator_params import create_params as create_agent_params
+from params.central_params import create_robot_params, get_path_to_humanav, get_seed, create_agent_params
 from simulators.agent import Agent
 from trajectory.trajectory import Trajectory
 
@@ -32,7 +30,7 @@ class Joystick():
         self.velocities = {}     # testing simstate utils
         self.accelerations = {}  # testing simstate utils
         self.environment = None
-        self.joystick_params = create_params()
+        self.joystick_params = create_robot_params()
         # sockets for communication
         self.robot_sender_socket = None
         self.robot_running = False
@@ -68,9 +66,9 @@ class Joystick():
     def init_control_pipeline(self):
         assert(self.sim_states is not None)
         assert(self.environment is not None)
-        self.params = create_agent_params()
-        self.params.dt = 0.05
-        self.params.control_horizon = 200  # based off central_simulator's parse params
+        self.params = create_agent_params(with_obstacle_map=True)
+        # based off central_simulator's parse params
+        self.params.control_horizon /= self.params.dt
         # self.environment["traversibles"][0]
         self.obstacle_map = self._init_obstacle_map()
         self.obj_fn = Agent._init_obj_fn(self)
@@ -131,20 +129,19 @@ class Joystick():
                 command = self.commanded_actions[self.num_sent]
                 lin = command[0]
                 ang = command[1]
-                if(lin != 0 and ang != 0):
-                    self.lin_vels.append(float(lin))
-                    self.ang_vels.append(float(ang))
-                    if(len(self.lin_vels) >= freq):
-                        self.robot_input(deepcopy(self.lin_vels),
-                                         deepcopy(self.ang_vels), self.request_world)
-                        # reset the containers
-                        self.lin_vels = []
-                        self.ang_vels = []
-                        # NOTE: this robot sender delay is tunable to ones liking
-                        time.sleep(0.1)  # planner delay
-                    if(self.num_sent % 20 == 0):
-                        self.request_world = True
-                    self.num_sent += 1
+                self.lin_vels.append(float(lin))
+                self.ang_vels.append(float(ang))
+                if(len(self.lin_vels) >= freq):
+                    self.robot_input(deepcopy(self.lin_vels),
+                                        deepcopy(self.ang_vels), self.request_world)
+                    # reset the containers
+                    self.lin_vels = []
+                    self.ang_vels = []
+                    # NOTE: this robot sender delay is tunable to ones liking
+                    time.sleep(0.1)  # planner delay
+                if(self.num_sent % 20 == 0):
+                    self.request_world = True
+                self.num_sent += 1
             else:
                 # wait until a new command is added
                 time.sleep(0.001)
@@ -173,7 +170,8 @@ class Joystick():
                     t_seg,
                     t=-1
                 )
-            self.vehicle_trajectory.append_along_time_axis(t_seg)
+            self.vehicle_trajectory.append_along_time_axis(
+                t_seg, track_trajectory_acceleration=self.params.planner_params.track_accel)
             self.commanded_actions.extend(commanded_actions_nkf[0])
             # print(self.planner_data['optimal_control_nk2'])
             # TODO: match the action_dt with the number of signals sent to the robot at once
