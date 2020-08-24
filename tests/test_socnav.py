@@ -300,7 +300,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     human_list = []
 
     # Generate the ~center~ of area3 when scaled up 2x
-    room_center = np.array([18, 8., 0.])
+    room_center = np.array([14., 14., 0.])
     # Create default environment which is a dictionary
     # containing ["map_scale", "traversibles"]
     # which is a constant and list of traversibles respectively

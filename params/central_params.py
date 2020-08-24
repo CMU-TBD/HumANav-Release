@@ -5,15 +5,18 @@ import os
 
 # first thing to do is read params file
 config = configparser.ConfigParser()
-config.read('/home/gustavo/Documents/tbd_SocNavBenchmark/params/params.ini')
-
-# Explicit seed for randomness generation
+config.read(os.path.join(os.getcwd(), 'params/params.ini'))
 seed = config['base_params'].getint('seed')
 
 
 def get_path_to_humanav():
-    PATH_TO_HUMANAV = config['base_params']['base_directory']
+    # PATH_TO_HUMANAV = config['base_params']['base_directory']
+    PATH_TO_HUMANAV = os.getcwd()
     if(not os.path.exists(PATH_TO_HUMANAV)):
+        # the main directory should be the parent of params/central_params.py
+        PATH_TO_HUMANAV = os.path.join(os.path.dirname(__file__), '..')
+        if(os.path.exists(PATH_TO_HUMANAV)):
+            return PATH_TO_HUMANAV
         print('\033[31m', "ERROR: Failed to find tbd_SocNavBench installation at",
               PATH_TO_HUMANAV, '\033[0m')
         os._exit(1)  # Failure condition

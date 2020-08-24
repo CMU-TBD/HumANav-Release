@@ -316,15 +316,15 @@ class Agent(AgentHelper):
     @staticmethod
     def _init_planner(self, params=None):
         if(params is None):
-            p = self.params
+            params = self.params
         obj_fn = self.obj_fn
-        return p.planner_params.planner(obj_fn=obj_fn,
-                                        params=p.planner_params)
+        return params.planner_params.planner(obj_fn=obj_fn,
+                                             params=params.planner_params)
 
     @staticmethod
     def _init_fmm_map(self, goal_pos_n2=None, params=None):
         if(params is None):
-            p = self.params
+            params = self.params
         obstacle_map = self.obstacle_map
         obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
 
