@@ -104,7 +104,7 @@ def create_base_params():
                              z_far=cam_p.getfloat('z_far'),
                              fov_horizontal=cam_p.getfloat('fov_horizontal'),
                              fov_vertical=cam_p.getfloat('fov_vertical'),
-                             img_channels=cam_p.getfloat('img_channels'),
+                             img_channels=cam_p.getint('img_channels'),
                              im_resize=cam_p.getfloat('im_resize'),
                              max_depth_meters=cam_p.getfloat('max_depth_meters'))
 
@@ -245,11 +245,16 @@ def create_system_dynamics_params():
 
     p.simulation_params = DotMap(simulation_mode=dyn_p.get('simulation_mode'),
                                  noise_params=DotMap(is_noisy=dyn_p.getboolean('is_noisy'),
-                                                     noise_type=dyn_p.get['noise_type'],
-                                                     noise_lb=dyn_p.get['noise_lb'],
-                                                     noise_ub=dyn_p.get['noise_ub'],
-                                                     noise_mean=dyn_p.get['noise_mean'],
-                                                     noise_std=dyn_p.get['noise_std']))
+                                                     noise_type=dyn_p.get(
+                                                         'noise_type'),
+                                                     noise_lb=eval(
+                                                         dyn_p.get('noise_lb')),
+                                                     noise_ub=eval(
+                                                         dyn_p.get('noise_ub')),
+                                                     noise_mean=eval(
+                                                         dyn_p.get('noise_mean')),
+                                                     noise_std=eval(
+                                                         dyn_p.get('noise_std'))))
     return p
 
 
@@ -260,6 +265,8 @@ def create_control_pipeline_params():
     p.system_dynamics_params = create_system_dynamics_params()
     p.waypoint_params = create_waypoint_params()
 
+    cp_p = config['control_pipeline_params']
+
     from control_pipelines.control_pipeline_v0 import ControlPipelineV0
     p.pipeline = ControlPipelineV0
 
@@ -269,49 +276,54 @@ def create_control_pipeline_params():
     # Spline parameters
     from trajectory.spline.spline_3rd_order import Spline3rdOrder
     p.spline_params = DotMap(spline=Spline3rdOrder,
-                             max_final_time=config['control_pipeline_params']['max_final_time'],
-                             epsilon=config['control_pipeline_params']['epsilon'])
-    p.minimum_spline_horizon = config['control_pipeline_params']['minimum_spline_horizon']
+                             max_final_time=cp_p.getfloat('max_final_time'),
+                             epsilon=1e-5)
+    p.minimum_spline_horizon = cp_p.getfloat('minimum_spline_horizon')
 
     # LQR setting parameters
     from costs.quad_cost_with_wrapping import QuadraticRegulatorRef
     p.lqr_params = DotMap(cost_fn=QuadraticRegulatorRef,
                           quad_coeffs=np.array(
-                              config['control_pipeline_params']['quad_coeffs'], dtype=np.float32),
-                          linear_coeffs=np.zeros(
-                              config['control_pipeline_params']['linear_coeffs'], dtype=np.float32))
+                              eval(cp_p.get('quad_coeffs')), dtype=np.float32),
+                          linear_coeffs=np.zeros((5), dtype=np.float32)
+                          )
 
     # Velocity binning parameters
-    p.binning_parameters = DotMap(num_bins=config['control_pipeline_params']['num_bins'],
+    p.binning_parameters = DotMap(num_bins=cp_p.getint('num_bins'),
                                   min_speed=p.system_dynamics_params.v_bounds[0],
                                   max_speed=p.system_dynamics_params.v_bounds[1])
 
     # Converting K to world coordinates is slow
     # so only set this to true when LQR data is needed
-    p.convert_K_to_world_coordinates = config['control_pipeline_params']['convert_K_to_world_coordinates']
+    p.convert_K_to_world_coordinates = cp_p.getboolean(
+        'convert_K_to_world_coordinates')
 
     # When not needed, LQR controllers can be discarded
     # to save memory
-    p.discard_LQR_controller_data = config['control_pipeline_params']['discard_LQR_controller_data']
+    p.discard_LQR_controller_data = cp_p.getboolean(
+        'discard_LQR_controller_data')
 
     # Set this to True to ignore precomputed
     # LQR trajectories
-    p.discard_precomputed_lqr_trajectories = config[
-        'control_pipeline_params']['discard_precomputed_lqr_trajectories']
+    p.discard_precomputed_lqr_trajectories = cp_p.getboolean(
+        'discard_precomputed_lqr_trajectories')
 
     # Set this to true if you want trajectory objects to track
     # linear and angular acceleration. If not set to false to save memory
-    p.track_trajectory_acceleration = config['control_pipeline_params']['track_trajectory_acceleration']
+    p.track_trajectory_acceleration = cp_p.getboolean(
+        'track_trajectory_acceleration')
 
-    p.verbose = config['control_pipeline_params']['verbose']
+    p.verbose = cp_p.getboolean('verbose')
     return p
 
 
 def create_simulator_params():
     p = DotMap()
 
+    sim_p = config['simulator_params']
+
     # whether or not to wait for joystick inputs or set a repeat frame count
-    p.block_joystick = config['simulator_params']['block_joystick']
+    p.block_joystick = sim_p.getboolean('block_joystick')
 
     # Load HumANav dependencies
     p.humanav_params = create_base_params()
@@ -324,6 +336,7 @@ def create_sbpd_simulator_params(render_3D=False):
     p.render_3D = render_3D
 
     # Load the dependencies
+    sbpd_p = config['sbpd_simulator_params']
 
     # Load obstacle map params
     p.obstacle_map_params = create_obstacle_map_params()
@@ -334,7 +347,7 @@ def create_sbpd_simulator_params(render_3D=False):
     else:
         print("Printing 3D movie sequentially")
     # verbose printing
-    p.verbose_printing = config['sbpd_simulator_params']['verbose_printing']
+    p.verbose_printing = sbpd_p.getboolean('verbose_printing')
 
     # simulation tick rate
     p.dt = create_system_dynamics_params().dt
@@ -343,18 +356,19 @@ def create_sbpd_simulator_params(render_3D=False):
 
 def create_agent_params(with_planner=True, with_obstacle_map=False):
     p = DotMap()
+    agnt_p = config["agent_params"]
     # Horizons in seconds
-    # more time to simulate a feasable path # default 200
-    p.episode_horizon_s = config['agent_params']['episode_horizon_s']
+    # more time to simulate a feasable path
+    p.episode_horizon_s = agnt_p.getfloat('episode_horizon_s')
     # time used on every iteration of the controller
-    p.control_horizon_s = config['agent_params']['control_horizon_s']
+    p.control_horizon_s = agnt_p.getfloat('control_horizon_s')
 
     # Whether to log videos (in GIF format) taken during trajectories
-    p.record_video = config['agent_params']['record_video']
+    p.record_video = agnt_p.getboolean('record_video')
 
     # Whether or not to log all trajectory data to pickle
     # files when running this simulator
-    p.save_trajectory_data = config['agent_params']['save_trajectory_data']
+    p.save_trajectory_data = agnt_p.getboolean('save_trajectory_data')
 
     # Load system dynamics params
     p.system_dynamics_params = create_system_dynamics_params()
@@ -379,27 +393,29 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
     # Define the Objectives
 
     # Obstacle Avoidance Objective
-    p.avoid_obstacle_objective = DotMap(obstacle_margin0=config['agent_params']['obstacle_margin0'],
-                                        obstacle_margin1=config['agent_params']['obstacle_margin1'],
+    p.avoid_obstacle_objective = DotMap(obstacle_margin0=agnt_p.getfloat('obstacle_margin0'),
+                                        obstacle_margin1=agnt_p.getfloat(
+                                            'obstacle_margin1'),
                                         # exponential cost constant
-                                        power=config['agent_params']['power_obstacle'],
-                                        obstacle_cost=config['agent_params']['obstacle_cost'])  # scalar cost multiple
+                                        power=agnt_p.getfloat(
+                                            'power_obstacle'),
+                                        obstacle_cost=agnt_p.getfloat('obstacle_cost'))  # scalar cost multiple
     # Angle Distance parameters
-    p.goal_angle_objective = DotMap(power=config['agent_params']['power_angle'],
-                                    angle_cost=config['agent_params']['angle_cost'])
+    p.goal_angle_objective = DotMap(power=agnt_p.getfloat('power_angle'),
+                                    angle_cost=agnt_p.getfloat('angle_cost'))
     # Goal Distance parameters
-    p.goal_distance_objective = DotMap(power=config['agent_params']['power_goal'],
-                                       goal_cost=config['agent_params']['goal_cost'],
-                                       goal_margin=config['agent_params']['goal_margin'])  # cutoff distance for the goal
+    p.goal_distance_objective = DotMap(power=agnt_p.getfloat('power_goal'),
+                                       goal_cost=agnt_p.getfloat('goal_cost'),
+                                       goal_margin=agnt_p.getfloat('goal_margin'))  # cutoff distance for the goal
 
-    p.objective_fn_params = DotMap(obj_type=config['agent_params']['obj_type'])
+    p.objective_fn_params = DotMap(obj_type=agnt_p.get('obj_type'))
     p.goal_cutoff_dist = p.goal_distance_objective.goal_margin
     p.goal_dist_norm = p.goal_distance_objective.power  # Default is l2 norm
     p.episode_termination_reasons = ['Timeout', 'Collision', 'Success']
     p.episode_termination_colors = ['b', 'r', 'g']
     p.waypt_cmap = 'winter'
 
-    p.num_validation_goals = config['agent_params']['num_validation_goals']
+    p.num_validation_goals = agnt_p.getint('num_validation_goals')
     return p
 
 
@@ -407,6 +423,7 @@ def create_obstacle_map_params():
     p = DotMap()
 
     # Load the dependencies
+    obst_p = config['obstacle_map_params']
     # p.renderer_params = create_base_params()
 
     from obstacles.sbpd_map import SBPDMap
@@ -414,17 +431,17 @@ def create_obstacle_map_params():
 
     # Size of map
     # Same as for HumANav FMM Map of Area3
-    p.map_size_2 = np.array(config['obstacle_map_params']['map_size_2'])
+    p.map_size_2 = np.array(eval(obst_p.get('map_size_2')))
 
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-    p.dx = config['obstacle_map_params']['dx']
+    p.dx = obst_p.getfloat('dx')
 
     # Origin is always 0,0 for SBPD
-    p.map_origin_2 = config['obstacle_map_params']['map_origin_2']
+    p.map_origin_2 = eval(obst_p.get('map_origin_2'))
 
     # Threshold distance from the obstacles to sample the start and the goal positions.
-    p.sampling_thres = config['obstacle_map_params']['sampling_thres']
+    p.sampling_thres = obst_p.getint('sampling_thres')
 
     # Number of grid steps around the start position to use for plotting
-    p.plotting_grid_steps = config['obstacle_map_params']['plotting_grid_steps']
+    p.plotting_grid_steps = obst_p.getint('plotting_grid_steps')
     return p

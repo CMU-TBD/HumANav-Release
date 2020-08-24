@@ -39,7 +39,7 @@ class RoboAgent(Agent):
     def parse_params(self):
         self.port_recv = self.params.port  # port for recieving commands from the joystick
         self.port_send = self.port_recv + 1  # port for sending commands to the joystick
-        self.radius = self.params.radius * 2
+        self.radius = self.params.physical_params.radius
         self.repeat_freq = self.params.repeat_freq
 
     # Getters for the robot class
