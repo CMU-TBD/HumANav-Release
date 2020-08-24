@@ -1,73 +1,21 @@
+import configparser
 from dotmap import DotMap
 import numpy as np
 import os
 
+# first thing to do is read params file
+config = configparser.ConfigParser()
+config.read('/home/gustavo/Documents/tbd_SocNavBenchmark/params/params.ini')
+
 # Explicit seed for randomness generation
-seed = 99
-
-
-def create_base_params():
-    p = DotMap()
-    p.dataset_name = 'sbpd'
-    p.building_name = 'area3'
-    p.flip = False
-    p.load_meshes = True
-    p.seed = seed
-
-    # False allows users to compute a new traversible when
-    # using a new area dataset, True will look for the
-    # precomputed traversible from the traversible folder
-    p.load_traversible_from_pickle_file = True
-
-    # Depending on computer, those equipped with an X graphical instance (or other display)
-    # can set this to True to use the openGL renderer and render the 3D humans/scene
-    # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
-    p.render_3D = False
-
-    # The camera is assumed to be mounted on a robot at fixed height
-    # and fixed pitch.
-    p.camera_params = DotMap(modalities=['rgb'],  # rgb or disparity
-                             width=64,
-                             height=64,
-                             z_near=.01,  # near plane clipping distance
-                             z_far=20.0,  # far plane clipping distance
-                             fov_horizontal=90.,
-                             fov_vertical=90.,
-                             img_channels=3,
-                             im_resize=1.,
-                             max_depth_meters=np.inf)
-
-    # HumANav dir
-    p.humanav_dir = get_path_to_humanav()
-
-    # Traversible dir
-    p.traversible_dir = get_traversible_dir()
-
-    if(p.render_3D):
-        # SBPD Data Directory
-        p.sbpd_data_dir = get_sbpd_data_dir()
-
-        # Surreal Parameters
-        p.surreal = DotMap(mode='train',
-                           data_dir=get_surreal_mesh_dir(),
-                           texture_dir=get_surreal_texture_dir(),
-                           body_shapes_train=[519, 1320,
-                                              521, 523, 779, 365, 1198, 368],
-                           body_shapes_test=[
-                               337, 944, 1333, 502, 344, 538, 413],
-                           compute_human_traversible=True,
-                           render_humans_in_gray_only=False
-                           )
-
-    return p
-
-# NOTE: these must be the ABSOLUTE path
+seed = config['base_params'].getint('seed')
+# TODO: fix the simulator to provide the start/goal and have the joystick read them
 
 
 def get_path_to_humanav():
-    PATH_TO_HUMANAV = '/home/gustavo/Documents/tbd_SocNavBenchmark'
+    PATH_TO_HUMANAV = config['base_params']['base_directory']
     if(not os.path.exists(PATH_TO_HUMANAV)):
-        print('\033[31m', "ERROR: Failed to find HumANav installation at",
+        print('\033[31m', "ERROR: Failed to find tbd_SocNavBench installation at",
               PATH_TO_HUMANAV, '\033[0m')
         os._exit(1)  # Failure condition
     return PATH_TO_HUMANAV
@@ -125,19 +73,82 @@ def get_seed():
     return seed
 
 
+def create_base_params():
+    p = DotMap()
+    base_p = config['base_params']
+    p.dataset_name = base_p.get('dataset_name')
+    p.building_name = base_p.get('building_name')
+    p.flip = base_p.getboolean('flip')
+    p.load_meshes = base_p.getboolean('load_meshes')
+    p.seed = seed
+
+    # False allows users to compute a new traversible when
+    # using a new area dataset, True will look for the
+    # precomputed traversible from the traversible folder
+    p.load_traversible_from_pickle_file = base_p.getboolean('load_traversible')
+
+    # Depending on computer, those equipped with an X graphical instance (or other display)
+    # can set this to True to use the openGL renderer and render the 3D humans/scene
+    # If unsure, a display exists if `echo $DISPLAY` yields some output (usually `:0`)
+    p.render_3D = base_p.getboolean('render_3D')
+
+    # The camera is assumed to be mounted on a robot at fixed height
+    # and fixed pitch.
+    cam_p = config['camera_params']
+    p.camera_params = DotMap(modalities=eval(cam_p.get('modalities')),  # rgb or disparity
+                             width=cam_p.getint('width'),
+                             height=cam_p.getint('height'),
+                             # near plane clipping distance
+                             z_near=cam_p.getfloat('z_near'),
+                             # far plane clipping distance
+                             z_far=cam_p.getfloat('z_far'),
+                             fov_horizontal=cam_p.getfloat('fov_horizontal'),
+                             fov_vertical=cam_p.getfloat('fov_vertical'),
+                             img_channels=cam_p.getfloat('img_channels'),
+                             im_resize=cam_p.getfloat('im_resize'),
+                             max_depth_meters=cam_p.getfloat('max_depth_meters'))
+
+    # HumANav dir
+    p.humanav_dir = get_path_to_humanav()
+
+    # Traversible dir
+    p.traversible_dir = get_traversible_dir()
+
+    if(p.render_3D):
+        # SBPD Data Directory
+        p.sbpd_data_dir = get_sbpd_data_dir()
+
+        # Surreal Parameters
+        surr_p = config['surreal_params']
+        p.surreal = DotMap(mode=surr_p['mode'],
+                           data_dir=get_surreal_mesh_dir(),
+                           texture_dir=get_surreal_texture_dir(),
+                           body_shapes_train=eval(
+                               surr_p.get('body_shapes_train')),
+                           body_shapes_test=eval(
+                               surr_p.get('body_shapes_test')),
+                           compute_human_traversible=surr_p.getboolean(
+                               'compute_human_traversible'),
+                           render_humans_in_gray_only=surr_p.getboolean(
+                               'render_humans_in_gray_only')
+                           )
+
+    return p
+
+# NOTE: these must be the ABSOLUTE path
+
+
 def create_robot_params():
     p = DotMap()
 
-    # can be any valid port, this is an arbitrary choice
-    p.port = 6000
+    rob_p = config['robot_params']
 
-    # in our case, the robot's length/width = 66.8 cm, radius is half of that
-    # radius of robot, we are basing the drive of the robot off of a pr2 robot
-    # more info here: https://robots.ieee.org/robots/pr2/
-    p.radius: float = 0.668 / 2.0  # meters
+    # can be any valid port, this is an arbitrary choice
+    p.port = rob_p.getint('port')
 
     # number of times to repeat a command (if repeat is on)
-    p.repeat_freq: int = 9  # number of frames to repeat last command
+    # number of frames to repeat last command
+    p.repeat_freq: int = rob_p.getint('repeat_freq')
 
     # The robot is modeled as a solid cylinder
     # of height, 'height', with radius, 'radius',
@@ -146,12 +157,18 @@ def create_robot_params():
     # 'sensor_height' pointing at
     # camera_elevation_degree degrees vertically
     # from the horizontal plane.
-    p.physical_params = DotMap(radius=p.radius,
-                               base=5,
-                               height=100,
-                               sensor_height=80,
-                               camera_elevation_degree=-45,  # camera tilt
-                               delta_theta=1.0)
+
+    # in our case, the robot's length/width = 66.8 cm, radius is half of that
+    # radius of robot, we are basing the drive of the robot off of a pr2 robot
+    # more info here: https://robots.ieee.org/robots/pr2/
+    p.physical_params = DotMap(radius=rob_p.getfloat('radius'),
+                               base=rob_p.getfloat('base'),
+                               height=rob_p.getfloat('height'),
+                               sensor_height=rob_p.getfloat('sensor_height'),
+                               # camera tilt
+                               camera_elevation_degree=rob_p.getfloat(
+                                   'camera_elevation_degree'),
+                               delta_theta=rob_p.getfloat('delta_theta'))
     return p
 
 
@@ -173,14 +190,16 @@ def create_waypoint_params():
     from waypoint_grids.projected_image_space_grid import ProjectedImageSpaceGrid
     p.grid = ProjectedImageSpaceGrid
 
+    wayp_p = config['waypoint_params']
+
     # Parameters for the projected image space grid
     # Desired number of waypoints. Actual number may differ slightly
     # See ./waypoint_grids/uniform_sampling_grid.py for more info
-    p.num_waypoints = 20000
-    p.num_theta_bins = 21
+    p.num_waypoints = wayp_p.getint('num_waypoints')
+    p.num_theta_bins = wayp_p.getint('num_theta_bins')
 
-    p.bound_min = [0., -2.5, -np.pi]
-    p.bound_max = [2.5, 2.5, 0.]
+    p.bound_min = eval(wayp_p.get('bound_min'))
+    p.bound_max = eval(wayp_p.get('bound_max'))
 
     camera_params = create_base_params().camera_params
     robot_params = create_robot_params().physical_params
@@ -213,24 +232,24 @@ def create_system_dynamics_params():
     p = DotMap()
     from systems.dubins_v2 import DubinsV2
     p.system = DubinsV2
-    p.dt = 0.05  # set as default over all of tbd_socnavbench
-    p.v_bounds = [0.0, 0.6]
-    p.w_bounds = [-1.1, 1.1]
+    # set as default over all of tbd_socnavbench
+    dyn_p = config['dynamics_params']
+    p.dt = dyn_p.getfloat('dt')
+    p.v_bounds = eval(dyn_p.get('v_bounds'))
+    p.w_bounds = eval(dyn_p.get('w_bounds'))
 
     # Set the acceleration bounds such that
     # by default they are never hit
-    p.linear_acc_max = 10e7
-    p.angular_acc_max = 10e7
+    p.linear_acc_max = dyn_p.getfloat('linear_acc_max')
+    p.angular_acc_max = dyn_p.getfloat('angular_acc_max')
 
-    p.simulation_params = DotMap(simulation_mode='ideal',
-                                 noise_params=DotMap(is_noisy=False,
-                                                     noise_type='uniform',
-                                                     noise_lb=[-0.02, -
-                                                               0.02, 0.],
-                                                     noise_ub=[
-                                                         0.02, 0.02, 0.],
-                                                     noise_mean=[0., 0., 0.],
-                                                     noise_std=[0.02, 0.02, 0.]))
+    p.simulation_params = DotMap(simulation_mode=dyn_p.get('simulation_mode'),
+                                 noise_params=DotMap(is_noisy=dyn_p.getboolean('is_noisy'),
+                                                     noise_type=dyn_p.get['noise_type'],
+                                                     noise_lb=dyn_p.get['noise_lb'],
+                                                     noise_ub=dyn_p.get['noise_ub'],
+                                                     noise_mean=dyn_p.get['noise_mean'],
+                                                     noise_std=dyn_p.get['noise_std']))
     return p
 
 
@@ -250,39 +269,41 @@ def create_control_pipeline_params():
     # Spline parameters
     from trajectory.spline.spline_3rd_order import Spline3rdOrder
     p.spline_params = DotMap(spline=Spline3rdOrder,
-                             max_final_time=10.0,
-                             epsilon=1e-5)
-    p.minimum_spline_horizon = 1.5  # default 1.5
+                             max_final_time=config['control_pipeline_params']['max_final_time'],
+                             epsilon=config['control_pipeline_params']['epsilon'])
+    p.minimum_spline_horizon = config['control_pipeline_params']['minimum_spline_horizon']
 
     # LQR setting parameters
     from costs.quad_cost_with_wrapping import QuadraticRegulatorRef
     p.lqr_params = DotMap(cost_fn=QuadraticRegulatorRef,
                           quad_coeffs=np.array(
-                              [1.0, 1.0, 1.0, 1.0, 1.0], dtype=np.float32),
-                          linear_coeffs=np.zeros((5), dtype=np.float32))
+                              config['control_pipeline_params']['quad_coeffs'], dtype=np.float32),
+                          linear_coeffs=np.zeros(
+                              config['control_pipeline_params']['linear_coeffs'], dtype=np.float32))
 
     # Velocity binning parameters
-    p.binning_parameters = DotMap(num_bins=20,
+    p.binning_parameters = DotMap(num_bins=config['control_pipeline_params']['num_bins'],
                                   min_speed=p.system_dynamics_params.v_bounds[0],
                                   max_speed=p.system_dynamics_params.v_bounds[1])
 
     # Converting K to world coordinates is slow
     # so only set this to true when LQR data is needed
-    p.convert_K_to_world_coordinates = False
+    p.convert_K_to_world_coordinates = config['control_pipeline_params']['convert_K_to_world_coordinates']
 
     # When not needed, LQR controllers can be discarded
     # to save memory
-    p.discard_LQR_controller_data = True
+    p.discard_LQR_controller_data = config['control_pipeline_params']['discard_LQR_controller_data']
 
     # Set this to True to ignore precomputed
     # LQR trajectories
-    p.discard_precomputed_lqr_trajectories = False
+    p.discard_precomputed_lqr_trajectories = config[
+        'control_pipeline_params']['discard_precomputed_lqr_trajectories']
 
     # Set this to true if you want trajectory objects to track
     # linear and angular acceleration. If not set to false to save memory
-    p.track_trajectory_acceleration = False
+    p.track_trajectory_acceleration = config['control_pipeline_params']['track_trajectory_acceleration']
 
-    p.verbose = False
+    p.verbose = config['control_pipeline_params']['verbose']
     return p
 
 
@@ -290,7 +311,7 @@ def create_simulator_params():
     p = DotMap()
 
     # whether or not to wait for joystick inputs or set a repeat frame count
-    p.block_joystick = True
+    p.block_joystick = config['simulator_params']['block_joystick']
 
     # Load HumANav dependencies
     p.humanav_params = create_base_params()
@@ -313,7 +334,7 @@ def create_sbpd_simulator_params(render_3D=False):
     else:
         print("Printing 3D movie sequentially")
     # verbose printing
-    p.verbose_printing = False
+    p.verbose_printing = config['sbpd_simulator_params']['verbose_printing']
 
     # simulation tick rate
     p.dt = create_system_dynamics_params().dt
@@ -323,15 +344,17 @@ def create_sbpd_simulator_params(render_3D=False):
 def create_agent_params(with_planner=True, with_obstacle_map=False):
     p = DotMap()
     # Horizons in seconds
-    p.episode_horizon_s = 200  # more time to simulate a feasable path # default 200
-    p.control_horizon_s = 0.5  # time used on every iteration of the controller
+    # more time to simulate a feasable path # default 200
+    p.episode_horizon_s = config['agent_params']['episode_horizon_s']
+    # time used on every iteration of the controller
+    p.control_horizon_s = config['agent_params']['control_horizon_s']
 
     # Whether to log videos (in GIF format) taken during trajectories
-    p.record_video = True
+    p.record_video = config['agent_params']['record_video']
 
     # Whether or not to log all trajectory data to pickle
     # files when running this simulator
-    p.save_trajectory_data = False
+    p.save_trajectory_data = config['agent_params']['save_trajectory_data']
 
     # Load system dynamics params
     p.system_dynamics_params = create_system_dynamics_params()
@@ -346,8 +369,8 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
         p.track_accel = p.planner_params.control_pipeline_params.track_trajectory_acceleration
 
         # Updating horizons
-        p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
-        p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
+        p.episode_horizon = int(np.ceil(p.episode_horizon_s / dt))
+        p.control_horizon = int(np.ceil(p.control_horizon_s / dt))
         p.dt = dt
 
     if(with_obstacle_map):
@@ -356,26 +379,27 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
     # Define the Objectives
 
     # Obstacle Avoidance Objective
-    p.avoid_obstacle_objective = DotMap(obstacle_margin0=0.3,
-                                        obstacle_margin1=0.5,
-                                        power=3,  # exponential cost constant
-                                        obstacle_cost=1.0)  # scalar cost multiple
+    p.avoid_obstacle_objective = DotMap(obstacle_margin0=config['agent_params']['obstacle_margin0'],
+                                        obstacle_margin1=config['agent_params']['obstacle_margin1'],
+                                        # exponential cost constant
+                                        power=config['agent_params']['power_obstacle'],
+                                        obstacle_cost=config['agent_params']['obstacle_cost'])  # scalar cost multiple
     # Angle Distance parameters
-    p.goal_angle_objective = DotMap(power=1,
-                                    angle_cost=.008)
+    p.goal_angle_objective = DotMap(power=config['agent_params']['power_angle'],
+                                    angle_cost=config['agent_params']['angle_cost'])
     # Goal Distance parameters
-    p.goal_distance_objective = DotMap(power=2,
-                                       goal_cost=.08,
-                                       goal_margin=0.3)  # cutoff distance for the goal
+    p.goal_distance_objective = DotMap(power=config['agent_params']['power_goal'],
+                                       goal_cost=config['agent_params']['goal_cost'],
+                                       goal_margin=config['agent_params']['goal_margin'])  # cutoff distance for the goal
 
-    p.objective_fn_params = DotMap(obj_type='valid_mean')
+    p.objective_fn_params = DotMap(obj_type=config['agent_params']['obj_type'])
     p.goal_cutoff_dist = p.goal_distance_objective.goal_margin
     p.goal_dist_norm = p.goal_distance_objective.power  # Default is l2 norm
     p.episode_termination_reasons = ['Timeout', 'Collision', 'Success']
     p.episode_termination_colors = ['b', 'r', 'g']
     p.waypt_cmap = 'winter'
 
-    p.num_validation_goals = 50
+    p.num_validation_goals = config['agent_params']['num_validation_goals']
     return p
 
 
@@ -389,17 +413,18 @@ def create_obstacle_map_params():
     p.obstacle_map = SBPDMap
 
     # Size of map
-    p.map_size_2 = np.array([521, 600])  # Same as for HumANav FMM Map of Area3
+    # Same as for HumANav FMM Map of Area3
+    p.map_size_2 = np.array(config['obstacle_map_params']['map_size_2'])
 
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-    p.dx = 0.05
+    p.dx = config['obstacle_map_params']['dx']
 
     # Origin is always 0,0 for SBPD
-    p.map_origin_2 = [0, 0]
+    p.map_origin_2 = config['obstacle_map_params']['map_origin_2']
 
     # Threshold distance from the obstacles to sample the start and the goal positions.
-    p.sampling_thres = 2
+    p.sampling_thres = config['obstacle_map_params']['sampling_thres']
 
     # Number of grid steps around the start position to use for plotting
-    p.plotting_grid_steps = 100
+    p.plotting_grid_steps = config['obstacle_map_params']['plotting_grid_steps']
     return p
