@@ -168,7 +168,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
         ax.set_yticks([])
         ax.set_title('Depth')
 
-    full_file_name = os.path.join(p.humanav_dir, 'tests/socnav', filename)
+    full_file_name = os.path.join(p.socnav_dir, 'tests/socnav', filename)
     if(not os.path.exists(full_file_name)):
         print('\033[31m', "Failed to find:", full_file_name,
               '\033[33m', "and therefore it will be created", '\033[0m')
@@ -201,7 +201,7 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
         print("Gathering prerecorded agents from",
               start_ped, "to", start_ped + num_pedestrians)
         datafile = os.path.join(
-            p.humanav_dir, "tests/world_coordinate_inter.csv")
+            p.socnav_dir, "tests/world_coordinate_inter.csv")
         world_df = pd.read_csv(datafile, header=None).T
         world_df.columns = ['frame', 'ped', 'y', 'x']
         world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')

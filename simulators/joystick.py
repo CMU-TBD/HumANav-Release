@@ -13,7 +13,7 @@ import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 from utils.utils import *
-from params.central_params import create_robot_params, get_path_to_humanav, get_seed, create_agent_params
+from params.central_params import create_robot_params, get_path_to_socnav, get_seed, create_agent_params
 from simulators.agent import Agent
 from trajectory.trajectory import Trajectory
 
@@ -216,7 +216,7 @@ class Joystick():
             self.listen_thread.join()
         # begin gif (movie) generation
         try:
-            save_to_gif(os.path.join(get_path_to_humanav(), self.dirname))
+            save_to_gif(os.path.join(get_path_to_socnav(), self.dirname))
         except:
             print("unable to render gif")
 
@@ -380,7 +380,7 @@ class Joystick():
         filename = "jview" + str(frame_count) + ".png"
         self.dirname = 'tests/socnav/joystick_movie'
         full_file_name = os.path.join(
-            get_path_to_humanav(), self.dirname, filename)
+            get_path_to_socnav(), self.dirname, filename)
         if(not os.path.exists(full_file_name)):
             touch(full_file_name)  # Just as the bash command
         fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)

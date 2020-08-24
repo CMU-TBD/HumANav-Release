@@ -8,7 +8,7 @@ import threading
 import multiprocessing
 from simulators.simulator_helper import SimulatorHelper
 from simulators.sim_state import SimState, HumanState, AgentState
-from params.central_params import get_path_to_humanav, create_sbpd_simulator_params
+from params.central_params import get_path_to_socnav, create_sbpd_simulator_params
 from utils.utils import *
 
 
@@ -299,7 +299,7 @@ class CentralSimulator(SimulatorHelper):
         for i in range(num_robots):
             dirname = "tests/socnav/sim_movie" + str(i)
             IMAGES_DIR = os.path.join(
-                self.params.humanav_params.humanav_dir, dirname)
+                self.params.socnav_params.socnav_dir, dirname)
             if(with_multiprocessing):
                 # little use to use pools here, since this is for multiple robot agents in a scene
                 # and the assumption here is that is a small number
@@ -476,7 +476,7 @@ class CentralSimulator(SimulatorHelper):
             ax.set_title('Depth')
 
         full_file_name = os.path.join(
-            self.params.humanav_params.humanav_dir, img_dir, filename)
+            self.params.socnav_params.socnav_dir, img_dir, filename)
         if(not os.path.exists(full_file_name)):
             if(self.params.verbose_printing):
                 print('\033[31m', "Failed to find:", full_file_name,
