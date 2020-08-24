@@ -225,7 +225,7 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
         # append y to the list of positions
         for j, y in enumerate(ped_i['y']):
             record[j].append(y + center_offset[1])
-        # append vector angles for all the agents
+        # append vector angles for all the gen_agents
         for j, pos_2 in enumerate(record):
             if(j > 0):
                 last_pos_2 = record[j - 1]
@@ -268,7 +268,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     dx_cm, traversible = r.get_config()
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm / 100.
-    if(p.render_3D):
+    if p.render_3D:
         # Get the surreal dataset for human generation
         surreal_data = r.d
 
@@ -329,12 +329,12 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         radius=5
     )
     simulator.add_agent(robot_agent)
-    # simulator.add_agent(robot_agent2) # can add arbitrary agents
+    # simulator.add_agent(robot_agent2) # can add arbitrary gen_agents
 
     """
     Add the prerecorded humans to the simulator
     """
-    print("Gathering prerecorded agents from", starting_prerec,
+    print("Gathering prerecorded gen_agents from", starting_prerec,
           "to", starting_prerec + num_prerecorded)
     generate_prerecorded_humans(
         starting_prerec, num_prerecorded, p, simulator, center_offset=np.array([8., 7.]))
@@ -374,8 +374,10 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         simulator.add_agent(new_human_i)
         print("Generated Random Humans:", i + 1, "\r", end="")
     print("\n")
+
     # run simulation
     simulator.simulate()
+
     # Plotting an image for each camera location
     for i in range(num_cameras):
         rgb_image_1mk3 = None

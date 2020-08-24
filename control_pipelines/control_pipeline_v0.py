@@ -33,7 +33,7 @@ class ControlPipelineV0(ControlPipelineBase):
             cls.pipeline = cls(params)
         else:
             assert(utils.check_dotmap_equality(cls.pipeline.params, params))
-        # can deepcopy for true parallelism, but due to the GIL (since our agents are threaded)
+        # can deepcopy for true parallelism, but due to the GIL (since our gen_agents are threaded)
         # it would be better to simply use the same pipeline
         if(cls.only_one_system):  # part of the base
             return cls.pipeline

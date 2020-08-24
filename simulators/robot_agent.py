@@ -81,9 +81,9 @@ class RoboAgent(Agent):
         return RoboAgent.generate_robot(configs)
 
     def sense(self):
-        """use this to take in a world state and compute obstacles (agents/walls) to affect the robot"""
+        """use this to take in a world state and compute obstacles (gen_agents/walls) to affect the robot"""
         if(not self.end_episode):
-            # check for collisions with other agents
+            # check for collisions with other gen_agents
             self.check_collisions(self.world_state)
             # enforce planning termination upon condition
             self._enforce_episode_termination_conditions()

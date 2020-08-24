@@ -38,7 +38,7 @@ class Agent(AgentHelper):
         self.end_acting = False
         self.path_step = 0
         self.termination_cause = None
-        # for collisions with other agents
+        # for collisions with other gen_agents
         self.has_collided = False
         # cosmetic items (for drawing the trajectories)
         possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
@@ -144,35 +144,41 @@ class Agent(AgentHelper):
         self.act(action_dt, world_state=sim_state)
 
     def plan(self):
-        """ Runs the planner for one step from config to generate a
+        """
+        Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
-        the subtrajectory, and relevant planner data"""
+        the subtrajectory, and relevant planner data
+        """
         if not hasattr(self, 'commanded_actions_nkf'):
             # initialize commanded actions
             self.commanded_actions_nkf = []
-        if(not hasattr(self, 'planner')):
+
+        if not hasattr(self, 'planner'):
             # create planner if none exists
             self.planner = Agent._init_planner(self)
-        if(not self.end_episode and not self.end_acting):
-            if(self.params.verbose_printing):
+
+        if not self.end_episode and not self.end_acting:
+            if self.params.verbose_printing:
                 print("planned next:",
                       self.planned_next_config.position_nk2())
+
             self.planner_data = self.planner.optimize(
-                self.planned_next_config, self.goal_config)
+                                    self.planned_next_config, self.goal_config)
             traj_segment, trajectory_data, commands_1kf = self._process_planner_data()
+
             self.planned_next_config = \
-                SystemConfig.init_config_from_trajectory_time_index(
-                    traj_segment,
-                    t=-1
-                )
+                    SystemConfig.init_config_from_trajectory_time_index(
+                    traj_segment, t=-1)
+
             # Append to Vehicle Data
             for key in self.vehicle_data.keys():
                 self.vehicle_data[key].append(trajectory_data[key])
             self.vehicle_trajectory.append_along_time_axis(traj_segment)
             self.commanded_actions_nkf.append(commands_1kf)
             self._enforce_episode_termination_conditions()
-            if(self.end_episode or self.end_acting):
-                if(self.params.verbose):
+
+            if self.end_episode or self.end_acting:
+                if self.params.verbose:
                     print("terminated plan for agent", self.get_name(),
                           "at t =", self.time, "k=", self.vehicle_trajectory.k,
                           "total time=", self.vehicle_trajectory.k * self.vehicle_trajectory.dt)
@@ -188,20 +194,20 @@ class Agent(AgentHelper):
                 self.end_acting = True
 
     def check_collisions(self, world_state, include_agents=True, include_prerecs=True, include_robots=True):
-        if(world_state is not None):
+        if world_state is not None:
             own_pos = self.get_current_config().to_3D_numpy()
-            if(include_agents and self._collision_in_group(own_pos, world_state.get_agents().values())):
+            if include_agents and self._collision_in_group(own_pos, world_state.get_agents().values()):
                 return True
-            if(include_prerecs and self._collision_in_group(own_pos, world_state.get_prerecs().values())):
+            if include_prerecs and self._collision_in_group(own_pos, world_state.get_prerecs().values()):
                 return True
-            if(include_robots and self._collision_in_group(own_pos, world_state.get_robots().values())):
+            if include_robots and self._collision_in_group(own_pos, world_state.get_robots().values()):
                 return True
         return False
 
     def act(self, action_dt, instant_complete=False, world_state=None):
         """ A utility method to initialize a config object
         from a particular timestep of a given trajectory object"""
-        if(not self.end_acting):
+        if not self.end_acting:
             if instant_complete:
                 # Complete the entire update of the current_config in one go
                 self.current_config = \
@@ -212,7 +218,7 @@ class Agent(AgentHelper):
             else:
                 # Update through the path traversal incrementally
 
-                # first check for collisions with any other agents
+                # first check for collisions with any other gen_agents
                 self.check_collisions(world_state)
 
                 # then update the current config
@@ -222,20 +228,20 @@ class Agent(AgentHelper):
 
                 # updating "next step" for agent path after traversing it
                 self.path_step += action_dt
-                if(self.path_step >= self.vehicle_trajectory.k):
+                if self.path_step >= self.vehicle_trajectory.k:
                     self.end_acting = True
 
                 # considers a full on collision once the agent has passed its "collision point"
-                if(self.path_step >= self.collision_point_k):
+                if self.path_step >= self.collision_point_k:
                     self.has_collided = True
                     self.end_acting = True
 
-                if(self.end_acting or self.has_collided):
-                    if(self.params.verbose):
+                if self.end_acting or self.has_collided:
+                    if self.params.verbose:
                         print("terminated act for agent",
                               self.get_name(), "at t =", self.time)
                     # save memory by deleting control pipeline (very memory intensive)
-                    del(self.planner)
+                    del self.planner
 
         # NOTE: can use the following if want to update further tracked variables, but sometimes
         # this is buggy when the action is not fully completed, thus this should be a TODO: fix
@@ -277,7 +283,7 @@ class Agent(AgentHelper):
                                                    T=self.params.control_horizon - 1,
                                                    sim_mode='realistic')
             else:
-                assert(False)
+                assert False
 
         self.planner.clip_data_along_time_axis(
             self.planner_data, self.params.control_horizon)

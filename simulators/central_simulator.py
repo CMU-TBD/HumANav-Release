@@ -35,7 +35,7 @@ class CentralSimulator(SimulatorHelper):
         self.r = renderer
         self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
-        # keep track of all agents in dictionary with names as the key
+        # keep track of all gen_agents in dictionary with names as the key
         self.agents = {}
         # keep track of all robots in dictionary with names as the key
         self.robots = {}
@@ -79,9 +79,9 @@ class CentralSimulator(SimulatorHelper):
         return p
 
     def add_agent(self, a):
-        """Adds an agent member to the central simulator's pool of agents
-        NOTE: this function works for robots (RoboAgent), prerecorded agents (PrerecordedHuman),
-              and general agents (Agent)
+        """Adds an agent member to the central simulator's pool of gen_agents
+        NOTE: this function works for robots (RoboAgent), prerecorded gen_agents (PrerecordedHuman),
+              and general gen_agents (Agent)
 
         Args:
             a (Agent/PrerecordedAgent/RoboAgent): The agent to be added to the simulator
@@ -127,14 +127,16 @@ class CentralSimulator(SimulatorHelper):
         return False
 
     def simulate(self):
-        """ A function that simulates an entire episode. The agents are updated with simultaneous
+        """ A function that simulates an entire episode. The gen_agents are updated with simultaneous
         threads running their update() functions and updating the robot with commands from the 
         external joystick process. 
         """
         num_agents: int = len(self.agents) + len(self.prerecs)
-        print("Running simulation on", num_agents, "agents")
+        print("Running simulation on", num_agents, "gen_agents")
         # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
+        # TODO what is this 3*params.dt ?
         self.delta_t = 3 * self.params.dt
+
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
         # give the robot knowledge of the initial world
@@ -143,32 +145,40 @@ class CentralSimulator(SimulatorHelper):
         # initialize the robot to establish joystick connection
         r_t = self.init_robot_listener_thread()
         # continue to spawn the simulation with an established (independent) connection
+
         # keep track of wall-time in the simulator
         start_time = time.clock()
         # save initial state before the simulator is spawned
         self.t = 0.0
-        if(self.delta_t < self.params.dt):
-            print("%sSimulation dt is too small; either lower the agents' dt's" % (color_red),
+        if self.delta_t < self.params.dt:
+            print("%sSimulation dt is too small; either lower the gen_agents' dt's" % (color_red),
                   self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
+
         iteration = 1  # loop iteration
         self.print_sim_progress(iteration)
+
         while self.exists_running_agent() or self.exists_running_prerec():
             # update "wall clock" time
             wall_clock = time.clock() - start_time
+
             # Complete thread operations
             agent_threads = \
                 self.init_agent_threads(self.t, self.delta_t, current_state)
             prerec_threads = self.init_prerec_threads(self.t, current_state)
+
             # start all thread groups
             self.start_threads(agent_threads)
             self.start_threads(prerec_threads)
+
             # calls a single iteration of the robot update
             self.robot.update(iteration)
+
             # join all thread groups
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
-            # capture time after all the agents have updated
+
+            # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
             current_state = self.save_state(self.t, self.delta_t, wall_clock)
             self.robot.update_world(current_state)
@@ -179,13 +189,13 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             self.print_sim_progress(iteration)
 
-        # free all the agents
+        # free all the gen_agents
         for a in self.agents.values():
-            del(a)
+            del a
 
         # free all the prerecs
         for p in self.prerecs.values():
-            del(p)
+            del p
 
         self.decommission_robot(r_t)
 
@@ -206,7 +216,7 @@ class CentralSimulator(SimulatorHelper):
         return p.obstacle_map(p, renderer)
 
     def num_conditions_in_agents(self, condition: str):
-        """Counts the number of termination causes matching condition in all the generated agents
+        """Counts the number of termination causes matching condition in all the generated gen_agents
 
         Args:
             condition (str): either "green" (success), "red" (collision), or "blue" (timeout)
@@ -253,7 +263,7 @@ class CentralSimulator(SimulatorHelper):
         saved_agents = {}
         for a in self.agents.values():
             saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
-        # deepcopy all prerecorded agents
+        # deepcopy all prerecorded gen_agents
         saved_prerecs = {}
         for a in self.prerecs.values():
             saved_prerecs[a.get_name()] = HumanState(a, deepcpy=True)
@@ -328,7 +338,7 @@ class CentralSimulator(SimulatorHelper):
             dirname = "tests/socnav/sim_movie" + str(i)
             IMAGES_DIR = os.path.join(self.params.humanav_dir, dirname)
             if(with_multiprocessing):
-                # little use to use pools here, since this is for multiple robot agents in a scene
+                # little use to use pools here, since this is for multiple robot gen_agents in a scene
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
                     target=save_to_gif,
@@ -346,7 +356,7 @@ class CentralSimulator(SimulatorHelper):
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13,
                      agents, prerecs, robots, room_center, plot_quiver=False):
         """Uses matplotlib to plot a birds-eye-view image of the world by plotting the environment
-        and the agents on every frame. The frame also includes the simulator time and wall clock time
+        and the gen_agents on every frame. The frame also includes the simulator time and wall clock time
 
         Args:
             ax (matplotlib.axes): the axes to plot on
@@ -384,11 +394,11 @@ class CentralSimulator(SimulatorHelper):
         plot_agents(ax, ppm, robots, label="Robot", normal_color="bo",
                     collided_color="ko", plot_quiver=plot_quiver)
 
-        # plot all the simulated prerecorded agents
+        # plot all the simulated prerecorded gen_agents
         plot_agents(ax, ppm, prerecs, label="Prerec", normal_color="yo",
                     collided_color="ro", plot_quiver=plot_quiver)
 
-        # plot all the randomly generated simulated agents
+        # plot all the randomly generated simulated gen_agents
         plot_agents(ax, ppm, agents, label="Agent", normal_color="go",
                     collided_color="ro", plot_quiver=plot_quiver)
 
