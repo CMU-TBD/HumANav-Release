@@ -9,7 +9,6 @@ config.read('/home/gustavo/Documents/tbd_SocNavBenchmark/params/params.ini')
 
 # Explicit seed for randomness generation
 seed = config['base_params'].getint('seed')
-# TODO: fix the simulator to provide the start/goal and have the joystick read them
 
 
 def get_path_to_humanav():

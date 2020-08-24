@@ -291,11 +291,12 @@ class Agent(AgentHelper):
         return obj_val
 
     @staticmethod
-    def _init_obj_fn(self):
+    def _init_obj_fn(self, params=None):
         """
         Initialize the objective function given sim params
         """
-        params = self.params
+        if params is None:
+            params = self.params
         obstacle_map = self.obstacle_map
         obj_fn = ObjectiveFunction(params.objective_fn_params)
         if not params.avoid_obstacle_objective.empty():
@@ -313,15 +314,17 @@ class Agent(AgentHelper):
         return obj_fn
 
     @staticmethod
-    def _init_planner(self):
-        p = self.params
+    def _init_planner(self, params=None):
+        if(params is None):
+            p = self.params
         obj_fn = self.obj_fn
         return p.planner_params.planner(obj_fn=obj_fn,
                                         params=p.planner_params)
 
     @staticmethod
-    def _init_fmm_map(self, goal_pos_n2=None):
-        p = self.params
+    def _init_fmm_map(self, goal_pos_n2=None, params=None):
+        if(params is None):
+            p = self.params
         obstacle_map = self.obstacle_map
         obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
 
@@ -336,13 +339,14 @@ class Agent(AgentHelper):
             mask_grid_mn=obstacle_occupancy_grid)
 
     @staticmethod
-    def _init_system_dynamics(self):
+    def _init_system_dynamics(self, params=None):
         """
         If there is a control pipeline (i.e. model based method)
         return its system_dynamics. Else create a new system_dynamics
         instance.
         """
-        params = self.params
+        if(params is None):
+            params = self.params
         try:
             planner = self.planner
             return planner.control_pipeline.system_dynamics

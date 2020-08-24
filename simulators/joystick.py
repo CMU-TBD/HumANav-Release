@@ -31,6 +31,9 @@ class Joystick():
         self.accelerations = {}  # testing simstate utils
         self.environment = None
         self.joystick_params = create_robot_params()
+        self.init()
+
+    def init(self):
         # sockets for communication
         self.robot_sender_socket = None
         self.robot_running = False
@@ -56,7 +59,7 @@ class Joystick():
 
     def _init_obstacle_map(self, renderer=0):
         """ Initializes the sbpd map."""
-        p = self.params.obstacle_map_params
+        p = self.agent_params.obstacle_map_params
         return p.obstacle_map(p, renderer,
                               res=float(self.environment["map_scale"]) * 100.,
                               trav=np.array(
@@ -66,20 +69,21 @@ class Joystick():
     def init_control_pipeline(self):
         assert(self.sim_states is not None)
         assert(self.environment is not None)
-        self.params = create_agent_params(with_obstacle_map=True)
+        self.agent_params = create_agent_params(with_obstacle_map=True)
         # based off central_simulator's parse params
-        self.params.control_horizon /= self.params.dt
+        self.agent_params.control_horizon /= self.agent_params.dt
         # self.environment["traversibles"][0]
         self.obstacle_map = self._init_obstacle_map()
-        self.obj_fn = Agent._init_obj_fn(self)
+        self.obj_fn = Agent._init_obj_fn(self, params=self.agent_params)
         # Initialize Fast-Marching-Method map for agent's pathfinding
-        self.fmm_map = Agent._init_fmm_map(self)
+        self.fmm_map = Agent._init_fmm_map(self, params=self.agent_params)
         Agent._update_fmm_map(self)
         # Initialize system dynamics and planner fields
-        self.planner = Agent._init_planner(self)
+        self.planner = Agent._init_planner(self, params=self.agent_params)
         self.vehicle_data = self.planner.empty_data_dict()
-        self.system_dynamics = Agent._init_system_dynamics(self)
-        self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        self.system_dynamics = Agent._init_system_dynamics(
+            self, params=self.agent_params)
+        self.vehicle_trajectory = Trajectory(dt=self.agent_params.dt, n=1, k=0)
 
     def create_message(self, joystick_power: bool, lin_vels: list, ang_vels: list,
                        j_time: float = 0.0, req_world: bool = False):
@@ -133,7 +137,7 @@ class Joystick():
                 self.ang_vels.append(float(ang))
                 if(len(self.lin_vels) >= freq):
                     self.robot_input(deepcopy(self.lin_vels),
-                                        deepcopy(self.ang_vels), self.request_world)
+                                     deepcopy(self.ang_vels), self.request_world)
                     # reset the containers
                     self.lin_vels = []
                     self.ang_vels = []
@@ -159,7 +163,7 @@ class Joystick():
                 self.planned_next_config, self.goal_config)
             # LQR feedback control loop
             t_seg = Trajectory.new_traj_clip_along_time_axis(self.planner_data['trajectory'],
-                                                             self.params.control_horizon,
+                                                             self.agent_params.control_horizon,
                                                              repeat_second_to_last_speed=True)
             _, commanded_actions_nkf = self.system_dynamics.parse_trajectory(
                 t_seg)
@@ -171,7 +175,7 @@ class Joystick():
                     t=-1
                 )
             self.vehicle_trajectory.append_along_time_axis(
-                t_seg, track_trajectory_acceleration=self.params.planner_params.track_accel)
+                t_seg, track_trajectory_acceleration=self.agent_params.planner_params.track_accel)
             self.commanded_actions.extend(commanded_actions_nkf[0])
             # print(self.planner_data['optimal_control_nk2'])
             # TODO: match the action_dt with the number of signals sent to the robot at once
@@ -194,9 +198,9 @@ class Joystick():
         information from the simulation while also sending commands to the robot """
         while(self.delta_t is None):
             time.sleep(0.01)
-        action_dt = int(np.floor(self.delta_t / self.params.dt))
+        action_dt = int(np.floor(self.delta_t / self.agent_params.dt))
         print("simulator's refresh rate =", self.delta_t)
-        print("joystick's refresh rate  =", self.params.dt)
+        print("joystick's refresh rate  =", self.agent_params.dt)
         sender_thread = threading.Thread(
             target=self.send_robot_group,
             args=(action_dt,)
@@ -278,13 +282,14 @@ class Joystick():
                         robot = robots[0]
                         self.current_config = generate_config_from_pos_3(
                             robot["current_config"])
-                        print("Updated environment from robot")
-                        # update the start and goal configs
+                        print("Updated environment from simulator")
+                        # update the start and goal configs from the simulator's challenge
                         self.start_config = generate_config_from_pos_3(
                             robot["start_config"])
                         self.goal_config = generate_config_from_pos_3(
                             robot["goal_config"])
                         self.delta_t = current_world["delta_t"]
+                        print("Updated start/goal for robot")
                     else:
                         # render when not receiving a new environment
                         self.generate_frame(current_world, self.frame_num)
