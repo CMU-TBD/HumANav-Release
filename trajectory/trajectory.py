@@ -257,7 +257,7 @@ class Trajectory(object):
         return np.concatenate([self.position_and_heading_nk3(),
                                self.speed_and_angular_speed_nk2()], axis=2)
 
-    def append_along_time_axis(self, trajectory):
+    def append_along_time_axis(self, trajectory, track_trajectory_acceleration=True):
         """ Utility function to concatenate trajectory
         over time. Useful for assembling an entire
         trajectory from multiple sub-trajectories. """
@@ -266,17 +266,18 @@ class Trajectory(object):
                                             axis=1)
         self._speed_nk1 = np.concatenate([self.speed_nk1(), trajectory.speed_nk1()],
                                          axis=1)
-        self._acceleration_nk1 = np.concatenate([self.acceleration_nk1(),
-                                                 trajectory.acceleration_nk1()],
-                                                axis=1)
+        if(track_trajectory_acceleration):
+            self._acceleration_nk1 = np.concatenate([self.acceleration_nk1(),
+                                                     trajectory.acceleration_nk1()],
+                                                    axis=1)
+            self._angular_acceleration_nk1 = np.concatenate([self.angular_acceleration_nk1(),
+                                                             trajectory.angular_acceleration_nk1()],
+                                                            axis=1)
         self._heading_nk1 = np.concatenate([self.heading_nk1(),
                                             trajectory.heading_nk1()], axis=1)
         self._angular_speed_nk1 = np.concatenate([self.angular_speed_nk1(),
                                                   trajectory.angular_speed_nk1()],
                                                  axis=1)
-        self._angular_acceleration_nk1 = np.concatenate([self.angular_acceleration_nk1(),
-                                                         trajectory.angular_acceleration_nk1()],
-                                                        axis=1)
         self.k = self.k + trajectory.k
         self.valid_horizons_n1 = self.valid_horizons_n1 + trajectory.valid_horizons_n1
 

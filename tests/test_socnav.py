@@ -15,10 +15,7 @@ from humanav.humanav_renderer_multi import HumANavRendererMulti
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
-from params.planner_params import create_params as create_planner_params
-from params.simulator.sbpd_simulator_params import create_params as create_sim_params
-from params.renderer_params import get_seed
-from params.renderer_params import create_params as create_base_params
+from params.central_params import get_seed, create_base_params, create_robot_params
 from utils.utils import *
 
 # seed the random number generator
@@ -31,16 +28,18 @@ def create_params():
     # Set any custom parameters
     p.building_name = 'area3'
 
+    # The camera is assumed to be mounted on a robot at fixed height
+    # and fixed pitch. See params/central_params.py for more information
     p.camera_params.width = 1024
     p.camera_params.height = 1024
     p.camera_params.fov_vertical = 75.
     p.camera_params.fov_horizontal = 75.
 
-    # The camera is assumed to be mounted on a robot at fixed height
-    # and fixed pitch. See humanav/renderer_params.py for more information
+    # Introduce the robot params
+    p.robot_params = create_robot_params()
 
     # Tilt the camera 10 degree down from the horizontal axis
-    p.robot_params.camera_elevation_degree = -10
+    p.robot_params.physical_params.camera_elevation_degree = -10
 
     if p.render_3D:
         # Can only render rgb and depth then host pc has an available display
@@ -169,7 +168,7 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
         ax.set_yticks([])
         ax.set_title('Depth')
 
-    full_file_name = os.path.join(p.humanav_dir, 'tests/socnav', filename)
+    full_file_name = os.path.join(p.socnav_dir, 'tests/socnav', filename)
     if(not os.path.exists(full_file_name)):
         print('\033[31m', "Failed to find:", full_file_name,
               '\033[33m', "and therefore it will be created", '\033[0m')
@@ -198,60 +197,63 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
     """"world_df" is a set of trajectories organized as a pandas dataframe. 
     Each row is a pedestrian at a given frame (aka time point). 
     The data was taken at 25 fps so between frames is 1/25th of a second. """
-    datafile = os.path.join(p.humanav_dir, "tests/world_coordinate_inter.csv")
-    world_df = pd.read_csv(datafile, header=None).T
-    world_df.columns = ['frame', 'ped', 'y', 'x']
-    world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
-    start_frame = world_df['frame'][0]  # default start (of data)
-    max_peds = max(np.unique(world_df.ped))
-    for i in range(num_pedestrians):
-        ped_id = i + start_ped + 1
-        if (ped_id >= max_peds):  # need data to be within the bounds
-            print("%sRequested Prerec agent index out of bounds:" %
-                  (color_red), ped_id, "%s" % (color_reset))
-        if(ped_id not in np.unique(world_df.ped)):
-            continue
-        ped_i = world_df[world_df.ped == ped_id]
-        times = []
-        for j, f in enumerate(ped_i['frame']):
-            if(i == 0 and j == 0):
-                start_frame = f  # update start frame to be representative of "first" pedestrian
-            relative_time = (f - start_frame) * (1 / 25.)
-            times.append(relative_time)
-        record = []
-        # generate a list of lists of positions (only x)
-        for x in ped_i['x']:
-            record.append([x + center_offset[0]])
-        # append y to the list of positions
-        for j, y in enumerate(ped_i['y']):
-            record[j].append(y + center_offset[1])
-        # append vector angles for all the agents
-        for j, pos_2 in enumerate(record):
-            if(j > 0):
-                last_pos_2 = record[j - 1]
-                theta = np.arctan2(
-                    pos_2[1] - last_pos_2[1], pos_2[0] - last_pos_2[0])
-                record[j - 1].append(theta)
-                if(j == len(record) - 1):
-                    record[j].append(theta)  # last element gets last angle
-        # append linear speed to the list of variables
-        for j, pos_2 in enumerate(record):
-            if(j > 0):
-                last_pos_2 = record[j - 1]
-                # calculating euclidean dist / delta_t
-                delta_t = (times[j] - times[j - 1])
-                speed = euclidean_dist2(pos_2, last_pos_2) / delta_t
-                # speed = np.sqrt((pos_2[1] - last_pos_2[1]) **
-                #                 2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
-                record[j].append(speed)  # last element gets last angle
-            else:
-                record[0].append(0)  # initial speed is 0
-        for j, t in enumerate(times):  # lastly, append t to the list
-            record[j].append(t)
-        simulator.add_agent(PrerecordedHuman(
-            record, generate_appearance=p.render_3D))
-        print("Generated Prerecorded Humans:", i + 1, "\r", end="")
     if(num_pedestrians > 0):
+        print("Gathering prerecorded agents from",
+              start_ped, "to", start_ped + num_pedestrians)
+        datafile = os.path.join(
+            p.socnav_dir, "tests/world_coordinate_inter.csv")
+        world_df = pd.read_csv(datafile, header=None).T
+        world_df.columns = ['frame', 'ped', 'y', 'x']
+        world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
+        start_frame = world_df['frame'][0]  # default start (of data)
+        max_peds = max(np.unique(world_df.ped))
+        for i in range(num_pedestrians):
+            ped_id = i + start_ped + 1
+            if (ped_id >= max_peds):  # need data to be within the bounds
+                print("%sRequested Prerec agent index out of bounds:" %
+                      (color_red), ped_id, "%s" % (color_reset))
+            if(ped_id not in np.unique(world_df.ped)):
+                continue
+            ped_i = world_df[world_df.ped == ped_id]
+            times = []
+            for j, f in enumerate(ped_i['frame']):
+                if(i == 0 and j == 0):
+                    start_frame = f  # update start frame to be representative of "first" pedestrian
+                relative_time = (f - start_frame) * (1 / 25.)
+                times.append(relative_time)
+            record = []
+            # generate a list of lists of positions (only x)
+            for x in ped_i['x']:
+                record.append([x + center_offset[0]])
+            # append y to the list of positions
+            for j, y in enumerate(ped_i['y']):
+                record[j].append(y + center_offset[1])
+            # append vector angles for all the agents
+            for j, pos_2 in enumerate(record):
+                if(j > 0):
+                    last_pos_2 = record[j - 1]
+                    theta = np.arctan2(
+                        pos_2[1] - last_pos_2[1], pos_2[0] - last_pos_2[0])
+                    record[j - 1].append(theta)
+                    if(j == len(record) - 1):
+                        record[j].append(theta)  # last element gets last angle
+            # append linear speed to the list of variables
+            for j, pos_2 in enumerate(record):
+                if(j > 0):
+                    last_pos_2 = record[j - 1]
+                    # calculating euclidean dist / delta_t
+                    delta_t = (times[j] - times[j - 1])
+                    speed = euclidean_dist2(pos_2, last_pos_2) / delta_t
+                    # speed = np.sqrt((pos_2[1] - last_pos_2[1]) **
+                    #                 2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
+                    record[j].append(speed)  # last element gets last angle
+                else:
+                    record[0].append(0)  # initial speed is 0
+            for j, t in enumerate(times):  # lastly, append t to the list
+                record[j].append(t)
+            simulator.add_agent(PrerecordedHuman(
+                record, generate_appearance=p.render_3D))
+            print("Generated Prerecorded Humans:", i + 1, "\r", end="")
         print("\n")
 
 
@@ -298,7 +300,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     human_list = []
 
     # Generate the ~center~ of area3 when scaled up 2x
-    room_center = np.array([14, 14., 0.])
+    room_center = np.array([14., 14., 0.])
     # Create default environment which is a dictionary
     # containing ["map_scale", "traversibles"]
     # which is a constant and list of traversibles respectively
@@ -317,9 +319,9 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
 
     # Create planner parameters
-    # planner_params = create_planner_params()
-    sim_params = create_sim_params(render_3D=p.render_3D)
-    simulator = CentralSimulator(sim_params, environment, renderer=r)
+    # sim_params = create_sbpd_simulator_params(render_3D=p.render_3D)
+    simulator = CentralSimulator(
+        environment, renderer=r, render_3D=p.render_3D)
 
     """
     Generate the humans and run the simulation on every human
@@ -329,13 +331,10 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         radius=5
     )
     simulator.add_agent(robot_agent)
-    # simulator.add_agent(robot_agent2) # can add arbitrary agents
 
     """
     Add the prerecorded humans to the simulator
     """
-    print("Gathering prerecorded agents from", starting_prerec,
-          "to", starting_prerec + num_prerecorded)
     generate_prerecorded_humans(
         starting_prerec, num_prerecorded, p, simulator, center_offset=np.array([8., 7.]))
 
@@ -345,7 +344,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     known_start = generate_config_from_pos_3(np.array([9., 18., 0.]))
     known_end = generate_config_from_pos_3(np.array([13., 10., 0.]))
     known_init_configs = HumanConfigs(known_start, known_end)
-    const_human = Human.generate_human_with_configs(known_init_configs)
+    const_human = Human.generate_human_with_configs(
+        known_init_configs, generate_appearance=p.render_3D)
     simulator.add_agent(const_human)
 
     """
@@ -373,7 +373,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         # Input human fields into simulator
         simulator.add_agent(new_human_i)
         print("Generated Random Humans:", i + 1, "\r", end="")
-    print("\n")
+    if(num_generated_humans > 0):
+        print("\n")
     # run simulation
     simulator.simulate()
     # Plotting an image for each camera location
@@ -395,4 +396,4 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(5, 5, starting_prerec=15)
+    test_socnav(num_generated_humans=3, num_prerecorded=3, starting_prerec=15)

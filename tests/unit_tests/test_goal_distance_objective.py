@@ -1,5 +1,4 @@
 import numpy as np
-
 from obstacles.sbpd_map import SBPDMap
 from objectives.goal_distance import GoalDistance
 from trajectory.trajectory import Trajectory
@@ -9,7 +8,7 @@ from utils.utils import *
 
 
 def create_renderer_params():
-    from params.renderer_params import get_traversible_dir, get_sbpd_data_dir
+    from params.central_params import get_traversible_dir, get_sbpd_data_dir
     p = DotMap()
     p.dataset_name = 'sbpd'
     p.building_name = 'area3'

@@ -25,9 +25,10 @@ import numpy as np
 
 from humanav import utils
 from mp_env import mp_env
-from params.renderer_params import get_sbpd_data_dir
+from params.central_params import get_sbpd_data_dir
 from utils.utils import *
 try:
+    # wont work on headless displays
     from mp_env.render import swiftshader_renderer as renderer
 except:
     pass
@@ -58,7 +59,7 @@ class Loader():
         mesh_file_name = glob.glob1(dir_name, '*.obj')[0]
         mesh_file_name_full = os.path.join(dir_name, mesh_file_name)
         #logging.error('Loading building from obj file: %s', mesh_file_name_full)
-        print("%sLoading building from obj file:" % (color_blue),
+        print("%sLoading building mesh from obj:" % (color_blue),
               mesh_file_name_full, "%s" % (color_reset))
         shape = renderer.Shape(mesh_file_name_full, load_materials=True,
                                name_prefix=building['name'] + '_', materials_scale=materials_scale)

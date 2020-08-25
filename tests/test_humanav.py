@@ -3,7 +3,6 @@ import numpy as np
 import os
 import sys
 import math
-from dotmap import DotMap
 from random import seed, random, randint
 from humanav import sbpd
 from humans.human import Human

@@ -2,7 +2,6 @@ import os
 import json
 import copy
 import numpy as np
-import dotmap
 import shutil
 from dotmap import DotMap
 from random import seed, random, randint
@@ -36,7 +35,7 @@ def render_angle_frequency(p):
 def log_dict_as_json(params, filename):
     """Save params (either a DotMap object or a python dictionary) to a file in json format"""
     with open(filename, 'w') as f:
-        if isinstance(params, dotmap.DotMap):
+        if isinstance(params, DotMap):
             params = params.toDict()
         param_dict_serializable = _to_json_serializable_dict(
             copy.deepcopy(params))
@@ -205,7 +204,7 @@ def delete_if_exists(dirname):
 
 
 def check_dotmap_equality(d1, d2):
-    """Check equality on nested dotmap objects that all keys and values match."""
+    """Check equality on nested map objects that all keys and values match."""
     assert(len(set(d1.keys()).difference(set(d2.keys()))) == 0)
     equality = [True] * len(d1.keys())
     for i, key in enumerate(d1.keys()):

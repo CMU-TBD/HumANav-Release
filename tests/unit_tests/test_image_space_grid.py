@@ -1,7 +1,7 @@
 import numpy as np
-from dotmap import DotMap
 from utils.utils import *
 from waypoint_grids.projected_image_space_grid import ProjectedImageSpaceGrid
+from dotmap import DotMap
 
 
 def create_params():

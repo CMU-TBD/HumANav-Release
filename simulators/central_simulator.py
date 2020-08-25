@@ -2,39 +2,33 @@ import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 import numpy as np
-import copy
 import os
 import time
 import threading
 import multiprocessing
-from humans.human import Human
-from humans.recorded_human import PrerecordedHuman
-from humanav.humanav_renderer_multi import HumANavRendererMulti
-from simulators.robot_agent import RoboAgent
-from trajectory.trajectory import SystemConfig, Trajectory
 from simulators.simulator_helper import SimulatorHelper
-from simulators.agent import Agent
 from simulators.sim_state import SimState, HumanState, AgentState
-from utils.fmm_map import FmmMap
+from params.central_params import get_path_to_socnav, create_sbpd_simulator_params
 from utils.utils import *
-from params.renderer_params import get_path_to_humanav
 
 
 class CentralSimulator(SimulatorHelper):
     """The centralized simulator of TBD_SocNavBench """
 
-    def __init__(self, params, environment, renderer=None):
+    obstacle_map = None
+
+    def __init__(self, environment, renderer=None, render_3D=None):
         """ Initializer for the central simulator
 
         Args:
-            params (DotMap): parameter configuration file from test_socnav.py
+            params (Map): parameter configuration file from test_socnav.py
             environment (dict): dictionary housing the obj map (bitmap) and more
             renderer (optional): OpenGL renderer for 3D models. Defaults to None
         """
-        self.params = CentralSimulator.parse_params(params)
         self.r = renderer
-        self.obstacle_map = self._init_obstacle_map(renderer)
         self.environment = environment
+        self.params = create_sbpd_simulator_params(render_3D=render_3D)
+        CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
         # keep track of all robots in dictionary with names as the key
@@ -48,36 +42,6 @@ class CentralSimulator(SimulatorHelper):
         self.t: float = 0
         self.delta_t: float = 0  # will be updated in simulator based off dt
 
-    @staticmethod
-    def parse_params(p):
-        """ Parse the parameters to add some additional helpful parameters.
-
-        Args:
-            p (DotMap): parameter config file from the initializer
-        """
-        # Parse the dependencies
-        p.humanav_dir = get_path_to_humanav()
-        p.planner_params.planner.parse_params(p.planner_params)
-        p.obstacle_map_params.obstacle_map.parse_params(p.obstacle_map_params)
-        # Time discretization step
-        dt = p.planner_params.control_pipeline_params.system_dynamics_params.dt
-        # Updating horizons
-        p.episode_horizon = max(1, int(np.ceil(p.episode_horizon_s / dt)))
-        p.control_horizon = max(1, int(np.ceil(p.control_horizon_s / dt)))
-        p.dt = dt
-        # whether to block on joystick, repeat last joystick command
-        p.block_joystick = True
-        # Much more optimized to only render topview, but can also render Humans
-        if(not p.render_3D):
-            print("Printing Topview movie with multithreading")
-        else:
-            print("Printing 3D movie sequentially")
-        # verbose printing
-        p.verbose_printing = False
-        # Save memory by updating renderer rather than deepcopying it, but very slow & sequential
-        # p.use_one_renderer = True
-        return p
-
     def add_agent(self, a):
         """Adds an agent member to the central simulator's pool of agents
         NOTE: this function works for robots (RoboAgent), prerecorded agents (PrerecordedHuman),
@@ -86,21 +50,24 @@ class CentralSimulator(SimulatorHelper):
         Args:
             a (Agent/PrerecordedAgent/RoboAgent): The agent to be added to the simulator
         """
+        assert(CentralSimulator.obstacle_map is not None)
         name = a.get_name()
+        from simulators.robot_agent import RoboAgent
+        from humans.recorded_human import PrerecordedHuman
         if(isinstance(a, RoboAgent)):
             # initialize the robot and add to simulator's known "robot" field
-            a.simulation_init(self.params, self.obstacle_map,
+            a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False)
             self.robots[name] = a
             self.robot = a
         elif (isinstance(a, PrerecordedHuman)):
             # generic agent initializer but without a planner (already have trajectories)
-            a.simulation_init(self.params, self.obstacle_map,
+            a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False)
             self.prerecs[name] = a
         else:
             # initialize agent and add to simulator
-            a.simulation_init(self.params, self.obstacle_map,
+            a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=True)
             self.agents[name] = a
 
@@ -137,6 +104,9 @@ class CentralSimulator(SimulatorHelper):
         self.delta_t = 3 * self.params.dt
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
+        if(self.robot is None):
+            print("%sNo robot in simulator%s" % (color_red, color_reset))
+            return
         # give the robot knowledge of the initial world
         self.robot.repeat_joystick = not self.params.block_joystick
         self.robot.update_world(current_state)
@@ -200,10 +170,12 @@ class CentralSimulator(SimulatorHelper):
         # convert all the generated frames into a gif file
         self.save_frames_to_gif(clear_old_files=True)
 
-    def _init_obstacle_map(self, renderer=None):
+    def _init_obstacle_map(self, renderer=None, ):
         """ Initializes the sbpd map."""
         p = self.params.obstacle_map_params
-        return p.obstacle_map(p, renderer)
+        return p.obstacle_map(p, renderer,
+                              res=self.environment["map_scale"] * 100,
+                              trav=self.environment["traversibles"][0])
 
     def num_conditions_in_agents(self, condition: str):
         """Counts the number of termination causes matching condition in all the generated agents
@@ -326,7 +298,8 @@ class CentralSimulator(SimulatorHelper):
         duration = self.delta_t
         for i in range(num_robots):
             dirname = "tests/socnav/sim_movie" + str(i)
-            IMAGES_DIR = os.path.join(self.params.humanav_dir, dirname)
+            IMAGES_DIR = os.path.join(
+                self.params.socnav_params.socnav_dir, dirname)
             if(with_multiprocessing):
                 # little use to use pools here, since this is for multiple robot agents in a scene
                 # and the assumption here is that is a small number
@@ -411,11 +384,11 @@ class CentralSimulator(SimulatorHelper):
 
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment,
                     camera_pos_13, agents, prerecs, robots,
-                    sim_t: float, wall_t: float, filename: str, img_dir: str):
+                    sim_t: float, wall_t: float, filename: str, img_dir: str, with_zoom=False):
         """Plots a single frame from information provided about the world state
 
         Args:
-            p (DotMap): CentralSimulator params
+            p (Map): CentralSimulator params
             rgb_image_1mk3: the RGB image of the world_state to plot
             depth_image_1mk1: the depth-map image of the world_state to plot
             environment (dict): dictionary housing the obj map (bitmap) and more
@@ -442,11 +415,17 @@ class CentralSimulator(SimulatorHelper):
         extent = np.array(extent) * map_scale
 
         # count used to signify the number of images that will be generated in a single frame
-        plot_count = 1  # default 2, for zoomed topview and normal topview
+        # default 1, for normal view (can add a second for zoomed view)
+        plot_count = 1
+        if(with_zoom):
+            plot_count += 1
+            zoomed_img_plt_indx = plot_count
         if rgb_image_1mk3 is not None:
             plot_count = plot_count + 1
+            rgb_img_plt_indx = plot_count
         if depth_image_1mk1 is not None:
             plot_count = plot_count + 1
+            depth_img_plt_indx = plot_count
 
         img_size = 10
         fig = plt.figure(figsize=(plot_count * img_size, img_size))
@@ -464,12 +443,12 @@ class CentralSimulator(SimulatorHelper):
         time_string = "sim_t=%.3f" % sim_t + " wall_t=%.3f" % wall_t
         ax.set_title(time_string, fontsize=20)
 
-        if(plot_count == 2):
+        if(with_zoom):
             # Render entire map-view from the top
             # to keep square plot
             outer_zoom = min(traversible.shape[0],
                              traversible.shape[1]) * map_scale
-            ax = fig.add_subplot(1, plot_count, 2)
+            ax = fig.add_subplot(1, plot_count, zoomed_img_plt_indx)
             ax.set_xlim(0., outer_zoom)
             ax.set_ylim(0., outer_zoom)
             self.plot_topview(ax, extent, traversible, human_traversible,
@@ -481,7 +460,7 @@ class CentralSimulator(SimulatorHelper):
 
         if rgb_image_1mk3 is not None:
             # Plot the RGB Image
-            ax = fig.add_subplot(1, plot_count, 3)
+            ax = fig.add_subplot(1, plot_count, rgb_img_plt_indx)
             ax.imshow(rgb_image_1mk3[0].astype(np.uint8))
             ax.set_xticks([])
             ax.set_yticks([])
@@ -489,7 +468,7 @@ class CentralSimulator(SimulatorHelper):
 
         if depth_image_1mk1 is not None:
             # Plot the Depth Image
-            ax = fig.add_subplot(1, plot_count, 4)
+            ax = fig.add_subplot(1, plot_count, depth_img_plt_indx)
             ax.imshow(depth_image_1mk1[0, :, :, 0].astype(
                 np.uint8), cmap='gray')
             ax.set_xticks([])
@@ -497,7 +476,7 @@ class CentralSimulator(SimulatorHelper):
             ax.set_title('Depth')
 
         full_file_name = os.path.join(
-            self.params.humanav_dir, img_dir, filename)
+            self.params.socnav_params.socnav_dir, img_dir, filename)
         if(not os.path.exists(full_file_name)):
             if(self.params.verbose_printing):
                 print('\033[31m', "Failed to find:", full_file_name,

@@ -21,6 +21,15 @@ class SBPDMap(ObstacleMap):
             resolution=res, traversible=trav)
         self._initialize_fmm_map()
 
+    def get_map_size_2(self):
+        return self.p.map_size_2
+
+    def get_dx(self):
+        return self.p.dx
+
+    def get_map_origin_2(self):
+        return self.p.map_origin_2
+
     def _initialize_occupancy_grid_for_map(self, resolution=None, traversible=None):
         """
         Initialize the occupancy grid for the entire map and

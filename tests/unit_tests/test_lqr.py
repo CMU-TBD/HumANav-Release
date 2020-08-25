@@ -41,7 +41,7 @@ def test_lqr0(visualize=False):
     n, k = 1, p.k
     dt = p.dt
 
-    db = DubinsV1(dt, params=p.system_dynamics_params.simulation_params)
+    db = DubinsV1(dt, params=p.system_dynamics_params)
     x_dim, u_dim = db._x_dim, db._u_dim
 
     goal_x, goal_y = 4.0, 0.0
@@ -88,7 +88,7 @@ def test_lqr1(visualize=False):
     n, k = p.n, 50
     dt = p.dt
 
-    db = DubinsV1(dt, params=p.system_dynamics_params.simulation_params)
+    db = DubinsV1(dt, params=p.system_dynamics_params)
     x_dim, u_dim = db._x_dim, db._u_dim
 
     x_n13 = np.array(np.zeros((n, 1, x_dim)), dtype=np.float32)
@@ -140,7 +140,7 @@ def test_lqr2(visualize=False):
     n, k = 2, 50
     dt = p.dt
 
-    db = DubinsV1(dt, params=p.system_dynamics_params.simulation_params)
+    db = DubinsV1(dt, params=p.system_dynamics_params)
     x_dim, u_dim = db._x_dim, db._u_dim
 
     x_n13 = np.array(np.zeros((n, 1, x_dim)), dtype=np.float32)

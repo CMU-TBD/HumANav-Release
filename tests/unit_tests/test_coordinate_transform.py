@@ -55,7 +55,8 @@ def test_coordinate_transform():
     n, k = 1, 30
     dt = .1
     p = create_params()
-    dubins_car = DubinsV1(dt=dt, params=p.simulation_params)
+    dubins_car = DubinsV1(
+        dt=dt, params=p.system_dynamics_params)
     ref_config = dubins_car.init_egocentric_robot_config(dt=dt, n=n)
 
     pos_nk2 = np.ones((n, k, 2), dtype=np.float32) * np.random.rand()
@@ -136,7 +137,8 @@ def test_lqr_feedback_coordinate_transform():
 
     p = create_params()
     n, k = p.n, p.k
-    dubins = p.system_dynamics_params.system(p.dt, params=p.simulation_params)
+    dubins = p.system_dynamics_params.system(
+        p.dt, params=p.system_dynamics_params)
 
     # # Robot starts from (0, 0, 0)
     # # and does a small spiral

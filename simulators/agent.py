@@ -14,6 +14,7 @@ from utils.fmm_map import FmmMap
 from utils.utils import *
 from planners.sampling_planner import SamplingPlanner
 from simulators.agent_helper import AgentHelper
+from params.central_params import create_agent_params
 
 
 class Agent(AgentHelper):
@@ -27,7 +28,6 @@ class Agent(AgentHelper):
         # upon initialization, the current config of the agent is start
         self.current_config = copy.deepcopy(start)
         self.planned_next_config = copy.deepcopy(self.current_config)
-
         self.time = 0  # tie to track progress during an update
         self.radius = 0.2  # meters (10cm radius)
 
@@ -89,9 +89,9 @@ class Agent(AgentHelper):
     def get_color(self):
         return self.color
 
-    def simulation_init(self, sim_params, sim_map, with_planner=True):
+    def simulation_init(self, sim_map, with_planner=True):
         """ Initializes important fields for the CentralSimulator"""
-        self.params = sim_params
+        self.params = create_agent_params(with_planner=with_planner)
         self.obstacle_map = sim_map
         self.obj_fn = Agent._init_obj_fn(self)
         # Initialize Fast-Marching-Method map for agent's pathfinding
@@ -108,11 +108,6 @@ class Agent(AgentHelper):
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         # the point in the trajectory where the agent collided
         self.collision_point_k = np.inf
-        # Motion fields
-        self.max_v = self.params.planner_params.control_pipeline_params.system_dynamics_params.v_bounds[
-            1]
-        self.max_w = self.params.planner_params.control_pipeline_params.system_dynamics_params.w_bounds[
-            1]
 
     def update_final(self):
         self.vehicle_trajectory = self.episode_data['vehicle_trajectory']
@@ -168,7 +163,9 @@ class Agent(AgentHelper):
             # Append to Vehicle Data
             for key in self.vehicle_data.keys():
                 self.vehicle_data[key].append(trajectory_data[key])
-            self.vehicle_trajectory.append_along_time_axis(traj_segment)
+            self.vehicle_trajectory.append_along_time_axis(
+                traj_segment,
+                track_trajectory_acceleration=self.params.planner_params.track_accel)
             self.commanded_actions_nkf.append(commands_1kf)
             self._enforce_episode_termination_conditions()
             if(self.end_episode or self.end_acting):
@@ -294,11 +291,12 @@ class Agent(AgentHelper):
         return obj_val
 
     @staticmethod
-    def _init_obj_fn(self):
+    def _init_obj_fn(self, params=None):
         """
         Initialize the objective function given sim params
         """
-        params = self.params
+        if params is None:
+            params = self.params
         obstacle_map = self.obstacle_map
         obj_fn = ObjectiveFunction(params.objective_fn_params)
         if not params.avoid_obstacle_objective.empty():
@@ -316,15 +314,17 @@ class Agent(AgentHelper):
         return obj_fn
 
     @staticmethod
-    def _init_planner(self):
-        p = self.params
+    def _init_planner(self, params=None):
+        if(params is None):
+            params = self.params
         obj_fn = self.obj_fn
-        return p.planner_params.planner(obj_fn=obj_fn,
-                                        params=p.planner_params)
+        return params.planner_params.planner(obj_fn=obj_fn,
+                                             params=params.planner_params)
 
     @staticmethod
-    def _init_fmm_map(self, goal_pos_n2=None):
-        p = self.params
+    def _init_fmm_map(self, goal_pos_n2=None, params=None):
+        if(params is None):
+            params = self.params
         obstacle_map = self.obstacle_map
         obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
 
@@ -333,24 +333,25 @@ class Agent(AgentHelper):
 
         return FmmMap.create_fmm_map_based_on_goal_position(
             goal_positions_n2=goal_pos_n2,
-            map_size_2=np.array(p.obstacle_map_params.map_size_2),
-            dx=p.obstacle_map_params.dx,
-            map_origin_2=p.obstacle_map_params.map_origin_2,
+            map_size_2=np.array(self.obstacle_map.get_map_size_2()),
+            dx=self.obstacle_map.get_dx(),
+            map_origin_2=self.obstacle_map.get_map_origin_2(),
             mask_grid_mn=obstacle_occupancy_grid)
 
     @staticmethod
-    def _init_system_dynamics(self):
+    def _init_system_dynamics(self, params=None):
         """
         If there is a control pipeline (i.e. model based method)
         return its system_dynamics. Else create a new system_dynamics
         instance.
         """
-        params = self.params
+        if(params is None):
+            params = self.params
         try:
             planner = self.planner
             return planner.control_pipeline.system_dynamics
         except AttributeError:
-            p = params.planner_params.control_pipeline_params.system_dynamics_params
+            p = params.system_dynamics_params
             return p.system(dt=p.dt, params=p)
 
     @staticmethod

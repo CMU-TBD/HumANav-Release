@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
 from obstacles.sbpd_map import SBPDMap
 from objectives.obstacle_avoidance import ObstacleAvoidance
 from trajectory.trajectory import Trajectory
@@ -9,7 +8,6 @@ from utils.utils import *
 
 
 def create_params():
-    # DotMap is essentially a fancy dictionary
     p = DotMap()
     # Obstacle avoidance parameters
     p.avoid_obstacle_objective = DotMap(obstacle_margin0=0.3,
@@ -29,7 +27,7 @@ def create_renderer_params():
     """
     Used to generate the parameters for the environment, building and traversibles
     """
-    from params.renderer_params import get_traversible_dir, get_sbpd_data_dir
+    from params.central_params import get_traversible_dir, get_sbpd_data_dir
     p = DotMap()
     p.dataset_name = 'sbpd'   # Stanford Building Parser Dataset (SBPD)
     # Name of the building (change to whatever is downloaded on your system)
