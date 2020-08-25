@@ -49,10 +49,10 @@ class Joystick():
         self.current_config = None
         # planned controls
         self.commanded_actions = []
-        self.num_sent = 0
+        self.delta_t = None
         self.lin_vels = []
         self.ang_vels = []
-        self.delta_t = None
+        self.num_sent = 0
 
     def set_host(self, h):
         self.host = h

@@ -306,15 +306,15 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
 
     p.radius = agnt_p.getfloat('radius')
 
-    p.episode_horizon_s = agnt_p.getfloat('episode_horizon_s')
-    p.control_horizon_s = agnt_p.getfloat('control_horizon_s')
-
     p.record_video = agnt_p.getboolean('record_video')
     p.save_trajectory_data = agnt_p.getboolean('save_trajectory_data')
 
     # Load system dynamics params
     p.system_dynamics_params = create_system_dynamics_params()
     if(with_planner):
+        p.episode_horizon_s = agnt_p.getfloat('episode_horizon_s')
+        p.control_horizon_s = agnt_p.getfloat('control_horizon_s')
+
         # Load the dependencies
         p.planner_params = create_planner_params()
 

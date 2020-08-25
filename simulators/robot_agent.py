@@ -18,12 +18,6 @@ class RoboAgent(Agent):
                          start_configs.get_goal_config(),
                          name=name, with_init=False)
         self.commands = []
-        self.params = create_robot_params()
-        self.parse_params()
-        # sockets for communication
-        self.joystick_receiver_socket = None
-        self.joystick_sender_socket = None
-        self.host = socket.gethostname()
         # robot's knowledge of the current state of the world
         self.world_state = None
         # josystick is ready once it has been sent an environment
@@ -33,9 +27,17 @@ class RoboAgent(Agent):
         # whether or not to repeat the last joystick input
         self.repeat_joystick = False
 
-    def parse_params(self):
-        self.port_recv = self.params.port  # port for recieving commands from the joystick
-        self.port_send = self.port_recv + 1  # port for sending commands to the joystick
+    def simulation_init(self, sim_map, with_planner=False):
+        super().simulation_init(sim_map, with_planner=with_planner)
+        self.params.robot_params = create_robot_params()
+        # sockets for communication
+        self.joystick_receiver_socket = None
+        self.joystick_sender_socket = None
+        self.host = socket.gethostname()
+        # port for recieving commands from the joystick
+        self.port_recv = self.params.robot_params.port
+        # port for sending commands to the joystick
+        self.port_send = self.port_recv + 1
         self.repeat_freq = self.params.repeat_freq
         # simulation update init
         self.running = True
@@ -49,8 +51,7 @@ class RoboAgent(Agent):
         return self.name
 
     def get_radius(self):
-        # TODO: fix params physical_params radius
-        return 0.334
+        return self.params.robot_params.physical_params.radius
 
     # Setters for the robot class
     def update_world(self, state):
@@ -209,7 +210,7 @@ class RoboAgent(Agent):
                                 if(self.repeat_joystick):  # if need be, repeat n-1 times
                                     repeat_amnt = \
                                         int(np.floor(
-                                            (self.params.physical_params.repeat_freq / self.amnt_per_joystick) - 1))
+                                            (self.params.robot_params.physical_params.repeat_freq / self.amnt_per_joystick) - 1))
                                     for i in range(repeat_amnt):
                                         # adds command to local list of individual commands
                                         self.commands.append(np_data)
