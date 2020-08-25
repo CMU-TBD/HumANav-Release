@@ -137,14 +137,14 @@ class Trajectory(object):
         """Given a tensor of indexes to gather in the batch dimension,
         update this trajectories instance variables and shape."""
         self.n = idxs.size
-        self._position_nk2 = np.gather(self._position_nk2, idxs)
-        self._speed_nk1 = np.gather(self._speed_nk1, idxs)
-        self._acceleration_nk1 = np.gather(self._acceleration_nk1, idxs)
-        self._heading_nk1 = np.gather(self._heading_nk1, idxs)
-        self._angular_speed_nk1 = np.gather(self._angular_speed_nk1, idxs)
-        self._angular_acceleration_nk1 = np.gather(
+        self._position_nk2 = np.take(self._position_nk2, idxs)
+        self._speed_nk1 = np.take(self._speed_nk1, idxs)
+        self._acceleration_nk1 = np.take(self._acceleration_nk1, idxs)
+        self._heading_nk1 = np.take(self._heading_nk1, idxs)
+        self._angular_speed_nk1 = np.take(self._angular_speed_nk1, idxs)
+        self._angular_acceleration_nk1 = np.take(
             self._angular_acceleration_nk1, idxs)
-        self.valid_horizons_n1 = np.gather(self.valid_horizons_n1, idxs)
+        self.valid_horizons_n1 = np.take(self.valid_horizons_n1, idxs)
         return self
 
     def to_numpy_repr(self):
@@ -202,14 +202,14 @@ class Trajectory(object):
         n = idxs.size
         k = traj.k
 
-        position_nk2 = np.gather(traj.position_nk2(), idxs)
-        speed_nk1 = np.gather(traj.speed_nk1(), idxs)
-        acceleration_nk1 = np.gather(traj.acceleration_nk1(), idxs)
-        heading_nk1 = np.gather(traj.heading_nk1(), idxs)
-        angular_speed_nk1 = np.gather(traj.angular_speed_nk1(), idxs)
-        angular_acceleration_nk1 = np.gather(
+        position_nk2 = np.take(traj.position_nk2(), idxs)
+        speed_nk1 = np.take(traj.speed_nk1(), idxs)
+        acceleration_nk1 = np.take(traj.acceleration_nk1(), idxs)
+        heading_nk1 = np.take(traj.heading_nk1(), idxs)
+        angular_speed_nk1 = np.take(traj.angular_speed_nk1(), idxs)
+        angular_acceleration_nk1 = np.take(
             traj.angular_acceleration_nk1(), idxs)
-        valid_horizons_n1 = np.gather(traj.valid_horizons_n1, idxs)
+        valid_horizons_n1 = np.take(traj.valid_horizons_n1, idxs)
         return cls(dt=dt, n=n, k=k, position_nk2=position_nk2,
                    speed_nk1=speed_nk1, acceleration_nk1=acceleration_nk1,
                    heading_nk1=heading_nk1, angular_speed_nk1=angular_speed_nk1,
