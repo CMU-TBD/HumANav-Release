@@ -252,29 +252,33 @@ class Joystick():
     def listen_to_robot(self):
         self.robot_receiver_socket.listen(10)
         self.robot_running = True
-        while(self.robot_running):
+
+        while self.robot_running:
             connection, client = self.robot_receiver_socket.accept()
             data_b, response_len = conn_recv(connection)
             # quickly close connection to open up for the next input
             connection.close()
-            print("%sreceived" % (color_blue), response_len,
-                  "bytes from server%s" % (color_reset))
-            if(data_b is not None and response_len > 0):
+            print("%sreceived" % color_blue, response_len,
+                  "bytes from server%s" % color_reset)
+
+            if data_b is not None and response_len > 0:
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
                 current_world = json.loads(data_str)
-                if(not current_world['robot_on']):
+                if not current_world['robot_on']:
                     return
                 # append new world to storage of all past worlds
                 self.sim_states.append(current_world)
                 # self.velocities[current_world['sim_t']] = compute_all_velocities(self.sim_states)
                 # self.accelerations[current_world['sim_t']] = compute_all_accelerations(self.sim_states)
-                if(current_world['robot_on'] is True):
-                    if(current_world['environment']):  # not empty
+
+                if current_world['robot_on'] is True:
+                    if current_world['environment']:  # not empty
                         # notify the robot that the joystick received the environment
                         joystick_ready = self.create_message(
                             True, [], [], -1, False)
                         self.send_to_robot(joystick_ready)
+
                         # only update the environment if it is non-empty
                         self.environment = current_world['environment']
                         robots = list(current_world["robots"].values())
@@ -338,7 +342,7 @@ class Joystick():
     def generate_frame(self, world_state, frame_count, plot_quiver=False):
         # extract the information from the world state
         environment = self.environment
-        agents = world_state['agents']
+        agents = world_state['gen_agents']
         prerecs = world_state['prerecs']
         robots = world_state['robots']
         sim_time = world_state['sim_t']
@@ -368,11 +372,11 @@ class Joystick():
                     plot_start_goal=True, start_3=self.start_config.to_3D_numpy(),
                     goal_3=self.goal_config.to_3D_numpy())
 
-        # plot all the simulated prerecorded agents
+        # plot all the simulated prerecorded gen_agents
         plot_agents(ax, ppm, prerecs, json_key="current_config", label="Prerec",
                     normal_color="yo", collided_color="ro", plot_trajectory=False, plot_quiver=plot_quiver)
 
-        # plot all the randomly generated simulated agents
+        # plot all the randomly generated simulated gen_agents
         plot_agents(ax, ppm, agents, json_key="current_config", label="Agent",
                     normal_color="go", collided_color="ro", plot_trajectory=False, plot_quiver=plot_quiver)
 

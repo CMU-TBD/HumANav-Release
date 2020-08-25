@@ -106,10 +106,10 @@ def conn_recv(connection, buffr_amnt=1024):
 
 def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color='bo', collided_color='ro',
                 plot_trajectory=True, plot_quiver=False, plot_start_goal=False, start_3=None, goal_3=None):
-    # plot all the simulated prerecorded agents
+    # plot all the simulated prerecorded gen_agents
     for i, a in enumerate(agents_dict.values()):
         if(json_key is not None):
-            # when plotting from JSON serialized agents
+            # when plotting from JSON serialized gen_agents
             collided = a["collided"]
             markersize = a["radius"] * ppm
             pos_3 = a[json_key]
@@ -128,10 +128,10 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
         start_goal_markersize = markersize * 0.7
         if(plot_trajectory):
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
-        color = normal_color  # agents are green and solid unless collided
+        color = normal_color  # gen_agents are green and solid unless collided
         start_goal_col = 'wo'  # white circle
         if(collided):
-            color = collided_color  # collided agents are drawn red
+            color = collided_color  # collided gen_agents are drawn red
         if(i == 0):
             # Only add label on the first humans
             ax.plot(pos_3[0], pos_3[1], color,
@@ -320,7 +320,7 @@ def generate_random_pos_in_environment(environment: dict, radius: int = 5):
         global_traversible.fill(True)
         for t in environment["traversibles"]:
             # add 0th and all others that match shape
-            if(t.shape == environment["traversibles"][0].shape):
+            if t.shape == environment["traversibles"][0].shape:
                 global_traversible = np.stack([global_traversible, t], axis=2)
                 global_traversible = np.all(global_traversible, axis=2)
     else:
@@ -330,7 +330,7 @@ def generate_random_pos_in_environment(environment: dict, radius: int = 5):
     pos_3 = np.array([-1, -1, 0])  # start far out of the traversible
 
     # continuously generate random positions near the center until one is valid
-    while(not within_traversible(pos_3, global_traversible, map_scale)):
+    while not within_traversible(pos_3, global_traversible, map_scale):
         pos_3 = generate_random_pos_3(center, radius, radius)
 
     # Random theta from 0 to pi

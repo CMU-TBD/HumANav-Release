@@ -5,7 +5,7 @@ from simulators.agent import Agent
 from humans.human import Human
 
 """ These are smaller "wrapper" classes that are visible by other
-agents/humans and saved during state deepcopies
+gen_agents/humans and saved during state deepcopies
 NOTE: they are all READ-ONLY (only getters)
 """
 
@@ -45,6 +45,10 @@ class AgentState():
 
     def get_color(self):
         return self.color
+
+    def get_pos3(self):
+        return self.get_current_config().to_3D_numpy()
+
 
     def to_json(self, include_start_goal=False):
         name_json = SimState.to_json_type(deepcopy(self.name))
@@ -89,9 +93,9 @@ class HumanState(AgentState):
 
 
 class SimState():
-    def __init__(self, environment, agents, prerecs, robots, sim_t, wall_t, delta_t):
+    def __init__(self, environment, gen_agents, prerecs, robots, sim_t, wall_t, delta_t):
         self.environment = environment
-        self.agents = agents
+        self.gen_agents = gen_agents
         self.prerecs = prerecs
         self.robots = robots
         self.sim_t = sim_t
@@ -101,22 +105,22 @@ class SimState():
     def to_json(self, robot_on=True, include_map=False):
         json_dict = {}
         json_dict['robot_on'] = deepcopy(robot_on)  # true or false
-        if(robot_on):  # only send the world if the robot is ON
-            if(include_map):
+        if robot_on:  # only send the world if the robot is ON
+            if include_map:
                 environment_json = SimState.to_json_dict(
                     deepcopy(self.environment))
                 json_dict['delta_t'] = deepcopy(self.delta_t)
             else:
                 environment_json = {}  # empty dictionary
             # serialize all other fields
-            agents_json = SimState.to_json_dict(deepcopy(self.agents))
+            agents_json = SimState.to_json_dict(deepcopy(self.gen_agents))
             prerecs_json = SimState.to_json_dict(deepcopy(self.prerecs))
             robots_json = SimState.to_json_dict(
                 deepcopy(self.robots), include_start_goal=include_map)
             sim_t_json = deepcopy(self.sim_t)
             # append them to the json dictionary
             json_dict['environment'] = environment_json
-            json_dict['agents'] = agents_json
+            json_dict['gen_agents'] = agents_json
             json_dict['prerecs'] = prerecs_json
             json_dict['robots'] = robots_json
             json_dict['sim_t'] = sim_t_json
@@ -128,8 +132,12 @@ class SimState():
     def get_map(self):
         return self.environment["traversibles"][0]
 
+    # TODO rename to get_genagents or get_gen_agents
     def get_agents(self):
-        return self.agents
+        return self.gen_agents
+
+    def get_gen_agents(self):
+        return self.gen_agents
 
     def get_prerecs(self):
         return self.prerecs
@@ -145,6 +153,13 @@ class SimState():
 
     def get_delta_t(self):
         return self.delta_t
+
+    def get_all_agents(self):
+        all_agents = {}
+        all_agents.update(get_agent_type(self, "gen_agents"))
+        all_agents.update(get_agent_type(self, "prerecs"))
+        all_agents.update(get_agent_type(self, "robots"))
+        return all_agents
 
     @ staticmethod
     def to_json_type(elem, include_start_goal=False):
@@ -176,25 +191,17 @@ class SimState():
 
 
 def get_agent_type(sim_state, agent_type: str):
-    if(callable(getattr(sim_state, 'get_' + agent_type, None))):
-        get_agent_type = getattr(sim_state, 'get_' + agent_type, None)
-        return get_agent_type()
+    if callable(getattr(sim_state, 'get_' + agent_type, None)):
+        getter_agent_type = getattr(sim_state, 'get_' + agent_type, None)
+        return getter_agent_type()
     elif hasattr(sim_state, agent_type):
         return sim_state[agent_type]
     else:
         return {}  # empty dict
 
 
-def get_all_agents(sim_state):
-    all_agents = {}
-    all_agents.update(get_agent_type(sim_state, "agents"))
-    all_agents.update(get_agent_type(sim_state, "prerecs"))
-    all_agents.update(get_agent_type(sim_state, "robots"))
-    return all_agents
-
-
 def get_sim_t(sim_state):
-    if(callable(getattr(sim_state, 'get_sim_t', None))):
+    if callable(getattr(sim_state, 'get_sim_t', None)):
         return sim_state.get_sim_t()
     return sim_state["sim_t"]
 
@@ -216,15 +223,16 @@ def compute_delta_t(sim_states: list):
 
 
 def get_pos3(agent):
-    if(callable(getattr(agent, "get_current_config", None))):
+    if callable(getattr(agent, "get_current_config", None)):
         return agent.get_current_config().to_3D_numpy()
     return agent["current_config"]
 
 
+# TODO: check how the delta_t is treated - want to use inter value deltas rather than const delta
 def compute_next_vel(sim_state_prev, sim_state_now, agent_name: str, delta_t: float):
-    old_agent = get_all_agents(sim_state_prev)[agent_name]
+    old_agent = sim_state_prev.get_all_agents()[agent_name]
     old_pos = get_pos3(old_agent)
-    new_agent = get_all_agents(sim_state_now)[agent_name]
+    new_agent = sim_state_prev.get_all_agents()[agent_name]
     new_pos = get_pos3(new_agent)
     # calculate distance over time
     # TODO: add sign to distance (displacement) for velocity?

@@ -84,9 +84,9 @@ class RoboAgent(Agent):
         return RoboAgent.generate_robot(configs)
 
     def sense(self):
-        """use this to take in a world state and compute obstacles (agents/walls) to affect the robot"""
+        """use this to take in a world state and compute obstacles (gen_agents/walls) to affect the robot"""
         if(not self.end_episode):
-            # check for collisions with other agents
+            # check for collisions with other gen_agents
             self.check_collisions(self.world_state)
             # enforce planning termination upon condition
             self._enforce_episode_termination_conditions()
@@ -123,14 +123,14 @@ class RoboAgent(Agent):
                 print(self.get_current_config().to_3D_numpy())
 
     def update(self, iteration):
-        if(self.running):
+        if self.running:
             # only execute the most recent commands
             self.sense()
-            if(self.num_executed < len(self.commands)):
+            if self.num_executed < len(self.commands):
                 # print(self.num_executed, len(self.commands))
                 self.execute()
             # block joystick until recieves next command
-            while(iteration >= self.get_num_executed()):
+            while iteration >= self.get_num_executed():
                 time.sleep(0.001)
             #     if(self.repeat_joystick and len(self.commands) > 0):
             #         last_command = self.commands[-1]
@@ -139,7 +139,7 @@ class RoboAgent(Agent):
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
             # quit the robot if it died
-            if(not self.running):
+            if not self.running:
                 # notify the joystick to stop sending commands to the robot
                 self.send_to_joystick(self.world_state.to_json(robot_on=False))
                 self.power_off()
@@ -155,7 +155,7 @@ class RoboAgent(Agent):
     """BEGIN socket utils"""
 
     def ping_joystick(self):
-        if(self.joystick_requests_world):  # only send when joystick requests
+        if self.joystick_requests_world:  # only send when joystick requests
             self.send_to_joystick(
                 self.world_state.to_json(robot_on=True, include_map=False))
             # immediately note that the world has been sent:
