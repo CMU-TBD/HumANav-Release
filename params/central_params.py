@@ -5,7 +5,7 @@ import os
 
 # first thing to do is read params file
 config = configparser.ConfigParser()
-config.read(os.path.join(os.getcwd(), 'params/params.ini'))
+config.read(os.path.join(os.getcwd(), 'params/params_example.ini'))
 seed = config['base_params'].getint('seed')
 
 
