@@ -73,7 +73,7 @@ def test_sbpd_map(visualize=False):
 
     obs_dists_nk = obstacle_map.dist_to_nearest_obs(trajectory.position_nk2())
 
-    assert(np.allclose(obs_dists_nk[0], [0.9958652, 1.3232646, 0.06279612]))
+    assert(np.allclose(obs_dists_nk[0], [1.252921, 1.5730935, 1.7213388]))
 
     if visualize:
         #occupancy_grid_nn = obstacle_map.create_occupancy_grid(trajectory.position_nk2())

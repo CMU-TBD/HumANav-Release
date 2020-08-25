@@ -44,15 +44,9 @@ class PrerecordedHuman(Human):
     def execute(self, state):
         self.check_collisions(self.world_state, include_prerecs=False)
         self.current_step += 1  # Has executed one more step
-<<<<<<< HEAD
         self.set_current_config(
             generate_config_from_pos_3(state[:3], speed=state[3]))
         # dummy "command" since these agents "teleport" from one step to another
-=======
-        self.set_current_config(generate_config_from_pos_3(state[:3], speed=state[3]))
-        # print(self.get_current_config().to_3D_numpy())
-        # dummy "command" since these gen_agents "teleport"
->>>>>>> 6be3cb764ef7e8921404316e9b1d1d4c6a4d4355
         null_command = np.array([[[0, 0]]], dtype=np.float32)
         # NOTE: the format for the acceleration commands to the open loop for the robot is:
         # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular

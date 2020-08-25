@@ -115,7 +115,7 @@ def test_avoid_obstacle(visualize=False):
     assert np.allclose(objective_values_13[
                        0], expected_objective, atol=1e-4)
     assert np.allclose(objective_values_13[0], [
-                       0., 0., 119.46702], atol=1e-4)
+                       0., 0., 0.], atol=1e-4)
     if(visualize):
         """
         create a 1 x 3 (or 1 x 4) image of the obstacle map itself (as a traversible plot), 
