@@ -46,6 +46,10 @@ class AgentState():
     def get_color(self):
         return self.color
 
+    def get_pos3(self):
+        return self.get_current_config().to_3D_numpy()
+
+
     def to_json(self, include_start_goal=False):
         name_json = SimState.to_json_type(deepcopy(self.name))
         # NOTE: the configs are just being serialized with their 3D positions
@@ -102,8 +106,8 @@ class SimState():
     def to_json(self, robot_on=True, include_map=False):
         json_dict = {}
         json_dict['robot_on'] = deepcopy(robot_on)  # true or false
-        if(robot_on):  # only send the world if the robot is ON
-            if(include_map):
+        if robot_on:  # only send the world if the robot is ON
+            if include_map:
                 environment_json = SimState.to_json_dict(
                     deepcopy(self.environment))
                 json_dict['delta_t'] = deepcopy(self.delta_t)
@@ -131,6 +135,9 @@ class SimState():
 
     # TODO rename to get_genagents or get_gen_agents
     def get_agents(self):
+        return self.gen_agents
+
+    def get_gen_agents(self):
         return self.gen_agents
 
     def get_prerecs(self):
@@ -185,7 +192,7 @@ class SimState():
 
 
 def get_agent_type(sim_state, agent_type: str):
-    if callable(getattr(sim_state, 'get_' + agent_type, None)) :
+    if callable(getattr(sim_state, 'get_' + agent_type, None)):
         getter_agent_type = getattr(sim_state, 'get_' + agent_type, None)
         return getter_agent_type()
     elif hasattr(sim_state, agent_type):
@@ -224,9 +231,9 @@ def get_pos3(agent):
 
 # TODO: check how the delta_t is treated - want to use inter value deltas rather than const delta
 def compute_next_vel(sim_state_prev, sim_state_now, agent_name: str, delta_t: float):
-    old_agent = get_all_agents(sim_state_prev)[agent_name]
+    old_agent = sim_state_prev.get_all_agents()[agent_name]
     old_pos = get_pos3(old_agent)
-    new_agent = get_all_agents(sim_state_now)[agent_name]
+    new_agent = sim_state_prev.get_all_agents()[agent_name]
     new_pos = get_pos3(new_agent)
     # calculate distance over time
     # TODO: add sign to distance (displacement) for velocity?

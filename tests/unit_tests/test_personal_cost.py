@@ -11,9 +11,39 @@ from utils.fmm_map import FmmMap
 from utils.utils import *
 
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
+from params.renderer_params import get_seed
+from params.renderer_params import create_params as create_base_params
 from simulators.central_simulator import CentralSimulator
 
 from humans.human import Human
+from humanav.humanav_renderer_multi import HumANavRendererMulti
+
+from simulators.sim_state import SimState, get_pos3
+
+def create_params():
+    p = create_base_params()
+
+    # Set any custom parameters
+    p.building_name = 'area3'
+
+    p.camera_params.width = 1024
+    p.camera_params.height = 1024
+    p.camera_params.fov_vertical = 75.
+    p.camera_params.fov_horizontal = 75.
+
+    # The camera is assumed to be mounted on a robot at fixed height
+    # and fixed pitch. See humanav/renderer_params.py for more information
+
+    # Tilt the camera 10 degree down from the horizontal axis
+    p.robot_params.camera_elevation_degree = -10
+
+    if p.render_3D:
+        # Can only render rgb and depth then host pc has an available display
+        p.camera_params.modalities = ['rgb', 'disparity']
+    else:
+        p.camera_params.modalities = ['occupancy_grid']
+
+    return p
 
 
 def create_renderer_params():
@@ -50,7 +80,7 @@ def create_renderer_params():
     return p
 
 
-def create_params():
+def create_test_params():
     p = DotMap()
     # Obstacle avoidance parameters
     p.avoid_obstacle_objective = DotMap(obstacle_margin0=0.3,
@@ -80,14 +110,14 @@ def create_params():
     return p
 
 
-def test_personal_cost_function(plot=False):
+def test_personal_cost_function(sim_state: SimState, plot=False):
     """
     Creating objective points maually, plotting them in the ObjectiveFunction
     class, and then asserting that combined, their sum adds up to the same
     objective cost as the sum of the individual trajectories
     """
     # Create parameters
-    p = create_params()
+    p = create_test_params()
     from humanav.humanav_renderer_multi import HumANavRendererMulti
     r = HumANavRendererMulti.get_renderer(
         p.obstacle_map_params.renderer_params, deepcpy=False)
@@ -143,8 +173,6 @@ def test_personal_cost_function(plot=False):
     expected_objective1 = objective1.evaluate_objective(trajectory)
     expected_objective2 = objective2.evaluate_objective(trajectory)
     expected_objective3 = objective3.evaluate_objective(trajectory)
-    # expected_overall_objective = tf.reduce_mean(
-    #     expected_objective1 + expected_objective2 + expected_objective3, axis=1)
     expected_overall_objective = np.mean(
         expected_objective1 + expected_objective2 + expected_objective3, axis=1)
     assert len(values_by_objective) == 3
@@ -154,9 +182,12 @@ def test_personal_cost_function(plot=False):
     assert np.allclose(overall_objective,
                        expected_overall_objective, atol=1e-2)
 
-
-    # Also need to generate the sim states for non ego agents
-    # How do we get sim states?
+    # Use sim_state from main
+    ps_cost = objectiveP.evaluate_objective(trajectory, sim_state)
+    print("Personal space cost ", ps_cost)
+    print("Obstacle avoidance cost", expected_objective1)
+    print("Goal distance cost", expected_objective2)
+    print("Angle distance cost", expected_objective3)
 
     # Optionally visualize the traversable and the points on which
     # we compute the objective function
@@ -164,18 +195,37 @@ def test_personal_cost_function(plot=False):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
         obstacle_map.render(ax)
-        ax.plot(pos_nk2[0, :, 0].numpy(), pos_nk2[0, :, 1].numpy(), 'r.')
+
+        # plot agent start
+        ax.plot(pos_nk2[0, :, 0], pos_nk2[0, :, 1], 'r.')
+        # plot agent goal
         ax.plot(goal_pos_n2[0, 0], goal_pos_n2[0, 1], 'k*')
-        fig.savefig('./tests/cost/test_cost_function.png',
+
+        agents = sim_state.get_all_agents()
+
+        for agent_name, agent_vals in agents.items():
+            agent_pos3 = get_pos3(agent_vals)  # (x,y,th)
+            theta = agent_pos3[2]
+            ax.plot(agent_pos3[0], agent_pos3[1], 'g.')
+
+        # plot non ego agents
+        fig.savefig('../test_psc_function.png',
                     bbox_inches='tight', pad_inches=0)
 
 
 def main_test():
+    p = create_params()  # used to instantiate the camera and its parameters
+    # TODO: can optimize HumANavRendererMulti renderer when not rendering humans
+    # get the renderer from the camera p
+    r = HumANavRendererMulti.get_renderer(p, deepcpy=False)
+    # obtain "resolution and traversible of building"
+    dx_cm, traversible = r.get_config()
+
     environment = {}
     environment["map_scale"] = 5/100  # dx_m
     environment["room_center"] = np.array([14, 14., 0.])  # room_center
     # obstacle traversible / human traversible TODO ?
-    # environment["traversibles"] = np.array([traversible])
+    environment["traversibles"] = np.array([traversible])
 
     # construct simulator
     sim_params = create_sim_params(render_3D=False)
@@ -196,7 +246,7 @@ def main_test():
 
         # Load a random human at a specified state and speed
         # update human traversible
-        # environment["traversibles"] = np.array([traversible])
+        environment["traversibles"] = np.array([traversible])
 
         # Input human fields into simulator
         simulator.add_agent(new_human_i)
@@ -205,7 +255,7 @@ def main_test():
     # get initial state
     sim_delT = 0.05
     sim_state = simulator.save_state(0, sim_delT, 0)
-    test_personal_cost_function(sim_state, plot=False)
+    test_personal_cost_function(sim_state, plot=True)
     print("%sCost function tests passed!%s" % (color_green, color_reset))
 
 

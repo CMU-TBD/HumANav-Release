@@ -321,7 +321,7 @@ def generate_random_pos_in_environment(environment: dict, radius: int = 5):
         global_traversible.fill(True)
         for t in environment["traversibles"]:
             # add 0th and all others that match shape
-            if(t.shape == environment["traversibles"][0].shape):
+            if t.shape == environment["traversibles"][0].shape:
                 global_traversible = np.stack([global_traversible, t], axis=2)
                 global_traversible = np.all(global_traversible, axis=2)
     else:
@@ -331,7 +331,7 @@ def generate_random_pos_in_environment(environment: dict, radius: int = 5):
     pos_3 = np.array([-1, -1, 0])  # start far out of the traversible
 
     # continuously generate random positions near the center until one is valid
-    while(not within_traversible(pos_3, global_traversible, map_scale)):
+    while not within_traversible(pos_3, global_traversible, map_scale):
         pos_3 = generate_random_pos_3(center, radius, radius)
 
     # Random theta from 0 to pi

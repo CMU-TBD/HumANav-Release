@@ -239,6 +239,7 @@ class Trajectory(object):
     def angular_speed_nk1(self):
         return self._angular_speed_nk1
 
+    # TODO is this always returning the first or the latest?
     def to_3D_numpy(self):
         pos_2 = self.position_nk2()[0][0]
         heading = self.heading_nk1()[0][0]

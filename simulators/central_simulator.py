@@ -87,13 +87,13 @@ class CentralSimulator(SimulatorHelper):
             a (Agent/PrerecordedAgent/RoboAgent): The agent to be added to the simulator
         """
         name = a.get_name()
-        if(isinstance(a, RoboAgent)):
+        if isinstance(a, RoboAgent):
             # initialize the robot and add to simulator's known "robot" field
             a.simulation_init(self.params, self.obstacle_map,
                               with_planner=False)
             self.robots[name] = a
             self.robot = a
-        elif (isinstance(a, PrerecordedHuman)):
+        elif isinstance(a, PrerecordedHuman):
             # generic agent initializer but without a planner (already have trajectories)
             a.simulation_init(self.params, self.obstacle_map,
                               with_planner=False)
