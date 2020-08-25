@@ -303,6 +303,9 @@ def create_sbpd_simulator_params(render_3D=False):
 def create_agent_params(with_planner=True, with_obstacle_map=False):
     p = DotMap()
     agnt_p = config["agent_params"]
+
+    p.radius = agnt_p.getfloat('radius')
+
     p.episode_horizon_s = agnt_p.getfloat('episode_horizon_s')
     p.control_horizon_s = agnt_p.getfloat('control_horizon_s')
 

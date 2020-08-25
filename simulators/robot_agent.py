@@ -14,6 +14,9 @@ import sys
 class RoboAgent(Agent):
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
+        super().__init__(start_configs.get_start_config(),
+                         start_configs.get_goal_config(),
+                         name=name, with_init=False)
         self.commands = []
         self.params = create_robot_params()
         self.parse_params()
@@ -23,29 +26,31 @@ class RoboAgent(Agent):
         self.host = socket.gethostname()
         # robot's knowledge of the current state of the world
         self.world_state = None
-        super().__init__(start_configs.get_start_config(),
-                         start_configs.get_goal_config(),
-                         name)
-        self.joystick_ready = False  # josystick is ready once it has been sent an environment
-        self.joystick_requests_world = False  # to send the world state
+        # josystick is ready once it has been sent an environment
+        self.joystick_ready = False
+        # To send the world state on the next joystick ping
+        self.joystick_requests_world = False
         # whether or not to repeat the last joystick input
         self.repeat_joystick = False
+
+    def parse_params(self):
+        self.port_recv = self.params.port  # port for recieving commands from the joystick
+        self.port_send = self.port_recv + 1  # port for sending commands to the joystick
+        self.repeat_freq = self.params.repeat_freq
         # simulation update init
         self.running = True
         self.last_command = None
         self.num_executed = 0  # keeps track of the latest command that is to be executed
         self.amnt_per_joystick = 1
 
-    def parse_params(self):
-        self.port_recv = self.params.port  # port for recieving commands from the joystick
-        self.port_send = self.port_recv + 1  # port for sending commands to the joystick
-        self.radius = self.params.physical_params.radius
-        self.repeat_freq = self.params.repeat_freq
-
     # Getters for the robot class
 
     def get_name(self):
         return self.name
+
+    def get_radius(self):
+        # TODO: fix params physical_params radius
+        return 0.334
 
     # Setters for the robot class
     def update_world(self, state):
@@ -132,10 +137,6 @@ class RoboAgent(Agent):
             # block joystick until recieves next command
             while iteration >= self.get_num_executed():
                 time.sleep(0.001)
-            #     if(self.repeat_joystick and len(self.commands) > 0):
-            #         last_command = self.commands[-1]
-            #         self.commands.append(last_command)
-            #         self.execute()
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
             # quit the robot if it died
@@ -206,7 +207,10 @@ class RoboAgent(Agent):
                                 # add at least one command
                                 self.commands.append(np_data)
                                 if(self.repeat_joystick):  # if need be, repeat n-1 times
-                                    for i in range(int(np.floor((self.repeat_freq / self.amnt_per_joystick) - 1))):
+                                    repeat_amnt = \
+                                        int(np.floor(
+                                            (self.params.physical_params.repeat_freq / self.amnt_per_joystick) - 1))
+                                    for i in range(repeat_amnt):
                                         # adds command to local list of individual commands
                                         self.commands.append(np_data)
                         # only sent by joystick when "ready" and needs the map

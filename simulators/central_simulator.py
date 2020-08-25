@@ -585,7 +585,6 @@ class CentralSimulator(SimulatorHelper):
             r.establish_joystick_receiver_connection()
             time.sleep(0.01)
             r.establish_joystick_sender_connection()
-            r.update_time(0)
             assert(r.world_state is not None)
             # send first transaction to the joystick
             print("sending map to joystick")

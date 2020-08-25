@@ -18,7 +18,7 @@ from params.central_params import create_agent_params
 
 
 class Agent(AgentHelper):
-    def __init__(self, start, goal, name=None):
+    def __init__(self, start, goal, name=None, with_init=True):
         if name is None:
             self.name = generate_name(20)
         else:
@@ -27,22 +27,23 @@ class Agent(AgentHelper):
         self.goal_config = goal
         # upon initialization, the current config of the agent is start
         self.current_config = copy.deepcopy(start)
-        self.planned_next_config = copy.deepcopy(self.current_config)
-        self.time = 0  # tie to track progress during an update
-        self.radius = 0.2  # meters (10cm radius)
-
-        # Dynamics and movement attributes
-        self.fmm_map = None
         # path planning and acting fields
         self.end_episode = False
         self.end_acting = False
-        self.path_step = 0
-        self.termination_cause = None
         # for collisions with other gen_agents
         self.has_collided = False
+        if(with_init):
+            self.init()
         # cosmetic items (for drawing the trajectories)
         possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
         self.color = random.choice(possible_colors)
+
+    def init(self):
+        self.planned_next_config = copy.deepcopy(self.current_config)
+        # Dynamics and movement attributes
+        self.fmm_map = None
+        self.path_step = 0
+        self.termination_cause = None
         # NOTE: JSON serialization is done within sim_state.py
         self.velocities = {}
         self.accelerations = {}
@@ -84,7 +85,7 @@ class Agent(AgentHelper):
         return self.has_collided
 
     def get_radius(self):
-        return self.radius
+        return self.params.radius
 
     def get_color(self):
         return self.color
@@ -119,13 +120,9 @@ class Agent(AgentHelper):
         self.commanded_actions_1kf = self.episode_data['commanded_actions_1kf']
         self.obj_val = self._compute_objective_value()
 
-    def update_time(self, t):
-        self.time = t
-
     def update(self, t, t_step, sim_state=None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         self.sim_states.append(sim_state)
-        self.update_time(t)
         if(self.params.verbose_printing):
             print("start: ", self.get_start_config().position_nk2())
             print("goal: ", self.get_goal_config().position_nk2())
@@ -158,11 +155,11 @@ class Agent(AgentHelper):
                       self.planned_next_config.position_nk2())
 
             self.planner_data = self.planner.optimize(
-                                    self.planned_next_config, self.goal_config)
+                self.planned_next_config, self.goal_config)
             traj_segment, trajectory_data, commands_1kf = self._process_planner_data()
 
             self.planned_next_config = \
-                    SystemConfig.init_config_from_trajectory_time_index(
+                SystemConfig.init_config_from_trajectory_time_index(
                     traj_segment, t=-1)
 
             # Append to Vehicle Data
@@ -177,7 +174,7 @@ class Agent(AgentHelper):
             if self.end_episode or self.end_acting:
                 if self.params.verbose:
                     print("terminated plan for agent", self.get_name(),
-                          "at t =", self.time, "k=", self.vehicle_trajectory.k,
+                          "k=", self.vehicle_trajectory.k,
                           "total time=", self.vehicle_trajectory.k * self.vehicle_trajectory.dt)
 
     def _collision_in_group(self, own_pos: np.array, group: list):
@@ -235,8 +232,7 @@ class Agent(AgentHelper):
 
                 if self.end_acting or self.has_collided:
                     if self.params.verbose:
-                        print("terminated act for agent",
-                              self.get_name(), "at t =", self.time)
+                        print("terminated act for agent", self.get_name())
                     # save memory by deleting control pipeline (very memory intensive)
                     del self.planner
 
