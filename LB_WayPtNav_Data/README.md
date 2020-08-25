@@ -8,30 +8,60 @@ This can be generalized to much more than the 8 grid spaces around a singular po
 ### Example directory
 An example of what this directory could look like (given the corresponding dynamics model parameters):
 ```
-.
-├── planning_horizon_200_dt_0.05
-│   └── dubins_v2
-│       └── image_plane_projected_grid_n_21483_theta_bins_21_bound_min_-0.01_-0.01_-3.14_bound_max_0.01_0.01_0.00
-│           └── 20_velocity_bins
-│               ├── incorrectly_binned.pkl
-│               ├── velocity_0.000.pkl
-│               ├── velocity_0.032.pkl
-│               ├── velocity_0.063.pkl
-│               ├── velocity_0.095.pkl
-│               ├── velocity_0.126.pkl
-│               ├── velocity_0.158.pkl
-│               ├── velocity_0.189.pkl
-│               ├── velocity_0.221.pkl
-│               ├── velocity_0.253.pkl
-│               ├── velocity_0.284.pkl
-│               ├── velocity_0.316.pkl
-│               ├── velocity_0.347.pkl
-│               ├── velocity_0.379.pkl
-│               ├── velocity_0.411.pkl
-│               ├── velocity_0.442.pkl
-│               ├── velocity_0.474.pkl
-│               ├── velocity_0.505.pkl
-│               ├── velocity_0.537.pkl
-│               ├── velocity_0.568.pkl
-│               └── velocity_0.600.pkl
+LB_WayPtNav_Data
+├── control_pipelines
+│   └── control_pipeline_v0
+│       ├── planning_horizon_200_dt_0.05
+│       │   └── dubins_v2
+│       │       ├── image_plane_projected_grid_n_21483_theta_bins_21_bound_min_-0.01_-0.01_-100000000.00_bound_max_0.01_0.01_0.00
+│       │       │   └── 20_velocity_bins
+│       │       └── image_plane_projected_grid_n_21483_theta_bins_21_bound_min_-0.01_-0.01_-3.14_bound_max_0.01_0.01_0.00
+│       │           └── 20_velocity_bins
+│       │               ├── incorrectly_binned.pkl
+│       │               ├── velocity_0.000.pkl
+│       │               ├── velocity_0.032.pkl
+│       │               ├── velocity_0.063.pkl
+│       │               ├── velocity_0.095.pkl
+│       │               ├── velocity_0.126.pkl
+│       │               ├── velocity_0.158.pkl
+│       │               ├── velocity_0.189.pkl
+│       │               ├── velocity_0.221.pkl
+│       │               ├── velocity_0.253.pkl
+│       │               ├── velocity_0.284.pkl
+│       │               ├── velocity_0.316.pkl
+│       │               ├── velocity_0.347.pkl
+│       │               ├── velocity_0.379.pkl
+│       │               ├── velocity_0.411.pkl
+│       │               ├── velocity_0.442.pkl
+│       │               ├── velocity_0.474.pkl
+│       │               ├── velocity_0.505.pkl
+│       │               ├── velocity_0.537.pkl
+│       │               ├── velocity_0.568.pkl
+│       │               └── velocity_0.600.pkl
+│       └── planning_horizon_67_dt_0.15
+│           └── dubins_v2
+│               └── image_plane_projected_grid_n_21483_theta_bins_21_bound_min_-0.01_-0.01_-3.14_bound_max_0.01_0.01_0.00
+│                   └── 20_velocity_bins
+│                       ├── incorrectly_binned.pkl
+│                       ├── velocity_0.000.pkl
+│                       ├── velocity_0.032.pkl
+│                       ├── velocity_0.063.pkl
+│                       ├── velocity_0.095.pkl
+│                       ├── velocity_0.126.pkl
+│                       ├── velocity_0.158.pkl
+│                       ├── velocity_0.189.pkl
+│                       ├── velocity_0.221.pkl
+│                       ├── velocity_0.253.pkl
+│                       ├── velocity_0.284.pkl
+│                       ├── velocity_0.316.pkl
+│                       ├── velocity_0.347.pkl
+│                       ├── velocity_0.379.pkl
+│                       ├── velocity_0.411.pkl
+│                       ├── velocity_0.442.pkl
+│                       ├── velocity_0.474.pkl
+│                       ├── velocity_0.505.pkl
+│                       ├── velocity_0.537.pkl
+│                       ├── velocity_0.568.pkl
+│                       └── velocity_0.600.pkl
+└── README.md
 ```
