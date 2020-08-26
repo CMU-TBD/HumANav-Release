@@ -107,6 +107,16 @@ class CentralSimulator(SimulatorHelper):
 
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
+        # get final state
+        # for a in self.prerecs.values():
+        #     a.end()
+        # current_state = self.save_state(0, self.delta_t, 0)
+        # convert the saved states to rendered png's to be rendered into a movie
+        self.generate_frames()
+
+        # convert all the generated frames into a gif file
+        self.save_frames_to_gif(clear_old_files=False)
+        return
         if(self.robot is None):
             print("%sNo robot in simulator%s" % (color_red, color_reset))
             return

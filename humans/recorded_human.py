@@ -73,3 +73,8 @@ class PrerecordedHuman(Human):
             # tell the simulator this agent is done
             self.end_episode = True
             self.end_acting = True
+
+    def end(self):
+        """Instantly teleport the agents to the last position in their trejectory
+        """
+        self.set_current_config(self.goal_config)

@@ -9,7 +9,6 @@ import pandas as pd
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
 from humans.human_configs import HumanConfigs
-from humans.human_appearance import HumanAppearance
 from simulators.robot_agent import RoboAgent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 # Planner + Simulator:
@@ -33,8 +32,8 @@ def create_params():
     # and fixed pitch. See params/central_params.py for more information
     p.camera_params.width = 1024
     p.camera_params.height = 1024
-    p.camera_params.fov_vertical = 75.
-    p.camera_params.fov_horizontal = 75.
+    p.camera_params.fov_vertical = 75.0
+    p.camera_params.fov_horizontal = 75.0
 
     # Introduce the robot params
     p.robot_params = create_robot_params()
@@ -43,7 +42,7 @@ def create_params():
     p.robot_params.physical_params.camera_elevation_degree = -10
 
     if p.render_3D:
-        # Can only render rgb and depth then host pc has an available display
+        # Can only render rgb and depth if the host has an available display
         p.camera_params.modalities = ['rgb', 'disparity']
     else:
         p.camera_params.modalities = ['occupancy_grid']
@@ -231,8 +230,6 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
                     # calculating euclidean dist / delta_t
                     delta_t = (times[j] - times[j - 1])
                     speed = euclidean_dist2(pos_2, last_pos_2) / delta_t
-                    # speed = np.sqrt((pos_2[1] - last_pos_2[1]) **
-                    #                 2 + (pos_2[0] - last_pos_2[0])**2) / delta_t
                     record[j].append(speed)  # last element gets last angle
                 else:
                     record[0].append(0)  # initial speed is 0
@@ -291,6 +288,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         # Get the surreal dataset for human generation
         surreal_data = r.d
         # Update the Human's appearance classes to contain the dataset
+        from humans.human_appearance import HumanAppearance
         HumanAppearance.dataset = surreal_data
         human_traversible = np.empty(traversible.shape)
         human_traversible.fill(True)  # initially all good
@@ -379,5 +377,5 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 if __name__ == '__main__':
     # run basic room test with variable # of human
     test_socnav(num_generated_humans=0,
-                num_prerecorded=0,  # use -1 to include ALL prerecorded agents
+                num_prerecorded=-1,  # use -1 to include ALL prerecorded agents
                 starting_prerec=0)
