@@ -225,6 +225,7 @@ class RoboAgent(Agent):
                     break
             # close connection to be reaccepted when the joystick sends data
             connection.close()
+            time.sleep(0.001)
 
     def establish_joystick_receiver_connection(self):
         """This is akin to a server connection (robot is server)"""

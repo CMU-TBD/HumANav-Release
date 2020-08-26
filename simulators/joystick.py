@@ -144,7 +144,7 @@ class Joystick():
                     # reset the containers
                     self.lin_vels = []
                     self.ang_vels = []
-                if(self.num_sent % 20 == 0):
+                if(self.num_sent % 8 == 0):
                     self.request_world = True
                 self.num_sent += 1
             else:
@@ -243,15 +243,6 @@ class Joystick():
         # Send data
         self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
         print("sent", json_message)
-        # wait for the robot to indicate it has recieved the message
-        while(True):
-            try:
-                self.robot_sender_socket.connect(server_address)
-                # to try and not have exceptional race conditions
-                time.sleep(0.001)
-            except:
-                break
-        time.sleep(0.001)
         self.robot_sender_socket.close()
 
     def listen_to_robot(self):

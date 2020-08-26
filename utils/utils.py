@@ -163,6 +163,34 @@ def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color
                           scale=3, scale_units='inches')
 
 
+def render_rgb_and_depth(r, camera_pos_13, dx_m: float, human_visible=True):
+    """render the rgb and depth images from the openGL renderer
+
+    Args:
+        r: the openGL renderer object
+        camera_pos_13: the 3D (x, y, theta) position of the camera
+        dx_m (float): the delta_x in meters between real world and grid units
+        human_visible (bool, optional): Whether or not the humans are drawn. Defaults to True.
+
+    Returns:
+        rgb_image_1mk3, depth_image_1mk1: the rgb and depth images respectively
+    """
+
+    # Convert from real world units to grid world units
+    camera_grid_world_pos_12 = camera_pos_13[:, :2] / dx_m
+
+    # Render RGB and Depth Images. The shape of the resulting
+    # image is (1 (batch), m (width), k (height), c (number channels))
+    rgb_image_1mk3 = r._get_rgb_image(
+        camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
+
+    depth_image_1mk1, _, _ = r._get_depth_image(
+        camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05,
+        map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
+
+    return rgb_image_1mk3, depth_image_1mk1
+
+
 def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files=True, verbose=False):
     """Takes the image directory and naturally sorts the images into a singular movie.gif"""
     images = []

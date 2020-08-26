@@ -177,22 +177,6 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
     print("%sRendered png at" % color_green, full_file_name, '\033[0m')
 
 
-def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
-    # Convert from real world units to grid world units
-    camera_grid_world_pos_12 = camera_pos_13[:, :2] / dx_m
-
-    # Render RGB and Depth Images. The shape of the resulting
-    # image is (1 (batch), m (width), k (height), c (number channels))
-    rgb_image_1mk3 = r._get_rgb_image(
-        camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
-
-    depth_image_1mk1, _, _ = r._get_depth_image(
-        camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05,
-        map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
-
-    return rgb_image_1mk3, depth_image_1mk1
-
-
 def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center_offset=np.array([0., 0.])):
     """"world_df" is a set of trajectories organized as a pandas dataframe. 
     Each row is a pedestrian at a given frame (aka time point). 

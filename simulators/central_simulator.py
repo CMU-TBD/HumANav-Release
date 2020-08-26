@@ -503,33 +503,6 @@ class CentralSimulator(SimulatorHelper):
             print('\033[32m', "Successfully rendered:",
                   full_file_name, '\033[0m')
 
-    def render_rgb_and_depth(self, r, camera_pos_13, dx_m: float, human_visible=True):
-        """render the rgb and depth images from the openGL renderer
-
-        Args:
-            r: the openGL renderer object
-            camera_pos_13: the 3D (x, y, theta) position of the camera
-            dx_m (float): the delta_x in meters between real world and grid units
-            human_visible (bool, optional): Whether or not the humans are drawn. Defaults to True.
-
-        Returns:
-            rgb_image_1mk3, depth_image_1mk1: the rgb and depth images respectively
-        """
-
-        # Convert from real world units to grid world units
-        camera_grid_world_pos_12 = camera_pos_13[:, :2] / dx_m
-
-        # Render RGB and Depth Images. The shape of the resulting
-        # image is (1 (batch), m (width), k (height), c (number channels))
-        rgb_image_1mk3 = r._get_rgb_image(
-            camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
-
-        depth_image_1mk1, _, _ = r._get_depth_image(
-            camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05,
-            map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
-
-        return rgb_image_1mk3, depth_image_1mk1
-
     def convert_state_to_frame(self, state: SimState, filename: str):
         """Converts a state into an image to be later converted to a gif movie
 
@@ -556,8 +529,8 @@ class CentralSimulator(SimulatorHelper):
                     "traversibles"][1] = self.r.get_human_traversible()
                 # compute the rgb and depth images
                 rgb_image_1mk3, depth_image_1mk1 = \
-                    self.render_rgb_and_depth(self.r, np.array([camera_pos_13]),
-                                              state.get_environment()["map_scale"], human_visible=True)
+                    render_rgb_and_depth(self.r, np.array([camera_pos_13]),
+                                         state.get_environment()["map_scale"], human_visible=True)
 
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
