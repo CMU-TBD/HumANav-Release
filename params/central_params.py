@@ -302,18 +302,18 @@ def create_sbpd_simulator_params(render_3D=False):
 
 def create_agent_params(with_planner=True, with_obstacle_map=False):
     p = DotMap()
-    agnt_p = config["agent_params"]
+    agent_p = config["agent_params"]
 
-    p.radius = agnt_p.getfloat('radius')
+    p.radius = agent_p.getfloat('radius')
 
-    p.record_video = agnt_p.getboolean('record_video')
-    p.save_trajectory_data = agnt_p.getboolean('save_trajectory_data')
+    p.record_video = agent_p.getboolean('record_video')
+    p.save_trajectory_data = agent_p.getboolean('save_trajectory_data')
 
     # Load system dynamics params
     p.system_dynamics_params = create_system_dynamics_params()
-    if(with_planner):
-        p.episode_horizon_s = agnt_p.getfloat('episode_horizon_s')
-        p.control_horizon_s = agnt_p.getfloat('control_horizon_s')
+    if with_planner:
+        p.episode_horizon_s = agent_p.getfloat('episode_horizon_s')
+        p.control_horizon_s = agent_p.getfloat('control_horizon_s')
 
         # Load the dependencies
         p.planner_params = create_planner_params()
@@ -329,31 +329,35 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
         p.control_horizon = int(np.ceil(p.control_horizon_s / dt))
         p.dt = dt
 
-    if(with_obstacle_map):
+    if with_obstacle_map:
         p.obstacle_map_params = create_obstacle_map_params()
 
     # Define the Objectives
 
     # Obstacle Avoidance Objective
     p.avoid_obstacle_objective = \
-        DotMap(obstacle_margin0=agnt_p.getfloat('obstacle_margin0'),
-               obstacle_margin1=agnt_p.getfloat('obstacle_margin1'),
-               power=agnt_p.getfloat('power_obstacle'),
-               obstacle_cost=agnt_p.getfloat('obstacle_cost'))
+        DotMap(obstacle_margin0=agent_p.getfloat('obstacle_margin0'),
+               obstacle_margin1=agent_p.getfloat('obstacle_margin1'),
+               power=agent_p.getfloat('power_obstacle'),
+               obstacle_cost=agent_p.getfloat('obstacle_cost'))
     # Angle Distance parameters
-    p.goal_angle_objective = DotMap(power=agnt_p.getfloat('power_angle'),
-                                    angle_cost=agnt_p.getfloat('angle_cost'))
+    p.goal_angle_objective = DotMap(power=agent_p.getfloat('power_angle'),
+                                    angle_cost=agent_p.getfloat('angle_cost'))
     # Goal Distance parameters
-    p.goal_distance_objective = DotMap(power=agnt_p.getfloat('power_goal'),
-                                       goal_cost=agnt_p.getfloat('goal_cost'),
-                                       goal_margin=agnt_p.getfloat('goal_margin'))
-    p.objective_fn_params = DotMap(obj_type=agnt_p.get('obj_type'))
+    p.goal_distance_objective = DotMap(power=agent_p.getfloat('power_goal'),
+                                       goal_cost=agent_p.getfloat('goal_cost'),
+                                       goal_margin=agent_p.getfloat('goal_margin'))
+
+    # Personal Space cost parameters
+    p.personal_space_objective = DotMap(psc_scale=1.0)
+
+    p.objective_fn_params = DotMap(obj_type=agent_p.get('obj_type'))
     p.goal_cutoff_dist = p.goal_distance_objective.goal_margin
     p.goal_dist_norm = p.goal_distance_objective.power  # Default is l2 norm
     p.episode_termination_reasons = ['Timeout', 'Collision', 'Success']
     p.episode_termination_colors = ['b', 'r', 'g']
     p.waypt_cmap = 'winter'
-    p.num_validation_goals = agnt_p.getint('num_validation_goals')
+    p.num_validation_goals = agent_p.getint('num_validation_goals')
     return p
 
 

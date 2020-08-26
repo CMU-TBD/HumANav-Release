@@ -348,7 +348,7 @@ class Agent(AgentHelper):
         return its system_dynamics. Else create a new system_dynamics
         instance.
         """
-        if(params is None):
+        if params is None:
             params = self.params
         try:
             planner = self.planner
@@ -370,7 +370,7 @@ class Agent(AgentHelper):
             elif isinstance(objective, AngleDistance):
                 objective.fmm_map = self.fmm_map
             else:
-                assert (False)
+                assert False
 
     @staticmethod
     def _update_fmm_map(self):

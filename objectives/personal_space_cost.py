@@ -1,6 +1,6 @@
 import numpy as np
 from objectives.objective_function import Objective
-from simulators.sim_state import SimState, get_pos3
+from simulators.sim_state import SimState, get_pos3, get_all_agents
 from metrics.cost_functions import *
 
 class PersonalSpaceCost(Objective):
@@ -23,7 +23,7 @@ class PersonalSpaceCost(Objective):
             ego_pos3 = ego_traj[0, i]  # (x,y,th)_self latest timestep
 
             # iterate through every non ego agent
-            agents = sim_state.get_all_agents()
+            agents = sim_state.get_all_agents() if isinstance(sim_state, SimState) else get_all_agents(sim_state)
 
             for agent_name, agent_vals in agents.items():
                 agent_pos3 = get_pos3(agent_vals)  # (x,y,th)

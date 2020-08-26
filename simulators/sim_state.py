@@ -154,11 +154,12 @@ class SimState():
     def get_delta_t(self):
         return self.delta_t
 
-    def get_all_agents(self):
+    def get_all_agents(self, include_robot=False):
         all_agents = {}
         all_agents.update(get_agent_type(self, "gen_agents"))
         all_agents.update(get_agent_type(self, "prerecs"))
-        all_agents.update(get_agent_type(self, "robots"))
+        if include_robot:
+            all_agents.update(get_agent_type(self, "robots"))
         return all_agents
 
     @ staticmethod
@@ -189,6 +190,14 @@ class SimState():
 
 """BEGIN SimState utils"""
 
+
+def get_all_agents(sim_state: dict, include_robot=False):
+    all_agents = {}
+    all_agents.update(get_agent_type(sim_state, "gen_agents"))
+    all_agents.update(get_agent_type(sim_state, "prerecs"))
+    if include_robot:
+        all_agents.update(get_agent_type(sim_state, "robots"))
+    return all_agents
 
 def get_agent_type(sim_state, agent_type: str):
     if callable(getattr(sim_state, 'get_' + agent_type, None)):

@@ -153,8 +153,10 @@ class Joystick():
     def planned_robot_joystick(self):
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
-        the subtrajectory, and relevant planner data"""
-        while(self.current_config is None):
+        the subtrajectory, and relevant planner data
+        This needs to have access to the sim_state - how?
+        """
+        while self.current_config is None:
             # wait until robot's current position is known
             time.sleep(0.01)
         self.planned_next_config = copy.deepcopy(self.current_config)
@@ -196,7 +198,7 @@ class Joystick():
     def update(self, random_commands: bool = False):
         """ Independent process for a user (at a designated host:port) to receive
         information from the simulation while also sending commands to the robot """
-        while(self.delta_t is None):
+        while self.delta_t is None:
             time.sleep(0.01)
         action_dt = int(np.floor(self.delta_t / self.agent_params.dt))
         print("simulator's refresh rate =", self.delta_t)
@@ -206,13 +208,15 @@ class Joystick():
             args=(action_dt,)
         )
         sender_thread.start()
-        if(random_commands):
+
+        if random_commands:
             self.random_robot_joystick(action_dt)
         else:
             self.planned_robot_joystick()
+
         # this point is reached once the planner/randomizer are finished
         self.force_close_socket()
-        if(self.listen_thread.is_alive()):
+        if self.listen_thread.is_alive():
             self.listen_thread.join()
         # begin gif (movie) generation
         try:
@@ -287,6 +291,7 @@ class Joystick():
                         self.current_config = generate_config_from_pos_3(
                             robot["current_config"])
                         print("Updated environment from simulator")
+
                         # update the start and goal configs from the simulator's challenge
                         self.start_config = generate_config_from_pos_3(
                             robot["start_config"])
@@ -324,15 +329,17 @@ class Joystick():
         self.robot_receiver_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
         self.robot_receiver_socket.bind((self.host, self.port_recv))
+
         # wait for a connection
         self.robot_receiver_socket.listen(1)
         connection, client = self.robot_receiver_socket.accept()
         print("%sRobot---->Joystick connection established%s" %
               (color_green, color_reset))
+
         # start the listening thread for recieving world states from robot
         self.listen_thread = threading.Thread(target=self.listen_to_robot)
         self.listen_thread.start()
-        while(self.environment is None):
+        while self.environment is None:
             # wait until environment is fully sent
             time.sleep(0.01)
         return connection, client

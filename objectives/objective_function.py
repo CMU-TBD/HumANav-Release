@@ -22,22 +22,22 @@ class ObjectiveFunction(object):
         """
         self.objectives.append(objective)
 
-    def evaluate_function_by_objective(self, trajectory):
+    def evaluate_function_by_objective(self, trajectory, sim_state: SimState = None):
         """
-        Evaluate each objective corresponding to a system trajectory.
-
+        Evaluate each objective corresponding to a system trajectory or sim_state
+        sim_states are only relevant for personal_space cost functions
         """
         objective_values_by_tag = [[objective.tag, objective.evaluate_objective(
             trajectory)] for objective in self.objectives]
         return objective_values_by_tag
 
-    def evaluate_function(self, trajectory):
+    def evaluate_function(self, trajectory, sim_state: SimState = None):
         """
-        Evaluate the entire objective function corresponding to a system trajectory.
-
+        Evaluate the entire objective function corresponding to a system trajectory or traj+sim_state.
+        sim_states are only relevant for personal_space cost functions
         """
         objective_values_by_tag = self.evaluate_function_by_objective(
-            trajectory)
+            trajectory, sim_state)
         objective_function_values = 0.
         for tag, objective_values in objective_values_by_tag:
             objective_function_values += self._reduce_objective_values(
@@ -54,5 +54,5 @@ class ObjectiveFunction(object):
             obj_sum = np.sum(objective_values * valid_mask_nk, axis=1)
             res = obj_sum / trajectory.valid_horizons_n1[:, 0]
         else:
-            assert(False)
+            assert False
         return res
