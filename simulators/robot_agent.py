@@ -32,7 +32,6 @@ class RoboAgent(Agent):
         self.params.robot_params = create_robot_params()
         # sockets for communication
         self.joystick_receiver_socket = None
-        self.joystick_notifier_socket = None
         self.joystick_sender_socket = None
         self.host = socket.gethostname()
         # port for recieving commands from the joystick
@@ -192,43 +191,38 @@ class RoboAgent(Agent):
         self.running = True  # initialize listener
         while(self.running):
             connection, client = self.joystick_receiver_socket.accept()
-            while(True):
-                data_b, response_len = conn_recv(connection, buffr_amnt=128)
-                if(data_b is not b''):
-                    data_str = data_b.decode("utf-8")  # bytes to str
-                    data = json.loads(data_str)
-                    if(data["joystick_on"]):
-                        if(data["j_time"] >= 0):  # normal command input
-                            lin_vels: list = data["lin_vels"]
-                            ang_vels: list = data["ang_vels"]
-                            assert(len(lin_vels) == len(ang_vels))
-                            self.amnt_per_joystick = len(lin_vels)
-                            for i in range(self.amnt_per_joystick):
-                                np_data = np.array(
-                                    [lin_vels[i], ang_vels[i]], dtype=np.float32)
-                                # add at least one command
-                                self.commands.append(np_data)
-                                if(self.repeat_joystick):  # if need be, repeat n-1 times
-                                    repeat_amnt = \
-                                        int(np.floor(
-                                            (self.params.robot_params.physical_params.repeat_freq / self.amnt_per_joystick) - 1))
-                                    for i in range(repeat_amnt):
-                                        # adds command to local list of individual commands
-                                        self.commands.append(np_data)
-                        # only sent by joystick when "ready" and needs the map
-                        elif data["j_time"] == -1:
-                            self.joystick_ready = True
-                        # whether or not the world state is requested
-                        if(data["req_world"] is True):
-                            # to send the world in the next update
-                            self.joystick_requests_world = True
-                    else:
-                        self.power_off()
-                        break
+            data_b, response_len = conn_recv(connection, buffr_amnt=128)
+            if(data_b is not b''):
+                data_str = data_b.decode("utf-8")  # bytes to str
+                data = json.loads(data_str)
+                if(data["joystick_on"]):
+                    if(data["j_time"] >= 0):  # normal command input
+                        lin_vels: list = data["lin_vels"]
+                        ang_vels: list = data["ang_vels"]
+                        assert(len(lin_vels) == len(ang_vels))
+                        self.amnt_per_joystick = len(lin_vels)
+                        for i in range(self.amnt_per_joystick):
+                            np_data = np.array(
+                                [lin_vels[i], ang_vels[i]], dtype=np.float32)
+                            # add at least one command
+                            self.commands.append(np_data)
+                            if(self.repeat_joystick):  # if need be, repeat n-1 times
+                                repeat_amnt = \
+                                    int(np.floor(
+                                        (self.params.robot_params.physical_params.repeat_freq / self.amnt_per_joystick) - 1))
+                                for i in range(repeat_amnt):
+                                    # adds command to local list of individual commands
+                                    self.commands.append(np_data)
+                    # only sent by joystick when "ready" and needs the map
+                    elif data["j_time"] == -1:
+                        self.joystick_ready = True
+                    # whether or not the world state is requested
+                    if(data["req_world"] is True):
+                        # to send the world in the next update
+                        self.joystick_requests_world = True
                 else:
+                    self.power_off()
                     break
-                # let the joystick know the robot has successfully received the data
-
             # close connection to be reaccepted when the joystick sends data
             connection.close()
 
@@ -260,19 +254,5 @@ class RoboAgent(Agent):
         assert(self.joystick_sender_socket is not None)
         print("%sJoystick->Robot connection established%s" %
               (color_green, color_reset))
-
-    def _establish_joystick_notifier_connection(self):
-        """This is akin to a client connection (joystick is client)"""
-        self.joystick_notifier_socket = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM)
-        address = ((self.host, self.port_send + 1))
-        try:
-            self.joystick_notifier_socket.connect(address)
-        except:
-            print("%sUnable to connect to joystick%s" %
-                  (color_red, color_reset))
-            print("Make sure you have a joystick instance running")
-            exit(1)
-        assert(self.joystick_notifier_socket is not None)
 
     """ END socket utils """

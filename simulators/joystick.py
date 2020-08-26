@@ -36,7 +36,6 @@ class Joystick():
     def init(self):
         # sockets for communication
         self.robot_sender_socket = None
-        self.robot_notifier_socket = None
         self.robot_receiver_socket = None
         self.robot_running = False
         self.robot_ready = True
@@ -145,8 +144,6 @@ class Joystick():
                     # reset the containers
                     self.lin_vels = []
                     self.ang_vels = []
-                    # NOTE: this robot sender delay is tunable to ones liking
-                    time.sleep(0.1)  # planner delay
                 if(self.num_sent % 20 == 0):
                     self.request_world = True
                 self.num_sent += 1
@@ -229,11 +226,6 @@ class Joystick():
             print("%sConnection closed by robot%s" % (color_red, color_reset))
             self.robot_running = False
             self.force_close_socket()
-            try:
-                # send one last command to the robot with indication that self.robot_running=False
-                self.robot_input([], [], False, override_power_off=True)
-            except:
-                pass
 
     """BEGIN socket utils"""
 
@@ -250,14 +242,17 @@ class Joystick():
             return
         # Send data
         self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
-        self.robot_sender_socket.close()
         print("sent", json_message)
         # wait for the robot to indicate it has recieved the message
-        r = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        r.bind((self.host, self.port_recv + 2))
-        # wait for a connection
-        r.listen(1)
-        connection, client = r.accept()
+        while(True):
+            try:
+                self.robot_sender_socket.connect(server_address)
+                # to try and not have exceptional race conditions
+                time.sleep(0.001)
+            except:
+                break
+        time.sleep(0.001)
+        self.robot_sender_socket.close()
 
     def listen_to_robot(self):
         self.robot_receiver_socket.listen(10)
@@ -345,17 +340,8 @@ class Joystick():
         self.listen_thread.start()
         while(self.environment is None):
             # wait until environment is fully sent
-            time.sleep(0.01)
+            time.sleep(0.001)
         return connection, client
-
-    def _establish_robot_notifier_connection(self):
-        """This is akin to a server connection (robot is server)"""
-        self.robot_notifier_socket = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM)
-        self.robot_notifier_socket.bind((self.host, self.port_recv + 1))
-        # wait for a connection
-        self.robot_notifier_socket.listen(1)
-        connection, client = self.robot_notifier_socket.accept()
 
     """ END socket utils """
 
