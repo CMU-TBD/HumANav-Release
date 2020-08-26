@@ -6,6 +6,7 @@ import time
 import sys
 import json
 import os
+import pandas as pd
 from copy import deepcopy
 from random import randint
 import numpy as np
@@ -13,6 +14,7 @@ import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 from utils.utils import *
+from utils.image_utils import *
 from params.central_params import create_robot_params, get_path_to_socnav, get_seed, create_agent_params
 from simulators.agent import Agent
 from trajectory.trajectory import Trajectory
@@ -36,7 +38,9 @@ class Joystick():
     def init(self):
         # sockets for communication
         self.robot_sender_socket = None
+        self.robot_receiver_socket = None
         self.robot_running = False
+        self.robot_ready = True
         self.host = socket.gethostname()
         # port for sending commands to the robot
         self.port_send = self.joystick_params.port
@@ -53,6 +57,8 @@ class Joystick():
         self.lin_vels = []
         self.ang_vels = []
         self.num_sent = 0
+        # data tracking with pandas
+        self.agent_data = None
 
     def set_host(self, h):
         self.host = h
@@ -104,6 +110,7 @@ class Joystick():
         if(request_world):
             # only a single message being sent
             self.request_world = False
+        self.robot_ready = False  # just sent a new command to the robot
         self.send_to_robot(message)
 
     def random_robot_joystick(self, action_dt: int):
@@ -119,7 +126,7 @@ class Joystick():
                     lin_vels.append(lin)
                     ang_vels.append(ang)
                 self.robot_input(lin_vels, ang_vels, self.request_world)
-                time.sleep(0.5)  # NOTE: Tune this to whatever you'd like
+                time.sleep(0.05)  # NOTE: Tune this to whatever you'd like
                 # now update the robot with the "ready" ping
             except KeyboardInterrupt:
                 print("%sJoystick disconnected by user%s" %
@@ -138,12 +145,12 @@ class Joystick():
                 if(len(self.lin_vels) >= freq):
                     self.robot_input(deepcopy(self.lin_vels),
                                      deepcopy(self.ang_vels), self.request_world)
+                    # planner time delay
+                    time.sleep(0.05)
                     # reset the containers
                     self.lin_vels = []
                     self.ang_vels = []
-                    # NOTE: this robot sender delay is tunable to ones liking
-                    time.sleep(0.1)  # planner delay
-                if(self.num_sent % 20 == 0):
+                if(self.num_sent % 4 == 0):  # TODO: make into params
                     self.request_world = True
                 self.num_sent += 1
             else:
@@ -229,11 +236,6 @@ class Joystick():
             print("%sConnection closed by robot%s" % (color_red, color_reset))
             self.robot_running = False
             self.force_close_socket()
-            try:
-                # send one last command to the robot with indication that self.robot_running=False
-                self.robot_input([], [], False, override_power_off=True)
-            except:
-                pass
 
     """BEGIN socket utils"""
 
@@ -250,8 +252,8 @@ class Joystick():
             return
         # Send data
         self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
-        self.robot_sender_socket.close()
         print("sent", json_message)
+        self.robot_sender_socket.close()
 
     def listen_to_robot(self):
         self.robot_receiver_socket.listen(10)
@@ -286,7 +288,8 @@ class Joystick():
                         # only update the environment if it is non-empty
                         self.environment = current_world['environment']
                         robots = list(current_world["robots"].values())
-                        assert(len(robots) == 1)  # there should only be one
+                        # there should only be one
+                        assert(len(robots) == 1)
                         robot = robots[0]
                         self.current_config = generate_config_from_pos_3(
                             robot["current_config"])
@@ -300,6 +303,12 @@ class Joystick():
                         self.delta_t = current_world["delta_t"]
                         print("Updated start/goal for robot")
                     else:
+                        # update the robot's position from sensor data
+                        self.current_config = \
+                            generate_config_from_pos_3(robot["current_config"])
+                        # Write the Agent's trajectory data into a pandas file
+                        self.write_pandas(current_world)
+                        # TODO: make the frame generator a separate process to not interfere
                         # render when not receiving a new environment
                         self.generate_frame(current_world, self.frame_num)
                 else:
@@ -308,6 +317,19 @@ class Joystick():
                     break
             else:
                 break
+
+    def write_pandas(self, world_state):
+        from simulators.sim_state import get_agent_type
+        if(self.agent_data is None):
+            all_agents = {}
+            all_agents.update(get_agent_type(world_state, "gen_agents"))
+            all_agents.update(get_agent_type(world_state, "prerecs"))
+            all_agents.update(get_agent_type(world_state, "robots"))
+            self.agent_data = pd.DataFrame(all_agents)
+        else:
+            # TODO: append data for new simstates to track values over time
+            pass
+        self.agent_data.to_csv('tests/socnav/joystick_movie/agent_data.csv')
 
     def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
@@ -341,7 +363,7 @@ class Joystick():
         self.listen_thread.start()
         while self.environment is None:
             # wait until environment is fully sent
-            time.sleep(0.01)
+            time.sleep(0.001)
         return connection, client
 
     """ END socket utils """

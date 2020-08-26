@@ -42,8 +42,12 @@ def log_dict_as_json(params, filename):
         json.dump(param_dict_serializable, f, indent=4, sort_keys=True)
 
 
-def _to_json_serializable_dict(param_dict):
-    """ Converts params_dict to a json serializable dict."""
+def _to_json_serializable_dict(param_dict: dict):
+    """Converts params_dict to a json serializable dict.
+
+    Args:
+        param_dict (dict): the dictionary to be serialized
+    """
     def _to_serializable_type(elem):
         """ Converts an element to a json serializable type. """
         if isinstance(elem, np.int64) or isinstance(elem, np.int32):
@@ -61,13 +65,27 @@ def _to_json_serializable_dict(param_dict):
     return param_dict
 
 
-def euclidean_dist2(p1, p2):
+def euclidean_dist2(p1: list, p2: list):
+    """Compute the 2D euclidean distance from p1 to p2.
+
+    Args:
+        p1 (list): A point in a 2D space (with at least 2 dimens).
+        p2 (list): Another point in a 2D space (with at least 2 dimens).
+
+    Returns:
+        dist (float): the euclidean (straight-line) distance between the points.
+    """
     diff_x = p1[0] - p2[0]
     diff_y = p1[1] - p2[1]
     return np.sqrt(diff_x**2 + diff_y**2)
 
 
-def touch(path):
+def touch(path: str):
+    """Creates an empty file at a specific file location
+
+    Args:
+        path (str): The absolute path for the location of the new file
+    """
     basedir = os.path.dirname(path)
     if not os.path.exists(basedir):
         os.makedirs(basedir)
@@ -75,7 +93,15 @@ def touch(path):
         os.utime(path, None)
 
 
-def natural_sort(l):
+def natural_sort(l: list):
+    """Sorts a list of items naturally.
+
+    Args:
+        l (list): the list of elements to sort. 
+
+    Returns:
+        A naturally sorted list with the same elements as l
+    """
     import re
     def convert(text): return int(text) if text.isdigit() else text.lower()
     def alphanum_key(key): return [convert(c)
@@ -83,15 +109,32 @@ def natural_sort(l):
     return sorted(l, key=alphanum_key)
 
 
-def generate_name(max_chars):
+def generate_name(max_chars: int):
+    """Creates a string of max_chars random characters.
+
+    Args:
+        max_chars (int): number of characters in random string (name).
+
+    Returns:
+        A string of length max_chars with random ascii characters
+    """
     return "".join([
         random.choice(string.ascii_letters + string.digits)
         for n in range(max_chars)
     ])
 
 
-def conn_recv(connection, buffr_amnt=1024):
-    # NOTE: allow for buffered data, thus no limit
+def conn_recv(connection, buffr_amnt: int = 1024):
+    """Makes sure all the data from a socket connection is correctly received
+
+    Args:
+        connection: The socket connection used as a communication channel.
+        buffr_amnt (int, optional): Amount of bytes to transfer at a time. Defaults to 1024.
+
+    Returns:
+        data (bytes): The data received from the socket.
+        response_len (int): The number of bytes that were transferred
+    """
     chunks = []
     response_len = 0
     while True:
@@ -102,95 +145,6 @@ def conn_recv(connection, buffr_amnt=1024):
         response_len += len(chunk)
     data = b''.join(chunks)
     return data, response_len
-
-
-def plot_agents(ax, ppm, agents_dict, json_key=None, label='Agent', normal_color='bo', collided_color='ro',
-                plot_trajectory=True, plot_quiver=False, plot_start_goal=False, start_3=None, goal_3=None):
-    # plot all the simulated prerecorded gen_agents
-    for i, a in enumerate(agents_dict.values()):
-        if(json_key is not None):
-            # when plotting from JSON serialized gen_agents
-            collided = a["collided"]
-            markersize = a["radius"] * ppm
-            pos_3 = a[json_key]
-            traj_col = a["color"]
-        else:
-            collided = a.get_collided()
-            markersize = a.get_radius() * ppm
-            pos_3 = a.get_current_config().to_3D_numpy()
-            traj_col = a.get_color()
-            if(plot_start_goal):
-                start_3 = a.get_start_config().to_3D_numpy()
-                goal_3 = a.get_goal_config().to_3D_numpy()
-        if(plot_start_goal):
-            assert(start_3 is not None)
-            assert(goal_3 is not None)
-        start_goal_markersize = markersize * 0.7
-        if(plot_trajectory):
-            a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
-        color = normal_color  # gen_agents are green and solid unless collided
-        start_goal_col = 'wo'  # white circle
-        if(collided):
-            color = collided_color  # collided gen_agents are drawn red
-        if(i == 0):
-            # Only add label on the first humans
-            ax.plot(pos_3[0], pos_3[1], color,
-                    markersize=markersize, label=label)
-            if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], start_goal_col,
-                        markersize=start_goal_markersize, label=label + " start")
-                ax.plot(goal_3[0], goal_3[1], start_goal_col,
-                        markersize=start_goal_markersize, label=label + " goal")
-        else:
-            ax.plot(pos_3[0], pos_3[1], color,
-                    markersize=markersize)
-            if(plot_start_goal):
-                ax.plot(start_3[0], start_3[1], start_goal_col,
-                        markersize=start_goal_markersize)
-                ax.plot(goal_3[0], goal_3[1], start_goal_col,
-                        markersize=start_goal_markersize)
-        # plot the surrounding "force field" around the agent
-        ax.plot(pos_3[0], pos_3[1], color,
-                alpha=0.2, markersize=2. * markersize)
-        if(plot_quiver):
-            # Agent heading
-            ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                      scale=2, scale_units='inches')
-            if(plot_start_goal):
-                ax.quiver(start_3[0], start_3[1], np.cos(start_3[2]), np.sin(start_3[2]),
-                          scale=3, scale_units='inches')
-                ax.quiver(goal_3[0], goal_3[1], np.cos(goal_3[2]), np.sin(goal_3[2]),
-                          scale=3, scale_units='inches')
-
-
-def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files=True, verbose=False):
-    """Takes the image directory and naturally sorts the images into a singular movie.gif"""
-    images = []
-    if(not os.path.exists(IMAGES_DIR)):
-        print('\033[31m', "ERROR: Failed to image directory at",
-              IMAGES_DIR, '\033[0m')
-        os._exit(1)  # Failure condition
-    files = natural_sort(glob.glob(os.path.join(IMAGES_DIR, '*.png')))
-    num_images = len(files)
-    for i, filename in enumerate(files):
-        if(verbose):
-            print("appending", filename)
-        try:
-            images.append(imageio.imread(filename))
-        except:
-            print("%sUnable to read file:" % (color_red), filename,
-                  "Try clearing the directory of old files and rerunning%s" % (color_reset))
-            exit(1)
-        print("Movie progress:", i, "out of", num_images, "%.3f" %
-              (i / num_images), "\r", end="")
-    output_location = os.path.join(IMAGES_DIR, gif_filename + ".gif")
-    kargs = {'duration': duration}  # 1/fps
-    imageio.mimsave(output_location, images, 'GIF', **kargs)
-    print("%sRendered gif at" % (color_green), output_location, '\033[0m')
-    # Clearing remaining files to not affect next render
-    if clear_old_files:
-        for f in files:
-            os.remove(f)
 
 
 def mkdir_if_missing(dirname):

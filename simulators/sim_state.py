@@ -3,6 +3,7 @@ from copy import deepcopy
 import json
 from simulators.agent import Agent
 from humans.human import Human
+from utils.utils import *
 
 """ These are smaller "wrapper" classes that are visible by other
 gen_agents/humans and saved during state deepcopies
@@ -49,7 +50,6 @@ class AgentState():
     def get_pos3(self):
         return self.get_current_config().to_3D_numpy()
 
-
     def to_json(self, include_start_goal=False):
         name_json = SimState.to_json_type(deepcopy(self.name))
         # NOTE: the configs are just being serialized with their 3D positions
@@ -62,10 +62,7 @@ class AgentState():
             deepcopy(self.get_current_config().to_3D_numpy()))
         # SimState.to_json_type( self.get_trajectory().to_numpy_repr())
         # trajectory_json = "None"
-        collided_json = deepcopy(self.collided)
-        end_acting_json = deepcopy(self.end_acting)
         radius_json = deepcopy(self.radius)
-        color_json = deepcopy(self.color)
         json_dict = {}
         json_dict['name'] = name_json
         # NOTE: the start and goal (of the robot) are only sent when the environment is sent
@@ -74,10 +71,7 @@ class AgentState():
             json_dict['goal_config'] = goal_json
         json_dict['current_config'] = current_json
         # json_dict['trajectory'] = trajectory_json
-        json_dict['collided'] = collided_json
-        json_dict['end_acting'] = end_acting_json
         json_dict['radius'] = radius_json
-        json_dict['color'] = color_json
         # returns array (python list) to be json'd in_simstate
         return json_dict
 
@@ -203,7 +197,7 @@ def get_agent_type(sim_state, agent_type: str):
     if callable(getattr(sim_state, 'get_' + agent_type, None)):
         getter_agent_type = getattr(sim_state, 'get_' + agent_type, None)
         return getter_agent_type()
-    elif hasattr(sim_state, agent_type):
+    elif agent_type in sim_state.keys():
         return sim_state[agent_type]
     else:
         return {}  # empty dict

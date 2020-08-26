@@ -17,6 +17,7 @@ from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
 from params.central_params import get_seed, create_base_params, create_robot_params
 from utils.utils import *
+from utils.image_utils import *
 
 # seed the random number generator
 random.seed(get_seed())
@@ -177,29 +178,11 @@ def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
     print("%sRendered png at" % color_green, full_file_name, '\033[0m')
 
 
-def render_rgb_and_depth(r, camera_pos_13, dx_m, human_visible=True):
-    # Convert from real world units to grid world units
-    camera_grid_world_pos_12 = camera_pos_13[:, :2] / dx_m
-
-    # Render RGB and Depth Images. The shape of the resulting
-    # image is (1 (batch), m (width), k (height), c (number channels))
-    rgb_image_1mk3 = r._get_rgb_image(
-        camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
-
-    depth_image_1mk1, _, _ = r._get_depth_image(
-        camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05,
-        map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
-
-    return rgb_image_1mk3, depth_image_1mk1
-
-
 def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center_offset=np.array([0., 0.])):
-    """"world_df" is a set of trajectories organized as a pandas dataframe. 
-    Each row is a pedestrian at a given frame (aka time point). 
+    """"world_df" is a set of trajectories organized as a pandas dataframe.
+    Each row is a pedestrian at a given frame (aka time point).
     The data was taken at 25 fps so between frames is 1/25th of a second. """
-    if(num_pedestrians > 0):
-        print("Gathering prerecorded agents from",
-              start_ped, "to", start_ped + num_pedestrians)
+    if(num_pedestrians > 0 or num_pedestrians == -1):
         datafile = os.path.join(
             p.socnav_dir, "tests/world_coordinate_inter.csv")
         world_df = pd.read_csv(datafile, header=None).T
@@ -207,6 +190,10 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
         world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
         start_frame = world_df['frame'][0]  # default start (of data)
         max_peds = max(np.unique(world_df.ped))
+        if(num_pedestrians == -1):
+            num_pedestrians = max_peds - 1
+        print("Gathering prerecorded agents from",
+              start_ped, "to", start_ped + num_pedestrians)
         for i in range(num_pedestrians):
             ped_id = i + start_ped + 1
             if (ped_id >= max_peds):  # need data to be within the bounds
@@ -257,6 +244,36 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
         print("\n")
 
 
+def generate_auto_humans(num_generated_humans, human_list, simulator, environment, p, r):
+    """
+    Generate and add num_humans number of randomly generated humans to the simulator
+    """
+    traversible = environment["traversibles"][0]
+    for i in range(num_generated_humans):
+        # Generates a random human from the environment
+        new_human_i = Human.generate_random_human_from_environment(
+            environment,
+            generate_appearance=p.render_3D,
+            radius=15
+        )
+        # Or specify a human's initial configs with a HumanConfig instance
+        # Human.generate_human_with_configs(Human, fixed_start_goal)
+        human_list.append(new_human_i)
+        # Load a random human at a specified state and speed
+        # update human traversible
+        if p.render_3D:
+            r.add_human(new_human_i)
+            environment["traversibles"] = np.array(
+                [traversible, r.get_human_traversible()])
+        else:
+            environment["traversibles"] = np.array([traversible])
+        # Input human fields into simulator
+        simulator.add_agent(new_human_i)
+        print("Generated Random Humans:", i + 1, "\r", end="")
+    if(num_generated_humans > 0):
+        print("\n")
+
+
 def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     Code for loading a random human into the environment
@@ -273,34 +290,20 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     if p.render_3D:
         # Get the surreal dataset for human generation
         surreal_data = r.d
-
         # Update the Human's appearance classes to contain the dataset
         HumanAppearance.dataset = surreal_data
-
         human_traversible = np.empty(traversible.shape)
         human_traversible.fill(True)  # initially all good
 
-    # Camera (robot) position modeled as (x, y, theta) in 2D array
-    # Multiple entries yield multiple shots
-    camera_pos_13 = np.array([
-        [12., 15., -np.pi / 4]
-    ])
-
-    # Add surrounding boundary dots to camer's so generated humans won't interfere
-    num_cameras = np.shape(camera_pos_13)[0]
-
     # In order to print more readable arrays
     np.set_printoptions(precision=3)
-
-    # Output position of new camera renders
-    for i in range(num_cameras):
-        print("Rendering camera (robot) at", camera_pos_13[i])
 
     # Creating list of to-be humans that will partake in the scene
     human_list = []
 
     # Generate the ~center~ of area3 when scaled up 2x
-    room_center = np.array([14., 14., 0.])
+    # room_center = np.array([14., 14., 0.])
+    room_center = np.array([23., 5., 0.])
     # Create default environment which is a dictionary
     # containing ["map_scale", "traversibles"]
     # which is a constant and list of traversibles respectively
@@ -310,7 +313,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     environment["room_center"] = room_center
     # obstacle traversible / human traversible
     if p.render_3D:
-        environment["traversibles"] = [traversible, human_traversible]
+        environment["traversibles"] = np.array(
+            [traversible, human_traversible])
     else:
         environment["traversibles"] = np.array([traversible])
     """
@@ -331,64 +335,41 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         radius=5
     )
     simulator.add_agent(robot_agent)
-
+    num_robots = 1
     """
     Add the prerecorded humans to the simulator
     """
-    generate_prerecorded_humans(
-        starting_prerec, num_prerecorded, p, simulator, center_offset=np.array([8., 7.]))
+    generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
+                                simulator, center_offset=np.array([15.0, 4.0]))
 
     """
     Generate and add a single human with a constant start/end config on every run 
     """
-    known_start = generate_config_from_pos_3(np.array([9., 18., 0.]))
-    known_end = generate_config_from_pos_3(np.array([13., 10., 0.]))
+    known_start = generate_config_from_pos_3(np.array([9.0, 10.0, 0.0]))
+    known_end = generate_config_from_pos_3(np.array([30.0, 8.5, 0.0]))
     known_init_configs = HumanConfigs(known_start, known_end)
     const_human = Human.generate_human_with_configs(
         known_init_configs, generate_appearance=p.render_3D)
     simulator.add_agent(const_human)
 
-    """
-    Generate and add num_humans number of randomly generated humans to the simulator
-    """
-    for i in range(num_generated_humans):
-        # Generates a random human from the environment
-        new_human_i = Human.generate_random_human_from_environment(
-            environment,
-            generate_appearance=p.render_3D,
-            radius=5
-        )
-        # Or specify a human's initial configs with a HumanConfig instance
-        # Human.generate_human_with_configs(Human, fixed_start_goal)
-        human_list.append(new_human_i)
+    generate_auto_humans(num_generated_humans, human_list,
+                         simulator, environment, p, r)
 
-        # Load a random human at a specified state and speed
-        # update human traversible
-        if p.render_3D:
-            r.add_human(new_human_i)
-            environment["traversibles"] = np.array(
-                [traversible, r.get_human_traversible()])
-        else:
-            environment["traversibles"] = np.array([traversible])
-        # Input human fields into simulator
-        simulator.add_agent(new_human_i)
-        print("Generated Random Humans:", i + 1, "\r", end="")
-    if(num_generated_humans > 0):
-        print("\n")
     # run simulation
     simulator.simulate()
 
     # Plotting an image for each camera location
-    for i in range(num_cameras):
+    for i in range(num_robots):
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
         if p.render_3D:  # only when rendering with opengl
             rgb_image_1mk3, depth_image_1mk1 = \
                 render_rgb_and_depth(r, np.array(
-                    [camera_pos_13[i]]), dx_m, human_visible=True)
+                    [robot_agent.get_start_config().to_3D_numpy()]), dx_m, human_visible=True)
         # Plot the rendered images
         plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
-                    camera_pos_13[i], human_list, "example1_v" + str(i) + ".png")
+                    robot_agent.get_start_config().to_3D_numpy(),
+                    human_list, "example1_v" + str(i) + ".png")
 
     # Remove all the humans from the environment
     if p.render_3D:  # only when rendering with opengl
@@ -397,4 +378,6 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(num_generated_humans=3, num_prerecorded=3, starting_prerec=15)
+    test_socnav(num_generated_humans=0,
+                num_prerecorded=0,  # use -1 to include ALL prerecorded agents
+                starting_prerec=0)

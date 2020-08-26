@@ -10,6 +10,7 @@ from simulators.simulator_helper import SimulatorHelper
 from simulators.sim_state import SimState, HumanState, AgentState
 from params.central_params import get_path_to_socnav, create_sbpd_simulator_params
 from utils.utils import *
+from utils.image_utils import *
 
 
 class CentralSimulator(SimulatorHelper):
@@ -95,29 +96,31 @@ class CentralSimulator(SimulatorHelper):
 
     def simulate(self):
         """ A function that simulates an entire episode. The gen_agents are updated with simultaneous
-        threads running their update() functions and updating the robot with commands from the 
-        external joystick process. 
+        threads running their update() functions and updating the robot with commands from the
+        external joystick process.
         """
         num_agents: int = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "gen_agents")
-        # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        # TODO what is this 3*params.dt ?
-        self.delta_t = 3 * self.params.dt
+
+        # scale the simulator time
+        self.delta_t = self.params.delta_t_scale * self.params.dt
 
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
         if(self.robot is None):
             print("%sNo robot in simulator%s" % (color_red, color_reset))
             return
+
         # give the robot knowledge of the initial world
         self.robot.repeat_joystick = not self.params.block_joystick
         self.robot.update_world(current_state)
+
         # initialize the robot to establish joystick connection
         r_t = self.init_robot_listener_thread()
-        # continue to spawn the simulation with an established (independent) connection
 
         # keep track of wall-time in the simulator
         start_time = time.clock()
+
         # save initial state before the simulator is spawned
         self.t = 0.0
         if self.delta_t < self.params.dt:
@@ -153,6 +156,7 @@ class CentralSimulator(SimulatorHelper):
             current_state = self.save_state(self.t, self.delta_t, wall_clock)
             self.robot.update_world(current_state)
             self.t += self.delta_t  # update simulator time
+
             # NOTE can add a hard limit to the number of frames the world can use
             # update iteration count
             iteration += 1
@@ -171,7 +175,6 @@ class CentralSimulator(SimulatorHelper):
 
         # capture final wall clock (completion) time
         wall_clock = time.clock() - start_time
-
         print("\nSimulation completed in", wall_clock, "seconds")
 
         # convert the saved states to rendered png's to be rendered into a movie
@@ -204,7 +207,7 @@ class CentralSimulator(SimulatorHelper):
 
     def print_sim_progress(self, rendered_frames: int):
         """prints an inline simulation progress message based off agent planning termination
-            TODO: account for agent<->agent collisions 
+            TODO: account for agent<->agent collisions
         Args:
             rendered_frames (int): how many frames have been generated so far
         """
@@ -225,10 +228,10 @@ class CentralSimulator(SimulatorHelper):
 
         Args:
             sim_t (float): the current time in the simulator in seconds
-            wall_t (float): the current wall clock time 
+            wall_t (float): the current wall clock time
 
         Returns:
-            current_state (SimState): the most recent state of the world 
+            current_state (SimState): the most recent state of the world
         """
         # NOTE: when using a modular environment, make saved_env a deepcopy
         saved_env = self.environment
@@ -252,10 +255,10 @@ class CentralSimulator(SimulatorHelper):
         return current_state
 
     def generate_frames(self, filename: str = "obs"):
-        """Generates a png frame for each world state saved in self.states. Note, based off the 
-        render_3D options, the function will generate the frames in multiple separate processes to 
+        """Generates a png frame for each world state saved in self.states. Note, based off the
+        render_3D options, the function will generate the frames in multiple separate processes to
         optimize performance on multicore machines, else it can also be done sequentially.
-        NOTE: the 3D renderer can only be run sequentially at the moment. 
+        NOTE: the 3D renderer can only be run sequentially at the moment.
 
         Args:
             filename (str, optional): name of each png frame (unindexed). Defaults to "obs".
@@ -346,10 +349,10 @@ class CentralSimulator(SimulatorHelper):
         # get number of pixels per meter based off the ax plot space
         img_scale = ax.transData.transform(
             (0, 1)) - ax.transData.transform((0, 0))
-        # print(img_scale)
-        ppm = img_scale[1]  # number of pixels per "meter" unit in the plot
+        # number of pixels per "meter" unit in the plot
+        ppm = int(img_scale[1] * (1.0 / self.params.img_scale))
         ax.imshow(traversible, extent=extent, cmap='gray',
-                  vmin=-.5, vmax=1.5, origin='lower')
+                  vmin=-0.5, vmax=1.5, origin='lower')
         # Plot human traversible
         if human_traversible is not None:
             # NOTE: the human radius is only available given the openGL human modeling
@@ -365,7 +368,7 @@ class CentralSimulator(SimulatorHelper):
 
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, label="Robot", normal_color="bo",
-                    collided_color="ko", plot_quiver=plot_quiver)
+                    collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True)
 
         # plot all the simulated prerecorded gen_agents
         plot_agents(ax, ppm, prerecs, label="Prerec", normal_color="yo",
@@ -429,40 +432,35 @@ class CentralSimulator(SimulatorHelper):
         plot_count = 1
         if(with_zoom):
             plot_count += 1
-            zoomed_img_plt_indx = plot_count
+            zoomed_img_plt_indx = plot_count  # 2
         if rgb_image_1mk3 is not None:
             plot_count = plot_count + 1
-            rgb_img_plt_indx = plot_count
+            rgb_img_plt_indx = plot_count  # 3
         if depth_image_1mk1 is not None:
             plot_count = plot_count + 1
-            depth_img_plt_indx = plot_count
+            depth_img_plt_indx = plot_count  # 4
 
-        img_size = 10
+        img_size = 10 * p.img_scale
         fig = plt.figure(figsize=(plot_count * img_size, img_size))
-
-        # Plot the 5x5 meter occupancy grid centered around the camera
-        zoom = 8.5  # zoom out in by a constant amount
         ax = fig.add_subplot(1, plot_count, 1)
-        ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
-        ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
+        ax.set_xlim(0., traversible.shape[1] * map_scale)
+        ax.set_ylim(0., traversible.shape[0] * map_scale)
         self.plot_topview(ax, extent, traversible, human_traversible,
                           camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=True)
         ax.legend()
-        ax.set_xticks([])
-        ax.set_yticks([])
+        # ax.set_xticks([])
+        # ax.set_yticks([])
         time_string = "sim_t=%.3f" % sim_t + " wall_t=%.3f" % wall_t
         ax.set_title(time_string, fontsize=20)
 
         if(with_zoom):
-            # Render entire map-view from the top
-            # to keep square plot
-            outer_zoom = min(traversible.shape[0],
-                             traversible.shape[1]) * map_scale
+            # Plot the 5x5 meter occupancy grid centered around the camera
+            zoom = 8.5  # zoom out in by a constant amount
             ax = fig.add_subplot(1, plot_count, zoomed_img_plt_indx)
-            ax.set_xlim(0., outer_zoom)
-            ax.set_ylim(0., outer_zoom)
+            ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
+            ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
             self.plot_topview(ax, extent, traversible, human_traversible,
-                              camera_pos_13, agents, prerecs, robots, room_center)
+                              camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=True)
             ax.legend()
             ax.set_xticks([])
             ax.set_yticks([])
@@ -501,33 +499,6 @@ class CentralSimulator(SimulatorHelper):
             print('\033[32m', "Successfully rendered:",
                   full_file_name, '\033[0m')
 
-    def render_rgb_and_depth(self, r, camera_pos_13, dx_m: float, human_visible=True):
-        """render the rgb and depth images from the openGL renderer
-
-        Args:
-            r: the openGL renderer object
-            camera_pos_13: the 3D (x, y, theta) position of the camera
-            dx_m (float): the delta_x in meters between real world and grid units
-            human_visible (bool, optional): Whether or not the humans are drawn. Defaults to True.
-
-        Returns:
-            rgb_image_1mk3, depth_image_1mk1: the rgb and depth images respectively
-        """
-
-        # Convert from real world units to grid world units
-        camera_grid_world_pos_12 = camera_pos_13[:, :2] / dx_m
-
-        # Render RGB and Depth Images. The shape of the resulting
-        # image is (1 (batch), m (width), k (height), c (number channels))
-        rgb_image_1mk3 = r._get_rgb_image(
-            camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
-
-        depth_image_1mk1, _, _ = r._get_depth_image(
-            camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05,
-            map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
-
-        return rgb_image_1mk3, depth_image_1mk1
-
     def convert_state_to_frame(self, state: SimState, filename: str):
         """Converts a state into an image to be later converted to a gif movie
 
@@ -554,9 +525,9 @@ class CentralSimulator(SimulatorHelper):
                     "traversibles"][1] = self.r.get_human_traversible()
                 # compute the rgb and depth images
                 rgb_image_1mk3, depth_image_1mk1 = \
-                    self.render_rgb_and_depth(self.r, np.array([camera_pos_13]),
-                                              state.get_environment()["map_scale"], human_visible=True)
-
+                    render_rgb_and_depth(self.r, np.array([camera_pos_13]),
+                                         state.get_environment()["map_scale"],
+                                         human_visible=True)
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                              state.get_environment(), camera_pos_13,
