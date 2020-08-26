@@ -10,7 +10,7 @@ def test_joystick():
     J.establish_robot_receiver_connection()
     # init control pipeline after recieved map from robot
     J.init_control_pipeline()
-    J.update(random_commands=False)
+    J.update(random_commands=True)
 
 
 if __name__ == '__main__':

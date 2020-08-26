@@ -49,7 +49,6 @@ class AgentState():
     def get_pos3(self):
         return self.get_current_config().to_3D_numpy()
 
-
     def to_json(self, include_start_goal=False):
         name_json = SimState.to_json_type(deepcopy(self.name))
         # NOTE: the configs are just being serialized with their 3D positions
@@ -194,7 +193,7 @@ def get_agent_type(sim_state, agent_type: str):
     if callable(getattr(sim_state, 'get_' + agent_type, None)):
         getter_agent_type = getattr(sim_state, 'get_' + agent_type, None)
         return getter_agent_type()
-    elif hasattr(sim_state, agent_type):
+    elif agent_type in sim_state.keys():
         return sim_state[agent_type]
     else:
         return {}  # empty dict

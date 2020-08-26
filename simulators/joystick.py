@@ -6,6 +6,7 @@ import time
 import sys
 import json
 import os
+import pandas as pd
 from copy import deepcopy
 from random import randint
 import numpy as np
@@ -56,6 +57,8 @@ class Joystick():
         self.lin_vels = []
         self.ang_vels = []
         self.num_sent = 0
+        # data tracking with pandas
+        self.agent_data = None
 
     def set_host(self, h):
         self.host = h
@@ -123,7 +126,7 @@ class Joystick():
                     lin_vels.append(lin)
                     ang_vels.append(ang)
                 self.robot_input(lin_vels, ang_vels, self.request_world)
-                time.sleep(0.5)  # NOTE: Tune this to whatever you'd like
+                time.sleep(0.05)  # NOTE: Tune this to whatever you'd like
                 # now update the robot with the "ready" ping
             except KeyboardInterrupt:
                 print("%sJoystick disconnected by user%s" %
@@ -147,7 +150,7 @@ class Joystick():
                     # reset the containers
                     self.lin_vels = []
                     self.ang_vels = []
-                if(self.num_sent % 8 == 0):
+                if(self.num_sent % 4 == 0):  # TODO: make into params
                     self.request_world = True
                 self.num_sent += 1
             else:
@@ -295,6 +298,12 @@ class Joystick():
                         self.delta_t = current_world["delta_t"]
                         print("Updated start/goal for robot")
                     else:
+                        # update the robot's position from sensor data
+                        self.current_config = \
+                            generate_config_from_pos_3(robot["current_config"])
+                        # Write the Agent's trajectory data into a pandas file
+                        self.write_pandas(current_world)
+                        # TODO: make the frame generator a separate process to not interfere
                         # render when not receiving a new environment
                         self.generate_frame(current_world, self.frame_num)
                 else:
@@ -303,6 +312,19 @@ class Joystick():
                     break
             else:
                 break
+
+    def write_pandas(self, world_state):
+        from simulators.sim_state import get_agent_type
+        if(self.agent_data is None):
+            all_agents = {}
+            all_agents.update(get_agent_type(world_state, "gen_agents"))
+            all_agents.update(get_agent_type(world_state, "prerecs"))
+            all_agents.update(get_agent_type(world_state, "robots"))
+            self.agent_data = pd.DataFrame(all_agents)
+        else:
+            # TODO: append data for new simstates to track values over time
+            pass
+        self.agent_data.to_csv('tests/socnav/joystick_movie/agent_data.csv')
 
     def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
