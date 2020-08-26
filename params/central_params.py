@@ -388,3 +388,29 @@ def create_obstacle_map_params():
     # Number of grid steps around the start position to use for plotting
     p.plotting_grid_steps = obst_p.getint('plotting_grid_steps')
     return p
+
+
+def create_map_params():
+    p = DotMap()
+    # NOTE: this is very much subject to change with diff maps
+
+    # goal_pos_n2 = np.array([[9., 15.]])
+    p.goal_pos_n2 = np.array([[13.0, 8.0]])
+
+    # pos_nk2 = np.array([[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=np.float32)
+    p.pos_nk2 = np.array(
+        [[[8., 9.], [8., 12.5], [18., 12.5]]], dtype=np.float32)
+
+    # p.test_goal_ang_obj_ans = [19.634956, 29.616005, 74.31618]
+    p.test_goal_ang_obj_ans = [5.0869893, 18.3243617, 60.214370]
+
+    # p.test_goal_dist_ans = [49.088074, 179.12201, 2071.5808]
+    p.test_goal_dist_ans = [644.88555, 1126.650778, 1126.65109]
+
+    # p.test_obst_map_ans = [1.252921, 1.5730935, 1.7213388]
+    p.test_obst_map_ans = [100.0, 0.5900573134422302, 100.0]
+
+    # p.test_obst = [0., 0., 0.]
+    p.test_obs_obj_ans = [0., 0., 10.345789710051179]
+
+    return p

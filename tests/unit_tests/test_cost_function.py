@@ -10,6 +10,7 @@ from systems.dubins_v3 import DubinsV3
 from utils.fmm_map import FmmMap
 from dotmap import DotMap
 from utils.utils import *
+from params.central_params import create_map_params
 
 
 def create_renderer_params():
@@ -47,7 +48,7 @@ def create_renderer_params():
 
 
 def create_params():
-    p = DotMap()
+    p = create_map_params()
     # Obstacle avoidance parameters
     p.avoid_obstacle_objective = DotMap(obstacle_margin0=0.3,
                                         obstacle_margin1=.5,
@@ -91,7 +92,7 @@ def test_cost_function(plot=False):
     map_size_2 = obstacle_occupancy_grid.shape[::-1]
 
     # Define a goal position and compute the corresponding fmm map
-    goal_pos_n2 = np.array([[9., 15]])
+    goal_pos_n2 = p.goal_pos_n2
     fmm_map = FmmMap.create_fmm_map_based_on_goal_position(goal_positions_n2=goal_pos_n2,
                                                            map_size_2=map_size_2,
                                                            dx=0.05,
@@ -115,8 +116,7 @@ def test_cost_function(plot=False):
     objective3 = AngleDistance(params=p.goal_angle_objective, fmm_map=fmm_map)
 
     # Define a set of positions and evaluate objective
-    pos_nk2 = np.array(
-        [[[8., 12.5], [8., 16.], [18., 16.5]]], dtype=np.float32)
+    pos_nk2 = p.pos_nk2
     heading_nk2 = np.array([[[np.pi / 2.0], [0.1], [0.1]]], dtype=np.float32)
     trajectory = Trajectory(
         dt=0.1, n=1, k=3, position_nk2=pos_nk2, heading_nk1=heading_nk2)

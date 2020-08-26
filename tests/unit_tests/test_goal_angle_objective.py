@@ -5,6 +5,7 @@ from trajectory.trajectory import Trajectory
 from utils.fmm_map import FmmMap
 from dotmap import DotMap
 from utils.utils import *
+from params.central_params import create_map_params
 
 
 def create_renderer_params():
@@ -41,7 +42,7 @@ def create_renderer_params():
 
 
 def create_params():
-    p = DotMap()
+    p = create_map_params()
     # Angle Distance parameters
     p.goal_angle_objective = DotMap(power=1,
                                     angle_cost=25.0)
@@ -72,7 +73,8 @@ def test_goal_angle_distance():
     map_size_2 = obstacle_occupancy_grid.shape[::-1]
 
     # Define a goal position and compute the corresponding fmm map
-    goal_pos_n2 = np.array([[9., 15.]])
+    # goal_pos_n2 = np.array([[9., 15.]])
+    goal_pos_n2 = p.goal_pos_n2
     fmm_map = FmmMap.create_fmm_map_based_on_goal_position(goal_positions_n2=goal_pos_n2,
                                                            map_size_2=map_size_2,
                                                            dx=0.05,
@@ -84,8 +86,8 @@ def test_goal_angle_distance():
     objective = AngleDistance(params=p.goal_angle_objective, fmm_map=fmm_map)
 
     # Define a set of positions and evaluate objective
-    pos_nk2 = np.array(
-        [[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=np.float32)
+    # pos_nk2 = np.array([[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=np.float32)
+    pos_nk2 = p.pos_nk2
     trajectory = Trajectory(dt=0.1, n=1, k=3, position_nk2=pos_nk2)
 
     # Compute the objective
@@ -105,8 +107,8 @@ def test_goal_angle_distance():
     assert np.allclose(objective_values_13[
                        0], expected_objective, atol=1e-2)
     # hardcoded results to match the given inputs
-    assert np.allclose(objective_values_13[0], [
-                       19.634956, 29.616005, 74.31618], atol=1e-2)
+    assert np.allclose(
+        objective_values_13[0], p.test_goal_ang_obj_ans, atol=1e-2)
 
 
 def main_test():

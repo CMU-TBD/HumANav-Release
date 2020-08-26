@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from trajectory.trajectory import Trajectory
 from obstacles.sbpd_map import SBPDMap
 from utils.utils import *
+from params.central_params import create_map_params
 
 
 def create_renderer_params():
@@ -41,7 +42,7 @@ def create_renderer_params():
 
 
 def create_params():
-    p = DotMap()
+    p = create_map_params()
     p.obstacle_map_params = DotMap(obstacle_map=SBPDMap,
                                    map_origin_2=[0., 0.],
                                    sampling_thres=2,
@@ -73,7 +74,7 @@ def test_sbpd_map(visualize=False):
 
     obs_dists_nk = obstacle_map.dist_to_nearest_obs(trajectory.position_nk2())
 
-    assert(np.allclose(obs_dists_nk[0], [1.252921, 1.5730935, 1.7213388]))
+    assert(np.allclose(obs_dists_nk[0], p.test_obst_map_ans))
 
     if visualize:
         #occupancy_grid_nn = obstacle_map.create_occupancy_grid(trajectory.position_nk2())

@@ -5,10 +5,11 @@ from objectives.obstacle_avoidance import ObstacleAvoidance
 from trajectory.trajectory import Trajectory
 from dotmap import DotMap
 from utils.utils import *
+from params.central_params import create_map_params
 
 
 def create_params():
-    p = DotMap()
+    p = create_map_params()
     # Obstacle avoidance parameters
     p.avoid_obstacle_objective = DotMap(obstacle_margin0=0.3,
                                         obstacle_margin1=0.5,
@@ -84,8 +85,7 @@ def test_avoid_obstacle(visualize=False):
                                   obstacle_map=obstacle_map)
 
     # Define a set of positions and evaluate objective
-    pos_nk2 = np.array(
-        [[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=np.float32)
+    pos_nk2 = p.pos_nk2
     trajectory = Trajectory(dt=0.1, n=1, k=3, position_nk2=pos_nk2)
 
     # Compute the objective
@@ -114,8 +114,7 @@ def test_avoid_obstacle(visualize=False):
 
     assert np.allclose(objective_values_13[
                        0], expected_objective, atol=1e-4)
-    assert np.allclose(objective_values_13[0], [
-                       0., 0., 0.], atol=1e-4)
+    assert np.allclose(objective_values_13[0], p.test_obs_obj_ans, atol=1e-4)
     if(visualize):
         """
         create a 1 x 3 (or 1 x 4) image of the obstacle map itself (as a traversible plot), 

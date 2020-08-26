@@ -22,7 +22,7 @@ class ObjectiveFunction(object):
         """
         self.objectives.append(objective)
 
-    def evaluate_function_by_objective(self, trajectory, sim_state: SimState = None):
+    def evaluate_function_by_objective(self, trajectory, sim_state=None):
         """
         Evaluate each objective corresponding to a system trajectory or sim_state
         sim_states are only relevant for personal_space cost functions
@@ -31,7 +31,7 @@ class ObjectiveFunction(object):
             trajectory)] for objective in self.objectives]
         return objective_values_by_tag
 
-    def evaluate_function(self, trajectory, sim_state: SimState = None):
+    def evaluate_function(self, trajectory, sim_state=None):
         """
         Evaluate the entire objective function corresponding to a system trajectory or traj+sim_state.
         sim_states are only relevant for personal_space cost functions
