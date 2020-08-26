@@ -192,6 +192,8 @@ class RoboAgent(Agent):
         while(self.running):
             connection, client = self.joystick_receiver_socket.accept()
             data_b, response_len = conn_recv(connection, buffr_amnt=128)
+            # close connection to be reaccepted when the joystick sends data
+            connection.close()
             if(data_b is not b''):
                 data_str = data_b.decode("utf-8")  # bytes to str
                 data = json.loads(data_str)
@@ -223,9 +225,6 @@ class RoboAgent(Agent):
                 else:
                     self.power_off()
                     break
-            # close connection to be reaccepted when the joystick sends data
-            connection.close()
-            time.sleep(0.001)
 
     def establish_joystick_receiver_connection(self):
         """This is akin to a server connection (robot is server)"""

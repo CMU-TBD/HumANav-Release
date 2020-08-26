@@ -274,6 +274,7 @@ def create_simulator_params():
     p.delta_t_scale = sim_p.getfloat('delta_t_scale')
     # Load SocNav dependencies
     p.socnav_params = create_base_params()
+    p.img_scale = sim_p.getfloat('img_scale')
     return p
 
 

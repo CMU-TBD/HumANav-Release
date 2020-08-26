@@ -17,6 +17,7 @@ from simulators.central_simulator import CentralSimulator
 from planners.sampling_planner import SamplingPlanner
 from params.central_params import get_seed, create_base_params, create_robot_params
 from utils.utils import *
+from utils.image_utils import *
 
 # seed the random number generator
 random.seed(get_seed())
@@ -284,7 +285,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     human_list = []
 
     # Generate the ~center~ of area3 when scaled up 2x
-    room_center = np.array([14., 14., 0.])
+    # room_center = np.array([14., 14., 0.])
+    room_center = np.array([23., 5., 0.])
     # Create default environment which is a dictionary
     # containing ["map_scale", "traversibles"]
     # which is a constant and list of traversibles respectively
@@ -320,17 +322,17 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     Add the prerecorded humans to the simulator
     """
     generate_prerecorded_humans(
-        starting_prerec, num_prerecorded, p, simulator, center_offset=np.array([8., 7.]))
+        starting_prerec, num_prerecorded, p, simulator, center_offset=np.array([8., 0.]))
 
     """
     Generate and add a single human with a constant start/end config on every run 
     """
-    known_start = generate_config_from_pos_3(np.array([9., 18., 0.]))
-    known_end = generate_config_from_pos_3(np.array([13., 10., 0.]))
-    known_init_configs = HumanConfigs(known_start, known_end)
-    const_human = Human.generate_human_with_configs(
-        known_init_configs, generate_appearance=p.render_3D)
-    simulator.add_agent(const_human)
+    # known_start = generate_config_from_pos_3(np.array([9., 18., 0.]))
+    # known_end = generate_config_from_pos_3(np.array([13., 10., 0.]))
+    # known_init_configs = HumanConfigs(known_start, known_end)
+    # const_human = Human.generate_human_with_configs(
+    #     known_init_configs, generate_appearance=p.render_3D)
+    # simulator.add_agent(const_human)
 
     """
     Generate and add num_humans number of randomly generated humans to the simulator

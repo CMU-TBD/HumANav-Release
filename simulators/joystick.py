@@ -13,6 +13,7 @@ import matplotlib as mpl
 mpl.use('Agg')  # for rendering without a display
 import matplotlib.pyplot as plt
 from utils.utils import *
+from utils.image_utils import *
 from params.central_params import create_robot_params, get_path_to_socnav, get_seed, create_agent_params
 from simulators.agent import Agent
 from trajectory.trajectory import Trajectory
@@ -141,6 +142,8 @@ class Joystick():
                 if(len(self.lin_vels) >= freq):
                     self.robot_input(deepcopy(self.lin_vels),
                                      deepcopy(self.ang_vels), self.request_world)
+                    # planner time delay
+                    time.sleep(0.05)
                     # reset the containers
                     self.lin_vels = []
                     self.ang_vels = []
