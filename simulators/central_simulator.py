@@ -526,8 +526,8 @@ class CentralSimulator(SimulatorHelper):
                 # compute the rgb and depth images
                 rgb_image_1mk3, depth_image_1mk1 = \
                     render_rgb_and_depth(self.r, np.array([camera_pos_13]),
-                                         state.get_environment()["map_scale"], human_visible=True)
-
+                                         state.get_environment()["map_scale"],
+                                         human_visible=True)
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                              state.get_environment(), camera_pos_13,

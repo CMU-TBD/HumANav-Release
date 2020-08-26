@@ -24,10 +24,10 @@ def plot_agents(ax, ppm: float, agents_dict: dict, json_key: str = None, label='
     for i, a in enumerate(agents_dict.values()):
         if(json_key is not None):
             # when plotting from JSON serialized gen_agents
-            collided = a["collided"]
+            collided = False
             markersize = a["radius"] * ppm
             pos_3 = a[json_key]
-            traj_col = a["color"]
+            traj_col = 'r'  # a["color"]
         else:
             collided = a.get_collided()
             markersize = a.get_radius() * ppm

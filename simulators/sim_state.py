@@ -3,6 +3,7 @@ from copy import deepcopy
 import json
 from simulators.agent import Agent
 from humans.human import Human
+from utils.utils import *
 
 """ These are smaller "wrapper" classes that are visible by other
 gen_agents/humans and saved during state deepcopies
@@ -61,10 +62,7 @@ class AgentState():
             deepcopy(self.get_current_config().to_3D_numpy()))
         # SimState.to_json_type( self.get_trajectory().to_numpy_repr())
         # trajectory_json = "None"
-        collided_json = deepcopy(self.collided)
-        end_acting_json = deepcopy(self.end_acting)
         radius_json = deepcopy(self.radius)
-        color_json = deepcopy(self.color)
         json_dict = {}
         json_dict['name'] = name_json
         # NOTE: the start and goal (of the robot) are only sent when the environment is sent
@@ -73,10 +71,7 @@ class AgentState():
             json_dict['goal_config'] = goal_json
         json_dict['current_config'] = current_json
         # json_dict['trajectory'] = trajectory_json
-        json_dict['collided'] = collided_json
-        json_dict['end_acting'] = end_acting_json
         json_dict['radius'] = radius_json
-        json_dict['color'] = color_json
         # returns array (python list) to be json'd in_simstate
         return json_dict
 
