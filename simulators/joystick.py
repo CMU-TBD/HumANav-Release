@@ -36,7 +36,10 @@ class Joystick():
     def init(self):
         # sockets for communication
         self.robot_sender_socket = None
+        self.robot_notifier_socket = None
+        self.robot_receiver_socket = None
         self.robot_running = False
+        self.robot_ready = True
         self.host = socket.gethostname()
         # port for sending commands to the robot
         self.port_send = self.joystick_params.port
@@ -104,6 +107,7 @@ class Joystick():
         if(request_world):
             # only a single message being sent
             self.request_world = False
+        self.robot_ready = False  # just sent a new command to the robot
         self.send_to_robot(message)
 
     def random_robot_joystick(self, action_dt: int):
@@ -248,6 +252,12 @@ class Joystick():
         self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
         self.robot_sender_socket.close()
         print("sent", json_message)
+        # wait for the robot to indicate it has recieved the message
+        r = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        r.bind((self.host, self.port_recv + 2))
+        # wait for a connection
+        r.listen(1)
+        connection, client = r.accept()
 
     def listen_to_robot(self):
         self.robot_receiver_socket.listen(10)
@@ -282,7 +292,8 @@ class Joystick():
                         # only update the environment if it is non-empty
                         self.environment = current_world['environment']
                         robots = list(current_world["robots"].values())
-                        assert(len(robots) == 1)  # there should only be one
+                        # there should only be one
+                        assert(len(robots) == 1)
                         robot = robots[0]
                         self.current_config = generate_config_from_pos_3(
                             robot["current_config"])
@@ -336,6 +347,15 @@ class Joystick():
             # wait until environment is fully sent
             time.sleep(0.01)
         return connection, client
+
+    def _establish_robot_notifier_connection(self):
+        """This is akin to a server connection (robot is server)"""
+        self.robot_notifier_socket = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
+        self.robot_notifier_socket.bind((self.host, self.port_recv + 1))
+        # wait for a connection
+        self.robot_notifier_socket.listen(1)
+        connection, client = self.robot_notifier_socket.accept()
 
     """ END socket utils """
 

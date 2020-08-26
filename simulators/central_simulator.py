@@ -100,24 +100,26 @@ class CentralSimulator(SimulatorHelper):
         """
         num_agents: int = len(self.agents) + len(self.prerecs)
         print("Running simulation on", num_agents, "gen_agents")
-        # delta_t = XYZ # NOTE: can tune this number to be whatever one wants
-        # TODO what is this 3*params.dt ?
-        self.delta_t = 3 * self.params.dt
+
+        # scale the simulator time
+        self.delta_t = self.params.delta_t_scale * self.params.dt
 
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
         if(self.robot is None):
             print("%sNo robot in simulator%s" % (color_red, color_reset))
             return
+
         # give the robot knowledge of the initial world
         self.robot.repeat_joystick = not self.params.block_joystick
         self.robot.update_world(current_state)
+
         # initialize the robot to establish joystick connection
         r_t = self.init_robot_listener_thread()
-        # continue to spawn the simulation with an established (independent) connection
 
         # keep track of wall-time in the simulator
         start_time = time.clock()
+
         # save initial state before the simulator is spawned
         self.t = 0.0
         if self.delta_t < self.params.dt:
@@ -153,6 +155,7 @@ class CentralSimulator(SimulatorHelper):
             current_state = self.save_state(self.t, self.delta_t, wall_clock)
             self.robot.update_world(current_state)
             self.t += self.delta_t  # update simulator time
+
             # NOTE can add a hard limit to the number of frames the world can use
             # update iteration count
             iteration += 1
@@ -171,7 +174,6 @@ class CentralSimulator(SimulatorHelper):
 
         # capture final wall clock (completion) time
         wall_clock = time.clock() - start_time
-
         print("\nSimulation completed in", wall_clock, "seconds")
 
         # convert the saved states to rendered png's to be rendered into a movie

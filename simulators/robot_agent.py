@@ -32,6 +32,7 @@ class RoboAgent(Agent):
         self.params.robot_params = create_robot_params()
         # sockets for communication
         self.joystick_receiver_socket = None
+        self.joystick_notifier_socket = None
         self.joystick_sender_socket = None
         self.host = socket.gethostname()
         # port for recieving commands from the joystick
@@ -169,7 +170,6 @@ class RoboAgent(Agent):
             socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
         server_address = ((self.host, self.port_send))
-        # print(self.host, self.port)
         try:
             self.joystick_sender_socket.connect(server_address)
         except ConnectionRefusedError:  # used to turn off the joystick
@@ -177,6 +177,7 @@ class RoboAgent(Agent):
             print("%sConnection closed by joystick%s" %
                   (color_red, color_reset))
             self.power_off()
+            return
         # Send data
         if(not isinstance(message, str)):
             message = str(message)
@@ -187,7 +188,7 @@ class RoboAgent(Agent):
         """Constantly connects to the robot listener socket and receives information from the
         joystick about the input commands as well as the world requests
         """
-        self.joystick_receiver_socket.listen(10)
+        self.joystick_receiver_socket.listen(1)
         self.running = True  # initialize listener
         while(self.running):
             connection, client = self.joystick_receiver_socket.accept()
@@ -226,6 +227,8 @@ class RoboAgent(Agent):
                         break
                 else:
                     break
+                # let the joystick know the robot has successfully received the data
+
             # close connection to be reaccepted when the joystick sends data
             connection.close()
 
@@ -257,5 +260,19 @@ class RoboAgent(Agent):
         assert(self.joystick_sender_socket is not None)
         print("%sJoystick->Robot connection established%s" %
               (color_green, color_reset))
+
+    def _establish_joystick_notifier_connection(self):
+        """This is akin to a client connection (joystick is client)"""
+        self.joystick_notifier_socket = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
+        address = ((self.host, self.port_send + 1))
+        try:
+            self.joystick_notifier_socket.connect(address)
+        except:
+            print("%sUnable to connect to joystick%s" %
+                  (color_red, color_reset))
+            print("Make sure you have a joystick instance running")
+            exit(1)
+        assert(self.joystick_notifier_socket is not None)
 
     """ END socket utils """
