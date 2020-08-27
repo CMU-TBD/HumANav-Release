@@ -80,8 +80,10 @@ class AgentState():
     def from_json(json_str: dict):
         new_state = AgentState()
         new_state.name = json_str['name']
-        new_state.start_config = json_str['start_config']
-        new_state.goal_config = json_str['goal_config']
+        if('start_config' in json_str.keys()):
+            new_state.start_config = json_str['start_config']
+        if('goal_config' in json_str.keys()):
+            new_state.goal_config = json_str['goal_config']
         new_state.current_config = json_str['current_config']
         new_state.vehicle_trajectory = Trajectory(dt=0.05, n=1, k=0)  # default
         new_state.radius = json_str['radius']
@@ -116,6 +118,7 @@ class SimState():
         self.sim_t = sim_t
         self.wall_t = wall_t
         self.delta_t = delta_t
+        self.robot_on = True
 
     def get_environment(self):
         return SimState.environment
@@ -140,6 +143,9 @@ class SimState():
 
     def get_delta_t(self):
         return self.delta_t
+
+    def get_robot_on(self):
+        return self.robot_on
 
     def get_all_agents(self, include_robot=False):
         all_agents = {}
@@ -193,6 +199,7 @@ class SimState():
         new_state.sim_t: float = json_str['sim_t']
         new_state.wall_t: float = json_str['wall_t']
         new_state.delta_t: float = json_str['delta_t']
+        new_state.robot_on = json_str['robot_on']
         return new_state
 
     @ staticmethod
