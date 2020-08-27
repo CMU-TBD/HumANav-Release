@@ -65,7 +65,7 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
                 alphas[x][y] = not(human_traversible[x][y])
         ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
                   vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
-        alphas = np.all(np.invert(human_traversible))
+        alphas = np.all(np.logical_not(human_traversible))
 
     # Plot the camera
     ax.plot(camera_pos_13[0], camera_pos_13[1],
@@ -343,12 +343,12 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     Generate and add a single human with a constant start/end config on every run 
     """
-    known_start = generate_config_from_pos_3(np.array([9.0, 10.0, 0.0]))
-    known_end = generate_config_from_pos_3(np.array([30.0, 8.5, 0.0]))
-    known_init_configs = HumanConfigs(known_start, known_end)
-    const_human = Human.generate_human_with_configs(
-        known_init_configs, generate_appearance=p.render_3D)
-    simulator.add_agent(const_human)
+    # known_start = generate_config_from_pos_3(np.array([9.0, 10.0, 0.0]))
+    # known_end = generate_config_from_pos_3(np.array([30.0, 8.5, 0.0]))
+    # known_init_configs = HumanConfigs(known_start, known_end)
+    # const_human = Human.generate_human_with_configs(
+    #     known_init_configs, generate_appearance=p.render_3D)
+    # simulator.add_agent(const_human)
 
     generate_auto_humans(num_generated_humans, human_list,
                          simulator, environment, p, r)
@@ -376,6 +376,6 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(num_generated_humans=0,
-                num_prerecorded=-1,  # use -1 to include ALL prerecorded agents
+    test_socnav(num_generated_humans=2,
+                num_prerecorded=2,  # use -1 to include ALL prerecorded agents
                 starting_prerec=0)

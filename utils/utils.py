@@ -229,9 +229,12 @@ def within_traversible(new_pos: np.array, traversible: np.array, map_scale: floa
     pos_x = int(new_pos[0] / map_scale)
     pos_y = int(new_pos[1] / map_scale)
     # Note: the traversible is mapped unintuitively, goes [y, x]
-    if (not traversible[pos_y][pos_x]):  # Looking for invalid spots
+    try:
+        if (not traversible[pos_y][pos_x]):  # Looking for invalid spots
+            return False
+        return True
+    except:
         return False
-    return True
 
 
 def within_traversible_with_radius(new_pos: np.array, traversible: np.array, map_scale: float, radius: int = 1,

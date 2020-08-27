@@ -107,16 +107,6 @@ class CentralSimulator(SimulatorHelper):
 
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
-        # get final state
-        # for a in self.prerecs.values():
-        #     a.end()
-        # current_state = self.save_state(0, self.delta_t, 0)
-        # convert the saved states to rendered png's to be rendered into a movie
-        self.generate_frames()
-
-        # convert all the generated frames into a gif file
-        self.save_frames_to_gif(clear_old_files=False)
-        return
         if(self.robot is None):
             print("%sNo robot in simulator%s" % (color_red, color_reset))
             return
@@ -165,13 +155,19 @@ class CentralSimulator(SimulatorHelper):
             # Takes screenshot of the new simulation state
             current_state = self.save_state(self.t, self.delta_t, wall_clock)
             self.robot.update_world(current_state)
-            self.t += self.delta_t  # update simulator time
 
-            # NOTE can add a hard limit to the number of frames the world can use
+            # update simulator time
+            self.t += self.delta_t
+
             # update iteration count
             iteration += 1
+
             # print simulation progress
             self.print_sim_progress(iteration)
+
+            # NOTE can add a hard limit to the number of frames the world can use
+            if(iteration > 100):
+                break
 
         # free all the gen_agents
         for a in self.agents.values():
@@ -374,7 +370,7 @@ class CentralSimulator(SimulatorHelper):
                     alphas[x][y] = not(human_traversible[x][y])
             ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
                       vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
-            alphas = np.all(np.invert(human_traversible))
+            alphas = np.all(np.logical_not(human_traversible))
 
         # Plot the camera (robots)
         plot_agents(ax, ppm, robots, label="Robot", normal_color="bo",
@@ -531,8 +527,8 @@ class CentralSimulator(SimulatorHelper):
                 for r_a in state.get_prerecs().values():
                     self.r.update_human(r_a)
                 # Update human traversible
-                state.get_environment()[
-                    "traversibles"][1] = self.r.get_human_traversible()
+                state.get_environment()["traversibles"][1] = \
+                    self.r.get_human_traversible()
                 # compute the rgb and depth images
                 rgb_image_1mk3, depth_image_1mk1 = \
                     render_rgb_and_depth(self.r, np.array([camera_pos_13]),
