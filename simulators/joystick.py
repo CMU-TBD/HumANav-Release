@@ -271,7 +271,8 @@ class Joystick():
             if data_b is not None and response_len > 0:
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
-                current_world = SimState.from_json(json.loads(data_str))
+                sim_state_json = json.loads(data_str)
+                current_world = SimState.from_json(sim_state_json)
                 if not current_world.get_robot_on():
                     return
                 # append new world to storage of all past worlds
@@ -286,27 +287,23 @@ class Joystick():
                             self.create_message(True, [], [], -1, False)
                         self.send_to_robot(joystick_ready)
                         # only update the environment if it is non-empty
-                        self.environment = SimState.environment
+                        self.environment = current_world.get_environment()
                         robots = list(current_world.get_robots().values())
                         # only one robot is supported
                         assert(len(robots) == 1)
                         robot = robots[0]
-                        self.current_config = generate_config_from_pos_3(
-                            robot.get_current_config())
                         print("Updated environment from simulator")
                         # update the start and goal configs from the simulator's challenge
-                        self.start_config = generate_config_from_pos_3(
-                            robot.get_start_config())
-                        self.goal_config = generate_config_from_pos_3(
-                            robot.get_goal_config())
+                        self.start_config = robot.get_start_config()
+                        self.goal_config = robot.get_goal_config()
+                        self.current_config = robot.get_current_config()
                         self.delta_t = current_world.get_delta_t()
                         print("Updated start/goal for robot")
                     else:
                         # update the robot's position from sensor data
-                        self.current_config = generate_config_from_pos_3(
-                            robot.get_current_config())
+                        self.current_config = robot.get_current_config()
                         # Write the Agent's trajectory data into a pandas file
-                        self.write_pandas(current_world)
+                        self.write_pandas(sim_state_json)
                         # TODO: make the frame generator a separate process to not interfere
                         # render when not receiving a new environment
                         self.generate_frame(current_world, self.frame_num)
@@ -317,10 +314,9 @@ class Joystick():
             else:
                 break
 
-    def write_pandas(self, world_state: SimState):
+    def write_pandas(self, world_state_json: SimState):
         from simulators.sim_state import get_all_agents
-        self.agent_data = \
-            pd.DataFrame(get_all_agents(world_state, include_robot=False))
+        self.agent_data = pd.DataFrame(world_state_json)
         self.agent_data.to_csv('tests/socnav/joystick_movie/agent_data.csv')
 
     def establish_robot_sender_connection(self):
@@ -388,21 +384,21 @@ class Joystick():
         ppm = img_scale[1]  # number of pixels per "meter" unit in the plot
 
         # Plot the camera (robots)
-        plot_agents(ax, ppm, robots, json_key="current_config", label="Robot",
-                    normal_color="bo", collided_color="ko", plot_trajectory=False,
-                    plot_quiver=True, plot_start_goal=True,
-                    start_3=self.start_config.to_3D_numpy(),
-                    goal_3=self.goal_config.to_3D_numpy())
+        plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="bo",
+                        collided_color="ko", plot_trajectory=False,
+                        plot_quiver=True, plot_start_goal=True,
+                        start_3=self.start_config.to_3D_numpy(),
+                        goal_3=self.goal_config.to_3D_numpy())
 
         # plot all the simulated prerecorded gen_agents
-        plot_agents(ax, ppm, prerecs, json_key="current_config", label="Prerec",
-                    normal_color="yo", collided_color="ro", plot_trajectory=False,
-                    plot_quiver=plot_quiver)
+        plot_agent_dict(ax, ppm, prerecs, label="Prerec", normal_color="yo",
+                        collided_color="ro", plot_trajectory=False,
+                        plot_quiver=plot_quiver)
 
         # plot all the randomly generated simulated gen_agents
-        plot_agents(ax, ppm, gen_agents, json_key="current_config", label="Agent",
-                    normal_color="go", collided_color="ro", plot_trajectory=False,
-                    plot_quiver=plot_quiver)
+        plot_agent_dict(ax, ppm, gen_agents, label="Agent", normal_color="go",
+                        collided_color="ro", plot_trajectory=False,
+                        plot_quiver=plot_quiver)
 
         # save the axis to a file
         filename = "jview" + str(frame_count) + ".png"

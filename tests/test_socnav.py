@@ -373,6 +373,6 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(num_generated_humans=2,
+    test_socnav(num_generated_humans=5,
                 num_prerecorded=5,  # use -1 to include ALL prerecorded agents
-                starting_prerec=99)
+                starting_prerec=50)

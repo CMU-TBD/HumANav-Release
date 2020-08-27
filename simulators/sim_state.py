@@ -81,10 +81,13 @@ class AgentState():
         new_state = AgentState()
         new_state.name = json_str['name']
         if('start_config' in json_str.keys()):
-            new_state.start_config = json_str['start_config']
+            new_state.start_config = \
+                generate_config_from_pos_3(json_str['start_config'])
         if('goal_config' in json_str.keys()):
-            new_state.goal_config = json_str['goal_config']
-        new_state.current_config = json_str['current_config']
+            new_state.goal_config = \
+                generate_config_from_pos_3(json_str['goal_config'])
+        new_state.current_config = \
+            generate_config_from_pos_3(json_str['current_config'])
         new_state.vehicle_trajectory = Trajectory(dt=0.05, n=1, k=0)  # default
         new_state.radius = json_str['radius']
         new_state.collided = False
@@ -105,13 +108,14 @@ class HumanState(AgentState):
 
 class SimState():
 
-    environment = None
+    # environment = None
 
     def __init__(self, environment: dict = None, gen_agents: dict = None,
                  prerecs: dict = None, robots: dict = None, sim_t: float = None,
                  wall_t: float = None, delta_t: float = None):
-        if(environment):
-            SimState.environment = environment
+        # if(environment):
+        #     SimState.environment = environment
+        self.environment = environment
         self.gen_agents = gen_agents
         self.prerecs = prerecs
         self.robots = robots
@@ -121,7 +125,9 @@ class SimState():
         self.robot_on = True
 
     def get_environment(self):
-        return SimState.environment
+        # TODO: make environment static for the class so it can be used easily
+        return self.environment
+        # return SimState.environment
 
     def get_map(self):
         return self.environment["traversibles"][0]
@@ -161,7 +167,7 @@ class SimState():
         if robot_on:  # only send the world if the robot is ON
             if include_map:
                 environment_json = \
-                    SimState.to_json_dict(deepcopy(SimState.environment))
+                    SimState.to_json_dict(deepcopy(self.get_environment()))
             else:
                 environment_json = {}  # empty dictionary
             # serialize all other fields
@@ -172,14 +178,15 @@ class SimState():
             robots_json = \
                 SimState.to_json_dict(deepcopy(self.get_robots()),
                                       include_start_goal=include_map)
-            sim_t_json = deepcopy(self.sim_t)
+            sim_t_json = deepcopy(self.get_sim_t())
+            delta_t_json = deepcopy(self.get_delta_t())
             # append them to the json dictionary
             json_dict['environment'] = environment_json
             json_dict['gen_agents'] = agents_json
             json_dict['prerecs'] = prerecs_json
             json_dict['robots'] = robots_json
             json_dict['sim_t'] = sim_t_json
-            json_dict['delta_t'] = deepcopy(self.get_delta_t())
+            json_dict['delta_t'] = delta_t_json
         return json.dumps(json_dict, indent=1)
 
     @ staticmethod
@@ -192,14 +199,15 @@ class SimState():
     @ staticmethod
     def from_json(json_str: dict):
         new_state = SimState()
-        # no need to update environment since its static
+        # TODO: no need to update environment since its static
+        new_state.environment = json_str['environment']
         new_state.gen_agents = SimState.init_agent_dict(json_str['gen_agents'])
         new_state.prerecs = SimState.init_agent_dict(json_str['prerecs'])
         new_state.robots = SimState.init_agent_dict(json_str['robots'])
         new_state.sim_t: float = json_str['sim_t']
-        new_state.wall_t: float = json_str['wall_t']
         new_state.delta_t: float = json_str['delta_t']
-        new_state.robot_on = json_str['robot_on']
+        new_state.robot_on: bool = json_str['robot_on']
+        new_state.wall_t = None
         return new_state
 
     @ staticmethod
