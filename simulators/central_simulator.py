@@ -452,7 +452,7 @@ class CentralSimulator(SimulatorHelper):
         ax.set_xlim(0., traversible.shape[1] * map_scale)
         ax.set_ylim(0., traversible.shape[0] * map_scale)
         self.plot_topview(ax, extent, traversible, human_traversible,
-                          camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=True)
+                          camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=False)
         ax.legend()
         # ax.set_xticks([])
         # ax.set_yticks([])

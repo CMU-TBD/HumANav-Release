@@ -8,10 +8,10 @@ from params.central_params import create_map_params
 
 
 def create_renderer_params():
-    from params.central_params import get_traversible_dir, get_sbpd_data_dir
+    from params.central_params import get_traversible_dir, get_sbpd_data_dir, create_base_params
     p = DotMap()
     p.dataset_name = 'sbpd'
-    p.building_name = 'area3'
+    p.building_name = create_base_params().building_name
     p.flip = False
 
     p.camera_params = DotMap(modalities=['occupancy_grid'],  # occupancy_grid, rgb, or depth

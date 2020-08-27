@@ -298,7 +298,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
     # Generate the ~center~ of area3 when scaled up 2x
     # room_center = np.array([14., 14., 0.])
-    room_center = np.array([23., 5., 0.])
+    room_center = np.array([30., 9., 0.])
     # Create default environment which is a dictionary
     # containing ["map_scale", "traversibles"]
     # which is a constant and list of traversibles respectively
@@ -335,7 +335,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     Add the prerecorded humans to the simulator
     """
     generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
-                                simulator, center_offset=np.array([15.0, 4.0]))
+                                simulator, center_offset=np.array([22.0, 4.0]))
 
     """
     Generate and add a single human with a constant start/end config on every run 
@@ -374,5 +374,5 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 if __name__ == '__main__':
     # run basic room test with variable # of human
     test_socnav(num_generated_humans=2,
-                num_prerecorded=2,  # use -1 to include ALL prerecorded agents
-                starting_prerec=0)
+                num_prerecorded=5,  # use -1 to include ALL prerecorded agents
+                starting_prerec=99)

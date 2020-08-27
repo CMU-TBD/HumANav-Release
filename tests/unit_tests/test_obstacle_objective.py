@@ -28,11 +28,11 @@ def create_renderer_params():
     """
     Used to generate the parameters for the environment, building and traversibles
     """
-    from params.central_params import get_traversible_dir, get_sbpd_data_dir
+    from params.central_params import get_traversible_dir, get_sbpd_data_dir, create_base_params
     p = DotMap()
     p.dataset_name = 'sbpd'   # Stanford Building Parser Dataset (SBPD)
     # Name of the building (change to whatever is downloaded on your system)
-    p.building_name = 'area3'
+    p.building_name = create_base_params().building_name
     p.flip = False
 
     p.camera_params = DotMap(modalities=['occupancy_grid'],  # occupancy_grid, rgb, or depth

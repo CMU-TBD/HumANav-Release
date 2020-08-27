@@ -20,11 +20,11 @@ from humanav.humanav_renderer_multi import HumANavRendererMulti
 
 from simulators.sim_state import SimState, get_pos3
 
+
 def create_params():
     p = create_base_params()
 
     # Set any custom parameters
-    p.building_name = 'area3'
 
     p.camera_params.width = 1024
     p.camera_params.height = 1024
@@ -47,10 +47,10 @@ def create_params():
 
 
 def create_renderer_params():
-    from params.renderer_params import get_traversible_dir, get_sbpd_data_dir
+    from params.central_params import get_traversible_dir, get_sbpd_data_dir, create_base_params
     p = DotMap()
     p.dataset_name = 'sbpd'
-    p.building_name = 'area3'
+    p.building_name = create_base_params().building_name
     p.flip = False
 
     p.camera_params = DotMap(modalities=['occupancy_grid'],  # occupancy_grid, rgb, or depth
@@ -159,7 +159,8 @@ def test_personal_cost_function(sim_state: SimState, plot=False):
         params=p.personal_space_objective)
 
     # Define a set of positions and evaluate objective
-    pos_nk2 = np.array([[[8., 12.5], [8., 16.], [18., 16.5]]], dtype=np.float32)
+    pos_nk2 = np.array(
+        [[[8., 12.5], [8., 16.], [18., 16.5]]], dtype=np.float32)
     heading_nk2 = np.array([[[np.pi / 2.0], [0.1], [0.1]]], dtype=np.float32)
     trajectory = Trajectory(
         dt=0.1, n=1, k=3, position_nk2=pos_nk2, heading_nk1=heading_nk2)
@@ -222,7 +223,7 @@ def main_test():
     dx_cm, traversible = r.get_config()
 
     environment = {}
-    environment["map_scale"] = 5/100  # dx_m
+    environment["map_scale"] = 5 / 100  # dx_m
     environment["room_center"] = np.array([14, 14., 0.])  # room_center
     # obstacle traversible / human traversible TODO ?
     environment["traversibles"] = np.array([traversible])
