@@ -56,7 +56,9 @@ class Loader():
 
     def load_building_meshes(self, building, materials_scale=1.0):
         dir_name = os.path.join(building['data_dir'], 'mesh', building['name'])
-        mesh_file_name = glob.glob1(dir_name, '*.obj')[0]
+        obj_files = glob.glob1(dir_name, '*.obj')
+        assert(len(obj_files) > 0)
+        mesh_file_name = obj_files[0]
         mesh_file_name_full = os.path.join(dir_name, mesh_file_name)
         #logging.error('Loading building from obj file: %s', mesh_file_name_full)
         print("%sLoading building mesh from obj:" % (color_blue),

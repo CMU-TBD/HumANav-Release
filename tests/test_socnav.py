@@ -25,9 +25,6 @@ random.seed(get_seed())
 def create_params():
     p = create_base_params()
 
-    # Set any custom parameters
-    p.building_name = 'area3'
-
     # The camera is assumed to be mounted on a robot at fixed height
     # and fixed pitch. See params/central_params.py for more information
     p.camera_params.width = 1024
