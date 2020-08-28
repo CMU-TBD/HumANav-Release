@@ -44,11 +44,11 @@ class HumanConfigs():
         return HumanConfigs.generate_human_config(start_config, goal_config)
 
     @staticmethod
-    def generate_random_human_config(environment, radius=5.):
+    def generate_random_human_config(environment):
         """
         Generate a random human config (both start and goal configs) from
         the given environment
         """
-        start_config = generate_random_config(environment, radius=radius)
-        goal_config = generate_random_config(environment, radius=radius)
+        start_config = generate_random_config(environment)
+        goal_config = generate_random_config(environment)
         return HumanConfigs.generate_human_config(start_config, goal_config)
