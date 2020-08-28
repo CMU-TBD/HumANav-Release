@@ -310,7 +310,7 @@ class Joystick():
                         # update the robot's position from sensor data
                         self.current_config = robot.get_current_config()
                         # Write the Agent's trajectory data into a pandas file
-                        self.update_logs(self.current_config)
+                        self.update_logs(current_world)
                         self.write_pandas()
                         # TODO: make the frame generator a separate process to not interfere
                         # render when not receiving a new environment
@@ -334,11 +334,12 @@ class Joystick():
                 # initialize dict for a specific agent if dosent already exist
                 self.agent_log[a] = {}
             self.agent_log[a][world_state.get_sim_t()] = \
-                a.get_current_config().to_3D_numpy()
+                agents_of_type[a].get_current_config().to_3D_numpy()
 
     def write_pandas(self):
         pd_df = pd.DataFrame(self.agent_log)
         pd_df.to_csv('tests/socnav/joystick_movie/agent_data.csv')
+        pd_df.swapaxes("index", "columns")  # to have sim_t index horizontally
         print("%sUpdated pandas dataframe%s" % (color_green, color_reset))
 
     def establish_robot_sender_connection(self):
