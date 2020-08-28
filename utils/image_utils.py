@@ -110,7 +110,7 @@ def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files
     """Takes the image directory and naturally sorts the images into a singular movie.gif"""
     images = []
     if(not os.path.exists(IMAGES_DIR)):
-        print('\033[31m', "ERROR: Failed to image directory at",
+        print('\033[31m', "ERROR: Failed to find image directory at",
               IMAGES_DIR, '\033[0m')
         os._exit(1)  # Failure condition
     files = natural_sort(glob.glob(os.path.join(IMAGES_DIR, '*.png')))

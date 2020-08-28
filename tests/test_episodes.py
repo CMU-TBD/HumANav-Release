@@ -208,7 +208,8 @@ def test_episodes():
         simulator = CentralSimulator(
             environment,
             renderer=r,
-            render_3D=p.render_3D
+            render_3D=p.render_3D,
+            episode_name=test
         )
 
         """

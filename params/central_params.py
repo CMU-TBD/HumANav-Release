@@ -143,6 +143,7 @@ def create_robot_params():
     p.track_sim_states = rob_p.getboolean('track_sim_states')
     p.track_vel_accel = rob_p.getboolean('track_vel_accel')
     p.write_pandas_log = rob_p.getboolean('write_pandas_log')
+    p.cmd_delay = rob_p.getfloat('cmd_delay')
     return p
 
 

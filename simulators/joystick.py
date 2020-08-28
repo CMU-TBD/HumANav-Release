@@ -148,7 +148,7 @@ class Joystick():
                     self.robot_input(deepcopy(self.lin_vels),
                                      deepcopy(self.ang_vels), self.request_world)
                     # planner time delay
-                    time.sleep(0.05)
+                    time.sleep(self.joystick_params.cmd_delay)
                     # reset the containers
                     self.lin_vels = []
                     self.ang_vels = []
@@ -193,14 +193,15 @@ class Joystick():
                     self.vehicle_trajectory, t=-1)
 
     def force_close_socket(self):
-        # connect to the socket, closing it, and continuing the thread to completion
-        try:
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
-                (self.host, self.port_recv))
-        except:
-            print("%sForce closing socket%s" %
-                  (color_red, color_reset))
-        self.robot_receiver_socket.close()
+        if(self.robot_running):
+            # connect to the socket, closing it, and continuing the thread to completion
+            try:
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+                    (self.host, self.port_recv))
+            except:
+                print("%sForce closing socket%s" %
+                      (color_red, color_reset))
+            self.robot_receiver_socket.close()
 
     def update(self, random_commands: bool = False):
         """ Independent process for a user (at a designated host:port) to receive
@@ -234,8 +235,9 @@ class Joystick():
     def power_off(self):
         if(self.robot_running):
             print("%sConnection closed by robot%s" % (color_red, color_reset))
-            self.robot_running = False
             self.force_close_socket()
+            self.robot_running = False
+            exit(0)
 
     """BEGIN socket utils"""
 

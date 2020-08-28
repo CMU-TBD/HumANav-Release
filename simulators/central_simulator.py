@@ -18,17 +18,20 @@ class CentralSimulator(SimulatorHelper):
 
     obstacle_map = None
 
-    def __init__(self, environment, renderer=None, render_3D=None):
+    def __init__(self, environment: dict, renderer=None,
+                 render_3D: bool = None, episode_name: str = "sim"):
         """ Initializer for the central simulator
 
         Args:
             params (Map): parameter configuration file from test_socnav.py
             environment (dict): dictionary housing the obj map (bitmap) and more
             renderer (optional): OpenGL renderer for 3D models. Defaults to None
+            episode (str, optional): Name of the episode test that the simulator runs
         """
         self.r = renderer
         self.environment = environment
         self.params = create_sbpd_simulator_params(render_3D=render_3D)
+        self.episode_name = episode_name
         CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
@@ -184,10 +187,11 @@ class CentralSimulator(SimulatorHelper):
         print("\nSimulation completed in", wall_clock, "seconds")
 
         # convert the saved states to rendered png's to be rendered into a movie
-        self.generate_frames()
+        self.generate_frames(filename=self.episode_name + "_obs")
 
         # convert all the generated frames into a gif file
-        self.save_frames_to_gif(clear_old_files=True)
+        self.save_frames_to_gif(clear_old_files=True,
+                                dir_title=self.episode_name)
 
     def _init_obstacle_map(self, renderer=None, ):
         """ Initializes the sbpd map."""
@@ -291,6 +295,7 @@ class CentralSimulator(SimulatorHelper):
                     print("Started processes:", frame + 1, "out of", num_frames,
                           "%.3f" % (frame + 1 / num_frames), "\r", end="")
                     skip = int(1.0 / self.params.fps_scale_down) - 1
+                    frame += 1
                 else:
                     skip -= 1.0
             print("\n")
@@ -317,7 +322,7 @@ class CentralSimulator(SimulatorHelper):
         # newline to not interfere with previous prints
         print("\n")
 
-    def save_frames_to_gif(self, clear_old_files=True, with_multiprocessing=True):
+    def save_frames_to_gif(self, clear_old_files=True, with_multiprocessing=True, dir_title="sim"):
         """Convert a directory full of png's to a gif movie
         NOTE: One can also save to mp4 using imageio-ffmpeg or this bash script:
               "ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4"
@@ -328,9 +333,9 @@ class CentralSimulator(SimulatorHelper):
         num_robots = len(self.robots)
         rendering_processes = []
         # fps = 1 / duration # where the duration is the simulation capture rate
-        duration = self.delta_t
+        duration = self.delta_t * (1.0 / self.params.fps_scale_down)
         for i in range(num_robots):
-            dirname = "tests/socnav/sim_movie" + str(i)
+            dirname = "tests/socnav/" + dir_title + "_movie"
             IMAGES_DIR = os.path.join(
                 self.params.socnav_params.socnav_dir, dirname)
             if(with_multiprocessing):
@@ -338,7 +343,7 @@ class CentralSimulator(SimulatorHelper):
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
                     target=save_to_gif,
-                    args=(IMAGES_DIR, duration, "movie", clear_old_files))
+                    args=(IMAGES_DIR, duration, dir_title + "movie", clear_old_files))
                 )
                 rendering_processes[i].start()
             else:
@@ -503,8 +508,8 @@ class CentralSimulator(SimulatorHelper):
             ax.set_yticks([])
             ax.set_title('Depth')
 
-        full_file_name = os.path.join(
-            self.params.socnav_params.socnav_dir, img_dir, filename)
+        full_file_name = \
+            os.path.join(p.socnav_params.socnav_dir, img_dir, filename)
         if(not os.path.exists(full_file_name)):
             if(self.params.verbose_printing):
                 print('\033[31m', "Failed to find:", full_file_name,
@@ -526,34 +531,34 @@ class CentralSimulator(SimulatorHelper):
             state (SimState): the state of the world to convert to an image
             filename (str): the name of the resulting image (unindexed)
         """
-        for i, r in enumerate(state.get_robots().values()):
-            camera_pos_13 = r.get_current_config().to_3D_numpy()
-            rgb_image_1mk3 = None
-            depth_image_1mk1 = None
-            # NOTE: 3d renderer can only be used with sequential plotting, much slower
-            if self.params.render_3D:
-                # TODO: Fix multiprocessing for properly deepcopied renderers
-                # only when rendering with opengl
-                assert(len(state.get_environment()["traversibles"]) == 2)
-                for a in state.get_gen_agents().values():
-                    self.r.update_human(a)
-                # update prerecorded humans
-                for r_a in state.get_prerecs().values():
-                    self.r.update_human(r_a)
-                # Update human traversible
-                state.get_environment()["traversibles"][1] = \
-                    self.r.get_human_traversible()
-                # compute the rgb and depth images
-                rgb_image_1mk3, depth_image_1mk1 = \
-                    render_rgb_and_depth(self.r, np.array([camera_pos_13]),
-                                         state.get_environment()["map_scale"],
-                                         human_visible=True)
-            # plot the rbg, depth, and topview images if applicable
-            self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
-                             state.get_environment(), camera_pos_13,
-                             state.get_gen_agents(), state.get_prerecs(), state.get_robots(),
-                             state.get_sim_t(), state.get_wall_t(), "rob" + str(i) + filename,
-                             'tests/socnav/sim_movie' + str(i))
+
+        camera_pos_13 = self.robot.get_current_config().to_3D_numpy()
+        rgb_image_1mk3 = None
+        depth_image_1mk1 = None
+        # NOTE: 3d renderer can only be used with sequential plotting, much slower
+        if self.params.render_3D:
+            # TODO: Fix multiprocessing for properly deepcopied renderers
+            # only when rendering with opengl
+            assert(len(state.get_environment()["traversibles"]) == 2)
+            for a in state.get_gen_agents().values():
+                self.r.update_human(a)
+            # update prerecorded humans
+            for r_a in state.get_prerecs().values():
+                self.r.update_human(r_a)
+            # Update human traversible
+            state.get_environment()["traversibles"][1] = \
+                self.r.get_human_traversible()
+            # compute the rgb and depth images
+            rgb_image_1mk3, depth_image_1mk1 = \
+                render_rgb_and_depth(self.r, np.array([camera_pos_13]),
+                                     state.get_environment()["map_scale"],
+                                     human_visible=True)
+        # plot the rbg, depth, and topview images if applicable
+        self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
+                         state.get_environment(), camera_pos_13,
+                         state.get_gen_agents(), state.get_prerecs(), state.get_robots(),
+                         state.get_sim_t(), state.get_wall_t(), self.episode_name + filename,
+                         'tests/socnav/' + self.episode_name + '_movie')
         # Delete state to save memory after frames are generated
         del(state)
 
