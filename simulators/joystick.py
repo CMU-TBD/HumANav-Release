@@ -325,6 +325,8 @@ class Joystick():
     def update_logs(self, world_state: SimState):
         # TODO: update logs of the other agents too
         self.update_log_of_type('robots', world_state)
+        self.update_log_of_type('gen_agents', world_state)
+        self.update_log_of_type('prerecs', world_state)
 
     def update_log_of_type(self, agent_type: str, world_state: SimState):
         from simulators.sim_state import get_agents_from_type
@@ -339,7 +341,6 @@ class Joystick():
     def write_pandas(self):
         pd_df = pd.DataFrame(self.agent_log)
         pd_df.to_csv('tests/socnav/joystick_movie/agent_data.csv')
-        pd_df.swapaxes("index", "columns")  # to have sim_t index horizontally
         print("%sUpdated pandas dataframe%s" % (color_green, color_reset))
 
     def establish_robot_sender_connection(self):
