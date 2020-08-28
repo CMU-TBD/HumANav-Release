@@ -29,7 +29,7 @@ class Joystick():
     def __init__(self):
         self.t = 0
         self.latest_state = None
-        self.sim_states = []
+        self.sim_states = {}
         self.velocities = {}     # for testing simstate utils
         self.accelerations = {}  # for testing simstate utils
         self.environment = None
@@ -60,6 +60,7 @@ class Joystick():
         self.num_sent = 0
         # data tracking with pandas
         self.pd_df = None
+        self.agent_log = {}
 
     def set_host(self, h):
         self.host = h
@@ -274,7 +275,6 @@ class Joystick():
                 if not current_world.get_robot_on():
                     return
                 # append new world to storage of all past worlds
-                from simulators.sim_state import compute_all_velocities, compute_all_accelerations
                 if current_world.get_robot_on():
                     if not self.environment:  # not empty
                         # notify the robot that the joystick received the environment
@@ -295,16 +295,23 @@ class Joystick():
                         self.delta_t = current_world.get_delta_t()
                         print("Updated start/goal for robot")
                     else:
-                        self.velocities[current_world.get_sim_t()] = \
-                            compute_all_velocities(self.sim_states)
-                        self.accelerations[current_world.get_sim_t()] = \
-                            compute_all_accelerations(self.sim_states)
                         # only update the SimStates for non-environment configs
-                        self.sim_states.append(current_world)
+                        # TODO: add param for this
+                        if(True or self.joystick_params.track_sim_states):
+                            self.sim_states[current_world.get_sim_t()] = \
+                                current_world
+                        from simulators.sim_state import compute_all_velocities, compute_all_accelerations
+                        self.velocities[current_world.get_sim_t()] = \
+                            compute_all_velocities(
+                                list(self.sim_states.values()))
+                        self.accelerations[current_world.get_sim_t()] = \
+                            compute_all_accelerations(
+                                list(self.sim_states.values()))
                         # update the robot's position from sensor data
                         self.current_config = robot.get_current_config()
                         # Write the Agent's trajectory data into a pandas file
-                        self.write_pandas(sim_state_json)
+                        self.update_logs(self.current_config)
+                        self.write_pandas()
                         # TODO: make the frame generator a separate process to not interfere
                         # render when not receiving a new environment
                         self.generate_frame(current_world, self.frame_num)
@@ -315,12 +322,24 @@ class Joystick():
             else:
                 break
 
-    def write_pandas(self, world_state_json: SimState):
-        if(self.pd_df is None):
-            self.pd_df = pd.DataFrame(world_state_json.get_robots())
-        else:
-            self.pd_df.append(world_state_json.get_robots())
-        self.pd_df.to_csv('tests/socnav/joystick_movie/agent_data.csv')
+    def update_logs(self, world_state: SimState):
+        # TODO: update logs of the other agents too
+        self.update_log_of_type('robots', world_state)
+
+    def update_log_of_type(self, agent_type: str, world_state: SimState):
+        from simulators.sim_state import get_agents_from_type
+        agents_of_type = get_agents_from_type(world_state, agent_type)
+        for a in agents_of_type.keys():
+            if(a not in self.agent_log.keys()):
+                # initialize dict for a specific agent if dosent already exist
+                self.agent_log[a] = {}
+            self.agent_log[a][world_state.get_sim_t()] = \
+                a.get_current_config().to_3D_numpy()
+
+    def write_pandas(self):
+        pd_df = pd.DataFrame(self.agent_log)
+        pd_df.to_csv('tests/socnav/joystick_movie/agent_data.csv')
+        print("%sUpdated pandas dataframe%s" % (color_green, color_reset))
 
     def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""

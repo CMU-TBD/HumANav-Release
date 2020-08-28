@@ -155,10 +155,10 @@ class SimState():
 
     def get_all_agents(self, include_robot=False):
         all_agents = {}
-        all_agents.update(get_agent_type(self, "gen_agents"))
-        all_agents.update(get_agent_type(self, "prerecs"))
+        all_agents.update(get_agents_from_type(self, "gen_agents"))
+        all_agents.update(get_agents_from_type(self, "prerecs"))
         if include_robot:
-            all_agents.update(get_agent_type(self, "robots"))
+            all_agents.update(get_agents_from_type(self, "robots"))
         return all_agents
 
     def to_json(self, robot_on=True, include_map=False):
@@ -241,14 +241,14 @@ class SimState():
 
 def get_all_agents(sim_state: dict, include_robot=False):
     all_agents = {}
-    all_agents.update(get_agent_type(sim_state, "gen_agents"))
-    all_agents.update(get_agent_type(sim_state, "prerecs"))
+    all_agents.update(get_agents_from_type(sim_state, "gen_agents"))
+    all_agents.update(get_agents_from_type(sim_state, "prerecs"))
     if include_robot:
-        all_agents.update(get_agent_type(sim_state, "robots"))
+        all_agents.update(get_agents_from_type(sim_state, "robots"))
     return all_agents
 
 
-def get_agent_type(sim_state, agent_type: str):
+def get_agents_from_type(sim_state, agent_type: str):
     if callable(getattr(sim_state, 'get_' + agent_type, None)):
         getter_agent_type = getattr(sim_state, 'get_' + agent_type, None)
         return getter_agent_type()
@@ -267,7 +267,7 @@ def compute_next_vel(sim_state_prev, sim_state_now, agent_name: str):
 
 def compute_agent_state_velocity(sim_states: list, agent_name: str):
     if(len(sim_states) > 1):  # need at least two to compute differences in positions
-        if(agent_name in get_all_agents(sim_states[0]).keys()):
+        if(agent_name in get_all_agents(sim_states[-1]).keys()):
             agent_velocities = []
             for i in range(len(sim_states)):
                 if(i > 0):
@@ -290,7 +290,7 @@ def compute_agent_state_acceleration(sim_states: list, agent_name: str, velociti
         # optionally compute velocities as well
         if(velocities is None):
             velocities = compute_agent_state_velocity(sim_states, agent_name)
-        if(agent_name in get_all_agents(sim_states[0]).keys()):
+        if(agent_name in get_all_agents(sim_states[-1]).keys()):
             agent_accels = []
             for i, this_vel in enumerate(velocities):
                 if(i > 0):
@@ -316,7 +316,7 @@ def compute_agent_state_acceleration(sim_states: list, agent_name: str, velociti
 
 def compute_all_velocities(sim_states: list):
     all_velocities = {}
-    for agent_name in get_all_agents(sim_states[0]).keys():
+    for agent_name in get_all_agents(sim_states[-1]).keys():
         assert(isinstance(agent_name, str))  # keyed by name
         all_velocities[agent_name] = \
             compute_agent_state_velocity(sim_states, agent_name)
@@ -326,7 +326,7 @@ def compute_all_velocities(sim_states: list):
 def compute_all_accelerations(sim_states: list):
     all_accels = {}
     # TODO: add option of providing precomputed velocities list
-    for agent_name in get_all_agents(sim_states[0]).keys():
+    for agent_name in get_all_agents(sim_states[-1]).keys():
         assert(isinstance(agent_name, str))  # keyed by name
         all_accels[agent_name] = compute_agent_state_acceleration(
             sim_states, agent_name)
