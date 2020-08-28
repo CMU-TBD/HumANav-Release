@@ -8,12 +8,10 @@ import pandas as pd
 # Humanav
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
-from humans.human_configs import HumanConfigs
 from simulators.robot_agent import RoboAgent
 from humanav.humanav_renderer_multi import HumANavRendererMulti
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
-from planners.sampling_planner import SamplingPlanner
 from params.central_params import get_seed, create_base_params, create_robot_params
 from utils.utils import *
 from utils.image_utils import *
@@ -334,16 +332,6 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
                                 simulator, center_offset=np.array([14.0, 2.0]))
-
-    """
-    Generate and add a single human with a constant start/end config on every run 
-    """
-    # known_start = generate_config_from_pos_3(np.array([9.0, 10.0, 0.0]))
-    # known_end = generate_config_from_pos_3(np.array([30.0, 8.5, 0.0]))
-    # known_init_configs = HumanConfigs(known_start, known_end)
-    # const_human = Human.generate_human_with_configs(
-    #     known_init_configs, generate_appearance=p.render_3D)
-    # simulator.add_agent(const_human)
 
     generate_auto_humans(num_generated_humans, human_list,
                          simulator, environment, p, r)

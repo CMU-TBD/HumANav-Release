@@ -148,7 +148,7 @@ class Joystick():
                     self.robot_input(deepcopy(self.lin_vels),
                                      deepcopy(self.ang_vels), self.request_world)
                     # planner time delay
-                    time.sleep(0.05)
+                    time.sleep(self.joystick_params.cmd_delay)
                     # reset the containers
                     self.lin_vels = []
                     self.ang_vels = []
@@ -193,14 +193,15 @@ class Joystick():
                     self.vehicle_trajectory, t=-1)
 
     def force_close_socket(self):
-        # connect to the socket, closing it, and continuing the thread to completion
-        try:
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
-                (self.host, self.port_recv))
-        except:
-            print("%sForce closing socket%s" %
-                  (color_red, color_reset))
-        self.robot_receiver_socket.close()
+        if(self.robot_running):
+            # connect to the socket, closing it, and continuing the thread to completion
+            try:
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+                    (self.host, self.port_recv))
+            except:
+                print("%sForce closing socket%s" %
+                      (color_red, color_reset))
+            self.robot_receiver_socket.close()
 
     def update(self, random_commands: bool = False):
         """ Independent process for a user (at a designated host:port) to receive
@@ -234,8 +235,9 @@ class Joystick():
     def power_off(self):
         if(self.robot_running):
             print("%sConnection closed by robot%s" % (color_red, color_reset))
-            self.robot_running = False
             self.force_close_socket()
+            self.robot_running = False
+            exit(0)
 
     """BEGIN socket utils"""
 
@@ -280,6 +282,10 @@ class Joystick():
                         # notify the robot that the joystick received the environment
                         joystick_ready = \
                             self.create_message(True, [], [], -1, False)
+                        self.episode_name = current_world.get_episode_name()
+                        print("%sRunning test for %s%s" %
+                              (color_orange, self.episode_name, color_reset))
+                        self.dirname = 'tests/socnav/' + self.episode_name + '_movie/joystick_data'
                         self.send_to_robot(joystick_ready)
                         # only update the environment if it is non-empty
                         self.environment = current_world.get_environment()
@@ -340,7 +346,11 @@ class Joystick():
 
     def write_pandas(self):
         pd_df = pd.DataFrame(self.agent_log)
-        pd_df.to_csv('tests/socnav/joystick_movie/agent_data.csv')
+        abs_path = \
+            os.path.join(get_path_to_socnav(), self.dirname, 'agent_data.csv')
+        if(not os.path.exists(abs_path)):
+            touch(abs_path)  # Just as the bash command
+        pd_df.to_csv(abs_path)
         print("%sUpdated pandas dataframe%s" % (color_green, color_reset))
 
     def establish_robot_sender_connection(self):
@@ -426,9 +436,8 @@ class Joystick():
 
         # save the axis to a file
         filename = "jview" + str(frame_count) + ".png"
-        self.dirname = 'tests/socnav/joystick_movie'
-        full_file_name = os.path.join(
-            get_path_to_socnav(), self.dirname, filename)
+        full_file_name = \
+            os.path.join(get_path_to_socnav(), self.dirname, filename)
         if(not os.path.exists(full_file_name)):
             touch(full_file_name)  # Just as the bash command
         fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
