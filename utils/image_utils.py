@@ -134,3 +134,4 @@ def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files
     if clear_old_files:
         for f in files:
             os.remove(f)
+        print("%sCleaned directory" % (color_green), '\033[0m')

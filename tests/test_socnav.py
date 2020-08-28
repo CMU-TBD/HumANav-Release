@@ -248,7 +248,7 @@ def generate_auto_humans(num_generated_humans, human_list, simulator, environmen
         new_human_i = Human.generate_random_human_from_environment(
             environment,
             generate_appearance=p.render_3D,
-            radius=15
+            radius=-1  # no bound on human generation
         )
         # Or specify a human's initial configs with a HumanConfig instance
         # Human.generate_human_with_configs(Human, fixed_start_goal)
@@ -327,7 +327,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     robot_agent = RoboAgent.generate_random_robot_from_environment(
         environment,
-        radius=5
+        radius=-1
     )
     simulator.add_agent(robot_agent)
     num_robots = 1

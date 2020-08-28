@@ -378,11 +378,11 @@ class CentralSimulator(SimulatorHelper):
 
         # plot all the simulated prerecorded gen_agents
         plot_agent_dict(ax, ppm, prerecs, label="Prerec", normal_color="yo",
-                        collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=True)
+                        collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False)
 
         # plot all the randomly generated simulated gen_agents
         plot_agent_dict(ax, ppm, agents, label="Agent", normal_color="go",
-                        collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=True)
+                        collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False)
 
         # plot other useful informational visuals in the topview
         # such as the key to the length of a "meter" unit

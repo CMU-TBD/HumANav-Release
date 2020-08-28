@@ -67,7 +67,7 @@ class Human(Agent):
 
     @staticmethod
     def generate_random_human_from_environment(environment,
-                                               radius=5.,
+                                               radius=5.,  # -1 means no bound
                                                generate_appearance=False):
         """
         Sample a new human without knowing any configs or appearance fields
