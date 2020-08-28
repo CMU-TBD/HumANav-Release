@@ -203,8 +203,8 @@ def generate_config_from_pos_3(pos_3, dt=0.1, speed=0):
 
 
 def generate_random_config(environment, dt=0.1,
-                           max_vel=0.6, radius=5.):
-    pos_3 = generate_random_pos_in_environment(environment, radius)
+                           max_vel=0.6):
+    pos_3 = generate_random_pos_in_environment(environment)
     return generate_config_from_pos_3(pos_3, dt=dt, speed=max_vel)
 
 # For generating positional arguments in an environment
@@ -257,7 +257,7 @@ def within_traversible_with_radius(new_pos: np.array, traversible: np.array, map
     return True
 
 
-def generate_random_pos_in_environment(environment: dict, radius: int = 5):
+def generate_random_pos_in_environment(environment: dict):
     """
     Generate a random position (x : meters, y : meters, theta : radians)
     and near the 'center' with a nearby valid goal position.
@@ -269,7 +269,6 @@ def generate_random_pos_in_environment(environment: dict, radius: int = 5):
     of precision, it is best to use the dx_m provided in examples.py
     """
     map_scale = float(environment["map_scale"])
-    center = np.array(environment["room_center"])
     # Combine the occupancy information from the static map
     # and the human
     if len(environment["traversibles"]) > 1:
@@ -288,7 +287,10 @@ def generate_random_pos_in_environment(environment: dict, radius: int = 5):
 
     # continuously generate random positions near the center until one is valid
     while not within_traversible(pos_3, global_traversible, map_scale):
-        pos_3 = generate_random_pos_3(center, radius, radius)
+        new_x = random.randint(0, global_traversible.shape[0])
+        new_y = random.randint(0, global_traversible.shape[1])
+        new_theta = 2 * np.pi * random.random()  # bound by (0, 2*pi)
+        pos_3 = np.array([new_x, new_y, new_theta])
 
     # Random theta from 0 to pi
     pos_3[2] = random.random() * 2 * np.pi

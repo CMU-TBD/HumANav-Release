@@ -191,7 +191,7 @@ class Agent(AgentHelper):
     def check_collisions(self, world_state, include_agents=True, include_prerecs=True, include_robots=True):
         if world_state is not None:
             own_pos = self.get_current_config().to_3D_numpy()
-            if include_agents and self._collision_in_group(own_pos, world_state.get_agents().values()):
+            if include_agents and self._collision_in_group(own_pos, world_state.get_gen_agents().values()):
                 return True
             if include_prerecs and self._collision_in_group(own_pos, world_state.get_prerecs().values()):
                 return True

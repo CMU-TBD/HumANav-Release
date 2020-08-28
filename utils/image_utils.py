@@ -18,29 +18,30 @@ def plot_image_observation(ax, img_mkd, size=None):
         raise NotImplementedError
 
 
-def plot_agents(ax, ppm: float, agents_dict: dict, json_key: str = None, label='Agent', normal_color='bo', collided_color='ro',
-                plot_trajectory=True, plot_quiver=False, plot_start_goal=False, start_3=None, goal_3=None):
+def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_color='bo',
+                    collided_color='ro', plot_trajectory=True, plot_quiver=False,
+                    plot_start_goal=False, start_3=None, goal_3=None):
     # plot all the simulated prerecorded gen_agents
     for i, a in enumerate(agents_dict.values()):
-        if(json_key is not None):
-            # when plotting from JSON serialized gen_agents
-            collided = False
-            markersize = a["radius"] * ppm
-            pos_3 = a[json_key]
-            traj_col = 'r'  # a["color"]
-        else:
-            collided = a.get_collided()
-            markersize = a.get_radius() * ppm
-            pos_3 = a.get_current_config().to_3D_numpy()
-            traj_col = a.get_color()
-            if(plot_start_goal):
-                start_3 = a.get_start_config().to_3D_numpy()
-                goal_3 = a.get_goal_config().to_3D_numpy()
+        collided = a.get_collided()
+        markersize = a.get_radius() * ppm
+        pos_3 = a.get_current_config().to_3D_numpy()
+        traj_col = a.get_color()
+        if(plot_start_goal):
+            try:
+                agent_start = a.get_start_config().to_3D_numpy()
+                agent_goal = a.get_goal_config().to_3D_numpy()
+                # set the start and goal if it exists in the agent, else use the provided
+                start_3 = agent_start
+                goal_3 = agent_goal
+            except:
+                # use the start_3 and goal_3 provided
+                pass
         if(plot_start_goal):
             assert(start_3 is not None)
             assert(goal_3 is not None)
         start_goal_markersize = markersize * 0.7
-        if(plot_trajectory):
+        if(plot_trajectory and a.get_trajectory()):
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
         color = normal_color  # gen_agents are green and solid unless collided
         start_goal_col = 'wo'  # white circle
@@ -50,7 +51,7 @@ def plot_agents(ax, ppm: float, agents_dict: dict, json_key: str = None, label='
             # Only add label on the first humans
             ax.plot(pos_3[0], pos_3[1], color,
                     markersize=markersize, label=label)
-            if(plot_start_goal):
+            if(plot_start_goal and (start_3 is not None and goal_3 is not None)):
                 ax.plot(start_3[0], start_3[1], start_goal_col,
                         markersize=start_goal_markersize, label=label + " start")
                 ax.plot(goal_3[0], goal_3[1], start_goal_col,
@@ -58,7 +59,7 @@ def plot_agents(ax, ppm: float, agents_dict: dict, json_key: str = None, label='
         else:
             ax.plot(pos_3[0], pos_3[1], color,
                     markersize=markersize)
-            if(plot_start_goal):
+            if(plot_start_goal and (start_3 is not None and goal_3 is not None)):
                 ax.plot(start_3[0], start_3[1], start_goal_col,
                         markersize=start_goal_markersize)
                 ax.plot(goal_3[0], goal_3[1], start_goal_col,
@@ -69,12 +70,12 @@ def plot_agents(ax, ppm: float, agents_dict: dict, json_key: str = None, label='
         if(plot_quiver):
             # Agent heading
             ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
-                      scale=int(0.066 * ppm), scale_units='inches')
-            if(plot_start_goal):
+                      scale=150.0 / ppm, scale_units='inches')
+            if(plot_start_goal and (start_3 is not None and goal_3 is not None)):
                 ax.quiver(start_3[0], start_3[1], np.cos(start_3[2]), np.sin(start_3[2]),
-                          scale=int(0.07 * ppm), scale_units='inches')
+                          scale=200.0 / ppm, scale_units='inches')
                 ax.quiver(goal_3[0], goal_3[1], np.cos(goal_3[2]), np.sin(goal_3[2]),
-                          scale=int(0.07 * ppm), scale_units='inches')
+                          scale=200.0 / ppm, scale_units='inches')
 
 
 def render_rgb_and_depth(r, camera_pos_13, dx_m: float, human_visible=True):
@@ -133,3 +134,4 @@ def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files
     if clear_old_files:
         for f in files:
             os.remove(f)
+        print("%sCleaned directory" % (color_green), '\033[0m')

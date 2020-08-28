@@ -373,16 +373,16 @@ class CentralSimulator(SimulatorHelper):
             alphas = np.all(np.logical_not(human_traversible))
 
         # Plot the camera (robots)
-        plot_agents(ax, ppm, robots, label="Robot", normal_color="bo",
-                    collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True)
+        plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="bo",
+                        collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True)
 
         # plot all the simulated prerecorded gen_agents
-        plot_agents(ax, ppm, prerecs, label="Prerec", normal_color="yo",
-                    collided_color="ro", plot_quiver=plot_quiver)
+        plot_agent_dict(ax, ppm, prerecs, label="Prerec", normal_color="yo",
+                        collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False)
 
         # plot all the randomly generated simulated gen_agents
-        plot_agents(ax, ppm, agents, label="Agent", normal_color="go",
-                    collided_color="ro", plot_quiver=plot_quiver)
+        plot_agent_dict(ax, ppm, agents, label="Agent", normal_color="go",
+                        collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False)
 
         # plot other useful informational visuals in the topview
         # such as the key to the length of a "meter" unit
@@ -452,7 +452,7 @@ class CentralSimulator(SimulatorHelper):
         ax.set_xlim(0., traversible.shape[1] * map_scale)
         ax.set_ylim(0., traversible.shape[0] * map_scale)
         self.plot_topview(ax, extent, traversible, human_traversible,
-                          camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=False)
+                          camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=True)
         ax.legend()
         # ax.set_xticks([])
         # ax.set_yticks([])
@@ -521,7 +521,7 @@ class CentralSimulator(SimulatorHelper):
                 # TODO: Fix multiprocessing for properly deepcopied renderers
                 # only when rendering with opengl
                 assert(len(state.get_environment()["traversibles"]) == 2)
-                for a in state.get_agents().values():
+                for a in state.get_gen_agents().values():
                     self.r.update_human(a)
                 # update prerecorded humans
                 for r_a in state.get_prerecs().values():
@@ -537,7 +537,7 @@ class CentralSimulator(SimulatorHelper):
             # plot the rbg, depth, and topview images if applicable
             self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                              state.get_environment(), camera_pos_13,
-                             state.get_agents(), state.get_prerecs(), state.get_robots(),
+                             state.get_gen_agents(), state.get_prerecs(), state.get_robots(),
                              state.get_sim_t(), state.get_wall_t(), "rob" + str(i) + filename,
                              'tests/socnav/sim_movie' + str(i))
         # Delete state to save memory after frames are generated

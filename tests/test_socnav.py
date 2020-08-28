@@ -247,8 +247,7 @@ def generate_auto_humans(num_generated_humans, human_list, simulator, environmen
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment(
             environment,
-            generate_appearance=p.render_3D,
-            radius=15
+            generate_appearance=p.render_3D
         )
         # Or specify a human's initial configs with a HumanConfig instance
         # Human.generate_human_with_configs(Human, fixed_start_goal)
@@ -326,8 +325,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     Generate the humans and run the simulation on every human
     """
     robot_agent = RoboAgent.generate_random_robot_from_environment(
-        environment,
-        radius=5
+        environment
     )
     simulator.add_agent(robot_agent)
     num_robots = 1
@@ -335,7 +333,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     Add the prerecorded humans to the simulator
     """
     generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
-                                simulator, center_offset=np.array([22.0, 4.0]))
+                                simulator, center_offset=np.array([14.0, 2.0]))
 
     """
     Generate and add a single human with a constant start/end config on every run 
@@ -373,6 +371,6 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(num_generated_humans=2,
+    test_socnav(num_generated_humans=5,
                 num_prerecorded=5,  # use -1 to include ALL prerecorded agents
-                starting_prerec=99)
+                starting_prerec=50)

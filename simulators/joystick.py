@@ -18,6 +18,7 @@ from utils.image_utils import *
 from params.central_params import create_robot_params, get_path_to_socnav, get_seed, create_agent_params
 from simulators.agent import Agent
 from trajectory.trajectory import Trajectory
+from simulators.sim_state import SimState
 
 
 # seed the random number generator
@@ -29,8 +30,8 @@ class Joystick():
         self.t = 0
         self.latest_state = None
         self.sim_states = []
-        self.velocities = {}     # testing simstate utils
-        self.accelerations = {}  # testing simstate utils
+        self.velocities = {}     # for testing simstate utils
+        self.accelerations = {}  # for testing simstate utils
         self.environment = None
         self.joystick_params = create_robot_params()
         self.init()
@@ -270,44 +271,39 @@ class Joystick():
             if data_b is not None and response_len > 0:
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
-                current_world = json.loads(data_str)
-                if not current_world['robot_on']:
+                sim_state_json = json.loads(data_str)
+                current_world = SimState.from_json(sim_state_json)
+                if not current_world.get_robot_on():
                     return
                 # append new world to storage of all past worlds
                 self.sim_states.append(current_world)
                 # self.velocities[current_world['sim_t']] = compute_all_velocities(self.sim_states)
                 # self.accelerations[current_world['sim_t']] = compute_all_accelerations(self.sim_states)
 
-                if current_world['robot_on'] is True:
-                    if current_world['environment']:  # not empty
+                if current_world.get_robot_on():
+                    if not self.environment:  # not empty
                         # notify the robot that the joystick received the environment
-                        joystick_ready = self.create_message(
-                            True, [], [], -1, False)
+                        joystick_ready = \
+                            self.create_message(True, [], [], -1, False)
                         self.send_to_robot(joystick_ready)
-
                         # only update the environment if it is non-empty
-                        self.environment = current_world['environment']
-                        robots = list(current_world["robots"].values())
-                        # there should only be one
+                        self.environment = current_world.get_environment()
+                        robots = list(current_world.get_robots().values())
+                        # only one robot is supported
                         assert(len(robots) == 1)
                         robot = robots[0]
-                        self.current_config = generate_config_from_pos_3(
-                            robot["current_config"])
                         print("Updated environment from simulator")
-
                         # update the start and goal configs from the simulator's challenge
-                        self.start_config = generate_config_from_pos_3(
-                            robot["start_config"])
-                        self.goal_config = generate_config_from_pos_3(
-                            robot["goal_config"])
-                        self.delta_t = current_world["delta_t"]
+                        self.start_config = robot.get_start_config()
+                        self.goal_config = robot.get_goal_config()
+                        self.current_config = robot.get_current_config()
+                        self.delta_t = current_world.get_delta_t()
                         print("Updated start/goal for robot")
                     else:
                         # update the robot's position from sensor data
-                        self.current_config = \
-                            generate_config_from_pos_3(robot["current_config"])
+                        self.current_config = robot.get_current_config()
                         # Write the Agent's trajectory data into a pandas file
-                        self.write_pandas(current_world)
+                        self.write_pandas(sim_state_json)
                         # TODO: make the frame generator a separate process to not interfere
                         # render when not receiving a new environment
                         self.generate_frame(current_world, self.frame_num)
@@ -318,17 +314,9 @@ class Joystick():
             else:
                 break
 
-    def write_pandas(self, world_state):
-        from simulators.sim_state import get_agent_type
-        if(self.agent_data is None):
-            all_agents = {}
-            all_agents.update(get_agent_type(world_state, "gen_agents"))
-            all_agents.update(get_agent_type(world_state, "prerecs"))
-            all_agents.update(get_agent_type(world_state, "robots"))
-            self.agent_data = pd.DataFrame(all_agents)
-        else:
-            # TODO: append data for new simstates to track values over time
-            pass
+    def write_pandas(self, world_state_json: SimState):
+        from simulators.sim_state import get_all_agents
+        self.agent_data = pd.DataFrame(world_state_json)
         self.agent_data.to_csv('tests/socnav/joystick_movie/agent_data.csv')
 
     def establish_robot_sender_connection(self):
@@ -371,10 +359,10 @@ class Joystick():
     def generate_frame(self, world_state, frame_count, plot_quiver=False):
         # extract the information from the world state
         environment = self.environment
-        agents = world_state['gen_agents']
-        prerecs = world_state['prerecs']
-        robots = world_state['robots']
-        sim_time = world_state['sim_t']
+        gen_agents = world_state.get_gen_agents()
+        prerecs = world_state.get_prerecs()
+        robots = world_state.get_robots()
+        sim_time = world_state.get_sim_t()
         # process the information
         map_scale = eval(environment["map_scale"])  # float
         room_center = np.array(environment["room_center"])
@@ -396,18 +384,21 @@ class Joystick():
         ppm = img_scale[1]  # number of pixels per "meter" unit in the plot
 
         # Plot the camera (robots)
-        plot_agents(ax, ppm, robots, json_key="current_config", label="Robot",
-                    normal_color="bo", collided_color="ko", plot_trajectory=False, plot_quiver=True,
-                    plot_start_goal=True, start_3=self.start_config.to_3D_numpy(),
-                    goal_3=self.goal_config.to_3D_numpy())
+        plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="bo",
+                        collided_color="ko", plot_trajectory=False,
+                        plot_quiver=True, plot_start_goal=True,
+                        start_3=self.start_config.to_3D_numpy(),
+                        goal_3=self.goal_config.to_3D_numpy())
 
         # plot all the simulated prerecorded gen_agents
-        plot_agents(ax, ppm, prerecs, json_key="current_config", label="Prerec",
-                    normal_color="yo", collided_color="ro", plot_trajectory=False, plot_quiver=plot_quiver)
+        plot_agent_dict(ax, ppm, prerecs, label="Prerec", normal_color="yo",
+                        collided_color="ro", plot_trajectory=False,
+                        plot_quiver=plot_quiver)
 
         # plot all the randomly generated simulated gen_agents
-        plot_agents(ax, ppm, agents, json_key="current_config", label="Agent",
-                    normal_color="go", collided_color="ro", plot_trajectory=False, plot_quiver=plot_quiver)
+        plot_agent_dict(ax, ppm, gen_agents, label="Agent", normal_color="go",
+                        collided_color="ro", plot_trajectory=False,
+                        plot_quiver=plot_quiver)
 
         # save the axis to a file
         filename = "jview" + str(frame_count) + ".png"
