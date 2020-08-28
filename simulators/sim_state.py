@@ -112,9 +112,7 @@ class SimState():
 
     def __init__(self, environment: dict = None, gen_agents: dict = None,
                  prerecs: dict = None, robots: dict = None, sim_t: float = None,
-                 wall_t: float = None, delta_t: float = None):
-        # if(environment):
-        #     SimState.environment = environment
+                 wall_t: float = None, delta_t: float = None, episode_name: str = None):
         self.environment = environment
         self.gen_agents = gen_agents
         self.prerecs = prerecs
@@ -123,11 +121,10 @@ class SimState():
         self.wall_t = wall_t
         self.delta_t = delta_t
         self.robot_on = True
+        self.episode_name = episode_name
 
     def get_environment(self):
-        # TODO: make environment static for the class so it can be used easily
         return self.environment
-        # return SimState.environment
 
     def get_map(self):
         return self.environment["traversibles"][0]
@@ -152,6 +149,9 @@ class SimState():
 
     def get_robot_on(self):
         return self.robot_on
+
+    def get_episode_name(self):
+        return self.episode_name
 
     def get_all_agents(self, include_robot=False):
         all_agents = {}
@@ -180,6 +180,7 @@ class SimState():
                                       include_start_goal=include_map)
             sim_t_json = deepcopy(self.get_sim_t())
             delta_t_json = deepcopy(self.get_delta_t())
+            episode_json = deepcopy(self.get_episode_name())
             # append them to the json dictionary
             json_dict['environment'] = environment_json
             json_dict['gen_agents'] = agents_json
@@ -187,6 +188,7 @@ class SimState():
             json_dict['robots'] = robots_json
             json_dict['sim_t'] = sim_t_json
             json_dict['delta_t'] = delta_t_json
+            json_dict['episode_name'] = episode_json
         return json.dumps(json_dict, indent=1)
 
     @ staticmethod
@@ -199,7 +201,6 @@ class SimState():
     @ staticmethod
     def from_json(json_str: dict):
         new_state = SimState()
-        # TODO: no need to update environment since its static
         new_state.environment = json_str['environment']
         new_state.gen_agents = SimState.init_agent_dict(json_str['gen_agents'])
         new_state.prerecs = SimState.init_agent_dict(json_str['prerecs'])
@@ -207,6 +208,7 @@ class SimState():
         new_state.sim_t: float = json_str['sim_t']
         new_state.delta_t: float = json_str['delta_t']
         new_state.robot_on: bool = json_str['robot_on']
+        new_state.episode_name: str = json_str['episode_name']
         new_state.wall_t = None
         return new_state
 

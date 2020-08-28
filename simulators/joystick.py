@@ -282,6 +282,10 @@ class Joystick():
                         # notify the robot that the joystick received the environment
                         joystick_ready = \
                             self.create_message(True, [], [], -1, False)
+                        self.episode_name = current_world.get_episode_name()
+                        print("%sRunning test for %s%s" %
+                              (color_orange, self.episode_name, color_reset))
+                        self.dirname = 'tests/socnav/' + self.episode_name + '_movie/joystick_data'
                         self.send_to_robot(joystick_ready)
                         # only update the environment if it is non-empty
                         self.environment = current_world.get_environment()
@@ -342,7 +346,11 @@ class Joystick():
 
     def write_pandas(self):
         pd_df = pd.DataFrame(self.agent_log)
-        pd_df.to_csv('tests/socnav/joystick_movie/agent_data.csv')
+        abs_path = \
+            os.path.join(get_path_to_socnav(), self.dirname, 'agent_data.csv')
+        if(not os.path.exists(abs_path)):
+            touch(abs_path)  # Just as the bash command
+        pd_df.to_csv(abs_path)
         print("%sUpdated pandas dataframe%s" % (color_green, color_reset))
 
     def establish_robot_sender_connection(self):
@@ -428,9 +436,8 @@ class Joystick():
 
         # save the axis to a file
         filename = "jview" + str(frame_count) + ".png"
-        self.dirname = 'tests/socnav/joystick_movie'
-        full_file_name = os.path.join(
-            get_path_to_socnav(), self.dirname, filename)
+        full_file_name = \
+            os.path.join(get_path_to_socnav(), self.dirname, filename)
         if(not os.path.exists(full_file_name)):
             touch(full_file_name)  # Just as the bash command
         fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)

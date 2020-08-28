@@ -258,7 +258,7 @@ class CentralSimulator(SimulatorHelper):
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
         current_state = SimState(saved_env,
                                  saved_agents, saved_prerecs, saved_robots,
-                                 sim_t, wall_t, delta_t
+                                 sim_t, wall_t, delta_t, self.episode_name
                                  )
         # Save current state to a class dictionary indexed by simulator time
         self.states[sim_t] = current_state
@@ -292,12 +292,14 @@ class CentralSimulator(SimulatorHelper):
                         args=(s, filename + str(p) + ".png"))
                     )
                     gif_processes[-1].start()
-                    print("Started processes:", frame + 1, "out of", num_frames,
-                          "%.3f" % (frame + 1 / num_frames), "\r", end="")
+                    print("Started processes:", frame + 1,
+                          "out of", num_frames, "\r", end="")
+                    # reset skip counter for frames
                     skip = int(1.0 / self.params.fps_scale_down) - 1
                     frame += 1
                 else:
-                    skip -= 1.0
+                    # skip certain other frames as directed by the fps_scale_down
+                    skip -= 1
             print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
@@ -473,8 +475,6 @@ class CentralSimulator(SimulatorHelper):
         self.plot_topview(ax, extent, traversible, human_traversible,
                           camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=True)
         ax.legend()
-        # ax.set_xticks([])
-        # ax.set_yticks([])
         time_string = "sim_t=%.3f" % sim_t + " wall_t=%.3f" % wall_t
         ax.set_title(time_string, fontsize=20)
 
