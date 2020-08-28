@@ -279,7 +279,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     # obtain "resolution and traversible of building"
     dx_cm, traversible = r.get_config()
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-    dx_m = dx_cm / 100.
+    dx_m = dx_cm / 100.0
     if p.render_3D:
         # Get the surreal dataset for human generation
         surreal_data = r.d
@@ -358,7 +358,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         if p.render_3D:  # only when rendering with opengl
             rgb_image_1mk3, depth_image_1mk1 = \
                 render_rgb_and_depth(r, np.array(
-                    [robot_agent.get_start_config().to_3D_numpy()]), dx_m, human_visible=True)
+                    [robot_agent.get_start_config().to_3D_numpy()]),
+                    dx_m, human_visible=True)
         # Plot the rendered images
         plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
                     robot_agent.get_start_config().to_3D_numpy(),

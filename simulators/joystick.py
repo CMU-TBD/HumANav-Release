@@ -187,8 +187,6 @@ class Joystick():
             self.vehicle_trajectory.append_along_time_axis(
                 t_seg, track_trajectory_acceleration=self.agent_params.planner_params.track_accel)
             self.commanded_actions.extend(commanded_actions_nkf[0])
-            # print(self.planner_data['optimal_control_nk2'])
-            # TODO: match the action_dt with the number of signals sent to the robot at once
             self.current_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
                     self.vehicle_trajectory, t=-1)
@@ -276,10 +274,11 @@ class Joystick():
                 if not current_world.get_robot_on():
                     return
                 # append new world to storage of all past worlds
-                self.sim_states.append(current_world)
-                # self.velocities[current_world['sim_t']] = compute_all_velocities(self.sim_states)
-                # self.accelerations[current_world['sim_t']] = compute_all_accelerations(self.sim_states)
-
+                from simulators.sim_state import compute_all_velocities, compute_all_accelerations
+                self.velocities[current_world.get_sim_t()] = \
+                    compute_all_velocities(self.sim_states)
+                self.accelerations[current_world.get_sim_t()] = \
+                    compute_all_accelerations(self.sim_states)
                 if current_world.get_robot_on():
                     if not self.environment:  # not empty
                         # notify the robot that the joystick received the environment
@@ -300,6 +299,8 @@ class Joystick():
                         self.delta_t = current_world.get_delta_t()
                         print("Updated start/goal for robot")
                     else:
+                        # only update the SimStates for non-environment configs
+                        self.sim_states.append(current_world)
                         # update the robot's position from sensor data
                         self.current_config = robot.get_current_config()
                         # Write the Agent's trajectory data into a pandas file

@@ -258,7 +258,7 @@ def get_agent_type(sim_state, agent_type: str):
 def compute_next_vel(sim_state_prev, sim_state_now, agent_name: str):
     old_agent = sim_state_prev.get_all_agents()[agent_name]
     old_pos = old_agent.get_current_config().to_3D_numpy()
-    new_agent = sim_state_prev.get_all_agents()[agent_name]
+    new_agent = sim_state_now.get_all_agents()[agent_name]
     new_pos = new_agent.get_current_config().to_3D_numpy()
     # calculate distance over time
     delta_t = sim_state_now.get_sim_t() - sim_state_prev.get_sim_t()
@@ -276,11 +276,13 @@ def compute_agent_state_velocity(sim_states: list, agent_name: str):
                     speed = compute_next_vel(prev_sim_s, now_sim_s, agent_name)
                     agent_velocities.append(speed)
                 else:
-                    agent_velocities.append(0)  # initial velocity is 0
+                    agent_velocities.append(0.0)  # initial velocity is 0
             return agent_velocities
         else:
             print("%sAgent" % color_red, agent_name,
                   "is not in the SimStates%s" % color_reset)
+    else:
+        return []
 
 
 def compute_agent_state_acceleration(sim_states: list, agent_name: str, velocities: list = None):
