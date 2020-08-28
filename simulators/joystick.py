@@ -152,7 +152,7 @@ class Joystick():
                     # reset the containers
                     self.lin_vels = []
                     self.ang_vels = []
-                if(self.num_sent % 4 == 0):  # TODO: make into params
+                if(self.num_sent % self.joystick_params.sense_interval == 0):
                     self.request_world = True
                 self.num_sent += 1
             else:
@@ -296,22 +296,23 @@ class Joystick():
                         print("Updated start/goal for robot")
                     else:
                         # only update the SimStates for non-environment configs
-                        # TODO: add param for this
-                        if(True or self.joystick_params.track_sim_states):
+                        if(self.joystick_params.track_sim_states):
                             self.sim_states[current_world.get_sim_t()] = \
                                 current_world
-                        from simulators.sim_state import compute_all_velocities, compute_all_accelerations
-                        self.velocities[current_world.get_sim_t()] = \
-                            compute_all_velocities(
-                                list(self.sim_states.values()))
-                        self.accelerations[current_world.get_sim_t()] = \
-                            compute_all_accelerations(
-                                list(self.sim_states.values()))
+                        if(self.joystick_params.track_vel_accel):
+                            from simulators.sim_state import compute_all_velocities, compute_all_accelerations
+                            self.velocities[current_world.get_sim_t()] = \
+                                compute_all_velocities(
+                                    list(self.sim_states.values()))
+                            self.accelerations[current_world.get_sim_t()] = \
+                                compute_all_accelerations(
+                                    list(self.sim_states.values()))
                         # update the robot's position from sensor data
                         self.current_config = robot.get_current_config()
-                        # Write the Agent's trajectory data into a pandas file
-                        self.update_logs(current_world)
-                        self.write_pandas()
+                        if(self.joystick_params.write_pandas_log):
+                            # Write the Agent's trajectory data into a pandas file
+                            self.update_logs(current_world)
+                            self.write_pandas()
                         # TODO: make the frame generator a separate process to not interfere
                         # render when not receiving a new environment
                         self.generate_frame(current_world, self.frame_num)
@@ -323,7 +324,6 @@ class Joystick():
                 break
 
     def update_logs(self, world_state: SimState):
-        # TODO: update logs of the other agents too
         self.update_log_of_type('robots', world_state)
         self.update_log_of_type('gen_agents', world_state)
         self.update_log_of_type('prerecs', world_state)
