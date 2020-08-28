@@ -305,9 +305,10 @@ def create_simulator_params():
     # whether or not to wait for joystick inputs or set a repeat frame count
     p.block_joystick = sim_p.getboolean('block_joystick')
     p.delta_t_scale = sim_p.getfloat('delta_t_scale')
-    # Load SocNav dependencies
     p.socnav_params = create_base_params()
     p.img_scale = sim_p.getfloat('img_scale')
+    p.max_frames = sim_p.getint('max_frames')
+    p.fps_scale_down = min(1.0, sim_p.getfloat('fps_scale_down'))
     return p
 
 

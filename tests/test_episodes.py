@@ -201,7 +201,10 @@ def test_episodes():
     of a human trajectory and pathfinding. 
     """
 
-    for episode in list(p.episode_params.values()):
+    for test in list(p.episode_params.keys()):
+        episode = p.episode_params[test]
+        print("%sStarting test:" % color_yellow, test, "%s" % color_reset)
+
         simulator = CentralSimulator(
             environment,
             renderer=r,

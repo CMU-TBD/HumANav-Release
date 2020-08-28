@@ -165,8 +165,8 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             self.print_sim_progress(iteration)
 
-            # NOTE can add a hard limit to the number of frames the world can use
-            if(iteration > 100):
+            if(iteration > self.params.max_frames):
+                # hard limit of simulation
                 break
 
         # free all the gen_agents
@@ -264,27 +264,35 @@ class CentralSimulator(SimulatorHelper):
         """Generates a png frame for each world state saved in self.states. Note, based off the
         render_3D options, the function will generate the frames in multiple separate processes to
         optimize performance on multicore machines, else it can also be done sequentially.
-        NOTE: the 3D renderer can only be run sequentially at the moment.
+        NOTE: the 3D renderer can currently only be run sequentially
 
         Args:
             filename (str, optional): name of each png frame (unindexed). Defaults to "obs".
         """
-        num_frames = len(self.states)
+        fps = (1.0 / self.delta_t) * self.params.fps_scale_down
+        print("%sRendering movie with fps=%d%s" %
+              (color_orange, fps, color_reset))
+        num_frames = int(len(self.states) * self.params.fps_scale_down)
         np.set_printoptions(precision=3)
         if(not self.params.render_3D):
             # optimized to use multiple processes
             # TODO: put a limit on the maximum number of processes that can be run at once
             gif_processes = []
+            skip = 0
+            frame = 0
             for p, s in enumerate(self.states.values()):
-                # pool.apply_async(self.convert_state_to_frame, args=(s, filename + str(p) + ".png"))
-                gif_processes.append(multiprocessing.Process(
-                    target=self.convert_state_to_frame,
-                    args=(s, filename + str(p) + ".png"))
-                )
-                gif_processes[-1].start()
-                p += 1
-                print("Started processes:", p, "out of", num_frames,
-                      "%.3f" % (p / num_frames), "\r", end="")
+                if(skip == 0):
+                    # pool.apply_async(self.convert_state_to_frame, args=(s, filename + str(p) + ".png"))
+                    gif_processes.append(multiprocessing.Process(
+                        target=self.convert_state_to_frame,
+                        args=(s, filename + str(p) + ".png"))
+                    )
+                    gif_processes[-1].start()
+                    print("Started processes:", frame + 1, "out of", num_frames,
+                          "%.3f" % (frame + 1 / num_frames), "\r", end="")
+                    skip = int(1.0 / self.params.fps_scale_down) - 1
+                else:
+                    skip -= 1.0
             print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
@@ -293,12 +301,18 @@ class CentralSimulator(SimulatorHelper):
                       "%.3f" % (frame / num_frames), "\r", end="")
         else:
             # generate frames sequentially (non multiproceses)
+            skip = 0
             for frame, s in enumerate(self.states.values()):
-                self.convert_state_to_frame(s, filename + str(frame) + ".png")
-                frame += 1
-                print("Generated Frames:", frame, "out of", num_frames,
-                      "%.3f" % (frame / num_frames), "\r", end="")
-                del(s)  # free the state from memory
+                if(skip == 0):
+                    self.convert_state_to_frame(
+                        s, filename + str(frame) + ".png")
+                    frame += 1
+                    print("Generated Frames:", frame, "out of", num_frames,
+                          "%.3f" % (frame / num_frames), "\r", end="")
+                    del(s)  # free the state from memory
+                    skip = int(1.0 / self.params.fps_scale_down) - 1
+                else:
+                    skip -= 1.0
 
         # newline to not interfere with previous prints
         print("\n")
