@@ -201,7 +201,7 @@ def test_episodes():
     of a human trajectory and pathfinding. 
     """
 
-    for test in list(p.episode_params.keys()):
+    for i, test in enumerate(list(p.episode_params.keys())):
         episode = p.episode_params[test]
         print("%sStarting test:" % color_yellow, test, "%s" % color_reset)
 
@@ -209,7 +209,9 @@ def test_episodes():
             environment,
             renderer=r,
             render_3D=p.render_3D,
-            episode_name=test
+            episode_name=test,
+            # only connect on the FIRST episode
+            connect_to_joystick=bool(i == 0)
         )
 
         """

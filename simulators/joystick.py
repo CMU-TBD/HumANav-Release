@@ -201,7 +201,8 @@ class Joystick():
             except:
                 print("%sForce closing socket%s" %
                       (color_red, color_reset))
-            self.robot_receiver_socket.close()
+            # TODO: only close socket on the LAST episode
+            # self.robot_receiver_socket.close()
 
     def update(self, random_commands: bool = False):
         """ Independent process for a user (at a designated host:port) to receive
@@ -221,7 +222,7 @@ class Joystick():
             self.random_robot_joystick(action_dt)
         else:
             self.planned_robot_joystick()
-
+        self.environment = None  # free environment
         # this point is reached once the planner/randomizer are finished
         self.force_close_socket()
         if self.listen_thread.is_alive():
@@ -257,6 +258,10 @@ class Joystick():
         print("sent", json_message)
         self.robot_sender_socket.close()
 
+    def await_env(self):
+        while(self.environment is None):
+            time.sleep(0.01)
+
     def listen_to_robot(self):
         self.robot_receiver_socket.listen(10)
         self.robot_running = True
@@ -267,15 +272,15 @@ class Joystick():
             # quickly close connection to open up for the next input
             connection.close()
             print("%sreceived" % color_blue, response_len,
-                  "bytes from server%s" % color_reset)
+                  "bytes from robot%s" % color_reset)
 
             if data_b is not None and response_len > 0:
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
                 sim_state_json = json.loads(data_str)
-                current_world = SimState.from_json(sim_state_json)
-                if not current_world.get_robot_on():
+                if not sim_state_json['robot_on']:
                     return
+                current_world = SimState.from_json(sim_state_json)
                 # append new world to storage of all past worlds
                 if current_world.get_robot_on():
                     if not self.environment:  # not empty
@@ -328,6 +333,7 @@ class Joystick():
                     break
             else:
                 break
+        self.environment = None
 
     def update_logs(self, world_state: SimState):
         self.update_log_of_type('robots', world_state)

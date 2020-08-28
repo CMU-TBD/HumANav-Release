@@ -19,7 +19,8 @@ class CentralSimulator(SimulatorHelper):
     obstacle_map = None
 
     def __init__(self, environment: dict, renderer=None,
-                 render_3D: bool = None, episode_name: str = "sim"):
+                 render_3D: bool = None, episode_name: str = "sim",
+                 connect_to_joystick: bool = True):
         """ Initializer for the central simulator
 
         Args:
@@ -32,6 +33,7 @@ class CentralSimulator(SimulatorHelper):
         self.environment = environment
         self.params = create_sbpd_simulator_params(render_3D=render_3D)
         self.episode_name = episode_name
+        self.connect_to_joystick = connect_to_joystick
         CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
@@ -119,7 +121,8 @@ class CentralSimulator(SimulatorHelper):
         self.robot.update_world(current_state)
 
         # initialize the robot to establish joystick connection
-        r_t = self.init_robot_listener_thread()
+        r_t = self.init_robot_listener_thread(
+            connect_to_joystick=self.connect_to_joystick)
 
         # keep track of wall-time in the simulator
         start_time = time.clock()
@@ -564,7 +567,7 @@ class CentralSimulator(SimulatorHelper):
 
     """BEGIN thread utils"""
 
-    def init_robot_listener_thread(self, power_on=True):
+    def init_robot_listener_thread(self, power_on=True, connect_to_joystick=True):
         """Initializes the robot listener by establishing socket connections to 
         the joystick, transmitting the (constant) obstacle map (environment), 
         and starting the robot thread.
@@ -578,9 +581,12 @@ class CentralSimulator(SimulatorHelper):
         # wait for joystick connection to be established
         r = self.robot
         if(r is not None):
-            r.establish_joystick_receiver_connection()
-            time.sleep(0.01)
-            r.establish_joystick_sender_connection()
+            if(connect_to_joystick):
+                r.establish_joystick_receiver_connection()
+                time.sleep(0.01)
+                r.establish_joystick_sender_connection()
+            else:
+                print("%sConnected to joystick%s" % (color_green, color_reset))
             assert(r.world_state is not None)
             # send first transaction to the joystick
             print("sending map to joystick")
