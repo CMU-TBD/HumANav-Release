@@ -48,8 +48,7 @@ class Human(Agent):
         Sample a new human with a known appearance at a random 
         config with a random goal config.
         """
-        configs = HumanConfigs.generate_random_human_config(
-            HumanConfigs, environment)
+        configs = HumanConfigs.generate_random_human_config(environment)
         return Human.generate_human(appearance, configs)
 
     @staticmethod

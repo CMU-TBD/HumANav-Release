@@ -8,6 +8,10 @@ config = configparser.ConfigParser()
 config.read(os.path.join(os.getcwd(), 'params/params_example.ini'))
 seed = config['base_params'].getint('seed')
 
+# read params file for episodes configs
+episodes_config = configparser.ConfigParser()
+episodes_config.read(os.path.join(os.getcwd(), 'simulators/episodes.ini'))
+
 
 def get_path_to_socnav():
     # can use a literal string in params.ini as the path
@@ -139,6 +143,30 @@ def create_robot_params():
     p.track_sim_states = rob_p.getboolean('track_sim_states')
     p.track_vel_accel = rob_p.getboolean('track_vel_accel')
     p.write_pandas_log = rob_p.getboolean('write_pandas_log')
+    return p
+
+
+def create_test_params(test: str):
+    p = DotMap()
+    test_p = episodes_config[test]
+    p.map_name = test_p.get('map_name')
+    p.prerecs_start = test_p.getint('prerecs_start')
+    p.num_prerecs = test_p.getint('num_prerecs')
+    p.agents_start = eval(test_p.get('agents_start'))
+    p.agents_end = eval(test_p.get('agents_end'))
+    p.robot_start_goal = eval(test_p.get('robot_start_goal'))
+    p.max_time = test_p.getfloat('max_time')
+    return p
+
+
+def create_episodes_params():
+    p = {}
+    # NOTE: returns a dictionary of DotMaps to use string notation
+    # Load the dependencies
+    epi_p = episodes_config['episodes_params']
+    tests = eval(epi_p.get('tests'))
+    for t in tests:
+        p[t] = create_test_params(test=t)
     return p
 
 
