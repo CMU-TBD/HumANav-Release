@@ -59,7 +59,7 @@ class Joystick():
         self.ang_vels = []
         self.num_sent = 0
         # data tracking with pandas
-        self.agent_data = None
+        self.pd_df = None
 
     def set_host(self, h):
         self.host = h
@@ -275,10 +275,6 @@ class Joystick():
                     return
                 # append new world to storage of all past worlds
                 from simulators.sim_state import compute_all_velocities, compute_all_accelerations
-                self.velocities[current_world.get_sim_t()] = \
-                    compute_all_velocities(self.sim_states)
-                self.accelerations[current_world.get_sim_t()] = \
-                    compute_all_accelerations(self.sim_states)
                 if current_world.get_robot_on():
                     if not self.environment:  # not empty
                         # notify the robot that the joystick received the environment
@@ -299,6 +295,10 @@ class Joystick():
                         self.delta_t = current_world.get_delta_t()
                         print("Updated start/goal for robot")
                     else:
+                        self.velocities[current_world.get_sim_t()] = \
+                            compute_all_velocities(self.sim_states)
+                        self.accelerations[current_world.get_sim_t()] = \
+                            compute_all_accelerations(self.sim_states)
                         # only update the SimStates for non-environment configs
                         self.sim_states.append(current_world)
                         # update the robot's position from sensor data
@@ -316,9 +316,11 @@ class Joystick():
                 break
 
     def write_pandas(self, world_state_json: SimState):
-        from simulators.sim_state import get_all_agents
-        self.agent_data = pd.DataFrame(world_state_json)
-        self.agent_data.to_csv('tests/socnav/joystick_movie/agent_data.csv')
+        if(self.pd_df is None):
+            self.pd_df = pd.DataFrame(world_state_json.get_robots())
+        else:
+            self.pd_df.append(world_state_json.get_robots())
+        self.pd_df.to_csv('tests/socnav/joystick_movie/agent_data.csv')
 
     def establish_robot_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
