@@ -347,7 +347,7 @@ class CentralSimulator(SimulatorHelper):
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
                     target=save_to_gif,
-                    args=(IMAGES_DIR, duration, dir_title + "movie", clear_old_files))
+                    args=(IMAGES_DIR, duration, dir_title + "_movie", clear_old_files))
                 )
                 rendering_processes[i].start()
             else:

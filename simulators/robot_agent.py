@@ -153,7 +153,8 @@ class RoboAgent(Agent):
         # only send when joystick requests
         if (self.joystick_requests_world and self.running):
             world_state = \
-                self.world_state.to_json(robot_on=True, include_map=False)
+                self.world_state.to_json(
+                    robot_on=self.running, include_map=False)
             self.send_to_joystick(world_state)
             # immediately note that the world has been sent:
             self.joystick_requests_world = False

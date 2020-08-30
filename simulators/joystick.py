@@ -228,10 +228,12 @@ class Joystick():
             self.planned_robot_joystick()
         # this point is reached once the planner/randomizer are finished
         self.environment = None  # free environment
-        print("Finished episode:", self.current_ep)
+        print("%sFinished episode:" % color_yellow,
+              self.current_ep, "%s" % color_reset)
         # begin gif (movie) generation
         try:
-            save_to_gif(os.path.join(get_path_to_socnav(), self.dirname))
+            save_to_gif(os.path.join(get_path_to_socnav(), self.dirname),
+                        gif_filename="joystick_movie")
         except:
             print("unable to render gif")
         if(self.current_ep == self.episodes[-1]):
@@ -295,7 +297,8 @@ class Joystick():
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
                 sim_state_json = json.loads(data_str)
-                self.manage_data(sim_state_json)
+                if(not self.manage_data(sim_state_json)):
+                    break
             else:
                 self.robot_running = True
                 break
@@ -308,12 +311,12 @@ class Joystick():
             self.episodes = sim_state_json['episodes']
             print("Received episodes:", self.episodes)
             assert(len(self.episodes) > 0)
-            return
+            return True
         # case where the robot sends a power-off signal
         if(not sim_state_json['robot_on']):
             print("powering off joystick")
             self.power_off()
-            return
+            return False
         # case where the data comes from some robot simulator (and is a world)
         current_world = SimState.from_json(sim_state_json)
         # append new world to storage of all past worlds
@@ -363,6 +366,7 @@ class Joystick():
             # TODO: make the frame generator a separate process to not interfere
             # render when not receiving a new environment
             self.generate_frame(current_world, self.frame_num)
+        return True
 
     def update_logs(self, world_state: SimState):
         self.update_log_of_type('robots', world_state)
