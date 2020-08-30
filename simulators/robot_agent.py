@@ -34,6 +34,8 @@ class RoboAgent(Agent):
         self.repeat_joystick = False
         # told the joystick that the robot is powered off
         self.notified_joystick = False
+        # termination cause of the episode for the robot
+        self.robot_termination = 'Timeout'  # assumed timeout at first
 
     def simulation_init(self, sim_map, with_planner=False):
         super().simulation_init(sim_map, with_planner=with_planner)
@@ -94,9 +96,13 @@ class RoboAgent(Agent):
             self.check_collisions(self.world_state)
             # enforce planning termination upon condition
             self._enforce_episode_termination_conditions()
+            if(self.termination_cause == 'green'):
+                # only green when the agent planner succeeds
+                self.robot_termination = "Success"
             # NOTE: enforce_episode_terminator updates the self.end_episode variable
             if(self.end_episode or self.has_collided):
                 self.has_collided = True
+                self.termination_cause = 'Collision'
                 self.power_off()
 
     def execute(self):
@@ -140,7 +146,8 @@ class RoboAgent(Agent):
         else:
             if(not self.notified_joystick):
                 # notify the joystick to stop sending commands to the robot
-                self.send_to_joystick(self.world_state.to_json(robot_on=False))
+                self.send_to_joystick(self.world_state.to_json(robot_on=False,
+                                                               termination_cause=self.robot_termination))
                 self.power_off()
                 self.notified_joystick = True
 

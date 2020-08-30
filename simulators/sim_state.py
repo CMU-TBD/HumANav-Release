@@ -166,7 +166,7 @@ class SimState():
             all_agents.update(get_agents_from_type(self, "robots"))
         return all_agents
 
-    def to_json(self, robot_on=True, include_map=False):
+    def to_json(self, robot_on=True, include_map=False, termination_cause=None):
         json_dict = {}
         json_dict['robot_on'] = deepcopy(robot_on)  # true or false
         if robot_on:  # only send the world if the robot is ON
@@ -198,6 +198,8 @@ class SimState():
             json_dict['delta_t'] = delta_t_json
             json_dict['episode_name'] = episode_json
             json_dict['episode_max_time'] = episode_max_time_json
+        else:
+            json_dict['termination_cause'] = deepcopy(termination_cause)
         return json.dumps(json_dict, indent=1)
 
     @ staticmethod

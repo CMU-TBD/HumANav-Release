@@ -231,12 +231,13 @@ class Joystick():
         self.environment = None  # free environment
         print("%sFinished episode:" % color_yellow,
               self.current_ep, "%s" % color_reset)
-        # begin gif (movie) generation
-        try:
-            save_to_gif(os.path.join(get_path_to_socnav(), self.dirname),
-                        gif_filename="joystick_movie")
-        except:
-            print("unable to render gif")
+        if(self.joystick_params.generate_movie):
+            # begin gif (movie) generation
+            try:
+                save_to_gif(os.path.join(get_path_to_socnav(), self.dirname),
+                            gif_filename="joystick_movie")
+            except:
+                print("unable to render gif")
         if(self.current_ep == self.episodes[-1]):
             self.force_close_socket()
             print("Finished all episodes")
@@ -314,7 +315,8 @@ class Joystick():
             return True
         # case where the robot sends a power-off signal
         if(not sim_state_json['robot_on']):
-            print("powering off joystick")
+            print("powering off joystick, robot episode terminated with:",
+                  sim_state_json['termination_cause'])
             self.power_off()
             return False
         # case where the data comes from some robot simulator (and is a world)
@@ -345,9 +347,13 @@ class Joystick():
                 # Write the Agent's trajectory data into a pandas file
                 self.update_logs(current_world)
                 self.write_pandas()
-            # TODO: make the frame generator a separate process to not interfere
-            # render when not receiving a new environment
-            self.generate_frame(current_world, self.frame_num)
+            if(self.joystick_params.generate_movie):
+                # self.generate_frame(current_world, self.frame_num)
+                t = multiprocessing.Process(target=self.generate_frame,
+                                            args=(current_world,
+                                                  self.frame_num)
+                                            )
+                t.start()
         return True
 
     def update_episode(self, current_world):
