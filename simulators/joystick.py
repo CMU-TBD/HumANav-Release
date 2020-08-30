@@ -37,7 +37,7 @@ class Joystick():
         self.init()
         self.current_ep = None
         self.episodes = None
-        self.finished_all_episodes = False
+        self.ep_max_time = None
 
     def init(self):
         # sockets for communication
@@ -104,7 +104,6 @@ class Joystick():
         json_dict = {}
         json_dict["joystick_on"] = joystick_power
         if(joystick_power):
-            json_dict["j_time"] = j_time
             json_dict["lin_vels"] = lin_vels
             json_dict["ang_vels"] = ang_vels
             json_dict["req_world"] = req_world
@@ -237,7 +236,6 @@ class Joystick():
         except:
             print("unable to render gif")
         if(self.current_ep == self.episodes[-1]):
-            self.finished_all_episodes = True
             self.force_close_socket()
             print("Finished all episodes")
             os._exit(0)
@@ -320,44 +318,24 @@ class Joystick():
         # case where the data comes from some robot simulator (and is a world)
         current_world = SimState.from_json(sim_state_json)
         # append new world to storage of all past worlds
+        # NOTE: the first if (obtaining the environment) is always run BEFORE
+        # the else in this clause
         if (not (not current_world.get_environment())):  # not empty dictionary
             # notify the robot that the joystick received the environment
             joystick_ready = \
                 self.create_message(True, [], [], -1, False)
-            self.current_ep = current_world.get_episode_name()
-            assert(self.current_ep in self.episodes)
-            print("%sRunning test for %s%s" %
-                  (color_orange, self.current_ep, color_reset))
-            self.dirname = 'tests/socnav/' + self.current_ep + '_movie/joystick_data'
+            self.update_episode(current_world)
+            self.update_robot_and_env(current_world)
             self.send_to_robot(joystick_ready)
-            # only update the environment if it is non-empty
-            self.environment = current_world.get_environment()
-            robots = list(current_world.get_robots().values())
-            # only one robot is supported
-            assert(len(robots) == 1)
-            robot = robots[0]
-            print("Updated environment from simulator")
-            # update the start and goal configs from the simulator's challenge
-            self.start_config = robot.get_start_config()
-            self.goal_config = robot.get_goal_config()
-            self.current_config = robot.get_current_config()
-            self.delta_t = current_world.get_delta_t()
-            print("Updated start/goal for robot")
         else:
             # only update the SimStates for non-environment configs
             if(self.joystick_params.track_sim_states):
                 self.sim_states[current_world.get_sim_t()] = \
                     current_world
-            print("%sUpdated state of the world for time = %.5f" %
-                  (color_orange, current_world.get_sim_t()), "%s" % color_reset)
-            if(self.joystick_params.track_vel_accel):
-                from simulators.sim_state import compute_all_velocities, compute_all_accelerations
-                self.velocities[current_world.get_sim_t()] = \
-                    compute_all_velocities(
-                        list(self.sim_states.values()))
-                self.accelerations[current_world.get_sim_t()] = \
-                    compute_all_accelerations(
-                        list(self.sim_states.values()))
+            print("%sUpdated state of the world for time = %.3f out of %.3f" %
+                  (color_orange, current_world.get_sim_t(), self.ep_max_time),
+                  "%s" % color_reset)
+            self.track_vel_accel()
             # update the robot's position from sensor data
             robot = list(current_world.get_robots().values())[0]
             self.current_config = robot.get_current_config()
@@ -369,6 +347,39 @@ class Joystick():
             # render when not receiving a new environment
             self.generate_frame(current_world, self.frame_num)
         return True
+
+    def update_episode(self, current_world):
+        self.current_ep = current_world.get_episode_name()
+        self.ep_max_time = current_world.get_episode_max_time()
+        assert(self.current_ep in self.episodes)
+        print("%sRunning test for %s%s" %
+              (color_orange, self.current_ep, color_reset))
+        self.dirname = 'tests/socnav/' + self.current_ep + '_movie/joystick_data'
+
+    def update_robot_and_env(self, current_world):
+        # only update the environment if it is non-empty
+        self.environment = current_world.get_environment()
+        robots = list(current_world.get_robots().values())
+        # only one robot is supported
+        assert(len(robots) == 1)
+        robot = robots[0]
+        print("Updated environment from simulator")
+        # update the start and goal configs from the simulator's challenge
+        self.start_config = robot.get_start_config()
+        self.goal_config = robot.get_goal_config()
+        self.current_config = robot.get_current_config()
+        self.delta_t = current_world.get_delta_t()
+        print("Updated start/goal for robot")
+
+    def track_vel_accel(self, current_world):
+        if(self.joystick_params.track_vel_accel):
+            from simulators.sim_state import compute_all_velocities, compute_all_accelerations
+            self.velocities[current_world.get_sim_t()] = \
+                compute_all_velocities(
+                    list(self.sim_states.values()))
+            self.accelerations[current_world.get_sim_t()] = \
+                compute_all_accelerations(
+                    list(self.sim_states.values()))
 
     def update_logs(self, world_state: SimState):
         self.update_log_of_type('robots', world_state)

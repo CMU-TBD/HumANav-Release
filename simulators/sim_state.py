@@ -112,7 +112,8 @@ class SimState():
 
     def __init__(self, environment: dict = None, gen_agents: dict = None,
                  prerecs: dict = None, robots: dict = None, sim_t: float = None,
-                 wall_t: float = None, delta_t: float = None, episode_name: str = None):
+                 wall_t: float = None, delta_t: float = None, episode_name: str = None,
+                 max_time: float = None):
         self.environment = environment
         self.gen_agents = gen_agents
         self.prerecs = prerecs
@@ -122,6 +123,7 @@ class SimState():
         self.delta_t = delta_t
         self.robot_on = True
         self.episode_name = episode_name
+        self.episode_max_time = max_time
 
     def get_environment(self):
         return self.environment
@@ -153,6 +155,9 @@ class SimState():
     def get_episode_name(self):
         return self.episode_name
 
+    def get_episode_max_time(self):
+        return self.episode_max_time
+
     def get_all_agents(self, include_robot=False):
         all_agents = {}
         all_agents.update(get_agents_from_type(self, "gen_agents"))
@@ -168,8 +173,12 @@ class SimState():
             if include_map:
                 environment_json = \
                     SimState.to_json_dict(deepcopy(self.get_environment()))
+                episode_json = deepcopy(self.get_episode_name())
+                episode_max_time_json = deepcopy(self.get_episode_max_time())
             else:
                 environment_json = {}  # empty dictionary
+                episode_json = {}
+                episode_max_time_json = {}
             # serialize all other fields
             agents_json = \
                 SimState.to_json_dict(deepcopy(self.get_gen_agents()))
@@ -180,7 +189,6 @@ class SimState():
                                       include_start_goal=include_map)
             sim_t_json = deepcopy(self.get_sim_t())
             delta_t_json = deepcopy(self.get_delta_t())
-            episode_json = deepcopy(self.get_episode_name())
             # append them to the json dictionary
             json_dict['environment'] = environment_json
             json_dict['gen_agents'] = agents_json
@@ -189,6 +197,7 @@ class SimState():
             json_dict['sim_t'] = sim_t_json
             json_dict['delta_t'] = delta_t_json
             json_dict['episode_name'] = episode_json
+            json_dict['episode_max_time'] = episode_max_time_json
         return json.dumps(json_dict, indent=1)
 
     @ staticmethod
@@ -209,6 +218,7 @@ class SimState():
         new_state.delta_t: float = json_str['delta_t']
         new_state.robot_on: bool = json_str['robot_on']
         new_state.episode_name: str = json_str['episode_name']
+        new_state.episode_max_time: str = json_str['episode_max_time']
         new_state.wall_t = None
         return new_state
 

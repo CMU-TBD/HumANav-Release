@@ -309,7 +309,8 @@ def create_simulator_params():
     p.socnav_params = create_base_params()
     p.img_scale = sim_p.getfloat('img_scale')
     p.max_frames = sim_p.getint('max_frames')
-    p.fps_scale_down = min(1.0, sim_p.getfloat('fps_scale_down'))
+    # bound by 0 <= X <= 1
+    p.fps_scale_down = max(0.0, min(1.0, sim_p.getfloat('fps_scale_down')))
     return p
 
 

@@ -32,6 +32,8 @@ class RoboAgent(Agent):
         self.joystick_requests_world = False
         # whether or not to repeat the last joystick input
         self.repeat_joystick = False
+        # told the joystick that the robot is powered off
+        self.notified_joystick = False
 
     def simulation_init(self, sim_map, with_planner=False):
         super().simulation_init(sim_map, with_planner=with_planner)
@@ -135,10 +137,12 @@ class RoboAgent(Agent):
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
             # quit the robot if it died
-            if not self.running:
+        else:
+            if(not self.notified_joystick):
                 # notify the joystick to stop sending commands to the robot
                 self.send_to_joystick(self.world_state.to_json(robot_on=False))
                 self.power_off()
+                self.notified_joystick = True
 
     def power_off(self):
         if(self.running):

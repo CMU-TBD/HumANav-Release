@@ -260,7 +260,8 @@ class CentralSimulator(SimulatorHelper):
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
         current_state = SimState(saved_env,
                                  saved_agents, saved_prerecs, saved_robots,
-                                 sim_t, wall_t, delta_t, self.episode_params.name
+                                 sim_t, wall_t, delta_t, self.episode_params.name,
+                                 self.episode_params.max_time
                                  )
         # Save current state to a class dictionary indexed by simulator time
         self.states[sim_t] = current_state
@@ -275,6 +276,10 @@ class CentralSimulator(SimulatorHelper):
         Args:
             filename (str, optional): name of each png frame (unindexed). Defaults to "obs".
         """
+        if(self.params.fps_scale_down == 0):
+            print("%sNot rendering movie%s" %
+                  (color_orange, color_reset))
+            return
         fps = (1.0 / self.delta_t) * self.params.fps_scale_down
         print("%sRendering movie with fps=%d%s" %
               (color_orange, fps, color_reset))
