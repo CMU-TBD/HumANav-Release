@@ -93,21 +93,23 @@ def generate_robot(robot_start_goal, simulator):
     simulator.add_agent(robot_agent)
 
 
-def generate_prerecorded_humans(max_time, with_prerecs, p, simulator, center_offset=np.array([0., 0.])):
+def generate_prerecorded_humans(max_time, start_indx, p, simulator, center_offset=np.array([0., 0.])):
     """"world_df" is a set of trajectories organized as a pandas dataframe.
     Each row is a pedestrian at a given frame (aka time point).
     The data was taken at 25 fps so between frames is 1/25th of a second. """
-    if(with_prerecs):
+    if(start_indx != -1):
         datafile = os.path.join(
             p.socnav_dir, "tests/world_coordinate_inter.csv")
         world_df = pd.read_csv(datafile, header=None).T
         world_df.columns = ['frame', 'ped', 'y', 'x']
         world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
-        start_frame = world_df['frame'][0]  # default start (of data)
+        start_frame = world_df['frame'][0]  # default start time (of data)
         max_peds = max(np.unique(world_df.ped))
+        data_capture = 25.0  # 25 frames per second
         # print("Gathering prerecorded agents from",start_ped, "to", start_ped + num_pedestrians)
+        last_frame = world_df[world_df.ped == start_indx]['frame']
         for i in range(max_peds - 1):
-            ped_id = i + 1
+            ped_id = i + start_indx + 1
             if (ped_id >= max_peds):  # need data to be within the bounds
                 print("%sRequested Prerec agent index out of bounds:" %
                       (color_red), ped_id, "%s" % (color_reset))
@@ -118,9 +120,9 @@ def generate_prerecorded_humans(max_time, with_prerecs, p, simulator, center_off
             for j, f in enumerate(ped_i['frame']):
                 if(i == 0 and j == 0):
                     start_frame = f  # update start frame to be representative of "first" pedestrian
-                relative_time = (f - start_frame) * (1 / 25.)
+                relative_time = (f - start_frame) * (1 / data_capture)
                 times.append(relative_time)
-            if(times[0] > max_time):
+            if(times[0] - last_frame[0] > max_time):
                 # under assumption that the prerecorded agents are inputted times are sequential
                 break
             record = []
@@ -250,7 +252,7 @@ def test_episodes():
         """
         Add the prerecorded humans to the simulator
         """
-        generate_prerecorded_humans(episode.max_time, episode.with_prerecs, p,
+        generate_prerecorded_humans(episode.max_time, episode.prerec_start_indx, p,
                                     simulator, center_offset=np.array([14.0, 2.0]))
 
         """

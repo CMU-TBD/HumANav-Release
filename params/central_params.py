@@ -152,7 +152,7 @@ def create_test_params(test: str):
     test_p = episodes_config[test]
     p.name = test
     p.map_name = test_p.get('map_name')
-    p.with_prerecs = test_p.getboolean('with_prerecs')
+    p.prerec_start_indx = test_p.getint('prerec_start_indx')
     p.agents_start = eval(test_p.get('agents_start'))
     p.agents_end = eval(test_p.get('agents_end'))
     p.robot_start_goal = eval(test_p.get('robot_start_goal'))
