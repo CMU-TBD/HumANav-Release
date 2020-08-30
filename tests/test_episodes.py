@@ -51,6 +51,37 @@ def create_params():
     return p
 
 
+def establish_joystick_handshake(p):
+    import socket
+    import json
+    import time
+    # sockets for communication
+    RoboAgent.host = socket.gethostname()
+    # port for recieving commands from the joystick
+    RoboAgent.port_recv = p.robot_params.port
+    # port for sending commands to the joystick (successor of port_recv)
+    RoboAgent.port_send = RoboAgent.port_recv + 1
+    RoboAgent.establish_joystick_receiver_connection()
+    time.sleep(0.01)
+    RoboAgent.establish_joystick_sender_connection()
+    # send the preliminary episodes that the socnav is going to run
+    json_dict = {}
+    json_dict['episodes'] = list(p.episode_params.keys())
+    episodes = json.dumps(json_dict)
+    # Create a TCP/IP socket
+    send_episodes_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Connect the socket to the port where the server is listening
+    server_address = ((RoboAgent.host, RoboAgent.port_send))
+    send_episodes_socket.connect(server_address)
+    send_episodes_socket.sendall(bytes(episodes, "utf-8"))
+    send_episodes_socket.close()
+
+
+def close_robot_sockets():
+    RoboAgent.joystick_sender_socket.close()
+    RoboAgent.joystick_receiver_socket.close()
+
+
 def generate_robot(robot_start_goal, simulator):
     assert(len(robot_start_goal) == 2)
     rob_start = generate_config_from_pos_3(robot_start_goal[0])
@@ -62,24 +93,22 @@ def generate_robot(robot_start_goal, simulator):
     simulator.add_agent(robot_agent)
 
 
-def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center_offset=np.array([0., 0.])):
+def generate_prerecorded_humans(max_time, start_indx, p, simulator, center_offset=np.array([0., 0.])):
     """"world_df" is a set of trajectories organized as a pandas dataframe.
     Each row is a pedestrian at a given frame (aka time point).
     The data was taken at 25 fps so between frames is 1/25th of a second. """
-    if(num_pedestrians > 0 or num_pedestrians == -1):
+    if(start_indx != -1):
         datafile = os.path.join(
             p.socnav_dir, "tests/world_coordinate_inter.csv")
         world_df = pd.read_csv(datafile, header=None).T
         world_df.columns = ['frame', 'ped', 'y', 'x']
         world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
-        start_frame = world_df['frame'][0]  # default start (of data)
+        start_frame = world_df['frame'][0]  # default start time (of data)
         max_peds = max(np.unique(world_df.ped))
-        if(num_pedestrians == -1):
-            num_pedestrians = max_peds - 1
-        print("Gathering prerecorded agents from",
-              start_ped, "to", start_ped + num_pedestrians)
-        for i in range(num_pedestrians):
-            ped_id = i + start_ped + 1
+        data_capture = 25.0  # 25 frames per second
+        # print("Gathering prerecorded agents from",start_ped, "to", start_ped + num_pedestrians)
+        for i in range(max_peds - 1):
+            ped_id = i + start_indx + 1
             if (ped_id >= max_peds):  # need data to be within the bounds
                 print("%sRequested Prerec agent index out of bounds:" %
                       (color_red), ped_id, "%s" % (color_reset))
@@ -90,8 +119,12 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
             for j, f in enumerate(ped_i['frame']):
                 if(i == 0 and j == 0):
                     start_frame = f  # update start frame to be representative of "first" pedestrian
-                relative_time = (f - start_frame) * (1 / 25.)
+                relative_time = (f - start_frame) * (1 / data_capture)
                 times.append(relative_time)
+            # make sure the start of the new agents are within the max_time
+            if(times[0] > max_time):
+                # under assumption that the prerecorded agents are inputted times are sequential
+                break
             record = []
             # generate a list of lists of positions (only x)
             for x in ped_i['x']:
@@ -120,10 +153,9 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
                     record[0].append(0)  # initial speed is 0
             for j, t in enumerate(times):  # lastly, append t to the list
                 record[j].append(t)
-            simulator.add_agent(PrerecordedHuman(
-                record, generate_appearance=p.render_3D))
-            print("Generated Prerecorded Humans:", i + 1, "\r", end="")
-        print("\n")
+            prerec = PrerecordedHuman(record, generate_appearance=p.render_3D)
+            simulator.add_agent(prerec)
+        print("Generated", i, "prerecorded agents")
 
 
 def generate_auto_humans(starts, goals, simulator, environment, p, r):
@@ -131,6 +163,7 @@ def generate_auto_humans(starts, goals, simulator, environment, p, r):
     Generate and add num_humans number of randomly generated humans to the simulator
     """
     num_gen_humans = min(len(starts), len(goals))
+    print("Generated Auto Humans:", num_gen_humans)
     traversible = environment["traversibles"][0]
     for i in range(num_gen_humans):
         start_config = generate_config_from_pos_3(starts[i])
@@ -152,9 +185,6 @@ def generate_auto_humans(starts, goals, simulator, environment, p, r):
 
         # Input human fields into simulator
         simulator.add_agent(new_human_i)
-        print("Generated Auto Humans:", i + 1, "\r", end="")
-    if(num_gen_humans > 0):
-        print("\n")
 
 
 def test_episodes():
@@ -201,6 +231,8 @@ def test_episodes():
     of a human trajectory and pathfinding. 
     """
 
+    establish_joystick_handshake(p)
+
     for test in list(p.episode_params.keys()):
         episode = p.episode_params[test]
         print("%sStarting test:" % color_yellow, test, "%s" % color_reset)
@@ -209,7 +241,7 @@ def test_episodes():
             environment,
             renderer=r,
             render_3D=p.render_3D,
-            episode_name=test
+            episode_params=episode
         )
 
         """
@@ -220,7 +252,7 @@ def test_episodes():
         """
         Add the prerecorded humans to the simulator
         """
-        generate_prerecorded_humans(episode.prerecs_start, episode.num_prerecs, p,
+        generate_prerecorded_humans(episode.max_time, episode.prerec_start_indx, p,
                                     simulator, center_offset=np.array([14.0, 2.0]))
 
         """
@@ -235,6 +267,8 @@ def test_episodes():
         # Remove all the humans from the renderer
         if p.render_3D:  # only when rendering with opengl
             r.remove_all_humans()
+
+    close_robot_sockets()
 
 
 if __name__ == '__main__':
