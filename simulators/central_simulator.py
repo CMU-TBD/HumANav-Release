@@ -121,8 +121,7 @@ class CentralSimulator(SimulatorHelper):
         self.robot.update_world(current_state)
 
         # initialize the robot to establish joystick connection
-        r_t = self.init_robot_listener_thread(
-            connect_to_joystick=self.connect_to_joystick)
+        r_t = self.init_robot_listener_thread()
 
         # keep track of wall-time in the simulator
         start_time = time.clock()
@@ -567,7 +566,7 @@ class CentralSimulator(SimulatorHelper):
 
     """BEGIN thread utils"""
 
-    def init_robot_listener_thread(self, power_on=True, connect_to_joystick=True):
+    def init_robot_listener_thread(self, power_on=True):
         """Initializes the robot listener by establishing socket connections to 
         the joystick, transmitting the (constant) obstacle map (environment), 
         and starting the robot thread.
@@ -581,12 +580,6 @@ class CentralSimulator(SimulatorHelper):
         # wait for joystick connection to be established
         r = self.robot
         if(r is not None):
-            if(connect_to_joystick):
-                r.establish_joystick_receiver_connection()
-                time.sleep(0.01)
-                r.establish_joystick_sender_connection()
-            else:
-                print("%sConnected to joystick%s" % (color_green, color_reset))
             assert(r.world_state is not None)
             # send first transaction to the joystick
             print("sending map to joystick")

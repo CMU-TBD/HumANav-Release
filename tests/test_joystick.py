@@ -8,16 +8,14 @@ def test_joystick():
     J = Joystick()
     J.establish_robot_sender_connection()
     J.establish_robot_receiver_connection()
-    J.init_control_pipeline()
-    # TODO: only run while the simulator has more episodes to run
-    while(True):
+    J.await_episodes()
+    episodes = J.get_episodes()
+    for ep in episodes:
+        J.await_env()
+        # init control pipeline after episode from robot
+        J.init_control_pipeline()
         J.update(random_commands=False)
         # for other episode instance
-        J.listen_thread = threading.Thread(target=J.listen_to_robot)
-        J.listen_thread.start()
-        # init control pipeline after recieved map from robot
-        J.init_control_pipeline()
-        J.await_env()
 
 
 if __name__ == '__main__':

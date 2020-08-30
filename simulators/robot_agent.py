@@ -14,6 +14,9 @@ import sys
 class RoboAgent(Agent):
     joystick_receiver_socket = None
     joystick_sender_socket = None
+    host = None
+    port_send = None
+    port_recv = None
 
     def __init__(self, name, start_configs, trajectory=None):
         self.name = name
@@ -33,12 +36,6 @@ class RoboAgent(Agent):
     def simulation_init(self, sim_map, with_planner=False):
         super().simulation_init(sim_map, with_planner=with_planner)
         self.params.robot_params = create_robot_params()
-        # sockets for communication
-        self.host = socket.gethostname()
-        # port for recieving commands from the joystick
-        self.port_recv = self.params.robot_params.port
-        # port for sending commands to the joystick
-        self.port_send = self.port_recv + 1
         self.repeat_freq = self.params.repeat_freq
         # simulation update init
         self.running = True
@@ -168,7 +165,7 @@ class RoboAgent(Agent):
         RoboAgent.joystick_sender_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
-        server_address = ((self.host, self.port_send))
+        server_address = ((RoboAgent.host, RoboAgent.port_send))
         try:
             RoboAgent.joystick_sender_socket.connect(server_address)
         except ConnectionRefusedError:  # used to turn off the joystick
@@ -226,11 +223,13 @@ class RoboAgent(Agent):
                     self.power_off()
                     break
 
-    def establish_joystick_receiver_connection(self):
+    @staticmethod
+    def establish_joystick_receiver_connection():
         """This is akin to a server connection (robot is server)"""
         RoboAgent.joystick_receiver_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
-        RoboAgent.joystick_receiver_socket.bind((self.host, self.port_recv))
+        RoboAgent.joystick_receiver_socket.bind(
+            (RoboAgent.host, RoboAgent.port_recv))
         # wait for a connection
         RoboAgent.joystick_receiver_socket.listen(1)
         print("Waiting for Joystick connection")
@@ -239,11 +238,12 @@ class RoboAgent(Agent):
               (color_green, color_reset))
         return connection, client
 
-    def establish_joystick_sender_connection(self):
+    @staticmethod
+    def establish_joystick_sender_connection():
         """This is akin to a client connection (joystick is client)"""
         RoboAgent.joystick_sender_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
-        address = ((self.host, self.port_send))
+        address = ((RoboAgent.host, RoboAgent.port_send))
         try:
             RoboAgent.joystick_sender_socket.connect(address)
         except:
