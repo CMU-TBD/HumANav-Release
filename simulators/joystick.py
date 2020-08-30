@@ -114,7 +114,7 @@ class Joystick():
     def robot_input(self, lin_commands: list, ang_commands: list,
                     request_world: bool, override_power_off: bool = False):
         # singular input
-        message = self.create_message(self.robot_running or override_power_off,
+        message = self.create_message(self.robot_running and (not override_power_off),
                                       lin_commands, ang_commands, time.clock(), request_world)
         if(request_world):
             # only a single message being sent
@@ -254,7 +254,11 @@ class Joystick():
         if(self.robot_running):
             print("%sConnection closed by robot%s" % (color_red, color_reset))
             self.robot_running = False
-            exit(0)
+            try:
+                self.robot_input([], [], request_world=False,
+                                 override_power_off=True)
+            except:
+                return
 
     """BEGIN socket utils"""
 

@@ -89,7 +89,7 @@ class RoboAgent(Agent):
         configs = HumanConfigs.generate_random_human_config(environment)
         return RoboAgent.generate_robot(configs)
 
-    def sense(self):
+    def check_termination_conditions(self):
         """use this to take in a world state and compute obstacles (gen_agents/walls) to affect the robot"""
         if(not self.end_episode):
             # check for collisions with other gen_agents
@@ -102,14 +102,14 @@ class RoboAgent(Agent):
             # NOTE: enforce_episode_terminator updates the self.end_episode variable
             if(self.end_episode or self.has_collided):
                 self.has_collided = True
-                self.termination_cause = 'Collision'
+                self.robot_termination = 'Collision'
                 self.power_off()
 
     def execute(self):
         for _ in range(self.amnt_per_joystick):
             if(not self.running):
                 break
-            self.sense()
+            self.check_termination_conditions()
             current_config = self.get_current_config()
             cmd_grp = self.commands[self.num_executed]
             num_cmds_in_grp = len(cmd_grp)
@@ -134,7 +134,7 @@ class RoboAgent(Agent):
     def update(self, iteration):
         if self.running:
             # only execute the most recent commands
-            self.sense()
+            self.check_termination_conditions()
             if self.num_executed < len(self.commands):
                 self.execute()
             # block joystick until recieves next command

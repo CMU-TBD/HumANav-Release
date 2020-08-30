@@ -617,7 +617,7 @@ class CentralSimulator(SimulatorHelper):
             # turn off the robot
             self.robot.power_off()
             # close robot listener threads
-            if(r_listener_thread.is_alive()):
+            if(r_listener_thread.is_alive() and self.params.join_threads):
                 r_listener_thread.join()
             del(r_listener_thread)
         return
