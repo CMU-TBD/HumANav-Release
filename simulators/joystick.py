@@ -33,6 +33,7 @@ class Joystick():
         self.velocities = {}     # for testing simstate utils
         self.accelerations = {}  # for testing simstate utils
         self.environment = None
+        self._old_env = None  # used for drawing if self.environment is reset
         self.joystick_params = create_robot_params()
         self.init()
         self.current_ep = None
@@ -360,6 +361,7 @@ class Joystick():
     def update_robot_and_env(self, current_world):
         # only update the environment if it is non-empty
         self.environment = current_world.get_environment()
+        self._old_env = deepcopy(self.environment)
         robots = list(current_world.get_robots().values())
         # only one robot is supported
         assert(len(robots) == 1)
@@ -444,7 +446,7 @@ class Joystick():
 
     def generate_frame(self, world_state, frame_count, plot_quiver=False):
         # extract the information from the world state
-        environment = self.environment
+        environment = self._old_env
         gen_agents = world_state.get_gen_agents()
         prerecs = world_state.get_prerecs()
         robots = world_state.get_robots()
