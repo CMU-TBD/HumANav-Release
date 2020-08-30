@@ -150,9 +150,9 @@ def create_robot_params():
 def create_test_params(test: str):
     p = DotMap()
     test_p = episodes_config[test]
+    p.name = test
     p.map_name = test_p.get('map_name')
-    p.prerecs_start = test_p.getint('prerecs_start')
-    p.num_prerecs = test_p.getint('num_prerecs')
+    p.with_prerecs = test_p.getboolean('with_prerecs')
     p.agents_start = eval(test_p.get('agents_start'))
     p.agents_end = eval(test_p.get('agents_end'))
     p.robot_start_goal = eval(test_p.get('robot_start_goal'))

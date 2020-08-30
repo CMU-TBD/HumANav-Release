@@ -265,7 +265,7 @@ class Joystick():
         server_address = ((self.host, self.port_send))
         try:
             self.robot_sender_socket.connect(server_address)
-        except ConnectionRefusedError:  # used to turn off the joystick
+        except:  # used to turn off the joystick
             self.power_off()
             return
         # Send data
@@ -348,6 +348,8 @@ class Joystick():
             if(self.joystick_params.track_sim_states):
                 self.sim_states[current_world.get_sim_t()] = \
                     current_world
+            print("%sUpdated state of the world for time = %.5f" %
+                  (color_orange, current_world.get_sim_t()), "%s" % color_reset)
             if(self.joystick_params.track_vel_accel):
                 from simulators.sim_state import compute_all_velocities, compute_all_accelerations
                 self.velocities[current_world.get_sim_t()] = \
@@ -392,7 +394,7 @@ class Joystick():
         pd_df.to_csv(abs_path)
         print("%sUpdated pandas dataframe%s" % (color_green, color_reset))
 
-    def establish_robot_sender_connection(self):
+    def establish_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
         self.robot_sender_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
@@ -406,8 +408,10 @@ class Joystick():
         print("%sJoystick->Robot connection established%s" %
               (color_green, color_reset))
         assert(self.robot_sender_socket is not None)
+        # set socket timeout
+        self.robot_sender_socket.settimeout(5)
 
-    def establish_robot_receiver_connection(self):
+    def establish_receiver_connection(self):
         """This is akin to a server connection (robot is server)"""
         self.robot_receiver_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)

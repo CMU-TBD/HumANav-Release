@@ -19,21 +19,19 @@ class CentralSimulator(SimulatorHelper):
     obstacle_map = None
 
     def __init__(self, environment: dict, renderer=None,
-                 render_3D: bool = None, episode_name: str = "sim",
-                 connect_to_joystick: bool = True):
+                 render_3D: bool = None, episode_params=None):
         """ Initializer for the central simulator
 
         Args:
             params (Map): parameter configuration file from test_socnav.py
             environment (dict): dictionary housing the obj map (bitmap) and more
             renderer (optional): OpenGL renderer for 3D models. Defaults to None
-            episode (str, optional): Name of the episode test that the simulator runs
+            episode_params (str, optional): Name of the episode test that the simulator runs
         """
         self.r = renderer
         self.environment = environment
         self.params = create_sbpd_simulator_params(render_3D=render_3D)
-        self.episode_name = episode_name
-        self.connect_to_joystick = connect_to_joystick
+        self.episode_params = episode_params
         CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
@@ -105,6 +103,7 @@ class CentralSimulator(SimulatorHelper):
         external joystick process.
         """
         num_agents: int = len(self.agents) + len(self.prerecs)
+        self.og_num_prerecs = len(self.prerecs)  # before they get completed
         print("Running simulation on", num_agents, "gen_agents")
 
         # scale the simulator time
@@ -170,7 +169,7 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             self.print_sim_progress(iteration)
 
-            if(iteration > self.params.max_frames):
+            if((iteration * self.delta_t) > self.episode_params.max_time):
                 # hard limit of simulation
                 break
 
@@ -189,11 +188,11 @@ class CentralSimulator(SimulatorHelper):
         print("\nSimulation completed in", wall_clock, "seconds")
 
         # convert the saved states to rendered png's to be rendered into a movie
-        self.generate_frames(filename=self.episode_name + "_obs")
+        self.generate_frames(filename=self.episode_params.name + "_obs")
 
         # convert all the generated frames into a gif file
         self.save_frames_to_gif(clear_old_files=True,
-                                dir_title=self.episode_name)
+                                dir_title=self.episode_params.name)
 
     def _init_obstacle_map(self, renderer=None, ):
         """ Initializes the sbpd map."""
@@ -225,7 +224,8 @@ class CentralSimulator(SimulatorHelper):
         """
         print("A:", len(self.agents),
               "%sSuccess:" % (color_green),
-              self.num_conditions_in_agents("green"),
+              self.num_conditions_in_agents("green") +
+              (self.og_num_prerecs - len(self.prerecs)),
               "%sCollide:" % (color_red),
               self.num_conditions_in_agents("red"),
               "%sTime:" % (color_blue),
@@ -260,7 +260,7 @@ class CentralSimulator(SimulatorHelper):
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
         current_state = SimState(saved_env,
                                  saved_agents, saved_prerecs, saved_robots,
-                                 sim_t, wall_t, delta_t, self.episode_name
+                                 sim_t, wall_t, delta_t, self.episode_params.name
                                  )
         # Save current state to a class dictionary indexed by simulator time
         self.states[sim_t] = current_state
@@ -559,8 +559,8 @@ class CentralSimulator(SimulatorHelper):
         self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                          state.get_environment(), camera_pos_13,
                          state.get_gen_agents(), state.get_prerecs(), state.get_robots(),
-                         state.get_sim_t(), state.get_wall_t(), self.episode_name + filename,
-                         'tests/socnav/' + self.episode_name + '_movie')
+                         state.get_sim_t(), state.get_wall_t(), self.episode_params.name + filename,
+                         'tests/socnav/' + self.episode_params.name + '_movie')
         # Delete state to save memory after frames are generated
         del(state)
 
