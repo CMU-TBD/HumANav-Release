@@ -107,7 +107,6 @@ def generate_prerecorded_humans(max_time, start_indx, p, simulator, center_offse
         max_peds = max(np.unique(world_df.ped))
         data_capture = 25.0  # 25 frames per second
         # print("Gathering prerecorded agents from",start_ped, "to", start_ped + num_pedestrians)
-        last_frame = world_df[world_df.ped == start_indx]['frame']
         for i in range(max_peds - 1):
             ped_id = i + start_indx + 1
             if (ped_id >= max_peds):  # need data to be within the bounds
@@ -122,7 +121,8 @@ def generate_prerecorded_humans(max_time, start_indx, p, simulator, center_offse
                     start_frame = f  # update start frame to be representative of "first" pedestrian
                 relative_time = (f - start_frame) * (1 / data_capture)
                 times.append(relative_time)
-            if(times[0] - last_frame[0] > max_time):
+            # make sure the start of the new agents are within the max_time
+            if(times[0] > max_time):
                 # under assumption that the prerecorded agents are inputted times are sequential
                 break
             record = []
