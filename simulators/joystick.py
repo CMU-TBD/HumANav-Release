@@ -104,6 +104,7 @@ class Joystick():
         json_dict = {}
         json_dict["joystick_on"] = joystick_power
         if(joystick_power):
+            json_dict['j_time'] = j_time
             json_dict["lin_vels"] = lin_vels
             json_dict["ang_vels"] = ang_vels
             json_dict["req_world"] = req_world
@@ -282,7 +283,7 @@ class Joystick():
             time.sleep(0.01)
 
     def listen_to_robot(self):
-        self.robot_receiver_socket.listen(10)
+        self.robot_receiver_socket.listen(30)
         self.robot_running = True
         while self.robot_running:
             connection, client = self.robot_receiver_socket.accept()
@@ -335,7 +336,7 @@ class Joystick():
             print("%sUpdated state of the world for time = %.3f out of %.3f" %
                   (color_orange, current_world.get_sim_t(), self.ep_max_time),
                   "%s" % color_reset)
-            self.track_vel_accel()
+            self.track_vel_accel(current_world)
             # update the robot's position from sensor data
             robot = list(current_world.get_robots().values())[0]
             self.current_config = robot.get_current_config()

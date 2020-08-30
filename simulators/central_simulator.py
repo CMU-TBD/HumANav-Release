@@ -339,6 +339,8 @@ class CentralSimulator(SimulatorHelper):
             clear_old_files (bool, optional): Whether or not to clear old image files. Defaults to True.
             with_multiprocessing (bool, optional): for multiple directories of images, run with multiprocessing. Defaults to True.
         """
+        if(self.params.fps_scale_down == 0):
+            return
         num_robots = len(self.robots)
         rendering_processes = []
         # fps = 1 / duration # where the duration is the simulation capture rate
