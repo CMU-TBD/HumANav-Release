@@ -105,7 +105,6 @@ class RoboAgent(Agent):
             current_config = self.get_current_config()
             cmd_grp = self.commands[self.num_executed]
             num_cmds_in_grp = len(cmd_grp)
-
             # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
             command = np.array([[cmd_grp]], dtype=np.float32)
             # NOTE: the format for the acceleration commands to the open loop for the robot is:
@@ -129,7 +128,6 @@ class RoboAgent(Agent):
             # only execute the most recent commands
             self.sense()
             if self.num_executed < len(self.commands):
-                # print(self.num_executed, len(self.commands))
                 self.execute()
             # block joystick until recieves next command
             while iteration >= self.get_num_executed():
@@ -148,22 +146,22 @@ class RoboAgent(Agent):
                   len(self.commands), "commands")
             # if the robot is already "off" do nothing
             self.running = False
-            # TODO: only close socket on the LAST episode
-            # RoboAgent.joystick_receiver_socket.close()
 
     """BEGIN socket utils"""
 
     def ping_joystick(self):
-        if self.joystick_requests_world:  # only send when joystick requests
-            self.send_to_joystick(
-                self.world_state.to_json(robot_on=True, include_map=False))
+        # only send when joystick requests
+        if (self.joystick_requests_world and self.running):
+            world_state = \
+                self.world_state.to_json(robot_on=True, include_map=False)
+            self.send_to_joystick(world_state)
             # immediately note that the world has been sent:
             self.joystick_requests_world = False
 
     def send_to_joystick(self, message):
         # Create a TCP/IP socket
-        RoboAgent.joystick_sender_socket = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM)
+        RoboAgent.joystick_sender_socket = \
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
         server_address = ((RoboAgent.host, RoboAgent.port_send))
         try:

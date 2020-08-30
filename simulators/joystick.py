@@ -207,7 +207,6 @@ class Joystick():
             except:
                 print("%sForce closing socket%s" %
                       (color_red, color_reset))
-            # TODO: only close socket on the LAST episode
             self.robot_receiver_socket.close()
 
     def update(self, random_commands: bool = False):
@@ -230,22 +229,23 @@ class Joystick():
         # this point is reached once the planner/randomizer are finished
         self.environment = None  # free environment
         print("Finished episode:", self.current_ep)
-        if(self.current_ep is self.episodes[-1]):
-            self.finished_all_episodes = True
-            self.force_close_socket()
-            if self.listen_thread.is_alive():
-                self.listen_thread.join()
-            print("Finished all episodes")
-        else:
-            # start the listening thread for recieving world states from robot
-            # only when there is another episode to run
-            self.listen_thread = threading.Thread(target=self.listen_to_robot)
-            self.listen_thread.start()
         # begin gif (movie) generation
         try:
             save_to_gif(os.path.join(get_path_to_socnav(), self.dirname))
         except:
             print("unable to render gif")
+        if(self.current_ep == self.episodes[-1]):
+            self.finished_all_episodes = True
+            self.force_close_socket()
+            print("Finished all episodes")
+            os._exit(0)
+            if self.listen_thread.is_alive():
+                self.listen_thread.join()
+        else:
+            # start the listening thread for recieving world states from robot
+            # only when there is another episode to run
+            self.listen_thread = threading.Thread(target=self.listen_to_robot)
+            self.listen_thread.start()
 
     def power_off(self):
         if(self.robot_running):

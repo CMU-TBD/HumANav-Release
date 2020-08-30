@@ -77,6 +77,11 @@ def establish_joystick_handshake(p):
     send_episodes_socket.close()
 
 
+def close_robot_sockets():
+    RoboAgent.joystick_sender_socket.close()
+    RoboAgent.joystick_receiver_socket.close()
+
+
 def generate_robot(robot_start_goal, simulator):
     assert(len(robot_start_goal) == 2)
     rob_start = generate_config_from_pos_3(robot_start_goal[0])
@@ -265,6 +270,8 @@ def test_episodes():
         # Remove all the humans from the renderer
         if p.render_3D:  # only when rendering with opengl
             r.remove_all_humans()
+
+    close_robot_sockets()
 
 
 if __name__ == '__main__':
