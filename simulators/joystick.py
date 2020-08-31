@@ -131,9 +131,12 @@ class Joystick():
                 ang_vels = []
                 lin = randint(10, 100) / 100.
                 ang = randint(-100, 100) / 100.
-                for i in range(action_dt):
+                for _ in range(action_dt):
                     lin_vels.append(lin)
                     ang_vels.append(ang)
+                    if(self.num_sent % self.joystick_params.sense_interval == 0):
+                        self.request_world = True
+                    self.num_sent += 1
                 self.robot_input(lin_vels, ang_vels, self.request_world)
                 time.sleep(0.05)  # NOTE: Tune this to whatever you'd like
                 # now update the robot with the "ready" ping
@@ -367,7 +370,7 @@ class Joystick():
         self.ep_max_time = current_world.get_episode_max_time()
         assert(self.current_ep in self.episodes)
         print("%sRunning test for %s%s" %
-              (color_orange, self.current_ep, color_reset))
+              (color_yellow, self.current_ep, color_reset))
         self.dirname = 'tests/socnav/' + self.current_ep + '_movie/joystick_data'
 
     def update_robot_and_env(self, current_world):

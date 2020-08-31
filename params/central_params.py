@@ -139,7 +139,7 @@ def create_robot_params():
                    'camera_elevation_degree'),
                delta_theta=rob_p.getfloat('delta_theta'))
     # joystick params
-    p.sense_interval = rob_p.getint('sense_interval')
+    p.sense_interval = max(1, rob_p.getint('sense_interval'))
     p.track_sim_states = rob_p.getboolean('track_sim_states')
     p.track_vel_accel = rob_p.getboolean('track_vel_accel')
     p.write_pandas_log = rob_p.getboolean('write_pandas_log')
