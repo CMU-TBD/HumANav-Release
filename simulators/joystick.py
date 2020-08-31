@@ -363,6 +363,7 @@ class Joystick():
                                                   self.frame_num)
                                             )
                 t.start()
+                self.frame_num += 1
         return True
 
     def update_episode(self, current_world):
@@ -393,11 +394,9 @@ class Joystick():
         if(self.joystick_params.track_vel_accel):
             from simulators.sim_state import compute_all_velocities, compute_all_accelerations
             self.velocities[current_world.get_sim_t()] = \
-                compute_all_velocities(
-                    list(self.sim_states.values()))
+                compute_all_velocities(list(self.sim_states.values()))
             self.accelerations[current_world.get_sim_t()] = \
-                compute_all_accelerations(
-                    list(self.sim_states.values()))
+                compute_all_accelerations(list(self.sim_states.values()))
 
     def update_logs(self, world_state: SimState):
         self.update_log_of_type('robots', world_state)
@@ -517,5 +516,3 @@ class Joystick():
         plt.close(fig)
         del fig
         plt.clf()
-        # update frame count
-        self.frame_num += 1

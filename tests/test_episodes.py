@@ -222,7 +222,11 @@ def test_episodes():
             np.set_printoptions(precision=3)
 
             # TODO: make this a param element
-            room_center = np.array([30., 9., 0.])
+            room_center = \
+                np.array([traversible.shape[0] * 0.5,
+                          traversible.shape[1] * 0.5,
+                          0.0]
+                         )
             # Create default environment which is a dictionary
             # containing ["map_scale", "traversibles"]
             # which is a constant and list of traversibles respectively
