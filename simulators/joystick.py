@@ -238,7 +238,7 @@ class Joystick():
             # begin gif (movie) generation
             try:
                 save_to_gif(os.path.join(get_path_to_socnav(), self.dirname),
-                            gif_filename="joystick_movie")
+                            gif_filename="joystick_movie", clear_old_files=True)
             except:
                 print("unable to render gif")
         if(self.current_ep == self.episodes[-1]):
