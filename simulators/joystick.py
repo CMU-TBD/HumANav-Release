@@ -36,6 +36,7 @@ class Joystick():
         self._old_env = None  # used for drawing if self.environment is reset
         self.joystick_params = create_robot_params()
         self.init()
+        self.gif_processes = []
         self.current_ep = None
         self.episodes = None
         self.ep_max_time = 10e7  # by default initial max-time is basically infinite
@@ -237,8 +238,11 @@ class Joystick():
         if(self.joystick_params.generate_movie):
             # begin gif (movie) generation
             try:
+                for p in self.gif_processes:
+                    if(p.is_alive()):
+                        p.join()
                 save_to_gif(os.path.join(get_path_to_socnav(), self.dirname),
-                            gif_filename="joystick_movie")
+                            gif_filename="joystick_movie", clear_old_files=True)
             except:
                 print("unable to render gif")
         if(self.current_ep == self.episodes[-1]):
@@ -362,7 +366,8 @@ class Joystick():
                                             args=(current_world,
                                                   self.frame_num)
                                             )
-                t.start()
+                self.gif_processes.append(t)
+                self.gif_processes[-1].start()
                 self.frame_num += 1
         return True
 

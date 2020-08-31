@@ -31,7 +31,19 @@ def create_params():
     p.camera_params.fov_horizontal = 75.0
 
     # Introduce the robot params
+    from params.central_params import create_robot_params
     p.robot_params = create_robot_params()
+
+    # Introduce the episode params
+    p.episode_params = {}
+    p.episode_params['test_socnav'] = \
+        DotMap(name='test_socnav',
+               map_name='Double_Corridor_OG',
+               prerec_start_indx=0,
+               agents_start=[],
+               agents_end=[],
+               robot_start_goal=[],
+               max_time=10e7)
 
     # Tilt the camera 10 degree down from the horizontal axis
     p.robot_params.physical_params.camera_elevation_degree = -10
@@ -43,133 +55,6 @@ def create_params():
         p.camera_params.modalities = ['occupancy_grid']
 
     return p
-
-
-def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
-                 humans, plot_quiver=False):
-    ax.imshow(traversible, extent=extent, cmap='gray',
-              vmin=-.5, vmax=1.5, origin='lower')
-
-    if human_traversible is not None:
-        # NOTE: the human radius is only available given the openGL human modeling
-        # and rendering, thus p.render_with_display must be True
-        # Plot the 5x5 meter human radius grid atop the environment traversible
-        alphas = np.empty(np.shape(human_traversible))
-        for y in range(human_traversible.shape[1]):
-            for x in range(human_traversible.shape[0]):
-                alphas[x][y] = not(human_traversible[x][y])
-        ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
-                  vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
-        alphas = np.all(np.logical_not(human_traversible))
-
-    # Plot the camera
-    ax.plot(camera_pos_13[0], camera_pos_13[1],
-            'bo', markersize=10, label='Camera')
-    ax.quiver(camera_pos_13[0], camera_pos_13[1], np.cos(
-        camera_pos_13[2]), np.sin(camera_pos_13[2]))
-
-    # Plot the humans (added support for multiple humans) and their trajectories
-    for i, human in enumerate(humans):
-        human_pos_2 = human.get_current_config().position_nk2()[0][0]
-        human_heading = (
-            human.get_current_config().heading_nk1())[0][0]
-        human_goal_2 = human.get_goal_config().position_nk2()[0][0]
-        goal_heading = (human.get_goal_config().heading_nk1())[0][0]
-        color = 'go'  # humand are green and solid unless collided
-        trajectory_color = "green"
-        if(human.get_collided()):
-            color = 'ro'  # collided humans are drawn red
-            trajectory_color = "red"
-        human.get_trajectory().render(ax, freq=1, color=trajectory_color, plot_quiver=False)
-        if(i == 0):
-            # Only add label on the first humans
-            ax.plot(human_pos_2[0], human_pos_2[1],
-                    color, markersize=10, label='Human')
-            ax.plot(human_goal_2[0], human_goal_2[1],
-                    'go', markersize=10, label='Goal')
-        else:
-            ax.plot(human_pos_2[0], human_pos_2[1], color, markersize=10)
-            ax.plot(human_goal_2[0], human_goal_2[1], 'go', markersize=10)
-        if(plot_quiver):
-            # human start quiver
-            ax.quiver(human_pos_2[0], human_pos_2[1], np.cos(human_heading), np.sin(
-                human_heading), scale=2, scale_units='inches')
-            # goal quiver
-            ax.quiver(human_goal_2[0], human_goal_2[1], np.cos(goal_heading), np.sin(
-                goal_heading), scale=2, scale_units='inches')
-
-
-def plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
-                camera_pos_13, humans, filename):
-
-    map_scale = environment["map_scale"]
-    # Obstacles/building traversible
-    traversible = environment["traversibles"][0]
-    human_traversible = None
-
-    if len(environment["traversibles"]) > 1:
-        human_traversible = environment["traversibles"][1]
-    # Compute the real_world extent (in meters) of the traversible
-    extent = [0., traversible.shape[1], 0., traversible.shape[0]]
-    extent = np.array(extent) * map_scale
-
-    num_frames = 2
-    if rgb_image_1mk3 is not None:
-        num_frames = num_frames + 1
-    if depth_image_1mk1 is not None:
-        num_frames = num_frames + 1
-
-    img_size = 10
-    fig = plt.figure(figsize=(num_frames * img_size, img_size))
-
-    # Plot the 5x5 meter occupancy grid centered around the camera
-    zoom = 5.5  # zoom in by a constant amount
-    ax = fig.add_subplot(1, num_frames, 1)
-    ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
-    ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
-    plot_topview(ax, extent, traversible, human_traversible,
-                 camera_pos_13, humans, plot_quiver=True)
-    ax.legend()
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title('Topview (zoomed)')
-
-    # Render entire map-view from the top
-    # to keep square plot
-    outer_zoom = min(traversible.shape[0], traversible.shape[1]) * map_scale
-    ax = fig.add_subplot(1, num_frames, 2)
-    ax.set_xlim(0., outer_zoom)
-    ax.set_ylim(0., outer_zoom)
-    plot_topview(ax, extent, traversible,
-                 human_traversible, camera_pos_13, humans)
-    ax.legend()
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_title('Topview')
-
-    if rgb_image_1mk3 is not None:
-        # Plot the RGB Image
-        ax = fig.add_subplot(1, num_frames, 3)
-        ax.imshow(rgb_image_1mk3[0].astype(np.uint8))
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title('RGB')
-
-    if depth_image_1mk1 is not None:
-        # Plot the Depth Image
-        ax = fig.add_subplot(1, num_frames, 4)
-        ax.imshow(depth_image_1mk1[0, :, :, 0].astype(np.uint8), cmap='gray')
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_title('Depth')
-
-    full_file_name = os.path.join(p.socnav_dir, 'tests/socnav', filename)
-    if(not os.path.exists(full_file_name)):
-        print('\033[31m', "Failed to find:", full_file_name,
-              '\033[33m', "and therefore it will be created", '\033[0m')
-        touch(full_file_name)  # Just as the bash command
-    fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
-    print("%sRendered png at" % color_green, full_file_name, '\033[0m')
 
 
 def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center_offset=np.array([0., 0.])):
@@ -236,7 +121,49 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
         print("\n")
 
 
-def generate_auto_humans(num_generated_humans, human_list, simulator, environment, p, r):
+def establish_joystick_handshake(p):
+    import socket
+    import json
+    import time
+    # sockets for communication
+    RoboAgent.host = socket.gethostname()
+    # port for recieving commands from the joystick
+    RoboAgent.port_recv = p.robot_params.port
+    # port for sending commands to the joystick (successor of port_recv)
+    RoboAgent.port_send = RoboAgent.port_recv + 1
+    RoboAgent.establish_joystick_receiver_connection()
+    time.sleep(0.01)
+    RoboAgent.establish_joystick_sender_connection()
+    # send the preliminary episodes that the socnav is going to run
+    json_dict = {}
+    json_dict['episodes'] = list(p.episode_params.keys())
+    episodes = json.dumps(json_dict)
+    # Create a TCP/IP socket
+    send_episodes_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Connect the socket to the port where the server is listening
+    server_address = ((RoboAgent.host, RoboAgent.port_send))
+    send_episodes_socket.connect(server_address)
+    send_episodes_socket.sendall(bytes(episodes, "utf-8"))
+    send_episodes_socket.close()
+
+
+def close_robot_sockets():
+    RoboAgent.joystick_sender_socket.close()
+    RoboAgent.joystick_receiver_socket.close()
+
+
+def generate_robot(robot_start_goal, simulator):
+    assert(len(robot_start_goal) == 2)
+    rob_start = generate_config_from_pos_3(robot_start_goal[0])
+    rob_goal = generate_config_from_pos_3(robot_start_goal[1])
+    robot_configs = HumanConfigs(rob_start, rob_goal)
+    robot_agent = RoboAgent.generate_robot(
+        robot_configs
+    )
+    simulator.add_agent(robot_agent)
+
+
+def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
     """
     Generate and add num_humans number of randomly generated humans to the simulator
     """
@@ -249,7 +176,6 @@ def generate_auto_humans(num_generated_humans, human_list, simulator, environmen
         )
         # Or specify a human's initial configs with a HumanConfig instance
         # Human.generate_human_with_configs(Human, fixed_start_goal)
-        human_list.append(new_human_i)
         # Load a random human at a specified state and speed
         # update human traversible
         if p.render_3D:
@@ -271,91 +197,88 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     and rendering topview, rgb, and depth images.
     """
     p = create_params()  # used to instantiate the camera and its parameters
-    # TODO: can optimize HumANavRendererMulti renderer when not rendering humans
-    # get the renderer from the camera p
-    r = HumANavRendererMulti.get_renderer(p, deepcpy=False)
-    # obtain "resolution and traversible of building"
-    dx_cm, traversible = r.get_config()
-    # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-    dx_m = dx_cm / 100.0
-    if p.render_3D:
-        # Get the surreal dataset for human generation
-        surreal_data = r.d
-        # Update the Human's appearance classes to contain the dataset
-        from humans.human_appearance import HumanAppearance
-        HumanAppearance.dataset = surreal_data
-        human_traversible = np.empty(traversible.shape)
-        human_traversible.fill(True)  # initially all good
+    establish_joystick_handshake(p)
 
-    # In order to print more readable arrays
-    np.set_printoptions(precision=3)
+    for i, test in enumerate(list(p.episode_params.keys())):
+        episode = p.episode_params[test]
+        r = None  # free 'old' renderer
+        if(i == 0 or (episode.map_name != p.building_name)):
+            # update map to match the episode
+            p.building_name = episode.map_name
+            print("%sStarting episode:" % color_yellow, test,
+                  "in building:", p.building_name, "%s" % color_reset)
+            # get the renderer from the camera p
+            r = HumANavRendererMulti.get_renderer(p)
+            # obtain "resolution and traversible of building"
+            dx_cm, traversible = r.get_config()
+            # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
+            dx_m = dx_cm / 100.0
+            if p.render_3D:
+                # Get the surreal dataset for human generation
+                surreal_data = r.d
+                # Update the Human's appearance classes to contain the dataset
+                from humans.human_appearance import HumanAppearance
+                HumanAppearance.dataset = surreal_data
+                human_traversible = np.empty(traversible.shape)
+                human_traversible.fill(True)  # initially all good
 
-    # Creating list of to-be humans that will partake in the scene
-    human_list = []
+            # In order to print more readable arrays
+            np.set_printoptions(precision=3)
 
-    # Generate the ~center~ of area3 when scaled up 2x
-    # room_center = np.array([14., 14., 0.])
-    room_center = np.array([30., 9., 0.])
-    # Create default environment which is a dictionary
-    # containing ["map_scale", "traversibles"]
-    # which is a constant and list of traversibles respectively
+            # TODO: make this a param element
+            room_center = \
+                np.array([traversible.shape[1] * 0.5,
+                          traversible.shape[0] * 0.5,
+                          0.0]
+                         ) * dx_m
+            # Create default environment which is a dictionary
+            # containing ["map_scale", "traversibles"]
+            # which is a constant and list of traversibles respectively
 
-    environment = {}
-    environment["map_scale"] = dx_m
-    environment["room_center"] = room_center
-    # obstacle traversible / human traversible
-    if p.render_3D:
-        environment["traversibles"] = np.array(
-            [traversible, human_traversible])
-    else:
-        environment["traversibles"] = np.array([traversible])
-    """
-    Creating planner, simulator, and control pipelines for the framework
-    of a human trajectory and pathfinding. 
-    """
+            environment = {}
+            environment["map_scale"] = dx_m
+            environment["room_center"] = room_center
+            # obstacle traversible / human traversible
+            if p.render_3D:
+                environment["traversibles"] = np.array(
+                    [traversible, human_traversible])
+            else:
+                environment["traversibles"] = np.array([traversible])
+        """
+        Creating planner, simulator, and control pipelines for the framework
+        of a human trajectory and pathfinding. 
+        """
+        simulator = CentralSimulator(
+            environment,
+            renderer=r,
+            render_3D=p.render_3D,
+            episode_params=episode
+        )
+        """
+        Generate the robots for the simulator
+        """
+        robot_agent = RoboAgent.generate_random_robot_from_environment(
+            environment
+        )
+        simulator.add_agent(robot_agent)
+        """
+        Add the prerecorded humans to the simulator
+        """
+        generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
+                                    simulator, center_offset=np.array([14.0, 2.0]))
+        """
+        Generate the autonomous human agents from the episode
+        """
+        generate_auto_humans(num_generated_humans,
+                             simulator, environment, p, r)
+        # run simulation
+        simulator.simulate()
 
-    # Create planner parameters
-    # sim_params = create_sbpd_simulator_params(render_3D=p.render_3D)
-    simulator = CentralSimulator(
-        environment, renderer=r, render_3D=p.render_3D)
-
-    """
-    Generate the humans and run the simulation on every human
-    """
-    robot_agent = RoboAgent.generate_random_robot_from_environment(
-        environment
-    )
-    simulator.add_agent(robot_agent)
-    num_robots = 1
-    """
-    Add the prerecorded humans to the simulator
-    """
-    generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
-                                simulator, center_offset=np.array([14.0, 2.0]))
-
-    generate_auto_humans(num_generated_humans, human_list,
-                         simulator, environment, p, r)
-
-    # run simulation
-    simulator.simulate()
-
-    # Plotting an image for each camera location
-    for i in range(num_robots):
-        rgb_image_1mk3 = None
-        depth_image_1mk1 = None
+        # Remove all the humans from the renderer
         if p.render_3D:  # only when rendering with opengl
-            rgb_image_1mk3, depth_image_1mk1 = \
-                render_rgb_and_depth(r, np.array(
-                    [robot_agent.get_start_config().to_3D_numpy()]),
-                    dx_m, human_visible=True)
-        # Plot the rendered images
-        plot_images(p, rgb_image_1mk3, depth_image_1mk1, environment, room_center,
-                    robot_agent.get_start_config().to_3D_numpy(),
-                    human_list, "example1_v" + str(i) + ".png")
+            r.remove_all_humans()
 
-    # Remove all the humans from the environment
-    if p.render_3D:  # only when rendering with opengl
-        r.remove_all_humans()
+    close_robot_sockets()
 
 
 if __name__ == '__main__':

@@ -178,11 +178,13 @@ class CentralSimulator(SimulatorHelper):
 
         # free all the gen_agents
         for a in self.agents.values():
-            del a
+            a = None
+            del(a)
 
         # free all the prerecs
         for p in self.prerecs.values():
-            del p
+            p = None
+            del(p)
 
         self.decommission_robot(r_t)
 
@@ -527,11 +529,14 @@ class CentralSimulator(SimulatorHelper):
                 print('\033[31m', "Failed to find:", full_file_name,
                       '\033[33m', "and therefore it will be created", '\033[0m')
             touch(full_file_name)  # Just as the bash command
+
         fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
         fig.clear()
+        plt.cla()
+        plt.clf()
+        plt.close('all')
         plt.close(fig)
         del fig
-        plt.clf()
         if(self.params.verbose_printing):
             print('\033[32m', "Successfully rendered:",
                   full_file_name, '\033[0m')
@@ -573,6 +578,9 @@ class CentralSimulator(SimulatorHelper):
                          'tests/socnav/' + self.episode_params.name + '_movie')
         # Delete state to save memory after frames are generated
         del(state)
+        # clear the memory for the renderer
+        del(self.r)
+        del(self)
 
     """BEGIN thread utils"""
 
