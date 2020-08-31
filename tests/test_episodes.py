@@ -223,10 +223,10 @@ def test_episodes():
 
             # TODO: make this a param element
             room_center = \
-                np.array([traversible.shape[0] * 0.5,
-                          traversible.shape[1] * 0.5,
+                np.array([traversible.shape[1] * 0.5,
+                          traversible.shape[0] * 0.5,
                           0.0]
-                         )
+                         ) * dx_m
             # Create default environment which is a dictionary
             # containing ["map_scale", "traversibles"]
             # which is a constant and list of traversibles respectively
