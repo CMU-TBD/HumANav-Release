@@ -270,13 +270,13 @@ class Joystick():
         server_address = ((self.host, self.port_send))
         try:
             self.robot_sender_socket.connect(server_address)
+            self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
+            self.robot_sender_socket.close()
         except:  # used to turn off the joystick
             self.power_off()
             return
         # Send data
-        self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
         print("sent", json_message)
-        self.robot_sender_socket.close()
 
     def await_episodes(self):
         print("Waiting for episodes...")

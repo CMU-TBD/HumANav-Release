@@ -138,25 +138,28 @@ class RoboAgent(Agent):
             if self.num_executed < len(self.commands):
                 self.execute()
             # block joystick until recieves next command
-            while iteration >= self.get_num_executed():
+            while (self.running and iteration >= self.get_num_executed()):
                 time.sleep(0.001)
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
             # quit the robot if it died
         else:
-            if(not self.notified_joystick):
-                # notify the joystick to stop sending commands to the robot
-                self.send_to_joystick(self.world_state.to_json(robot_on=False,
-                                                               termination_cause=self.robot_termination))
-                self.power_off()
-                self.notified_joystick = True
+            self.power_off()
 
     def power_off(self):
+        # if the robot is already "off" do nothing
         if(self.running):
             print("\nRobot powering off, recieved",
                   len(self.commands), "commands")
-            # if the robot is already "off" do nothing
             self.running = False
+            try:
+                quit_message = self.world_state.to_json(
+                    robot_on=False,
+                    termination_cause=self.robot_termination
+                )
+                self.send_to_joystick(quit_message)
+            except:
+                return
 
     """BEGIN socket utils"""
 
@@ -231,8 +234,9 @@ class RoboAgent(Agent):
                         # to send the world in the next update
                         self.joystick_requests_world = True
                 else:
-                    self.power_off()
-                    break
+                    pass
+                    # self.power_off()
+                    # break
 
     @staticmethod
     def establish_joystick_receiver_connection():
