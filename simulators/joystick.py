@@ -38,7 +38,7 @@ class Joystick():
         self.init()
         self.current_ep = None
         self.episodes = None
-        self.ep_max_time = None
+        self.ep_max_time = 10e7  # by default initial max-time is basically infinite
 
     def init(self):
         # sockets for communication
@@ -289,9 +289,9 @@ class Joystick():
             time.sleep(0.01)
 
     def listen_to_robot(self):
-        self.robot_receiver_socket.listen(30)
+        self.robot_receiver_socket.listen(1)
         self.robot_running = True
-        while self.robot_running:
+        while self.robot_running and self.t < self.ep_max_time:
             connection, client = self.robot_receiver_socket.accept()
             data_b, response_len = conn_recv(connection)
             # quickly close connection to open up for the next input
@@ -305,7 +305,7 @@ class Joystick():
                 if(not self.manage_data(sim_state_json)):
                     break
             else:
-                self.robot_running = True
+                self.robot_running = False
                 break
         self.environment = None
 
@@ -369,20 +369,20 @@ class Joystick():
         self.dirname = 'tests/socnav/' + self.current_ep + '_movie/joystick_data'
 
     def update_robot_and_env(self, current_world):
-        # only update the environment if it is non-empty
-        self.environment = current_world.get_environment()
-        self._old_env = deepcopy(self.environment)
         robots = list(current_world.get_robots().values())
         # only one robot is supported
         assert(len(robots) == 1)
         robot = robots[0]
-        print("Updated environment from simulator")
         # update the start and goal configs from the simulator's challenge
         self.start_config = robot.get_start_config()
         self.goal_config = robot.get_goal_config()
         self.current_config = robot.get_current_config()
         self.delta_t = current_world.get_delta_t()
         print("Updated start/goal for robot")
+        # only update the environment if it is non-empty
+        self.environment = current_world.get_environment()
+        self._old_env = deepcopy(self.environment)
+        print("Updated environment from simulator")
 
     def track_vel_accel(self, current_world):
         if(self.joystick_params.track_vel_accel):
