@@ -188,6 +188,16 @@ def subplot2(plt, Y_X, sz_y_sz_x=(10, 10), space_y_x=(0.1, 0.1), T=False):
     return fig, axes, axes_list
 
 
+def termination_cause_to_color(cause: str):
+    if(cause == "Success"):
+        return "green"
+    if(cause == "Collision"):
+        return "red"
+    if(cause == "Timeout"):
+        return "blue"
+    return None
+
+
 """ BEGIN configs functions """
 
 

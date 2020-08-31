@@ -53,18 +53,19 @@ class HumANavRendererMulti():
             self.human_radius = self.default_human_radius
 
     @classmethod
-    def get_renderer(cls, params, deepcpy=False):
+    def get_renderer(cls, params, deepcpy=False, ensure_only_one=False):
         """
         Used to instantiate a renderer object. Ensures that only one renderer
         object ever exists as they are very memory intensive.
         """
-        r = cls.renderer
-        if r is not None:
-            dn, bn, f, c = r.p.dataset_name, r.p.building_name, r.p.flip, r.p.modalities
-            if dn == params.dataset_name and bn == params.building_name and f == params.flip and c == params.modalities:
-                return r
-            else:
-                assert False, "Renderer settings are different than previously instantiated renderer"
+        if(ensure_only_one):
+            r = cls.renderer
+            if r is not None:
+                dn, bn, f, c = r.p.dataset_name, r.p.building_name, r.p.flip, r.p.modalities
+                if dn == params.dataset_name and bn == params.building_name and f == params.flip and c == params.modalities:
+                    return r
+                else:
+                    assert False, "Renderer settings are different than previously instantiated renderer"
 
         cls.renderer = cls(params)
         if(not deepcpy):

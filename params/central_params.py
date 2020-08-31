@@ -139,11 +139,12 @@ def create_robot_params():
                    'camera_elevation_degree'),
                delta_theta=rob_p.getfloat('delta_theta'))
     # joystick params
-    p.sense_interval = rob_p.getint('sense_interval')
+    p.sense_interval = max(1, rob_p.getint('sense_interval'))
     p.track_sim_states = rob_p.getboolean('track_sim_states')
     p.track_vel_accel = rob_p.getboolean('track_vel_accel')
     p.write_pandas_log = rob_p.getboolean('write_pandas_log')
     p.cmd_delay = rob_p.getfloat('cmd_delay')
+    p.generate_movie = rob_p.getboolean('generate_movie')
     return p
 
 
@@ -309,7 +310,11 @@ def create_simulator_params():
     p.socnav_params = create_base_params()
     p.img_scale = sim_p.getfloat('img_scale')
     p.max_frames = sim_p.getint('max_frames')
-    p.fps_scale_down = min(1.0, sim_p.getfloat('fps_scale_down'))
+    # bound by 0 <= X <= 1
+    p.fps_scale_down = max(0.0, min(1.0, sim_p.getfloat('fps_scale_down')))
+    p.print_data = sim_p.getboolean('print_data')
+    p.verbose = sim_p.getboolean('verbose')
+    p.join_threads = sim_p.getboolean('join_threads')
     return p
 
 

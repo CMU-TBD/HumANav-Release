@@ -33,11 +33,12 @@ class Joystick():
         self.velocities = {}     # for testing simstate utils
         self.accelerations = {}  # for testing simstate utils
         self.environment = None
+        self._old_env = None  # used for drawing if self.environment is reset
         self.joystick_params = create_robot_params()
         self.init()
         self.current_ep = None
         self.episodes = None
-        self.finished_all_episodes = False
+        self.ep_max_time = 10e7  # by default initial max-time is basically infinite
 
     def init(self):
         # sockets for communication
@@ -104,7 +105,7 @@ class Joystick():
         json_dict = {}
         json_dict["joystick_on"] = joystick_power
         if(joystick_power):
-            json_dict["j_time"] = j_time
+            json_dict['j_time'] = j_time
             json_dict["lin_vels"] = lin_vels
             json_dict["ang_vels"] = ang_vels
             json_dict["req_world"] = req_world
@@ -113,7 +114,7 @@ class Joystick():
     def robot_input(self, lin_commands: list, ang_commands: list,
                     request_world: bool, override_power_off: bool = False):
         # singular input
-        message = self.create_message(self.robot_running or override_power_off,
+        message = self.create_message(self.robot_running and (not override_power_off),
                                       lin_commands, ang_commands, time.clock(), request_world)
         if(request_world):
             # only a single message being sent
@@ -130,9 +131,12 @@ class Joystick():
                 ang_vels = []
                 lin = randint(10, 100) / 100.
                 ang = randint(-100, 100) / 100.
-                for i in range(action_dt):
+                for _ in range(action_dt):
                     lin_vels.append(lin)
                     ang_vels.append(ang)
+                    if(self.num_sent % self.joystick_params.sense_interval == 0):
+                        self.request_world = True
+                    self.num_sent += 1
                 self.robot_input(lin_vels, ang_vels, self.request_world)
                 time.sleep(0.05)  # NOTE: Tune this to whatever you'd like
                 # now update the robot with the "ready" ping
@@ -230,14 +234,14 @@ class Joystick():
         self.environment = None  # free environment
         print("%sFinished episode:" % color_yellow,
               self.current_ep, "%s" % color_reset)
-        # begin gif (movie) generation
-        try:
-            save_to_gif(os.path.join(get_path_to_socnav(), self.dirname),
-                        gif_filename="joystick_movie")
-        except:
-            print("unable to render gif")
+        if(self.joystick_params.generate_movie):
+            # begin gif (movie) generation
+            try:
+                save_to_gif(os.path.join(get_path_to_socnav(), self.dirname),
+                            gif_filename="joystick_movie")
+            except:
+                print("unable to render gif")
         if(self.current_ep == self.episodes[-1]):
-            self.finished_all_episodes = True
             self.force_close_socket()
             print("Finished all episodes")
             os._exit(0)
@@ -253,7 +257,11 @@ class Joystick():
         if(self.robot_running):
             print("%sConnection closed by robot%s" % (color_red, color_reset))
             self.robot_running = False
-            exit(0)
+            try:
+                self.robot_input([], [], request_world=False,
+                                 override_power_off=True)
+            except:
+                return
 
     """BEGIN socket utils"""
 
@@ -265,13 +273,14 @@ class Joystick():
         server_address = ((self.host, self.port_send))
         try:
             self.robot_sender_socket.connect(server_address)
+            self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
+            self.robot_sender_socket.close()
         except:  # used to turn off the joystick
             self.power_off()
             return
         # Send data
-        self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
-        print("sent", json_message)
-        self.robot_sender_socket.close()
+        if(self.joystick_params.print_data):
+            print("sent", json_message)
 
     def await_episodes(self):
         print("Waiting for episodes...")
@@ -284,15 +293,16 @@ class Joystick():
             time.sleep(0.01)
 
     def listen_to_robot(self):
-        self.robot_receiver_socket.listen(10)
+        self.robot_receiver_socket.listen(1)
         self.robot_running = True
-        while self.robot_running:
+        while self.robot_running and self.t < self.ep_max_time:
             connection, client = self.robot_receiver_socket.accept()
             data_b, response_len = conn_recv(connection)
             # quickly close connection to open up for the next input
             connection.close()
-            print("%sreceived" % color_blue, response_len,
-                  "bytes from robot%s" % color_reset)
+            if(self.joystick_params.verbose):
+                print("%sreceived" % color_blue, response_len,
+                      "bytes from robot%s" % color_reset)
             if data_b is not None and response_len > 0:
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
@@ -300,7 +310,7 @@ class Joystick():
                 if(not self.manage_data(sim_state_json)):
                     break
             else:
-                self.robot_running = True
+                self.robot_running = False
                 break
         self.environment = None
 
@@ -314,50 +324,31 @@ class Joystick():
             return True
         # case where the robot sends a power-off signal
         if(not sim_state_json['robot_on']):
-            print("powering off joystick")
+            print("\npowering off joystick, robot episode terminated with:",
+                  sim_state_json['termination_cause'])
             self.power_off()
             return False
         # case where the data comes from some robot simulator (and is a world)
         current_world = SimState.from_json(sim_state_json)
         # append new world to storage of all past worlds
+        # NOTE: the first if (obtaining the environment) is always run BEFORE
+        # the else in this clause
         if (not (not current_world.get_environment())):  # not empty dictionary
             # notify the robot that the joystick received the environment
             joystick_ready = \
                 self.create_message(True, [], [], -1, False)
-            self.current_ep = current_world.get_episode_name()
-            assert(self.current_ep in self.episodes)
-            print("%sRunning test for %s%s" %
-                  (color_orange, self.current_ep, color_reset))
-            self.dirname = 'tests/socnav/' + self.current_ep + '_movie/joystick_data'
+            self.update_episode(current_world)
+            self.update_robot_and_env(current_world)
             self.send_to_robot(joystick_ready)
-            # only update the environment if it is non-empty
-            self.environment = current_world.get_environment()
-            robots = list(current_world.get_robots().values())
-            # only one robot is supported
-            assert(len(robots) == 1)
-            robot = robots[0]
-            print("Updated environment from simulator")
-            # update the start and goal configs from the simulator's challenge
-            self.start_config = robot.get_start_config()
-            self.goal_config = robot.get_goal_config()
-            self.current_config = robot.get_current_config()
-            self.delta_t = current_world.get_delta_t()
-            print("Updated start/goal for robot")
         else:
             # only update the SimStates for non-environment configs
             if(self.joystick_params.track_sim_states):
                 self.sim_states[current_world.get_sim_t()] = \
                     current_world
-            print("%sUpdated state of the world for time = %.5f" %
-                  (color_orange, current_world.get_sim_t()), "%s" % color_reset)
-            if(self.joystick_params.track_vel_accel):
-                from simulators.sim_state import compute_all_velocities, compute_all_accelerations
-                self.velocities[current_world.get_sim_t()] = \
-                    compute_all_velocities(
-                        list(self.sim_states.values()))
-                self.accelerations[current_world.get_sim_t()] = \
-                    compute_all_accelerations(
-                        list(self.sim_states.values()))
+            print("%sUpdated state of the world for time = %.3f out of %.3f\r" %
+                  (color_blue, current_world.get_sim_t(), self.ep_max_time),
+                  "%s" % color_reset, end="")
+            self.track_vel_accel(current_world)
             # update the robot's position from sensor data
             robot = list(current_world.get_robots().values())[0]
             self.current_config = robot.get_current_config()
@@ -365,10 +356,47 @@ class Joystick():
                 # Write the Agent's trajectory data into a pandas file
                 self.update_logs(current_world)
                 self.write_pandas()
-            # TODO: make the frame generator a separate process to not interfere
-            # render when not receiving a new environment
-            self.generate_frame(current_world, self.frame_num)
+            if(self.joystick_params.generate_movie):
+                # self.generate_frame(current_world, self.frame_num)
+                t = multiprocessing.Process(target=self.generate_frame,
+                                            args=(current_world,
+                                                  self.frame_num)
+                                            )
+                t.start()
+                self.frame_num += 1
         return True
+
+    def update_episode(self, current_world):
+        self.current_ep = current_world.get_episode_name()
+        self.ep_max_time = current_world.get_episode_max_time()
+        assert(self.current_ep in self.episodes)
+        print("%sRunning test for %s%s" %
+              (color_yellow, self.current_ep, color_reset))
+        self.dirname = 'tests/socnav/' + self.current_ep + '_movie/joystick_data'
+
+    def update_robot_and_env(self, current_world):
+        robots = list(current_world.get_robots().values())
+        # only one robot is supported
+        assert(len(robots) == 1)
+        robot = robots[0]
+        # update the start and goal configs from the simulator's challenge
+        self.start_config = robot.get_start_config()
+        self.goal_config = robot.get_goal_config()
+        self.current_config = robot.get_current_config()
+        self.delta_t = current_world.get_delta_t()
+        print("Updated start/goal for robot")
+        # only update the environment if it is non-empty
+        self.environment = current_world.get_environment()
+        self._old_env = deepcopy(self.environment)
+        print("Updated environment from simulator")
+
+    def track_vel_accel(self, current_world):
+        if(self.joystick_params.track_vel_accel):
+            from simulators.sim_state import compute_all_velocities, compute_all_accelerations
+            self.velocities[current_world.get_sim_t()] = \
+                compute_all_velocities(list(self.sim_states.values()))
+            self.accelerations[current_world.get_sim_t()] = \
+                compute_all_accelerations(list(self.sim_states.values()))
 
     def update_logs(self, world_state: SimState):
         self.update_log_of_type('robots', world_state)
@@ -392,7 +420,9 @@ class Joystick():
         if(not os.path.exists(abs_path)):
             touch(abs_path)  # Just as the bash command
         pd_df.to_csv(abs_path)
-        print("%sUpdated pandas dataframe%s" % (color_green, color_reset))
+        if(self.joystick_params.verbose):
+            print("%sUpdated pandas dataframe%s" %
+                  (color_green, color_reset))
 
     def establish_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""
@@ -432,7 +462,7 @@ class Joystick():
 
     def generate_frame(self, world_state, frame_count, plot_quiver=False):
         # extract the information from the world state
-        environment = self.environment
+        environment = self._old_env
         gen_agents = world_state.get_gen_agents()
         prerecs = world_state.get_prerecs()
         robots = world_state.get_robots()
@@ -486,5 +516,3 @@ class Joystick():
         plt.close(fig)
         del fig
         plt.clf()
-        # update frame count
-        self.frame_num += 1

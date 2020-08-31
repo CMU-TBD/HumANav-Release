@@ -37,13 +37,13 @@ class Agent(AgentHelper):
         # cosmetic items (for drawing the trajectories)
         possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
         self.color = random.choice(possible_colors)
+        self.termination_cause = None  # TODO: assumed timeout if none of the others
 
     def init(self):
         self.planned_next_config = copy.deepcopy(self.current_config)
         # Dynamics and movement attributes
         self.fmm_map = None
         self.path_step = 0
-        self.termination_cause = None
         # NOTE: JSON serialization is done within sim_state.py
         self.velocities = {}
         self.accelerations = {}

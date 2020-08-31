@@ -14,7 +14,7 @@ def test_joystick():
         J.await_env()
         # init control pipeline after episode from robot
         J.init_control_pipeline()
-        J.update(random_commands=False)
+        J.update(random_commands=True)
         # for other episode instance
 
 

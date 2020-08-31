@@ -32,6 +32,10 @@ class RoboAgent(Agent):
         self.joystick_requests_world = False
         # whether or not to repeat the last joystick input
         self.repeat_joystick = False
+        # told the joystick that the robot is powered off
+        self.notified_joystick = False
+        # termination cause of the episode for the robot
+        self.robot_termination = 'Timeout'  # assumed timeout at first
 
     def simulation_init(self, sim_map, with_planner=False):
         super().simulation_init(sim_map, with_planner=with_planner)
@@ -85,23 +89,27 @@ class RoboAgent(Agent):
         configs = HumanConfigs.generate_random_human_config(environment)
         return RoboAgent.generate_robot(configs)
 
-    def sense(self):
+    def check_termination_conditions(self):
         """use this to take in a world state and compute obstacles (gen_agents/walls) to affect the robot"""
         if(not self.end_episode):
             # check for collisions with other gen_agents
             self.check_collisions(self.world_state)
             # enforce planning termination upon condition
             self._enforce_episode_termination_conditions()
+            if(self.termination_cause == 'green'):
+                # only green when the agent planner succeeds
+                self.robot_termination = "Success"
             # NOTE: enforce_episode_terminator updates the self.end_episode variable
             if(self.end_episode or self.has_collided):
                 self.has_collided = True
+                self.robot_termination = 'Collision'
                 self.power_off()
 
     def execute(self):
         for _ in range(self.amnt_per_joystick):
             if(not self.running):
                 break
-            self.sense()
+            self.check_termination_conditions()
             current_config = self.get_current_config()
             cmd_grp = self.commands[self.num_executed]
             num_cmds_in_grp = len(cmd_grp)
@@ -126,26 +134,32 @@ class RoboAgent(Agent):
     def update(self, iteration):
         if self.running:
             # only execute the most recent commands
-            self.sense()
+            self.check_termination_conditions()
             if self.num_executed < len(self.commands):
                 self.execute()
             # block joystick until recieves next command
-            while iteration >= self.get_num_executed():
+            while (self.running and iteration >= self.get_num_executed()):
                 time.sleep(0.001)
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
             # quit the robot if it died
-            if not self.running:
-                # notify the joystick to stop sending commands to the robot
-                self.send_to_joystick(self.world_state.to_json(robot_on=False))
-                self.power_off()
+        else:
+            self.power_off()
 
     def power_off(self):
+        # if the robot is already "off" do nothing
         if(self.running):
             print("\nRobot powering off, recieved",
                   len(self.commands), "commands")
-            # if the robot is already "off" do nothing
             self.running = False
+            try:
+                quit_message = self.world_state.to_json(
+                    robot_on=False,
+                    termination_cause=self.robot_termination
+                )
+                self.send_to_joystick(quit_message)
+            except:
+                return
 
     """BEGIN socket utils"""
 
@@ -194,6 +208,7 @@ class RoboAgent(Agent):
             if(data_b is not b''):
                 data_str = data_b.decode("utf-8")  # bytes to str
                 data = json.loads(data_str)
+                # NOTE: this COULD use joystick_on parameter in the incoming data.
                 if(data["joystick_on"]):
                     if(data["j_time"] >= 0):  # normal command input
                         lin_vels: list = data["lin_vels"]
@@ -219,9 +234,6 @@ class RoboAgent(Agent):
                     if(data["req_world"] is True):
                         # to send the world in the next update
                         self.joystick_requests_world = True
-                else:
-                    self.power_off()
-                    break
 
     @staticmethod
     def establish_joystick_receiver_connection():

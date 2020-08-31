@@ -193,49 +193,57 @@ def test_episodes():
     and rendering topview, rgb, and depth images.
     """
     p = create_params()  # used to instantiate the camera and its parameters
-    # get the renderer from the camera p
-    r = HumANavRendererMulti.get_renderer(p, deepcpy=False)
-    # obtain "resolution and traversible of building"
-    dx_cm, traversible = r.get_config()
-    # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-    dx_m = dx_cm / 100.0
-    if p.render_3D:
-        # Get the surreal dataset for human generation
-        surreal_data = r.d
-        # Update the Human's appearance classes to contain the dataset
-        from humans.human_appearance import HumanAppearance
-        HumanAppearance.dataset = surreal_data
-        human_traversible = np.empty(traversible.shape)
-        human_traversible.fill(True)  # initially all good
-
-    # In order to print more readable arrays
-    np.set_printoptions(precision=3)
-
-    # TODO: make this a param element
-    room_center = np.array([30., 9., 0.])
-    # Create default environment which is a dictionary
-    # containing ["map_scale", "traversibles"]
-    # which is a constant and list of traversibles respectively
-
-    environment = {}
-    environment["map_scale"] = dx_m
-    environment["room_center"] = room_center
-    # obstacle traversible / human traversible
-    if p.render_3D:
-        environment["traversibles"] = np.array(
-            [traversible, human_traversible])
-    else:
-        environment["traversibles"] = np.array([traversible])
-    """
-    Creating planner, simulator, and control pipelines for the framework
-    of a human trajectory and pathfinding. 
-    """
-
     establish_joystick_handshake(p)
 
-    for test in list(p.episode_params.keys()):
+    for i, test in enumerate(list(p.episode_params.keys())):
         episode = p.episode_params[test]
-        print("%sStarting test:" % color_yellow, test, "%s" % color_reset)
+        r = None  # free 'old' renderer
+        if(i == 0 or (episode.map_name != p.building_name)):
+            # update map to match the episode
+            p.building_name = episode.map_name
+            print("%sStarting episode:" % color_yellow, test,
+                  "in building:", p.building_name, "%s" % color_reset)
+            # get the renderer from the camera p
+            r = HumANavRendererMulti.get_renderer(p)
+            # obtain "resolution and traversible of building"
+            dx_cm, traversible = r.get_config()
+            # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
+            dx_m = dx_cm / 100.0
+            if p.render_3D:
+                # Get the surreal dataset for human generation
+                surreal_data = r.d
+                # Update the Human's appearance classes to contain the dataset
+                from humans.human_appearance import HumanAppearance
+                HumanAppearance.dataset = surreal_data
+                human_traversible = np.empty(traversible.shape)
+                human_traversible.fill(True)  # initially all good
+
+            # In order to print more readable arrays
+            np.set_printoptions(precision=3)
+
+            # TODO: make this a param element
+            room_center = \
+                np.array([traversible.shape[0] * 0.5,
+                          traversible.shape[1] * 0.5,
+                          0.0]
+                         )
+            # Create default environment which is a dictionary
+            # containing ["map_scale", "traversibles"]
+            # which is a constant and list of traversibles respectively
+
+            environment = {}
+            environment["map_scale"] = dx_m
+            environment["room_center"] = room_center
+            # obstacle traversible / human traversible
+            if p.render_3D:
+                environment["traversibles"] = np.array(
+                    [traversible, human_traversible])
+            else:
+                environment["traversibles"] = np.array([traversible])
+        """
+        Creating planner, simulator, and control pipelines for the framework
+        of a human trajectory and pathfinding. 
+        """
 
         simulator = CentralSimulator(
             environment,
