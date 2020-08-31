@@ -276,7 +276,8 @@ class Joystick():
             self.power_off()
             return
         # Send data
-        print("sent", json_message)
+        if(self.joystick_params.print_data):
+            print("sent", json_message)
 
     def await_episodes(self):
         print("Waiting for episodes...")
@@ -296,8 +297,9 @@ class Joystick():
             data_b, response_len = conn_recv(connection)
             # quickly close connection to open up for the next input
             connection.close()
-            print("%sreceived" % color_blue, response_len,
-                  "bytes from robot%s" % color_reset)
+            if(self.joystick_params.verbose):
+                print("%sreceived" % color_blue, response_len,
+                      "bytes from robot%s" % color_reset)
             if data_b is not None and response_len > 0:
                 self.request_world = False
                 data_str = data_b.decode("utf-8")  # bytes to str
@@ -319,7 +321,7 @@ class Joystick():
             return True
         # case where the robot sends a power-off signal
         if(not sim_state_json['robot_on']):
-            print("powering off joystick, robot episode terminated with:",
+            print("\npowering off joystick, robot episode terminated with:",
                   sim_state_json['termination_cause'])
             self.power_off()
             return False
@@ -340,9 +342,9 @@ class Joystick():
             if(self.joystick_params.track_sim_states):
                 self.sim_states[current_world.get_sim_t()] = \
                     current_world
-            print("%sUpdated state of the world for time = %.3f out of %.3f" %
-                  (color_orange, current_world.get_sim_t(), self.ep_max_time),
-                  "%s" % color_reset)
+            print("%sUpdated state of the world for time = %.3f out of %.3f\r" %
+                  (color_blue, current_world.get_sim_t(), self.ep_max_time),
+                  "%s" % color_reset, end="")
             self.track_vel_accel(current_world)
             # update the robot's position from sensor data
             robot = list(current_world.get_robots().values())[0]
@@ -416,7 +418,9 @@ class Joystick():
         if(not os.path.exists(abs_path)):
             touch(abs_path)  # Just as the bash command
         pd_df.to_csv(abs_path)
-        print("%sUpdated pandas dataframe%s" % (color_green, color_reset))
+        if(self.joystick_params.verbose):
+            print("%sUpdated pandas dataframe%s" %
+                  (color_green, color_reset))
 
     def establish_sender_connection(self):
         """This is akin to a client connection (joystick is client)"""

@@ -208,6 +208,7 @@ class RoboAgent(Agent):
             if(data_b is not b''):
                 data_str = data_b.decode("utf-8")  # bytes to str
                 data = json.loads(data_str)
+                # NOTE: this COULD use joystick_on parameter in the incoming data.
                 if(data["joystick_on"]):
                     if(data["j_time"] >= 0):  # normal command input
                         lin_vels: list = data["lin_vels"]
@@ -233,10 +234,6 @@ class RoboAgent(Agent):
                     if(data["req_world"] is True):
                         # to send the world in the next update
                         self.joystick_requests_world = True
-                else:
-                    pass
-                    # self.power_off()
-                    # break
 
     @staticmethod
     def establish_joystick_receiver_connection():
