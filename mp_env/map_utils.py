@@ -22,10 +22,7 @@ import scipy.ndimage
 import PIL
 import cv2
 import sys
-if sys.version_info[0] == 2:
-    from . import utils
-else:
-    from humanav import utils  # py3
+from humanav.utils import Foo
 
 
 def _get_xy_bounding_box(vertex, padding):
@@ -62,8 +59,8 @@ def make_map(padding, resolution, vertex=None, sc=1.):
     min_, max_ = _get_xy_bounding_box(vertex * sc, padding=padding)
     sz = np.ceil((max_ - min_ + 1) / resolution).astype(np.int32)
     max_ = min_ + sz * resolution - 1
-    map = utils.Foo(origin=min_, size=sz, max=max_, resolution=resolution,
-                    padding=padding)
+    map = Foo(origin=min_, size=sz, max=max_, resolution=resolution,
+              padding=padding)
     return map
 
 

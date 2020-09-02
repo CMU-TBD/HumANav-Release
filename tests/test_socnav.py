@@ -9,7 +9,7 @@ import pandas as pd
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
 from simulators.robot_agent import RoboAgent
-from humanav.humanav_renderer_multi import HumANavRendererMulti
+from humanav.socnav_renderer import SocNavRenderer
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
 from params.central_params import get_seed, create_base_params, create_robot_params
@@ -208,7 +208,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             print("%sStarting episode:" % color_yellow, test,
                   "in building:", p.building_name, "%s" % color_reset)
             # get the renderer from the camera p
-            r = HumANavRendererMulti.get_renderer(p)
+            r = SocNavRenderer.get_renderer(p)
             # obtain "resolution and traversible of building"
             dx_cm, traversible = r.get_config()
             # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
