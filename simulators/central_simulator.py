@@ -578,9 +578,6 @@ class CentralSimulator(SimulatorHelper):
                          'tests/socnav/' + self.episode_params.name + '_movie')
         # Delete state to save memory after frames are generated
         del(state)
-        # clear the memory for the renderer
-        del(self.r)
-        del(self)
 
     """BEGIN thread utils"""
 
