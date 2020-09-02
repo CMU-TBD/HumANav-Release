@@ -104,7 +104,7 @@ class CentralSimulator(SimulatorHelper):
         """
         num_agents: int = len(self.agents) + len(self.prerecs)
         self.og_num_prerecs = len(self.prerecs)  # before they get completed
-        print("Running simulation on", num_agents, "gen_agents")
+        print("Running simulation on", num_agents, "agents")
 
         # scale the simulator time
         self.delta_t = self.params.delta_t_scale * self.params.dt
