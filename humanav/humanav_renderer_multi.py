@@ -1,8 +1,8 @@
-from humanav import sbpd
-from humanav import depth_utils as du
 from humans.human import Human
 from humanav import utils
 from mp_env import map_utils as mu
+from utils import depth_utils as du
+from sbpd import sbpd
 import numpy as np
 import sys
 import os
