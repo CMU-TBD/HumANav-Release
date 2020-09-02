@@ -9,7 +9,7 @@ import pandas as pd
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
 from simulators.robot_agent import RoboAgent
-from humanav.socnav_renderer import SocNavRenderer
+from socnav.socnav_renderer import SocNavRenderer
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
 from params.central_params import get_seed, create_base_params, create_robot_params

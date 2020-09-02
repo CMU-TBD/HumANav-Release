@@ -23,7 +23,6 @@ import sys
 import pickle
 import numpy as np
 
-# from humanav import utils
 from mp_env import mp_env
 from params.central_params import get_sbpd_data_dir
 from utils.utils import *

@@ -8,6 +8,8 @@ from random import seed, random, randint
 import string
 import random
 import glob
+import time
+import logging
 import imageio
 import socket
 from trajectory.trajectory import SystemConfig
