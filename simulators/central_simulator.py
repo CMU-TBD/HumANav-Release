@@ -560,7 +560,8 @@ class CentralSimulator(SimulatorHelper):
             # only when rendering with opengl
             assert(len(state.get_environment()["traversibles"]) == 2)
             for a in state.get_gen_agents().values():
-                self.r.update_human(a)
+                if(not a.get_collided()):
+                    self.r.update_human(a)
             # update prerecorded humans
             for r_a in state.get_prerecs().values():
                 self.r.update_human(r_a)
