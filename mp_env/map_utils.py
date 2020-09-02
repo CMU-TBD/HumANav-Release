@@ -22,7 +22,7 @@ import scipy.ndimage
 import PIL
 import cv2
 import sys
-from humanav.utils import Foo
+from utils.utils import Foo
 
 
 def _get_xy_bounding_box(vertex, padding):

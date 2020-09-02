@@ -23,7 +23,7 @@ import sys
 import pickle
 import numpy as np
 
-from humanav import utils
+# from humanav import utils
 from mp_env import mp_env
 from params.central_params import get_sbpd_data_dir
 from utils.utils import *
@@ -68,8 +68,8 @@ class Loader():
         return [shape]
 
     def load_data(self, name, robot, flip=False):
-        env = utils.Foo(padding=10, resolution=5, num_point_threshold=2,
-                        valid_min=-10, valid_max=200, n_samples_per_face=200)
+        env = Foo(padding=10, resolution=5, num_point_threshold=2,
+                  valid_min=-10, valid_max=200, n_samples_per_face=200)
         building = mp_env.Building(self, name, robot, env, flip=flip)
         return building
 

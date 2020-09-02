@@ -11,6 +11,7 @@ import glob
 import imageio
 import socket
 from trajectory.trajectory import SystemConfig
+from contextlib import contextmanager
 
 color_orange = '\033[33m'
 color_green = '\033[32m'
