@@ -1,8 +1,8 @@
-from humanav import sbpd
-from humanav import depth_utils as du
 from humans.human import Human
-from humanav import utils
 from mp_env import map_utils as mu
+from utils import depth_utils as du
+from sbpd import sbpd
+from utils.utils import mkdir_if_missing
 import numpy as np
 import sys
 import os
@@ -10,7 +10,7 @@ import copy
 import pickle
 
 
-class HumANavRendererMulti():
+class SocNavRenderer():
     """
     An image renderer to render images from the
     SBPD dataset, now with support for multiple humans
@@ -269,7 +269,7 @@ class HumANavRendererMulti():
             assert sys.version[0] == '3'
             resolution, traversible = self.building.env.resolution, self.building.traversible
 
-            utils.mkdir_if_missing(traversible_dir)
+            mkdir_if_missing(traversible_dir)
 
             filenames = os.listdir(traversible_dir)
             if 'data.pkl' not in filenames:

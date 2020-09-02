@@ -79,8 +79,8 @@ def test_cost_function(plot=False):
     """
     # Create parameters
     p = create_params()
-    from humanav.humanav_renderer_multi import HumANavRendererMulti
-    r = HumANavRendererMulti.get_renderer(
+    from socnav.socnav_renderer import SocNavRenderer
+    r = SocNavRenderer.get_renderer(
         p.obstacle_map_params.renderer_params, deepcpy=False)
     # obtain "resolution and traversible of building"
     dx_cm, traversible = r.get_config()

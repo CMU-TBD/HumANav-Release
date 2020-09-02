@@ -63,8 +63,8 @@ def test_sbpd_map(visualize=False):
     p = create_params()
 
     # Create an SBPD Map
-    from humanav.humanav_renderer_multi import HumANavRendererMulti
-    r = HumANavRendererMulti.get_renderer(
+    from socnav.socnav_renderer import SocNavRenderer
+    r = SocNavRenderer.get_renderer(
         p.obstacle_map_params.renderer_params, deepcpy=False)
     # obtain "resolution and traversible of building"
     dx_cm, traversible = r.get_config()

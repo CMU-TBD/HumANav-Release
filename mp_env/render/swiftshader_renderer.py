@@ -36,7 +36,6 @@ import numpy as np
 import pyassimp as assimp
 from OpenGL.GLES2 import *
 from OpenGL.EGL import *
-from humanav import utils
 from mp_env.render import rotation_utils
 from utils.utils import *
 
@@ -338,7 +337,7 @@ class SwiftshaderRenderer():
         self.egl_surface = egl_surface
         self.egl_config = egl_config
         self.egl_mapping = {}
-        self.render_timer = utils.Timer()
+        self.render_timer = Timer()
         self.load_timer = None
         self.height = height
         self.width = width
@@ -719,17 +718,17 @@ def _test_renderer(modality, N=16):
     dir_name = os.path.dirname(os.path.realpath(__file__))
     cube = Shape('{:s}/cube/cube.obj'.format(dir_name), load_materials=True,
                  name_prefix='cube')
-    camera_param = utils.Foo(width=225, height=225, z_near=0.01, z_far=20.0,
-                             fov_horizontal=60., fov_vertical=60., modalities=[modality], img_channels=3,
-                             im_resize=1.)
+    camera_param = Foo(width=225, height=225, z_near=0.01, z_far=20.0,
+                       fov_horizontal=60., fov_vertical=60., modalities=[modality], img_channels=3,
+                       im_resize=1.)
     r_obj = get_r_obj(camera_param)
     entities = r_obj.load_shapes([cube])
     r_obj.set_entity_visible(entities, True)
 
     r = 3
     out_dir = os.path.join('tmp', 'test-renderer',
-                           modality + '-' + utils.get_time_str())
-    utils.mkdir_if_missing(out_dir)
+                           modality + '-' + get_time_str())
+    mkdir_if_missing(out_dir)
     #logging.error('Logging to directory: %s', out_dir)
     print('\033[36m', "Logging to the directory:", out_dir, '\033[0m')
     for i in range(N):
