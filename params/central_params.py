@@ -299,7 +299,7 @@ def create_control_pipeline_params():
     return p
 
 
-def create_simulator_params():
+def create_simulator_params(render_3D=False):
     p = DotMap()
 
     sim_p = config['simulator_params']
@@ -315,29 +315,18 @@ def create_simulator_params():
     p.print_data = sim_p.getboolean('print_data')
     p.verbose = sim_p.getboolean('verbose')
     p.join_threads = sim_p.getboolean('join_threads')
-    return p
-
-
-def create_sbpd_simulator_params(render_3D=False):
-    p = create_simulator_params()
-
+    # sbpd simulator params:
     p.render_3D = render_3D
-
-    # Load the dependencies
-    sbpd_p = config['sbpd_simulator_params']
-
     # Load obstacle map params
     p.obstacle_map_params = create_obstacle_map_params()
-
     # much faster to only render the topview rather than use the 3D renderer
     if(not p.render_3D):
         print("Rendering topview only")
     else:
         print("Rendering depth and rgb images with 3D renderer")
-    p.verbose_printing = sbpd_p.getboolean('verbose_printing')
+    p.verbose_printing = sim_p.getboolean('verbose_printing')
     # simulation tick rate
     p.dt = create_system_dynamics_params().dt
-
     return p
 
 

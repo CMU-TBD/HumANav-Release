@@ -8,7 +8,7 @@ import threading
 import multiprocessing
 from simulators.simulator_helper import SimulatorHelper
 from simulators.sim_state import SimState, HumanState, AgentState
-from params.central_params import get_path_to_socnav, create_sbpd_simulator_params
+from params.central_params import get_path_to_socnav, create_simulator_params
 from utils.utils import *
 from utils.image_utils import *
 
@@ -30,7 +30,7 @@ class CentralSimulator(SimulatorHelper):
         """
         self.r = renderer
         self.environment = environment
-        self.params = create_sbpd_simulator_params(render_3D=render_3D)
+        self.params = create_simulator_params(render_3D=render_3D)
         self.episode_params = episode_params
         CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
