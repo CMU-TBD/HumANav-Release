@@ -117,8 +117,6 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
                 record[j].append(t)
             simulator.add_agent(PrerecordedHuman(
                 record, generate_appearance=p.render_3D))
-            print("Generated Prerecorded Humans:", i + 1, "\r", end="")
-        print("\n")
 
 
 def establish_joystick_handshake(p):
@@ -152,23 +150,13 @@ def close_robot_sockets():
     RoboAgent.joystick_receiver_socket.close()
 
 
-def generate_robot(robot_start_goal, simulator):
-    assert(len(robot_start_goal) == 2)
-    rob_start = generate_config_from_pos_3(robot_start_goal[0])
-    rob_goal = generate_config_from_pos_3(robot_start_goal[1])
-    robot_configs = HumanConfigs(rob_start, rob_goal)
-    robot_agent = RoboAgent.generate_robot(
-        robot_configs
-    )
-    simulator.add_agent(robot_agent)
-
-
 def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
     """
     Generate and add num_humans number of randomly generated humans to the simulator
     """
     traversible = environment["traversibles"][0]
-    for i in range(num_generated_humans):
+    print("Generating {} autonomous human agents".format(num_generated_humans))
+    for _ in range(num_generated_humans):
         # Generates a random human from the environment
         new_human_i = Human.generate_random_human_from_environment(
             environment,
@@ -186,9 +174,6 @@ def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
             environment["traversibles"] = np.array([traversible])
         # Input human fields into simulator
         simulator.add_agent(new_human_i)
-        print("Generated Random Humans:", i + 1, "\r", end="")
-    if(num_generated_humans > 0):
-        print("\n")
 
 
 def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
