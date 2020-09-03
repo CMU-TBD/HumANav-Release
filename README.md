@@ -6,7 +6,6 @@ Welcome to the Social Navigation Benchmark utility (SocNavBenchmark), a codebase
 
 ![Expected Movie with OpenGL](https://github.com/GustavoSilvera/GustavoSilvera.github.io/blob/master/Images/proj/sim_with_humans.gif)
 
-
 ## Rendering Utility
 ![Render Graphic](https://smlbansal.github.io/LB-WayPtNav-DH/resources/images/dataset.jpg)
 For rendering purposes, we use the [Swiftshader](https://github.com/google/swiftshader) rendering engine, a CPU based rendering engine for photorealistic visuals (rgb, disparity, surface normal, etc.) from textured meshes used in. 
