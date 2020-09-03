@@ -321,7 +321,8 @@ class CentralSimulator(SimulatorHelper):
         else:
             # generate frames sequentially (non multiproceses)
             skip = 0
-            for frame, s in enumerate(self.states.values()):
+            frame = 0
+            for s in self.states.values():
                 if(skip == 0):
                     self.convert_state_to_frame(
                         s, filename + str(frame) + ".png")
@@ -548,8 +549,9 @@ class CentralSimulator(SimulatorHelper):
             state (SimState): the state of the world to convert to an image
             filename (str): the name of the resulting image (unindexed)
         """
-
-        camera_pos_13 = self.robot.get_current_config().to_3D_numpy()
+        robot = list(state.get_robots().values())[0]
+        camera_pos_13 = \
+            robot.get_current_config().to_3D_numpy()
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
         # NOTE: 3d renderer can only be used with sequential plotting, much slower
@@ -578,9 +580,6 @@ class CentralSimulator(SimulatorHelper):
                          'tests/socnav/' + self.episode_params.name + '_movie')
         # Delete state to save memory after frames are generated
         del(state)
-        # clear the memory for the renderer
-        del(self.r)
-        del(self)
 
     """BEGIN thread utils"""
 
