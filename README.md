@@ -4,6 +4,9 @@ Welcome to the Social Navigation Benchmark utility (SocNavBenchmark), a codebase
 ## HumANav
 Welcome to the Human Active Navigation Dataset (HumANav), a codebase for photorealistic simulations of humans in indoor office environments! We are a team of researchers from UC Berkeley and Google Brain.
 
+## Visual-Navigation
+Welcome to LB-WayPtNav (Learning-Based Waypoint Navigation), a codebase for simulation of robot navigational scenarios in indoor-office environments! We are a team of researchers from UC Berkeley and UIUC.
+
 This codebase is a part of our work in ["Visual Navigation Among Humans with Optimal Control as a Supervisor"](https://arxiv.org/pdf/2003.09354.pdf). In this work we show that HumANav enables zero-shot transfer of learning based navigation algorithms directly from simulation to reality. We hope that HumANav can be a useful tool for the broader visual navigation, computer vision, and robotics communities.
 
 ![HumANav Graphic](https://smlbansal.github.io/LB-WayPtNav-DH/resources/images/dataset.jpg)
