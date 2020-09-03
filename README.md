@@ -1,5 +1,5 @@
 # tbd_SocNavBenchmark
-Welcome to the Social Navigation Benchmark utility (SocNavBenchmark), a codebase for benchmarking robot planning algorithms within a multi-agent environments and indoor obstacles. We are a team of researches from Carnegie Mellon University's Robotics Institute at TBD Lab and HARP Lab. 
+Welcome to the Social Navigation Benchmark utility (SocNavBenchmark), a codebase for benchmarking robot planning algorithms against various episodes of containing multi-agent environments. We are a team of researches from Carnegie Mellon University's Robotics Institute at TBD Lab and HARP Lab. 
 
 ## Output
 ![Expected Movie without OpenGL](https://github.com/GustavoSilvera/GustavoSilvera.github.io/blob/master/Images/proj/sim_without_humans.gif)
@@ -8,7 +8,7 @@ Welcome to the Social Navigation Benchmark utility (SocNavBenchmark), a codebase
 
 
 ## Rendering Utility
-![HumANav Graphic](https://smlbansal.github.io/LB-WayPtNav-DH/resources/images/dataset.jpg)
+![Render Graphic](https://smlbansal.github.io/LB-WayPtNav-DH/resources/images/dataset.jpg)
 For rendering purposes, we use the [Swiftshader](https://github.com/google/swiftshader) rendering engine, a CPU based rendering engine for photorealistic visuals (rgb, disparity, surface normal, etc.) from textured meshes used in. 
 ### Building(map) Rendering
 We use mesh scans of office buildings from the [Stanford Large Scale 3d Indoor Spaces Dataset (SD3DIS)](http://buildingparser.stanford.edu/dataset.html) , however the rendering engine is independent of the meshes used. In principle, textured meshes from scans of any 3D model (see [`sd3dis`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/tree/master/sd3dis)). 
@@ -26,10 +26,10 @@ Follow the instructions in [`surreal/README.md`](https://github.com/CMU-TBD/tbd_
 ### Download SD3DIS data
 Follow the instructions in [`sd3dis/README.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/sd3dis/README.md) to correctly install the building/area meshes. 
 
-Note: HumANav is independent of the actual indoor office environment and human meshes used. In this work we use human meshes exported from the [SURREAL](https://www.di.ens.fr/willow/research/surreal/data/) dataset and scans of indoor office environments from the [S3DIS](http://buildingparser.stanford.edu/dataset.html) dataset. However, if you would like to use other meshes, please download and configure them yourself and update the parameters in renderer_params.py to point to your data installation.
+Note: `tbd_SocNavBenchmark` is independent of the actual indoor office environment and human meshes used. In this work we use human meshes exported from the [SURREAL](https://www.di.ens.fr/willow/research/surreal/data/) dataset and scans of indoor office environments from the [S3DIS](http://buildingparser.stanford.edu/dataset.html) dataset. However, if you would like to use other meshes, please download and configure them yourself and update the parameters in `central_params.py` to point to your data installation.
 
 ## Setup
-### Install Anaconda, gcc, g++
+### Install Anaconda, gcc, g++, libassimp-dev
 ```
 # Install Anaconda
 wget https://repo.anaconda.com/archive/Anaconda3-2019.07-Linux-x86_64.sh
@@ -38,11 +38,8 @@ bash Anaconda3-2019.07-Linux-x86_64.sh
 # Install gcc and g++ if you don't already have them
 sudo apt-get install gcc
 sudo apt-get install g++
-```
 
-#### Install Libassimp-dev
-In the terminal run:
-```
+# Install libassimp-dev if you don't already have it
 sudo apt-get install libassimp-dev
 ```
 
@@ -53,46 +50,56 @@ conda activate tbd_socnavbench
 ```
 
 #### Install pip/conda packages
-In the terminal (and in the virtual environment from above [`tbd_lab`]) run:
+In the terminal (and in the virtual environment from above `tbd_socnavbench`) run:
 ```
 chmod a+x get_packages.sh
-./get_packages.sh # make sure the tbd_socnavbench conda environment is active!
+bash get_packages.sh # make sure the tbd_socnavbench conda environment is active!
 ```
-The script will inform you of all packages being installed and their status, to install manually just look inside
+The script will inform you of all packages being installed and their status, they can also all be install manually
 
 
 #### Patch the OpenGL Installation
 In the terminal run the following commands.
 ```
-1. /PATH/TO/HumANav/humanav
+1. /PATH/TO/tbd_SocNavBenchmark/socnav
 2. bash patches/apply_patches_3.sh
 # NOTE: after running get_packages.sh you should see:
 # HUNK #3 succeeded at 401 (offset 1 line).
 # Hunk #4 succeeded at 407 (offset 1 line).
 ```
-If the script fails there are instructions in apply_patches_3.sh describing how to manually apply the patch. 
+If the script fails there are instructions in [`apply_patches_3.sh`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/socnav/patches/apply_patches_3.sh) describing how to manually apply the patch. 
 
 ### Manually patch pyassimp bug
-Additionally, this version of `pyassimp` has a bug which can be fixed by following [this commit](https://github.com/assimp/assimp/commit/b6d3cbcb61f4cc4c42678d5f183351f95c97c8d4) and simply changing `isinstance(obj,int)` to `isinstance(obj, (int, str, bytes))` on line 98 of `anaconda3/envs/tbd_humanav/lib/python3.6/site-packages/pyassimp/core.py`. Then try running the patches again, or manually (not recommended).
+Additionally, this version of `pyassimp` has a bug which can be fixed by following [this commit](https://github.com/assimp/assimp/commit/b6d3cbcb61f4cc4c42678d5f183351f95c97c8d4) and simply changing `isinstance(obj,int)` to `isinstance(obj, (int, str, bytes))` on line 98 of `anaconda3/envs/tbd_socnavbench/lib/python3.6/site-packages/pyassimp/core.py`. Then try running the patches again, or manually (not recommended).
 
 
-#### Install tbd_SocNavBenchmark as a pip package
-Follow the steps below to install HumANav as a pip package, so it can be easily integrated with any other codebase.
+## Run the tbd_SocNavBenchmark tests
+To get you started we've included `tests`, which contains the main code example for rendering the central simulaton and various unit tests. 
+
 ```
-cd /PATH/TO/tbd_SocNavBenchmark
-pip install -e .
+# From the base tbd_SocNavBenchmark directory
+
+# Ensure the unit tests succeed with 
+python3 tests/all_unit_tests.py 
+
+# test the socnav simulator itself with 
+PYOPENGL_PLATFORM=egl PYTHONPATH='.' python3 tests/test_socnav.py
+...
+# In a seperate shell (as a separate executable):
+python3 tests/test_joystick 
 ```
 
-## Run the tbd_SocNavBenchmark installation
-To get you started we've included `tests`, which contains the main code example for rendering the central simulaton. Currently the mode is set to "topview only" which focuses on the top-down "bird's-eye-view" perspective without using an OpenGL renderer. However, to run the 3D OpenGL renderer (which adds an RGB and Depth view from the robot's perspective) simply change the `p.render_3D` in `./params/renderer_params` to `True`.
+
+### Visualization
+Currently the mode is set to "topview only" which uses just matplotlib to render a top-down "bird's-eye-view" perspective without needing the intensive OpenGL renderer. However, to visualize the Depth/RGB modes change the `render_3D` parameter in [`params/params_exampmle.ini`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/params/params_example.ini) to `True`.
 
 ## Run the external Joystick process
 The simulation relies on (and will wait until a connection is established) a bidirectional connection to a local socket that communicates between the internal "robot" thread and an external "Joystick" process that can be run as a *separate executable* in `./tests/test_joystick.py`
 
 ### Things to note
 - The joystick must be run in an external process (and within the same `conda` environment)
-    - Therefore, make sure before running `test_joystick.py` that the conda environment is `tbd_socnavbench` (same as for `test_socnav.py`
-- The joystick socket is defaulted to 6000, if this interferes with a port on your existing machine, edit the `p.port` in `./params/robot_params`
+    - Therefore, make sure before running `test_joystick.py` that the conda environment is `tbd_socnavbench` (same as for `test_socnav.py`/`test_episodes.py`)
+- The communication port is defaulted to 6000, this can be changed by editing `port` in [`params/params_example.ini`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/params/params_example.ini) under `[robot_params]`
 
 ```
 cd /PATH/TO/tbd_SocNavBenchmark/

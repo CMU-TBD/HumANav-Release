@@ -10,7 +10,7 @@ seed = config['base_params'].getint('seed')
 
 # read params file for episodes configs
 episodes_config = configparser.ConfigParser()
-episodes_config.read(os.path.join(os.getcwd(), 'simulators/episodes.ini'))
+episodes_config.read(os.path.join(os.getcwd(), 'params/episodes_params.ini'))
 
 
 def get_path_to_socnav():
@@ -331,9 +331,9 @@ def create_sbpd_simulator_params(render_3D=False):
 
     # much faster to only render the topview rather than use the 3D renderer
     if(not p.render_3D):
-        print("Printing Topview movie with multithreading")
+        print("Rendering topview only")
     else:
-        print("Printing 3D movie sequentially")
+        print("Rendering depth and rgb images with 3D renderer")
     p.verbose_printing = sbpd_p.getboolean('verbose_printing')
     # simulation tick rate
     p.dt = create_system_dynamics_params().dt
