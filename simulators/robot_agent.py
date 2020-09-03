@@ -244,7 +244,7 @@ class RoboAgent(Agent):
             (RoboAgent.host, RoboAgent.port_recv))
         # wait for a connection
         RoboAgent.joystick_receiver_socket.listen(1)
-        print("Waiting for Joystick connection")
+        print("Waiting for Joystick connection...")
         connection, client = RoboAgent.joystick_receiver_socket.accept()
         print("%sRobot---->Joystick connection established%s" %
               (color_green, color_reset))
