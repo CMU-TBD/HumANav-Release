@@ -37,7 +37,7 @@ class Agent(AgentHelper):
         # cosmetic items (for drawing the trajectories)
         possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
         self.color = random.choice(possible_colors)
-        self.termination_cause = None  # TODO: assumed timeout if none of the others
+        self.termination_cause = None
 
     def init(self):
         self.planned_next_config = copy.deepcopy(self.current_config)
@@ -238,12 +238,10 @@ class Agent(AgentHelper):
                     del self.planner
 
         # NOTE: can use the following if want to update further tracked variables, but sometimes
-        # this is buggy when the action is not fully completed, thus this should be a TODO: fix
+        # this is buggy when the action is not fully completed
         # else:
         #     self.update_final()
 
-    # TODO: put most of the below functions in an agent_helper.py class
-    # TODO: this should probably be static too
     def _process_planner_data(self):
         """
         Process the planners current plan. This could mean applying

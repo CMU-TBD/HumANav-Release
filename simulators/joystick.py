@@ -86,9 +86,6 @@ class Joystick():
         assert(self.sim_states is not None)
         assert(self.environment is not None)
         self.agent_params = create_agent_params(with_obstacle_map=True)
-        # based off central_simulator's parse params
-        self.agent_params.control_horizon /= self.agent_params.dt
-        # self.environment["traversibles"][0]
         self.obstacle_map = self._init_obstacle_map()
         self.obj_fn = Agent._init_obj_fn(self, params=self.agent_params)
         # Initialize Fast-Marching-Method map for agent's pathfinding
@@ -174,7 +171,7 @@ class Joystick():
         """ Runs the planner for one step from config to generate a
         subtrajectory, the resulting robot config after the robot executes
         the subtrajectory, and relevant planner data
-        This needs to have access to the sim_state - how?
+        - Access to sim_states from the self.current_world
         """
         while self.current_config is None:
             # wait until robot's current position is known

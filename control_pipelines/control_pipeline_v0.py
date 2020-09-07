@@ -46,8 +46,7 @@ class ControlPipelineV0(ControlPipelineBase):
         Else returns data only for the closest waypoint to goal_config"""
 
         # Compute the closest velocity bin for this starting configuration
-        idx = np.squeeze(self._compute_bin_idx_for_start_velocities(
-            start_config.speed_nk1()[:, :, 0]))
+        idx = self._compute_bin_idx_for_start_velocities(start_config.speed_nk1()[:, :, 0])[0]
         # Convert waypoints for this velocity bin into world coordinates
         self.waypt_configs_world[idx] = self.system_dynamics.to_world_coordinates(
             start_config, self.waypt_configs[idx], self.waypt_configs_world[idx], mode='assign')

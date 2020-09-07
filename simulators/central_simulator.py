@@ -236,7 +236,7 @@ class CentralSimulator(SimulatorHelper):
               "%sTime:" % (color_blue),
               self.num_conditions_in_agents("blue"),
               "%sFrames:" % (color_reset),
-              rendered_frames + 1,
+              rendered_frames - 1,
               "T = %.3f" % (self.t),
               "\r", end="")
 
