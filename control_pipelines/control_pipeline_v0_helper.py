@@ -63,34 +63,38 @@ class ControlPipelineV0Helper():
 
         # To save memory, when discard_precomputed_lqr_trajectories is true the lqr_trajectories variables can be
         # discarded.
-        dt = data['lqr_trajectories']['dt']
-        n = data['lqr_trajectories']['n']
+        dt = data['lqr_trajectories'].dt
+        n = data['lqr_trajectories'].n
         if discard_precomputed_lqr_trajectories:
             lqr_trajectories = Trajectory(dt=dt, n=n, k=0)
         else:
-            lqr_trajectories = Trajectory.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
-                                                               **data['lqr_trajectories'])
+            lqr_trajectories = data['lqr_trajectories']
+            # lqr_trajectories = Trajectory.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
+            #                                                    **data['lqr_trajectories'])
 
         # To save memory the LQR controllers and reference trajectories (spline trajectories) can be discarded when not
         # needed (i.e. in simulation when the saved lqr_trajectory is the exact result of applying the saved LQR
         # controllers.
-        n = data['spline_trajectories']['n']
+        n = data['spline_trajectories'].n
         if discard_lqr_controller_data:
             spline_trajectories = Trajectory(dt=dt, n=n, k=0)
             K_nkfd = np.zeros((2, 1, 1, 1), dtype=np.float32)
             k_nkf1 = np.zeros((2, 1, 1, 1), dtype=np.float32)
         else:
-            spline_trajectories = Trajectory.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
-                                                                  **data['spline_trajectories'])
-            K_nkfd = np.constantenate(data['K_nkfd'])
-            k_nkf1 = np.constantenate(data['k_nkf1'])
+            spline_trajectories = data['spline_trajectories']
+            # spline_trajectories = Trajectory.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
+            #                                                       **data['spline_trajectories'])
+            K_nkfd = np.array(data['K_nkfd'])
+            k_nkf1 = np.array(data['k_nkf1'])
 
         # Load remaining variables
         start_speeds = np.array(data['start_speeds'])
-        start_configs = SystemConfig.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
-                                                          **data['start_configs'])
-        waypt_configs = SystemConfig.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
-                                                          **data['waypt_configs'])
+        start_configs = data['start_configs']
+        waypt_configs = data['waypt_configs']
+        # start_configs = SystemConfig.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
+        #                                                   **data['start_configs'])
+        # waypt_configs = SystemConfig.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
+        #                                                   **data['waypt_configs'])
         horizons = np.array(data['horizons'])
 
         data_processed = {'start_speeds': start_speeds,
@@ -110,8 +114,7 @@ class ControlPipelineV0Helper():
             data['waypt_configs'], idxs)
         data_bin['start_configs'] = SystemConfig.gather_across_batch_dim_and_create(
             data['start_configs'], idxs)
-        data_bin['start_speeds'] = np.take(
-            data['start_speeds'], idxs, axis=0)
+        data_bin['start_speeds'] = np.take(data['start_speeds'], idxs, axis=0)
         data_bin['spline_trajectories'] = Trajectory.gather_across_batch_dim_and_create(
             data['spline_trajectories'], idxs)
         data_bin['horizons'] = np.take(data['horizons'], idxs, axis=0)
