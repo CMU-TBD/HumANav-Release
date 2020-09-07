@@ -30,7 +30,6 @@ class ControlPipelineV0(ControlPipelineBase):
         Used to instantiate a control pipeline. Saves memory by ensuring that only one pipeline is ever loaded.
         """
         if cls.pipeline is None:
-            print("Generating pipeline, this may take some time...")
             cls.pipeline = cls(params)
         else:
             assert(utils.check_dotmap_equality(cls.pipeline.params, params))
@@ -121,6 +120,7 @@ class ControlPipelineV0(ControlPipelineBase):
         return waypt_configs, horizons, self.trajectories_world[0], self.spline_trajectories_world[0], controllers
 
     def generate_control_pipeline(self, params=None):
+        print("Generating pipeline, this may take some time...")
         p = self.params
         # Initialize spline, cost function, lqr solver
         waypoints_egocentric = self._sample_egocentric_waypoints(vf=0.)
