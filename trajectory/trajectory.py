@@ -132,14 +132,20 @@ class Trajectory(object):
         """Given a tensor of indexes to gather in the batch dimension,
         update this trajectories instance variables and shape."""
         self.n = idxs.size
-        self._position_nk2 = np.take(self._position_nk2, idxs)
-        self._speed_nk1 = np.take(self._speed_nk1, idxs)
-        self._acceleration_nk1 = np.take(self._acceleration_nk1, idxs)
-        self._heading_nk1 = np.take(self._heading_nk1, idxs)
-        self._angular_speed_nk1 = np.take(self._angular_speed_nk1, idxs)
-        self._angular_acceleration_nk1 = np.take(
+
+        def gather(arr, idxs):  # used for when arr is multidim and dont want slicing
+            a = []
+            for i in idxs:
+                a.append(arr[i])
+            return np.array(a)
+        self._position_nk2 = gather(self._position_nk2, idxs)
+        self._speed_nk1 = gather(self._speed_nk1, idxs)
+        self._acceleration_nk1 = gather(self._acceleration_nk1, idxs)
+        self._heading_nk1 = gather(self._heading_nk1, idxs)
+        self._angular_speed_nk1 = gather(self._angular_speed_nk1, idxs)
+        self._angular_acceleration_nk1 = gather(
             self._angular_acceleration_nk1, idxs)
-        self.valid_horizons_n1 = np.take(self.valid_horizons_n1, idxs)
+        self.valid_horizons_n1 = gather(self.valid_horizons_n1, idxs)
         return self
 
     def to_numpy_repr(self):

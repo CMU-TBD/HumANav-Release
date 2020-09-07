@@ -30,6 +30,7 @@ class ControlPipelineV0(ControlPipelineBase):
         Used to instantiate a control pipeline. Saves memory by ensuring that only one pipeline is ever loaded.
         """
         if cls.pipeline is None:
+            print("Generating pipeline, this may take some time...")
             cls.pipeline = cls(params)
         else:
             assert(utils.check_dotmap_equality(cls.pipeline.params, params))
@@ -185,7 +186,7 @@ class ControlPipelineV0(ControlPipelineBase):
         # Only keep the valid problems and corresponding splines and horizons
         start_config.gather_across_batch_dim(valid_idxs)
         goal_config.gather_across_batch_dim(valid_idxs)
-        horizons_n1 = np.gather(horizons_n1, valid_idxs)
+        horizons_n1 = np.take(horizons_n1, valid_idxs)
         self.spline_trajectory.gather_across_batch_dim(valid_idxs)
         return start_config, goal_config, horizons_n1
 
