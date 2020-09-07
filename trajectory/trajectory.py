@@ -22,8 +22,12 @@ class Trajectory(object):
             try:
                 assert(k == position_nk2.shape[1])
             except:
-                print("ERROR, dimens mismatch:", k, position_nk2.shape[1])
-                exit(1)
+                try:
+                    # tuple with implied 1 as dimen 1
+                    assert(position_nk2.shape[0] == position_nk2.size)
+                except:
+                    print("ERROR, dimens mismatch:", k, position_nk2.shape[1])
+                    exit(1)
 
         # Discretization step
         self.dt = dt
@@ -86,16 +90,7 @@ class Trajectory(object):
                              acceleration_nk1, heading_nk1, angular_speed_nk1,
                              angular_acceleration_nk1, valid_horizons_n1,
                              track_trajectory_acceleration=True):
-        """Utility function to initialize a trajectory object from its numpy
-        representation. Useful for loading pickled trajectories"""
-        return cls(dt=dt, n=n, k=k, position_nk2=position_nk2,
-                   speed_nk1=speed_nk1, acceleration_nk1=acceleration_nk1,
-                   heading_nk1=heading_nk1,
-                   angular_speed_nk1=angular_speed_nk1,
-                   angular_acceleration_nk1=angular_acceleration_nk1,
-                   valid_horizons_n1=valid_horizons_n1,
-                   variable=False,
-                   track_trajectory_acceleration=track_trajectory_acceleration)
+        raise NotImplementedError
 
     def update_valid_mask_nk(self):
         """Update this trajectories valid mask. The valid mask is a mask of 1's
@@ -164,7 +159,7 @@ class Trajectory(object):
     @classmethod
     def concat_across_batch_dim(cls, trajs):
         """Concatenates a list of trajectory objects
-        across the batch dimension, returning a new 
+        across the batch dimension, returning a new
         trajectory object."""
         if len(trajs) == 0:
             return None
@@ -202,25 +197,32 @@ class Trajectory(object):
         n = idxs.size
         k = traj.k
 
-        position_nk2 = np.take(traj.position_nk2(), idxs)
-        speed_nk1 = np.take(traj.speed_nk1(), idxs)
-        acceleration_nk1 = np.take(traj.acceleration_nk1(), idxs)
-        heading_nk1 = np.take(traj.heading_nk1(), idxs)
-        angular_speed_nk1 = np.take(traj.angular_speed_nk1(), idxs)
-        angular_acceleration_nk1 = np.take(
-            traj.angular_acceleration_nk1(), idxs)
-        valid_horizons_n1 = np.take(traj.valid_horizons_n1, idxs)
+        def gather(arr, idxs):  # used for when arr is multidim and dont want slicing
+            a = []
+            for i in idxs:
+                a.append(arr[i])
+            return np.array(a)
+
+        position_nk2 = gather(traj.position_nk2(), idxs)
+        speed_nk1 = gather(traj.speed_nk1(), idxs)
+        acceleration_nk1 = np.zeros_like(traj.acceleration_nk1()) if traj.acceleration_nk1().size == 0 else gather(
+            traj.acceleration_nk1(), idxs)
+        heading_nk1 = gather(traj.heading_nk1(), idxs)
+        angular_speed_nk1 = gather(traj.angular_speed_nk1(), idxs)
+        angular_acceleration_nk1 = np.zeros_like(traj.angular_acceleration_nk1()) if traj.angular_acceleration_nk1(
+        ).size == 0 else gather(traj.angular_acceleration_nk1(), idxs)
+        valid_horizons_n1 = gather(traj.valid_horizons_n1, idxs)
         return cls(dt=dt, n=n, k=k, position_nk2=position_nk2,
                    speed_nk1=speed_nk1, acceleration_nk1=acceleration_nk1,
                    heading_nk1=heading_nk1, angular_speed_nk1=angular_speed_nk1,
                    angular_acceleration_nk1=angular_acceleration_nk1,
                    valid_horizons_n1=valid_horizons_n1)
 
-    @property
+    @ property
     def trainable_variables(self):
         return self.vars
 
-    @property
+    @ property
     def shape(self):
         return '({:d}, {:d})'.format(self.n, self.k)
 
@@ -239,7 +241,6 @@ class Trajectory(object):
     def angular_speed_nk1(self):
         return self._angular_speed_nk1
 
-    # TODO is this always returning the first or the latest?
     def to_3D_numpy(self):
         pos_2 = self.position_nk2()[0][0]
         heading = self.heading_nk1()[0][0]
@@ -249,14 +250,25 @@ class Trajectory(object):
         return self._angular_acceleration_nk1
 
     def position_and_heading_nk3(self):
-        return np.concatenate([self.position_nk2(), self.heading_nk1()], axis=2)
+        p_nk2 = self.position_nk2()
+        h_nk1 = self.heading_nk1()
+        if(len(p_nk2) == 0 and len(h_nk1) == 0):
+            return np.array([])
+        return np.concatenate([p_nk2, h_nk1], axis=2)
 
     def speed_and_angular_speed_nk2(self):
-        return np.concatenate([self.speed_nk1(), self.angular_speed_nk1()], axis=2)
+        s_nk1 = self.speed_nk1()
+        a_nk1 = self.angular_speed_nk1()
+        if(len(s_nk1) == 0 and len(a_nk1) == 0):
+            return np.array([])
+        return np.concatenate([s_nk1, a_nk1], axis=2)
 
     def position_heading_speed_and_angular_speed_nk5(self):
-        return np.concatenate([self.position_and_heading_nk3(),
-                               self.speed_and_angular_speed_nk2()], axis=2)
+        ph_nk3 = self.position_and_heading_nk3()
+        sa_nk2 = self.speed_and_angular_speed_nk2()
+        if(len(ph_nk3) == 0 and len(sa_nk2) == 0):
+            return np.array([])
+        return np.concatenate([ph_nk3, sa_nk2], axis=2)
 
     def append_along_time_axis(self, trajectory, track_trajectory_acceleration=True):
         """ Utility function to concatenate trajectory

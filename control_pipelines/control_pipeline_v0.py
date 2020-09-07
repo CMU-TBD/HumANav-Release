@@ -302,14 +302,16 @@ class ControlPipelineV0(ControlPipelineBase):
             data['start_speeds'])
 
         for i in range(len(self.start_velocities)):
-            idxs = np.where(np.equal(bin_idxs, i))[:, 0]
+            ee = np.equal(bin_idxs, i)
+            idxs = np.where(ee)[0]
+            # idxs = idxs[:, 0]
             data_bin = self.helper.gather_across_batch_dim(data, idxs)
 
             # When rebinning the same waypoint may occur more than once in a given bin
             # If this happens filter out the data such that each waypoint occurs only once.
             unique_idxs = self._compute_unique_waypt_idxs(
                 data_bin['waypt_configs'])
-            if unique_idxs.shape[0].value < data_bin['waypt_configs'].n:
+            if unique_idxs.shape[0] < data_bin['waypt_configs'].n:
                 data_bin = self.helper.gather_across_batch_dim(
                     data_bin, unique_idxs)
 
@@ -331,8 +333,9 @@ class ControlPipelineV0(ControlPipelineBase):
     def _compute_unique_waypt_idxs(self, waypt_configs):
         """Return a set of indices of unique elements in waypt_configs."""
         # Tensorflow doesn't support unique operation on multidimensional tensors so we use numpy here.
-        waypt_config_np = waypt_configs.position_heading_speed_and_angular_speed_nk5()[
-            :, 0]
+        waypt_config_np = waypt_configs.position_heading_speed_and_angular_speed_nk5()
+        if(waypt_config_np.size > 0):
+            waypt_config_np = waypt_config_np[:, 0]
         _, idxs = np.unique(waypt_config_np, axis=0, return_index=True)
         idxs.sort()
         return idxs

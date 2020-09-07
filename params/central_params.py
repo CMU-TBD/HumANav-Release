@@ -267,6 +267,9 @@ def create_control_pipeline_params():
     # The directory for saving the control pipeline files
     p.dir = os.path.join(base_data_dir(), 'control_pipelines')
 
+    # The time interval between updates, global to system dynamics
+    p.dt = create_system_dynamics_params().dt
+
     # Spline parameters
     from trajectory.spline.spline_3rd_order import Spline3rdOrder
     p.spline_params = DotMap(spline=Spline3rdOrder,
