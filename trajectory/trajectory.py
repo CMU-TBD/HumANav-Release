@@ -90,7 +90,16 @@ class Trajectory(object):
                              acceleration_nk1, heading_nk1, angular_speed_nk1,
                              angular_acceleration_nk1, valid_horizons_n1,
                              track_trajectory_acceleration=True):
-        raise NotImplementedError
+        """Utility function to initialize a trajectory object from its numpy
+        representation. Useful for loading pickled trajectories"""
+        return cls(dt=dt, n=n, k=k, position_nk2=position_nk2,
+                   speed_nk1=speed_nk1, acceleration_nk1=acceleration_nk1,
+                   heading_nk1=heading_nk1,
+                   angular_speed_nk1=angular_speed_nk1,
+                   angular_acceleration_nk1=angular_acceleration_nk1,
+                   valid_horizons_n1=valid_horizons_n1,
+                   variable=False,
+                   track_trajectory_acceleration=track_trajectory_acceleration)
 
     def update_valid_mask_nk(self):
         """Update this trajectories valid mask. The valid mask is a mask of 1's

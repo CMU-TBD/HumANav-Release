@@ -46,7 +46,8 @@ class ControlPipelineV0(ControlPipelineBase):
         Else returns data only for the closest waypoint to goal_config"""
 
         # Compute the closest velocity bin for this starting configuration
-        idx = self._compute_bin_idx_for_start_velocities(start_config.speed_nk1()[:, :, 0])[0]
+        idx = self._compute_bin_idx_for_start_velocities(
+            start_config.speed_nk1()[:, :, 0])[0]
         # Convert waypoints for this velocity bin into world coordinates
         self.waypt_configs_world[idx] = self.system_dynamics.to_world_coordinates(
             start_config, self.waypt_configs[idx], self.waypt_configs_world[idx], mode='assign')
@@ -309,8 +310,8 @@ class ControlPipelineV0(ControlPipelineBase):
 
             # When rebinning the same waypoint may occur more than once in a given bin
             # If this happens filter out the data such that each waypoint occurs only once.
-            unique_idxs = self._compute_unique_waypt_idxs(
-                data_bin['waypt_configs'])
+            unique_idxs = \
+                self._compute_unique_waypt_idxs(data_bin['waypt_configs'])
             if unique_idxs.shape[0] < data_bin['waypt_configs'].n:
                 data_bin = self.helper.gather_across_batch_dim(
                     data_bin, unique_idxs)
@@ -336,9 +337,10 @@ class ControlPipelineV0(ControlPipelineBase):
         waypt_config_np = waypt_configs.position_heading_speed_and_angular_speed_nk5()
         if(waypt_config_np.size > 0):
             waypt_config_np = waypt_config_np[:, 0]
-        _, idxs = np.unique(waypt_config_np, axis=0, return_index=True)
-        idxs.sort()
-        return idxs
+            _, idxs = np.unique(waypt_config_np, axis=0, return_index=True)
+            idxs.sort()
+            return idxs
+        return np.array([])
 
     def _compute_bin_idx_for_start_velocities(self, start_speeds_n1):
         """Computes the closest starting velocity bin to each speed in start_speeds."""
