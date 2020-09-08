@@ -43,7 +43,7 @@ def create_params():
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],
-               max_time=10e7)
+               max_time=20)
 
     # Tilt the camera 10 degree down from the horizontal axis
     p.robot_params.physical_params.camera_elevation_degree = -10
