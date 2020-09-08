@@ -37,7 +37,7 @@ class Agent(AgentHelper):
         # cosmetic items (for drawing the trajectories)
         possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
         self.color = random.choice(possible_colors)
-        self.termination_cause = None
+        self.termination_cause = None 
 
     def init(self):
         self.planned_next_config = copy.deepcopy(self.current_config)

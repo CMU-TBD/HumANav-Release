@@ -194,7 +194,9 @@ class Joystick():
                     t=-1
                 )
             self.vehicle_trajectory.append_along_time_axis(
-                t_seg, track_trajectory_acceleration=self.agent_params.planner_params.track_accel)
+                t_seg,
+                track_trajectory_acceleration=self.agent_params.planner_params.track_accel
+            )
             self.commanded_actions.extend(commanded_actions_nkf[0])
             self.current_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
@@ -227,6 +229,9 @@ class Joystick():
         if random_commands:
             self.random_robot_joystick(action_dt)
         else:
+            # NOTE: this planner is very simple and only updates the robot's position
+            # via its own calculations rather than from the "sense" action, and thus
+            # may fail due to running off tracks
             self.planned_robot_joystick()
         # this point is reached once the planner/randomizer are finished
         self.environment = None  # free environment

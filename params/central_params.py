@@ -385,7 +385,7 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
     p.personal_space_objective = DotMap(psc_scale=1.0)
 
     p.objective_fn_params = DotMap(obj_type=agent_p.get('obj_type'))
-    p.goal_cutoff_dist = p.goal_distance_objective.goal_margin
+    p.goal_margin = p.goal_distance_objective.goal_margin
     p.goal_dist_norm = p.goal_distance_objective.power  # Default is l2 norm
     p.episode_termination_reasons = ['Timeout', 'Collision', 'Success']
     p.episode_termination_colors = ['b', 'r', 'g']

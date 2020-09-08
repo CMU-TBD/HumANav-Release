@@ -65,6 +65,7 @@ class AgentHelper(object):
             episode_data = {}
         self.end_episode = end_episode
         self.episode_data = episode_data
+        return end_episode
 
     def _compute_time_idx_for_termination_condition(self, condition):
         """
@@ -140,7 +141,7 @@ class AgentHelper(object):
         """
         dist_to_goal_1k = self._dist_to_goal(use_euclidean=False)
         successes = np.where(
-            np.less(dist_to_goal_1k, self.params.goal_cutoff_dist))
+            np.less(dist_to_goal_1k, self.params.goal_margin))
         success_idxs = successes[1]
         if np.size(success_idxs) != 0:
             time_idx = success_idxs[0]
