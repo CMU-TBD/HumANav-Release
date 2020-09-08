@@ -56,8 +56,9 @@ class ControlPipelineV0Helper():
                               discard_precomputed_lqr_trajectories=False,
                               track_trajectory_acceleration=False):
         """Load control pipeline data from a pickle file and process it so that it can be used by the pipeline."""
-        # if(not os.path.exists(filename)):
-        #    os.mknod(filename) #create the 'incorrectly_binned.pkl' if not there
+        if(not os.path.exists(filename)):
+            # create the 'incorrectly_binned.pkl' if not there
+            os.mknod(filename)
         with open(filename, 'rb') as f:
             data = pickle.load(f)
 
@@ -69,8 +70,6 @@ class ControlPipelineV0Helper():
             lqr_trajectories = Trajectory(dt=dt, n=n, k=0)
         else:
             lqr_trajectories = data['lqr_trajectories']
-            # lqr_trajectories = Trajectory.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
-            #                                                    **data['lqr_trajectories'])
 
         # To save memory the LQR controllers and reference trajectories (spline trajectories) can be discarded when not
         # needed (i.e. in simulation when the saved lqr_trajectory is the exact result of applying the saved LQR
@@ -82,8 +81,6 @@ class ControlPipelineV0Helper():
             k_nkf1 = np.zeros((2, 1, 1, 1), dtype=np.float32)
         else:
             spline_trajectories = data['spline_trajectories']
-            # spline_trajectories = Trajectory.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
-            #                                                       **data['spline_trajectories'])
             K_nkfd = np.array(data['K_nkfd'])
             k_nkf1 = np.array(data['k_nkf1'])
 
@@ -91,10 +88,6 @@ class ControlPipelineV0Helper():
         start_speeds = np.array(data['start_speeds'])
         start_configs = data['start_configs']
         waypt_configs = data['waypt_configs']
-        # start_configs = SystemConfig.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
-        #                                                   **data['start_configs'])
-        # waypt_configs = SystemConfig.init_from_numpy_repr(track_trajectory_acceleration=track_trajectory_acceleration,
-        #                                                   **data['waypt_configs'])
         horizons = np.array(data['horizons'])
 
         data_processed = {'start_speeds': start_speeds,

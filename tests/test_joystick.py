@@ -10,7 +10,7 @@ def test_joystick():
     J.establish_receiver_connection()
     J.await_episodes()
     episodes = J.get_episodes()
-    for ep in episodes:
+    for _ in episodes:
         J.await_env()
         # init control pipeline after episode from robot
         J.init_control_pipeline()

@@ -135,7 +135,7 @@ class CentralSimulator(SimulatorHelper):
         iteration = 1  # loop iteration
         self.print_sim_progress(iteration)
 
-        while self.exists_running_agent() or self.exists_running_prerec():
+        while self.t <= self.episode_params.max_time:
             # update "wall clock" time
             wall_clock = time.clock() - start_time
 
@@ -236,7 +236,7 @@ class CentralSimulator(SimulatorHelper):
               "%sTime:" % (color_blue),
               self.num_conditions_in_agents("blue"),
               "%sFrames:" % (color_reset),
-              rendered_frames + 1,
+              rendered_frames - 1,
               "T = %.3f" % (self.t),
               "\r", end="")
 
@@ -372,7 +372,7 @@ class CentralSimulator(SimulatorHelper):
             p.join()
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13,
-                     agents, prerecs, robots, room_center, plot_quiver=False):
+                     agents, prerecs, robots, room_center, plot_quiver=False, plot_meter_tick=False):
         """Uses matplotlib to plot a birds-eye-view image of the world by plotting the environment
         and the gen_agents on every frame. The frame also includes the simulator time and wall clock time
 
@@ -420,22 +420,24 @@ class CentralSimulator(SimulatorHelper):
         plot_agent_dict(ax, ppm, agents, label="Agent", normal_color="go",
                         collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False)
 
-        # plot other useful informational visuals in the topview
-        # such as the key to the length of a "meter" unit
-        plot_line_loc = room_center[:2] * 0.65
-        start = [0, 0] + plot_line_loc
-        end = [1, 0] + plot_line_loc
-        gather_xs = [start[0], end[0]]
-        gather_ys = [start[1], end[1]]
-        col = 'k-'
-        h = 0.1  # height of the "ticks" of the key
-        ax.plot(gather_xs, gather_ys, col)  # main line
-        ax.plot([start[0], start[0]], [start[1] +
-                                       h, start[1] - h], col)  # tick left
-        ax.plot([end[0], end[0]], [end[1] + h, end[1] - h], col)  # tick right
-        if(plot_quiver):
-            ax.text(0.5 * (start[0] + end[0]) - 0.2, start[1] +
-                    0.5, "1m", fontsize=14, verticalalignment='top')
+        if(plot_meter_tick):
+            # plot other useful informational visuals in the topview
+            # such as the key to the length of a "meter" unit
+            plot_line_loc = room_center[:2] * 0.65
+            start = [0, 0] + plot_line_loc
+            end = [1, 0] + plot_line_loc
+            gather_xs = [start[0], end[0]]
+            gather_ys = [start[1], end[1]]
+            col = 'k-'
+            h = 0.1  # height of the "ticks" of the key
+            ax.plot(gather_xs, gather_ys, col)  # main line
+            ax.plot([start[0], start[0]], [start[1] +
+                                           h, start[1] - h], col)  # tick left
+            ax.plot([end[0], end[0]], [end[1] + h,
+                                       end[1] - h], col)  # tick right
+            if(plot_quiver):
+                ax.text(0.5 * (start[0] + end[0]) - 0.2, start[1] +
+                        0.5, "1m", fontsize=14, verticalalignment='top')
 
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment,
                     camera_pos_13, agents, prerecs, robots,

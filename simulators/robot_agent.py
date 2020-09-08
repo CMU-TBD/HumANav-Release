@@ -118,7 +118,8 @@ class RoboAgent(Agent):
             # NOTE: the format for the acceleration commands to the open loop for the robot is:
             # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
             t_seg, actions_nk2 = Agent.apply_control_open_loop(self, current_config,
-                                                               command, num_cmds_in_grp, sim_mode='ideal'
+                                                               command, num_cmds_in_grp,
+                                                               sim_mode='ideal'
                                                                )
             self.num_executed += 1
             self.vehicle_trajectory.append_along_time_axis(t_seg)
