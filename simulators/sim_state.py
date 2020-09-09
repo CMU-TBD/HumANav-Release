@@ -1,8 +1,8 @@
 import numpy as np
 from copy import deepcopy
 import json
-from simulators.agent import Agent
-from humans.human import Human
+# from simulators.agent import Agent
+# from humans.human import Human
 from trajectory.trajectory import Trajectory
 from utils.utils import *
 

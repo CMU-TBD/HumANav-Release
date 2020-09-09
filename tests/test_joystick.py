@@ -19,4 +19,5 @@ def test_joystick():
 
 
 if __name__ == '__main__':
+    print("Joystick")
     test_joystick()

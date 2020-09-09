@@ -5,7 +5,7 @@ import os
 from utils.angle_utils import angle_normalize
 
 
-class ControlPipelineV0Helper():
+class ControlPipelineV0Helper:
     """A collection of useful helper functions for ControlPipelineV0."""
 
     # TODO: Currently calling numpy() here as tfe.DEVICE_PLACEMENT_SILENT is not working in the eager mode to place
@@ -56,7 +56,7 @@ class ControlPipelineV0Helper():
                               discard_precomputed_lqr_trajectories=False,
                               track_trajectory_acceleration=False):
         """Load control pipeline data from a pickle file and process it so that it can be used by the pipeline."""
-        if(not os.path.exists(filename)):
+        if not os.path.exists(filename):
             # create the 'incorrectly_binned.pkl' if not there
             os.mknod(filename)
         with open(filename, 'rb') as f:

@@ -19,3 +19,6 @@ params/params_example.ini
 tests/humanav/
 tests/visual-nav/
 tests/socnav/
+params/renderer_params.py
+.idea*
+params/params.ini

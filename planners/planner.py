@@ -35,15 +35,15 @@ class Planner(object):
         """
         raise NotImplementedError
 
-    def eval_objective(self, start_config, goal_config=None, sim_state=None):
+    def eval_objective(self, start_config, goal_config=None, sim_state_hist=None):
         """ Evaluate the objective function on a trajectory
         generated through the control pipeline from start_config (world frame)."""
-        if(self.control_pipeline.params.only_one_system):
+        if self.control_pipeline.params.only_one_system:
             with lock:
                 # NOTE: these functions are not reentrant
                 waypts, horizons, trajectories_lqr, trajectories_spline, controllers = self.control_pipeline.plan(
                     start_config, goal_config)
-                obj_val = self.obj_fn.evaluate_function(trajectories_lqr, sim_state)
+                obj_val = self.obj_fn.evaluate_function(trajectories_lqr, sim_state_hist)
         else:
             waypts, horizons, trajectories_lqr, trajectories_spline, controllers = self.control_pipeline.plan(
                 start_config, goal_config)

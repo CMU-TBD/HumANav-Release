@@ -8,8 +8,8 @@ import threading
 import multiprocessing
 from simulators.simulator_helper import SimulatorHelper
 from simulators.sim_state import SimState, HumanState, AgentState
-from params.central_params import get_path_to_socnav, create_simulator_params
-from utils.utils import *
+from params.central_params import get_path_to_socnav, create_simulator_params, get_seed
+# from utils.utils import *
 from utils.image_utils import *
 
 
@@ -58,7 +58,7 @@ class CentralSimulator(SimulatorHelper):
         name = a.get_name()
         from simulators.robot_agent import RoboAgent
         from humans.recorded_human import PrerecordedHuman
-        if(isinstance(a, RoboAgent)):
+        if isinstance(a, RoboAgent):
             # initialize the robot and add to simulator's known "robot" field
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False)
@@ -111,7 +111,7 @@ class CentralSimulator(SimulatorHelper):
 
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
-        if(self.robot is None):
+        if self.robot is None:
             print("%sNo robot in simulator%s" % (color_red, color_reset))
             return
 
@@ -245,6 +245,7 @@ class CentralSimulator(SimulatorHelper):
 
         Args:
             sim_t (float): the current time in the simulator in seconds
+            delta_t (float): the timestep size in the simulator in seconds
             wall_t (float): the current wall clock time
 
         Returns:
@@ -266,8 +267,8 @@ class CentralSimulator(SimulatorHelper):
         current_state = SimState(saved_env,
                                  saved_agents, saved_prerecs, saved_robots,
                                  sim_t, wall_t, delta_t, self.episode_params.name,
-                                 self.episode_params.max_time
-                                 )
+                                 self.episode_params.max_time)
+
         # Save current state to a class dictionary indexed by simulator time
         self.states[sim_t] = current_state
         return current_state
@@ -345,7 +346,7 @@ class CentralSimulator(SimulatorHelper):
             clear_old_files (bool, optional): Whether or not to clear old image files. Defaults to True.
             with_multiprocessing (bool, optional): for multiple directories of images, run with multiprocessing. Defaults to True.
         """
-        if(self.params.fps_scale_down == 0):
+        if self.params.fps_scale_down == 0:
             return
         num_robots = len(self.robots)
         rendering_processes = []
@@ -355,17 +356,17 @@ class CentralSimulator(SimulatorHelper):
             dirname = "tests/socnav/" + dir_title + "_movie"
             IMAGES_DIR = os.path.join(
                 self.params.socnav_params.socnav_dir, dirname)
-            if(with_multiprocessing):
+            if with_multiprocessing:
                 # little use to use pools here, since this is for multiple robot gen_agents in a scene
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
                     target=save_to_gif,
-                    args=(IMAGES_DIR, duration, dir_title + "_movie", clear_old_files))
+                    args=(IMAGES_DIR, duration, dir_title + "_movie_%d" %(get_seed()), clear_old_files))
                 )
                 rendering_processes[i].start()
             else:
                 # sequentially
-                save_to_gif(IMAGES_DIR, duration,
+                save_to_gif(IMAGES_DIR, duration, gif_filename="movie_%d" %(get_seed()),
                             clear_old_files=clear_old_files)
 
         for p in rendering_processes:

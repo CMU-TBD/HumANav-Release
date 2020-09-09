@@ -104,7 +104,7 @@ def create_test_params():
 
     p.personal_space_params = DotMap(
         power=1,
-        pcost_scale=1
+        psc_scale=10
     )
 
     return p

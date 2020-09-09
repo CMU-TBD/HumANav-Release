@@ -8,6 +8,7 @@ from objectives.objective_function import ObjectiveFunction
 from objectives.angle_distance import AngleDistance
 from objectives.goal_distance import GoalDistance
 from objectives.obstacle_avoidance import ObstacleAvoidance
+from objectives.personal_space_cost import PersonalSpaceCost
 
 from trajectory.trajectory import SystemConfig, Trajectory
 from utils.fmm_map import FmmMap
@@ -315,6 +316,10 @@ class Agent(AgentHelper):
         return obj_fn
 
     @staticmethod
+    def _init_psc_objective(params):
+        return PersonalSpaceCost(params=params.personal_space_objective)
+
+    @staticmethod
     def _init_planner(self, params=None):
         if(params is None):
             params = self.params
@@ -367,6 +372,8 @@ class Agent(AgentHelper):
                 objective.fmm_map = self.fmm_map
             elif isinstance(objective, AngleDistance):
                 objective.fmm_map = self.fmm_map
+            elif isinstance(objective, PersonalSpaceCost):
+                pass
             else:
                 assert False
 

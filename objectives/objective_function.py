@@ -1,4 +1,6 @@
 import numpy as np
+from simulators.sim_state import SimState
+# from objectives.personal_space_cost import PersonalSpaceCost
 
 
 class Objective(object):
@@ -22,22 +24,29 @@ class ObjectiveFunction(object):
         """
         self.objectives.append(objective)
 
-    def evaluate_function_by_objective(self, trajectory, sim_state=None):
+    def evaluate_function_by_objective(self, trajectory, sim_state_hist=None):
         """
         Evaluate each objective corresponding to a system trajectory or sim_state
         sim_states are only relevant for personal_space cost functions
         """
-        objective_values_by_tag = [[objective.tag, objective.evaluate_objective(
-            trajectory)] for objective in self.objectives]
+        for objective in self.objectives:
+            try:
+                obj_value = objective.evaluate_objective(trajectory)
+            # importing PersonalSpaceCost leads to circular dependency
+            # TODO: figure out a better way to do this
+            # maybe import here and then an isinstance?
+            except TypeError:
+                obj_value = objective.evaluate_objective(trajectory, sim_state_hist)
+            objective_values_by_tag = [[objective.tag, obj_value]]
         return objective_values_by_tag
 
-    def evaluate_function(self, trajectory, sim_state=None):
+    def evaluate_function(self, trajectory, sim_state_hist=None):
         """
         Evaluate the entire objective function corresponding to a system trajectory or traj+sim_state.
         sim_states are only relevant for personal_space cost functions
         """
         objective_values_by_tag = self.evaluate_function_by_objective(
-            trajectory, sim_state)
+            trajectory, sim_state_hist)
         objective_function_values = 0.
         for tag, objective_values in objective_values_by_tag:
             objective_function_values += self._reduce_objective_values(

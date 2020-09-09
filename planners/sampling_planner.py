@@ -34,12 +34,10 @@ class SamplingPlanner(Planner):
             3. Return the minimum cost waypoint, trajectory, and cost
         """
         # TODO:
-        #   for now the sim_state_hist is limited to one sim_state
-        #   we need to make it so that the planner has a history
-        #   and can plan forward accordingly
+        #   changing the code so that sim_state is all history
 
         obj_vals, data = self.eval_objective(
-            start_config, goal_config, sim_state=sim_state_hist)
+            start_config, goal_config, sim_state_hist=sim_state_hist)
         min_idx = np.argmin(obj_vals)
         # min_cost = obj_vals[min_idx]
         waypts, horizons_s, trajectories_lqr, trajectories_spline, controllers = data

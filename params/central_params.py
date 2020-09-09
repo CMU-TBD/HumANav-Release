@@ -5,6 +5,7 @@ import os
 
 # first thing to do is read params file
 config = configparser.ConfigParser()
+# config.read(os.path.join(os.getcwd(), 'params/params.ini'))
 config.read(os.path.join(os.getcwd(), 'params/params_example.ini'))
 seed = config['base_params'].getint('seed')
 
@@ -382,7 +383,9 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
                                        goal_margin=agent_p.getfloat('goal_margin'))
 
     # Personal Space cost parameters
-    p.personal_space_objective = DotMap(psc_scale=1.0)
+    p.personal_space_objective = DotMap(power=1,
+                                        psc_scale=10
+                                        )
 
     p.objective_fn_params = DotMap(obj_type=agent_p.get('obj_type'))
     p.goal_margin = p.goal_distance_objective.goal_margin
