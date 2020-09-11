@@ -91,11 +91,10 @@ class Joystick():
     def _init_obstacle_map(self, renderer=0):
         """ Initializes the sbpd map."""
         p = self.agent_params.obstacle_map_params
+        env = self.current_ep.get_environment()
         return p.obstacle_map(p, renderer,
-                              res=float(
-                                  self.environment["map_scale"]) * 100.,
-                              trav=np.array(
-                                  self.environment["traversibles"][0])
+                              res=float(env["map_scale"]) * 100.,
+                              trav=np.array(env["traversibles"][0])
                               )
 
     def init_control_pipeline(self):
@@ -178,6 +177,8 @@ class Joystick():
             try:
                 # if the robot socket is still alive, notify it that the joystick has stopped
                 self.robot_input([], [], False, override_power_off=True)
+            except:
+                pass
 
     """BEGIN socket utils"""
 
@@ -240,7 +241,7 @@ class Joystick():
             self.request_world = False
             data_str = data_b.decode("utf-8")  # bytes to str
             sim_state_json = json.loads(data_str)
-            return self.manage_data(sim_state_json):
+            return self.manage_data(sim_state_json)
         else:
             self.robot_running = False
             return False
