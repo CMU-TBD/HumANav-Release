@@ -92,12 +92,11 @@ class RoboAgent(Agent):
             self.check_collisions(self.world_state)
             # enforce planning termination upon condition
             self._enforce_episode_termination_conditions()
+            # NOTE: enforce_episode_terminator updates the self.end_episode flag
             if(self.termination_cause == 'green'):
                 # only green when the agent planner succeeds
                 self.robot_termination = "Success"
-            # NOTE: enforce_episode_terminator updates the self.end_episode variable
-            if(self.end_episode or self.has_collided):
-                self.has_collided = True
+            elif(self.has_collided):
                 self.robot_termination = 'Collision'
                 self.power_off()
 
