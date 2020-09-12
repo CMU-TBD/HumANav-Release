@@ -144,7 +144,7 @@ class CentralSimulator(SimulatorHelper):
                   self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
 
-        iteration = 1  # loop iteration
+        iteration = 0  # loop iteration
         self.print_sim_progress(iteration)
 
         while self.t <= self.episode_params.max_time:
@@ -246,7 +246,7 @@ class CentralSimulator(SimulatorHelper):
               "%sSuccess:" % (color_green), num_completed_agents,
               "%sCollide:" % (color_red), num_collided_agents,
               "%sTime:" % (color_blue), num_timeout,
-              "%sFrames:" % (color_reset), rendered_frames - 1,
+              "%sFrames:" % (color_reset), rendered_frames,
               "T = %.3f" % (self.t),
               "\r", end="")
 
@@ -264,26 +264,12 @@ class CentralSimulator(SimulatorHelper):
         # NOTE: when using a modular environment, make saved_env a deepcopy
         saved_env = self.environment
         saved_agents = {}
-        self.num_completed_agents = 0
-        self.num_collided_agents = 0  # reset count
         for a in self.agents.values():
             saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
-            # count whether or not the agent has collided/completed
-            if a.get_collided():
-                self.num_collided_agents += 1
-            elif a.get_completed():
-                self.num_completed_agents += 1
         # deepcopy all prerecorded gen_agents
         saved_prerecs = {}
-        self.num_completed_prerecs = 0
-        self.num_collided_prerecs = 0
         for a in self.prerecs.values():
             saved_prerecs[a.get_name()] = HumanState(a, deepcpy=True)
-            # count whether or not the agent has collided/completed
-            if a.get_collided():
-                self.num_collided_prerecs += 1
-            elif a.get_completed():
-                self.num_completed_prerecs += 1
         # Save all the robots
         saved_robots = {}
         for r in self.robots.values():
@@ -313,7 +299,8 @@ class CentralSimulator(SimulatorHelper):
         fps = (1.0 / self.delta_t) * self.params.fps_scale_down
         print("%sRendering movie with fps=%d%s" %
               (color_orange, fps, color_reset))
-        num_frames = int(len(self.states) * self.params.fps_scale_down)
+        num_frames = \
+            int(np.ceil(len(self.states) * self.params.fps_scale_down))
         np.set_printoptions(precision=3)
         if(not self.params.render_3D):
             # optimized to use multiple processes
@@ -324,25 +311,24 @@ class CentralSimulator(SimulatorHelper):
             for p, s in enumerate(self.states.values()):
                 if(skip == 0):
                     # pool.apply_async(self.convert_state_to_frame, args=(s, filename + str(p) + ".png"))
+                    frame += 1
                     gif_processes.append(multiprocessing.Process(
                         target=self.convert_state_to_frame,
                         args=(s, filename + str(p) + ".png"))
                     )
                     gif_processes[-1].start()
-                    print("Started processes:", frame + 1,
+                    print("Started processes:", frame,
                           "out of", num_frames, "\r", end="")
                     # reset skip counter for frames
                     skip = int(1.0 / self.params.fps_scale_down) - 1
-                    frame += 1
                 else:
                     # skip certain other frames as directed by the fps_scale_down
                     skip -= 1
             print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
-                frame += 1
-                print("Generated Frames:", frame, "out of", num_frames,
-                      "%.3f" % (frame / num_frames), "\r", end="")
+                print("Generated Frames:", frame + 1, "out of", num_frames,
+                      "%.3f" % ((frame + 1) / num_frames), "\r", end="")
         else:
             # generate frames sequentially (non multiproceses)
             skip = 0
@@ -634,7 +620,7 @@ class CentralSimulator(SimulatorHelper):
                 r_listener_thread.start()
             # wait until joystick is ready
             while(not r.joystick_ready):
-                # wait until joystick recieves the environment (once)
+                # wait until joystick receives the environment (once)
                 time.sleep(0.01)
             print("Robot powering on")
             return r_listener_thread
@@ -669,9 +655,18 @@ class CentralSimulator(SimulatorHelper):
             agent_threads (list): list of all spawned (not started) agent threads
         """
         agent_threads = []
-        for a in self.agents.values():
-            agent_threads.append(threading.Thread(
-                target=a.update, args=(sim_t, t_step, current_state,)))
+        all_agents = list(self.agents.values())
+        for a in all_agents:
+            if(not a.end_acting):
+                agent_threads.append(threading.Thread(
+                    target=a.update, args=(sim_t, t_step, current_state,)))
+            else:
+                if(a.termination_cause == "green"):
+                    self.num_completed_agents += 1
+                else:
+                    self.num_collided_agents += 1
+                self.agents.pop(a.get_name())
+                del(a)
         return agent_threads
 
     def init_prerec_threads(self, sim_t: float, current_state: SimState = None):
@@ -696,6 +691,10 @@ class CentralSimulator(SimulatorHelper):
             else:
                 # remove agent since its not within the time frame or finished
                 if(a.get_name() in self.prerecs.keys()):
+                    if(a.get_collided()):
+                        self.num_collided_prerecs += 1
+                    else:
+                        self.num_completed_prerecs += 1
                     self.prerecs.pop(a.get_name())
                     del(a)
         return prerec_threads

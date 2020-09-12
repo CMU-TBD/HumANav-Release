@@ -135,7 +135,7 @@ class RoboAgent(Agent):
             if self.num_executed < len(self.commands):
                 self.execute()
             # block joystick until recieves next command
-            while (self.running and iteration >= self.get_num_executed() + 1):
+            while (self.running and iteration >= self.get_num_executed()):
                 time.sleep(0.001)
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
@@ -146,7 +146,7 @@ class RoboAgent(Agent):
     def power_off(self):
         # if the robot is already "off" do nothing
         if(self.running):
-            print("\nRobot powering off, recieved",
+            print("\nRobot powering off, received",
                   len(self.commands), "commands")
             self.running = False
             try:

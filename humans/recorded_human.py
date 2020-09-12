@@ -40,7 +40,7 @@ class PrerecordedHuman(Human):
         return self.record_data[-1][-1]
 
     def get_completed(self):
-        return self.end_acting and self.has_completed
+        return self.end_acting and self.end_episode
 
     def simulation_init(self, sim_map, with_planner=True):
         """ Initializes important fields for the CentralSimulator"""
@@ -76,7 +76,6 @@ class PrerecordedHuman(Human):
                 except IndexError:
                     self.next_step = self.record_data[-1]  # last one
                     self.current_step = self.max_steps
-                    self.completed = True
                     break
         else:
             # tell the simulator this agent is done
