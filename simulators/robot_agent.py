@@ -67,11 +67,7 @@ class RoboAgent(Agent):
         """
         Sample a new random robot agent from all required features
         """
-        robot_name = None
-        if(name is None):
-            robot_name = generate_name(20)
-        else:
-            robot_name = name
+        robot_name = "robot_agent"  # constant name for the robot since there will only ever be one
         # In order to print more readable arrays
         np.set_printoptions(precision=2)
         pos_2 = configs.get_start_config().to_3D_numpy()
