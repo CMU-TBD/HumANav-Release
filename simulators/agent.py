@@ -33,12 +33,14 @@ class Agent(AgentHelper):
         self.end_acting = False
         # for collisions with other gen_agents
         self.has_collided = False
+        # has not yet completed its trajectory
+        self.has_completed = False
         if(with_init):
             self.init()
         # cosmetic items (for drawing the trajectories)
         possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
         self.color = random.choice(possible_colors)
-        self.termination_cause = None 
+        self.termination_cause = None
 
     def init(self):
         self.planned_next_config = copy.deepcopy(self.current_config)
@@ -84,6 +86,9 @@ class Agent(AgentHelper):
 
     def get_collided(self):
         return self.has_collided
+
+    def get_completed(self):
+        return self.end_acting and self.termination_cause == "green"
 
     def get_radius(self):
         return self.params.radius

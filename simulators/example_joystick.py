@@ -166,7 +166,7 @@ class Joystick():
                 break
         # finished this episode
         print("%sFinished episode:" % color_yellow,
-              self.current_ep, "%s" % color_reset)
+              self.current_ep.get_name(), "%s" % color_reset)
         # listening to robot
         if self.current_ep.get_name() == self.episode_names[-1]:
             self.close_recv_socket()

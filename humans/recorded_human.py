@@ -33,6 +33,15 @@ class PrerecordedHuman(Human):
             appearance = None
         super().__init__(name, appearance, init_configs)
 
+    def get_start_time(self):
+        return self.record_data[0][-1]
+
+    def get_end_time(self):
+        return self.record_data[-1][-1]
+
+    def get_completed(self):
+        return self.end_acting and self.has_completed
+
     def simulation_init(self, sim_map, with_planner=True):
         """ Initializes important fields for the CentralSimulator"""
         self.params = create_agent_params(with_planner=with_planner)
@@ -44,12 +53,11 @@ class PrerecordedHuman(Human):
     def execute(self, state):
         self.check_collisions(self.world_state, include_prerecs=False)
         self.current_step += 1  # Has executed one more step
-        self.set_current_config(
-            generate_config_from_pos_3(state[:3], speed=state[3]))
+        self.current_config = \
+            generate_config_from_pos_3(state[:3], speed=state[3])
         # dummy "command" since these agents "teleport" from one step to another
+        # below code is just to keep track of the agent's trajectories as they move
         null_command = np.array([[[0, 0]]], dtype=np.float32)
-        # NOTE: the format for the acceleration commands to the open loop for the robot is:
-        # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
         t_seg, actions_nk2 = Agent.apply_control_open_loop(self, self.current_config,
                                                            null_command, 1, sim_mode='ideal'
                                                            )
@@ -68,6 +76,7 @@ class PrerecordedHuman(Human):
                 except IndexError:
                     self.next_step = self.record_data[-1]  # last one
                     self.current_step = self.max_steps
+                    self.completed = True
                     break
         else:
             # tell the simulator this agent is done

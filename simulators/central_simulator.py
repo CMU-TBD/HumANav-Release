@@ -38,6 +38,7 @@ class CentralSimulator(SimulatorHelper):
         # keep track of all robots in dictionary with names as the key
         self.robots = {}
         # keep track of all prerecorded humans in a dictionary like the otherwise
+        self.backstage_prerecs = {}
         self.prerecs = {}
         # keep a single (important) robot as a value
         self.robot = None
@@ -68,12 +69,24 @@ class CentralSimulator(SimulatorHelper):
             # generic agent initializer but without a planner (already have trajectories)
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False)
-            self.prerecs[name] = a
+            # added to backstage prerecs which will add to self.prerecs when the time is right
+            self.backstage_prerecs[name] = a
         else:
             # initialize agent and add to simulator
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=True)
             self.agents[name] = a
+
+    def init_sim_data(self):
+        # Create pre-simulation metadata
+        self.total_agents: int = len(self.agents) + len(self.backstage_prerecs)
+        print("Running simulation on", self.total_agents, "agents")
+        self.num_collided_agents = 0
+        self.num_collided_prerecs = 0
+        self.num_completed_agents = 0
+        self.num_completed_prerecs = 0
+        # scale the simulator time
+        self.delta_t = self.params.delta_t_scale * self.params.dt
 
     def exists_running_agent(self):
         """Checks whether or not a generated agent is still running (acting)
@@ -102,12 +115,11 @@ class CentralSimulator(SimulatorHelper):
         threads running their update() functions and updating the robot with commands from the
         external joystick process.
         """
-        num_agents: int = len(self.agents) + len(self.prerecs)
-        self.og_num_prerecs = len(self.prerecs)  # before they get completed
-        print("Running simulation on", num_agents, "agents")
+        # initialize pre-simulation metadata
+        self.init_sim_data()
 
-        # scale the simulator time
-        self.delta_t = self.params.delta_t_scale * self.params.dt
+        # add the first (when t=0) agents to the self.prerecs dict
+        self.init_prerec_threads(sim_t=0, current_state=None)
 
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
@@ -227,16 +239,14 @@ class CentralSimulator(SimulatorHelper):
         Args:
             rendered_frames (int): how many frames have been generated so far
         """
-        print("A:", len(self.agents),
-              "%sSuccess:" % (color_green),
-              self.num_conditions_in_agents("green") +
-              (self.og_num_prerecs - len(self.prerecs)),
-              "%sCollide:" % (color_red),
-              self.num_conditions_in_agents("red"),
-              "%sTime:" % (color_blue),
-              self.num_conditions_in_agents("blue"),
-              "%sFrames:" % (color_reset),
-              rendered_frames - 1,
+        num_completed_agents = self.num_completed_agents + self.num_completed_prerecs
+        num_collided_agents = self.num_collided_agents + self.num_collided_prerecs
+        num_timeout = self.total_agents - num_completed_agents - num_collided_agents
+        print("A:", self.total_agents,
+              "%sSuccess:" % (color_green), num_completed_agents,
+              "%sCollide:" % (color_red), num_collided_agents,
+              "%sTime:" % (color_blue), num_timeout,
+              "%sFrames:" % (color_reset), rendered_frames - 1,
               "T = %.3f" % (self.t),
               "\r", end="")
 
@@ -254,12 +264,26 @@ class CentralSimulator(SimulatorHelper):
         # NOTE: when using a modular environment, make saved_env a deepcopy
         saved_env = self.environment
         saved_agents = {}
+        self.num_completed_agents = 0
+        self.num_collided_agents = 0  # reset count
         for a in self.agents.values():
             saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
+            # count whether or not the agent has collided/completed
+            if a.get_collided():
+                self.num_collided_agents += 1
+            elif a.get_completed():
+                self.num_completed_agents += 1
         # deepcopy all prerecorded gen_agents
         saved_prerecs = {}
+        self.num_completed_prerecs = 0
+        self.num_collided_prerecs = 0
         for a in self.prerecs.values():
             saved_prerecs[a.get_name()] = HumanState(a, deepcpy=True)
+            # count whether or not the agent has collided/completed
+            if a.get_collided():
+                self.num_collided_prerecs += 1
+            elif a.get_completed():
+                self.num_completed_prerecs += 1
         # Save all the robots
         saved_robots = {}
         for r in self.robots.values():
@@ -361,12 +385,12 @@ class CentralSimulator(SimulatorHelper):
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
                     target=save_to_gif,
-                    args=(IMAGES_DIR, duration, dir_title + "_movie_%d" %(get_seed()), clear_old_files))
+                    args=(IMAGES_DIR, duration, dir_title + "_movie_%d" % (get_seed()), clear_old_files))
                 )
                 rendering_processes[i].start()
             else:
                 # sequentially
-                save_to_gif(IMAGES_DIR, duration, gif_filename="movie_%d" %(get_seed()),
+                save_to_gif(IMAGES_DIR, duration, gif_filename="movie_%d" % (get_seed()),
                             clear_old_files=clear_old_files)
 
         for p in rendering_processes:
@@ -650,7 +674,7 @@ class CentralSimulator(SimulatorHelper):
                 target=a.update, args=(sim_t, t_step, current_state,)))
         return agent_threads
 
-    def init_prerec_threads(self, sim_t: float, current_state: SimState):
+    def init_prerec_threads(self, sim_t: float, current_state: SimState = None):
         """Spawns a new prerec thread for each running prerecorded agent
 
         Args:
@@ -661,15 +685,19 @@ class CentralSimulator(SimulatorHelper):
             prerec_threads (list): list of all spawned (not started) prerecorded agent threads
         """
         prerec_threads = []
-        prerec_agents = list(self.prerecs.values())
-        for a in prerec_agents:
-            if(not a.end_acting):
-                prerec_threads.append(threading.Thread(
-                    target=a.update, args=(sim_t, current_state,)))
+        all_prerec_agents = list(self.backstage_prerecs.values())
+        for a in all_prerec_agents:
+            if(not a.end_acting and a.get_start_time() <= sim_t < a.get_end_time()):
+                # only add (or keep) agents in the time frame
+                self.prerecs[a.get_name()] = a
+                if(current_state):  # not None
+                    prerec_threads.append(threading.Thread(
+                        target=a.update, args=(sim_t, current_state,)))
             else:
-                # remove the agent once it's completed its trajectory
-                self.prerecs.pop(a.get_name())
-                del(a)
+                # remove agent since its not within the time frame or finished
+                if(a.get_name() in self.prerecs.keys()):
+                    self.prerecs.pop(a.get_name())
+                    del(a)
         return prerec_threads
 
     def start_threads(self, thread_group):
