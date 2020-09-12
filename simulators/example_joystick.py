@@ -61,8 +61,8 @@ class JoystickExample(JoystickBase):
         print("simulator's refresh rate = %.4f" % self.sim_delta_t)
         print("joystick's refresh rate  = %.4f" % self.agent_params.dt)
         self.robot_receiver_socket.listen(1)  # init listener thread
-        self.robot_running = True
-        while(self.robot_running):
+        self.joystick_on = True
+        while(self.joystick_on):
             # send a command to the robot
             num_actions_per_dt = \
                 int(np.floor(self.sim_delta_t / self.agent_params.dt))
