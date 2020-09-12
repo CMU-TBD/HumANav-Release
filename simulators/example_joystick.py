@@ -150,8 +150,8 @@ class Joystick():
 
     def update(self):
         assert(self.sim_delta_t)  # obtained from the second J.listen_once()
-        print("simulator's refresh rate =", self.sim_delta_t)
-        print("joystick's refresh rate  =", self.agent_params.dt)
+        print("simulator's refresh rate = %.4f" % self.sim_delta_t)
+        print("joystick's refresh rate  = %.4f" % self.agent_params.dt)
         self.robot_receiver_socket.listen(1)  # init listener thread
         self.robot_running = True
         while(self.robot_running):
@@ -213,9 +213,23 @@ class Joystick():
         if self.joystick_params.print_data:
             print("sent", json_message)
 
-    def listen_once(self):
+    def get_all_episode_names(self):
+        # sets the data to look for all the episode names
+        return self.listen_once(0)
+
+    def get_episode_metadata(self):
+        # sets data_type to look for the episode metadata
+        return self.listen_once(1)
+
+    def listen_once(self, data_type: int = 2):
         """Runs a single instance of listening to the receiver socket
-        to obtain information about the world
+        to obtain information about the world and episode metadata
+
+        Args:
+            data_type (int, optional): 0 if obtaining all episode names,
+                                       1 if obtaining specific episode metadata,
+                                       2 if obtaining simulator info from a sim_state.
+                                       Defaults to 2.
 
         Returns:
             [bool]: True if the listening was successful, False otherwise
@@ -229,45 +243,39 @@ class Joystick():
                   "bytes from robot%s" % color_reset)
         if response_len > 0:
             data_str = data_b.decode("utf-8")  # bytes to str
-            sim_state_json = json.loads(data_str)
-            return self.manage_data(sim_state_json)
+            data_json = json.loads(data_str)
+            if (data_type == 0):
+                return self.manage_episodes_name_data(data_json)
+            elif (data_type == 1):
+                return self.manage_episode_data(data_json)
+            else:
+                return self.manage_sim_state_data(data_json)
         else:
             self.robot_running = False
             return False
         return True
 
-    def listen_to_robot_loop(self):
-        self.robot_receiver_socket.listen(1)
-        self.robot_running = True
-        while self.robot_running and self.t < self.ep_max_time:
-            connection, client = self.robot_receiver_socket.accept()
-            data_b, response_len = conn_recv(connection)
-            # quickly close connection to open up for the next input
-            connection.close()
-            if self.joystick_params.verbose:
-                print("%sreceived" % color_blue, response_len,
-                      "bytes from robot%s" % color_reset)
-            if data_b is not None and response_len > 0:
-                self.request_world = False
-                data_str = data_b.decode("utf-8")  # bytes to str
-                sim_state_json = json.loads(data_str)
-                if not self.manage_data(sim_state_json):
-                    break
-            else:
-                self.robot_running = False
-                break
-        self.environment = None
+    def manage_episodes_name_data(self, episode_names_json: dict):
+        # case where there is no simulator yet, just episodes
+        assert('episodes' in episode_names_json.keys())
+        self.episode_names = episode_names_json['episodes']
+        print("Received episodes:", self.episode_names)
+        assert(len(self.episode_names) > 0)
+        return True  # valid parsing of the data
 
-    def manage_data(self, sim_state_json: dict):
+    def manage_episode_data(self, initial_sim_state_json: dict):
+        current_world = SimState.from_json(initial_sim_state_json)
+        # not empty dictionary
+        assert(not (not current_world.get_environment()))
+        # ping the robot that the joystick received the environment
+        # this is signified by the unique fact that j_time = -1
+        joystick_ready = \
+            self.create_message(True, [], [], -1, False)
+        self.update_knowledge_from_episode(current_world, init_ep=True)
+        self.send_to_robot(joystick_ready)
+        return True
 
-        if 'robot_on' not in sim_state_json.keys():
-            # case where there is no simulator yet, just episodes
-            assert('episodes' in sim_state_json.keys())
-            self.episode_names = sim_state_json['episodes']
-            print("Received episodes:", self.episode_names)
-            assert(len(self.episode_names) > 0)
-            return True  # valid parsing of the data
-
+    def manage_sim_state_data(self, sim_state_json: dict):
         # case where the robot sends a power-off signal
         if not sim_state_json['robot_on']:
             # TODO: fix cause for 'success' state
@@ -275,20 +283,10 @@ class Joystick():
                   sim_state_json['termination_cause'])
             self.power_off()
             return False  # robot is off, do not continue
-
-        # case where the data comes from some robot simulator (and is a world)
-
-        # TODO: make this not a SimState (since that requires importing sim_state.py)
-        # and instead just keep as a dictionary for now.
-        current_world = SimState.from_json(sim_state_json)
-        if not (not current_world.get_environment()):  # not empty dictionary
-            # ping the robot that the joystick received the environment
-            # this is signified by the unique fact that j_time = -1
-            joystick_ready = \
-                self.create_message(True, [], [], -1, False)
-            self.update_knowledge_from_episode(current_world, init_ep=True)
-            self.send_to_robot(joystick_ready)
         else:
+            # TODO: make this not a SimState (since that requires importing sim_state.py)
+            # and instead just keep as a dictionary for now.
+            current_world = SimState.from_json(sim_state_json)
             # only update the SimStates for non-environment configs
             self.update_knowledge_from_episode(current_world)
 
@@ -311,8 +309,6 @@ class Joystick():
                 # Write the Agent's trajectory data into a pandas file
                 self.update_logs(current_world)
                 self.write_pandas()
-
-        # both of the above cases yielded a valid listen management
         return True
 
     def update_knowledge_from_episode(self, current_world, init_ep: bool = False):

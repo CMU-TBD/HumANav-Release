@@ -58,9 +58,9 @@ class PrerecordedHuman(Human):
         # dummy "command" since these agents "teleport" from one step to another
         # below code is just to keep track of the agent's trajectories as they move
         null_command = np.array([[[0, 0]]], dtype=np.float32)
-        t_seg, actions_nk2 = Agent.apply_control_open_loop(self, self.current_config,
-                                                           null_command, 1, sim_mode='ideal'
-                                                           )
+        t_seg, _ = Agent.apply_control_open_loop(self, self.current_config,
+                                                 null_command, 1, sim_mode='ideal'
+                                                 )
         self.vehicle_trajectory.append_along_time_axis(t_seg)
 
     def update(self, time, world_state):
