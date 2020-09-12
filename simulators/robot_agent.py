@@ -207,8 +207,8 @@ class RoboAgent(Agent):
                 # NOTE: this COULD use joystick_on parameter in the incoming data.
                 if(data["joystick_on"]):
                     if(data["j_time"] >= 0):  # normal command input
-                        lin_vels: list = data["lin_vels"]
-                        ang_vels: list = data["ang_vels"]
+                        lin_vels: list = data["v_cmds"]
+                        ang_vels: list = data["w_cmds"]
                         assert(len(lin_vels) == len(ang_vels))
                         self.amnt_per_joystick = len(lin_vels)
                         for i in range(self.amnt_per_joystick):
@@ -227,7 +227,7 @@ class RoboAgent(Agent):
                     elif data["j_time"] == -1:
                         self.joystick_ready = True
                     # whether or not the world state is requested
-                    if(data["req_world"] is True):
+                    if(data["sense"] is True):
                         # to send the world in the next update
                         self.joystick_requests_world = True
 

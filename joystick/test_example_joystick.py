@@ -1,8 +1,8 @@
-from simulators.example_joystick import Joystick
+from simulators.example_joystick import JoystickExample
 
 
 def test_joystick():
-    J = Joystick()
+    J = JoystickExample()
     J.establish_sender_connection()
     J.establish_receiver_connection()
     # first listen() for the episode names
@@ -16,7 +16,7 @@ def test_joystick():
         J.get_episode_metadata()
         assert(J.current_ep and J.current_ep.get_name() == ep_title)
         J.init_control_pipeline()
-        J.update()
+        J.update_loop()
 
 
 if __name__ == '__main__':
