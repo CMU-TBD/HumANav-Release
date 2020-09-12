@@ -165,14 +165,13 @@ class Joystick():
                 self.power_off()
                 break
         # finished this episode
-        print("%sFinished episode:" % color_yellow,
+        print("%sFinished episode:" % color_green,
               self.current_ep.get_name(), "%s" % color_reset)
         # listening to robot
         if self.current_ep.get_name() == self.episode_names[-1]:
             self.close_recv_socket()
             print("Finished all episodes")
         else:
-            self.episode_names.pop(0)  # free last (completed) episode
             self.current_ep = None
 
     def power_off(self):
