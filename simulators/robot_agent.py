@@ -139,7 +139,7 @@ class RoboAgent(Agent):
             if self.num_executed < len(self.commands):
                 self.execute()
             # block joystick until recieves next command
-            while (self.running and iteration >= self.get_num_executed()):
+            while (self.running and iteration >= self.get_num_executed() + 1):
                 time.sleep(0.001)
             # send the (JSON serialized) world state per joystick's request
             self.ping_joystick()
