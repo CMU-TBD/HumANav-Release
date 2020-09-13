@@ -54,7 +54,7 @@ class JoystickRandom(JoystickBase):
                 random.randint(w_bounds[0] * pr, w_bounds[1] * pr) / pr
             w_cmds.append(rand_w_cmd)
         # send the data in lists based off the simulator/joystick refresh rate
-        self.robot_input(v_cmds, w_cmds, sense=False)
+        self.send_cmds(v_cmds, w_cmds)
 
     def joystick_sense(self):
         # ping's the robot to request a sim state

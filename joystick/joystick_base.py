@@ -15,7 +15,6 @@ random.seed(get_seed())
 
 class JoystickBase():
     def __init__(self):
-        self.t = 0
         self.joystick_params = create_robot_params()
         # episode fields
         self.episode_names = []
@@ -72,23 +71,12 @@ class JoystickBase():
     def init_control_pipeline(self):
         raise NotImplementedError
 
-    def create_message(self, joystick_status: bool, v_cmds: list, w_cmds: list,
-                       j_time: float = 0.0, req_world: bool = False):
+    def send_cmds(self, v_cmds: list, w_cmds: list):
         json_dict = {}
-        json_dict["joystick_on"] = joystick_status
-        if(joystick_status):
-            json_dict['j_time'] = j_time
-            json_dict["v_cmds"] = v_cmds
-            json_dict["w_cmds"] = w_cmds
-            json_dict["sense"] = req_world
-        return json.dumps(json_dict, indent=1)
-
-    def robot_input(self, v_cmds: list, w_cmds: list,
-                    sense: bool = True,
-                    override_power_off: bool = False):
-        r_status = self.joystick_on and not override_power_off  # robot on or off
-        message = self.create_message(r_status, v_cmds, w_cmds, self.t, sense)
-        self.send_to_robot(message)
+        json_dict["v_cmds"] = v_cmds
+        json_dict["w_cmds"] = w_cmds
+        cmds = json.dumps(json_dict, indent=1)
+        self.send_to_robot(cmds)
 
     def joystick_sense(self):
         raise NotImplementedError
@@ -169,12 +157,9 @@ class JoystickBase():
         current_world = SimState.from_json(initial_sim_state_json)
         # not empty dictionary
         assert(not (not current_world.get_environment()))
-        # ping the robot that the joystick received the environment
-        # this is signified by the unique fact that j_time = -1
-        joystick_ready = \
-            self.create_message(True, [], [], -1, False)
         self.update_knowledge_from_episode(current_world, init_ep=True)
-        self.send_to_robot(joystick_ready)
+        # ping the robot that the joystick received the episode (keyword)
+        self.send_to_robot("ready")
         return True
 
     def manage_sim_state_data(self, sim_state_json: dict):
