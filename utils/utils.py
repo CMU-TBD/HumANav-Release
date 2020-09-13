@@ -301,14 +301,16 @@ def color_print(color: str):
 """ BEGIN configs functions """
 
 
-def generate_config_from_pos_3(pos_3, dt=0.1, speed=0):
+def generate_config_from_pos_3(pos_3, dt=0.1, v=0, w=0):
     pos_n11 = np.array([[[pos_3[0], pos_3[1]]]], dtype=np.float32)
     heading_n11 = np.array([[[pos_3[2]]]], dtype=np.float32)
-    speed_nk1 = np.ones((1, 1, 1), dtype=np.float32) * speed
+    speed_nk1 = np.ones((1, 1, 1), dtype=np.float32) * v
+    angular_speed_nk1 = np.ones((1, 1, 1), dtype=np.float32) * w
     return SystemConfig(dt, 1, 1,
                         position_nk2=pos_n11,
                         heading_nk1=heading_n11,
                         speed_nk1=speed_nk1,
+                        angular_speed_nk1=angular_speed_nk1,
                         variable=False)
 
 

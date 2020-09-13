@@ -124,19 +124,17 @@ class Agent(AgentHelper):
         self.commanded_actions_1kf = self.episode_data['commanded_actions_1kf']
         self.obj_val = self._compute_objective_value()
 
-    def update(self, t, t_step, sim_state=None):
+    def update(self, t, sim_dt, sim_state=None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         self.sim_states.append(sim_state)
         if(self.params.verbose_printing):
             print("start: ", self.get_start_config().position_nk2())
             print("goal: ", self.get_goal_config().position_nk2())
 
-        # self.velocities[get_sim_t(sim_state)] = compute_all_velocities(self.sim_states)
-        # self.accelerations[get_sim_t(sim_state)] = compute_all_accelerations(self.sim_states)
-
         # Generate the next trajectory segment, update next config, update actions/data
         self.plan()
-        action_dt = int(np.floor(t_step / self.params.dt))
+
+        action_dt = int(np.floor(sim_dt / self.params.dt))
         self.act(action_dt, world_state=sim_state)
 
     def plan(self):
@@ -238,11 +236,6 @@ class Agent(AgentHelper):
                         print("terminated act for agent", self.get_name())
                     # save memory by deleting control pipeline (very memory intensive)
                     del self.planner
-
-        # NOTE: can use the following if want to update further tracked variables, but sometimes
-        # this is buggy when the action is not fully completed
-        # else:
-        #     self.update_final()
 
     def _process_planner_data(self):
         """

@@ -46,8 +46,6 @@ class JoystickBase():
         # keeping an explicit log of every sim_state indexed by time
         if(self.joystick_params.track_sim_states):
             self.sim_states = {}  # log of simulator states indexed by time
-        else:
-            self.sim_states = None
 
         # tracking velocity and acceleration of the agents from the sim states
         if(self.joystick_params.track_vel_accel):
