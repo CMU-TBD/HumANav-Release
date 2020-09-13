@@ -29,9 +29,6 @@ class JoystickBase():
         self.port_send = self.joystick_params.port  # sender port
         self.port_recv = self.port_send + 1         # receiver port
         print("Initiated joystick at", self.host, self.port_send)
-        # our 'positions' are modeled as (x, y, theta)
-        self.robot_current = None    # current position of the robot
-        self.sim_delta_t = None      # the delta_t (tickrate) of the simulator
         # potentially add more fields based off the params
         self.param_based_init()
 
@@ -197,8 +194,9 @@ class JoystickBase():
 
             if self.joystick_params.write_pandas_log:
                 # used for file IO such as pandas logging
+                # NOTE: this MUST match the directory name in CentralSimulator
                 self.dirname = 'tests/socnav/' + self.current_ep.get_name() + \
-                    '_movie/joystick_data'
+                    '_output/joystick_data'
                 # Write the Agent's trajectory data into a pandas file
                 self.update_logs(self.sim_state_now)
                 self.write_pandas()
@@ -215,8 +213,6 @@ class JoystickBase():
         # only one robot is supported
         assert(len(robots) == 1)
         robot = robots[0]
-        # update robot's current position
-        self.robot_current = robot.get_current_config().to_3D_numpy()
         # episode data
         if(init_ep):
             # only update start/goal when creating an episode
@@ -297,12 +293,14 @@ class JoystickBase():
         assert(isinstance(message, str))
         try:
             self.robot_sender_socket.connect(robot_addr)
-            self.robot_sender_socket.sendall(bytes(message, "utf-8"))
-            self.robot_sender_socket.close()
         except:  # used to turn off the joystick
             self.joystick_on = False
+            print("%sRobot socket disconnected%s" % (color_red, color_reset))
+            os._exit(1)
             return
         # Send data
+        self.robot_sender_socket.sendall(bytes(message, "utf-8"))
+        self.robot_sender_socket.close()
         if self.joystick_params.print_data:
             print("sent", message)
 

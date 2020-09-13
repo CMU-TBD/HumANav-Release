@@ -165,6 +165,11 @@ def euclidean_dist2(p1: list, p2: list):
     return np.sqrt(diff_x**2 + diff_y**2)
 
 
+def absmax(x):
+    # returns maximum based off magnitude, not sign
+    return max(x.min(), x.max(), key=abs)
+
+
 def touch(path: str):
     """Creates an empty file at a specific file location
 

@@ -10,6 +10,8 @@ class JoystickRandom(JoystickBase):
     def __init__(self):
         # planner variables
         self.commanded_actions = []  # the list of commands sent to the robot to execute
+        # our 'positions' are modeled as (x, y, theta)
+        self.robot_current = None    # current position of the robot
         super().__init__()
 
     def _init_obstacle_map(self, renderer=0):
@@ -107,6 +109,8 @@ class JoystickWithPlanner(JoystickBase):
         # planner variables
         self.commanded_actions = []  # the list of commands sent to the robot to execute
         self.simulator_joystick_update_ratio = 1
+        # our 'positions' are modeled as (x, y, theta)
+        self.robot_current = None    # current position of the robot
         self.robot_v = 0     # not tracked in the base simulator
         self.robot_w = 0     # not tracked in the base simulator
         super().__init__()
@@ -141,7 +145,8 @@ class JoystickWithPlanner(JoystickBase):
         self.vehicle_data = self.planner.empty_data_dict()
         self.system_dynamics = \
             Agent._init_system_dynamics(self, params=self.agent_params)
-        # self.vehicle_trajectory = Trajectory(dt=self.agent_params.dt, n=1, k=0)
+        # init robot current config from the starting position
+        self.robot_current = self.current_ep.get_robot_start().copy()
 
     def joystick_sense(self):
         # ping's the robot to request a sim state
@@ -154,9 +159,13 @@ class JoystickWithPlanner(JoystickBase):
             self.joystick_on = False
 
         # NOTE: at this point, self.sim_state_now is updated with the
-        # most up-to-date simulation information (same with self.robot_current)
+        # most up-to-date simulation information
 
-        # updating robot speeds (linear and angular)
+        # Update robot current position
+        robot = list(self.sim_state_now.get_robots().values())[0]
+        self.robot_current = robot.get_current_config().to_3D_numpy()
+
+        # Updating robot speeds (linear and angular) based off simulator data
         self.robot_v = \
             euclidean_dist2(self.robot_current, robot_prev) / self.sim_delta_t
         self.robot_w = \
@@ -177,15 +186,12 @@ class JoystickWithPlanner(JoystickBase):
                                   self.goal_config,
                                   sim_state_hist=self.sim_states)
 
-        # base the number of planned commands on the number of updates the joystick does
-        # per a single update of the simulator, ex: j_update = 0.05s, s_update=0.15s, =>
-        # j should update (s/j = ) 3 times per simulator update
-        num_planned_cmds = \
-            self.agent_params.control_horizon * self.simulator_joystick_update_ratio
+        # TODO: make sure the planning control horizon is greater than the
+        # simulator_joystick_update_ratio else it will not plan far enough
 
         # LQR feedback control loop
         t_seg = Trajectory.new_traj_clip_along_time_axis(self.planner_data['trajectory'],
-                                                         num_planned_cmds,
+                                                         self.agent_params.control_horizon,
                                                          repeat_second_to_last_speed=True)
 
         # From the new planned subtrajectory, parse it for the requisite v & w commands
@@ -194,29 +200,38 @@ class JoystickWithPlanner(JoystickBase):
 
     def joystick_act(self):
         if(self.joystick_on):
-            # initialize the command containers
-            v_cmds, w_cmds = [], []
-            for v_cmd, w_cmd in self.commanded_actions[0:self.simulator_joystick_update_ratio]:
-                v_cmds.append(float(v_cmd))
-                w_cmds.append(float(w_cmd))
-            self.send_cmds(v_cmds, w_cmds)
+            num_cmds_per_step = self.simulator_joystick_update_ratio
+            # runs through the entire planned horizon just with a cmds_step of the above
+            for _ in range(int(np.floor(len(self.commanded_actions) / num_cmds_per_step))):
+                # initialize the command containers
+                v_cmds, w_cmds = [], []
+                # only going to send the first simulator_joystick_update_ratio commands
+                clipped_cmds = self.commanded_actions[:num_cmds_per_step]
+                for v_cmd, w_cmd in clipped_cmds:
+                    v_cmds.append(float(v_cmd))
+                    w_cmds.append(float(w_cmd))
+                self.send_cmds(v_cmds, w_cmds)
+                # remove the sent commands
+                self.commanded_actions = self.commanded_actions[num_cmds_per_step:]
+                # break if the robot finished
+                if(not self.joystick_on):
+                    break
 
     def update_loop(self):
         assert(self.sim_delta_t)
         print("simulator's refresh rate = %.4f" % self.sim_delta_t)
         print("joystick's refresh rate  = %.4f" % self.agent_params.dt)
+        # TODO: do I need the listener thing?
         self.robot_receiver_socket.listen(1)  # init listener thread
         self.joystick_on = True
-        self.simulator_joystick_update_ratio = \
-            int(np.floor(self.sim_delta_t / self.agent_params.dt))
+        self.simulator_joystick_update_ratio = int(
+            np.floor(self.sim_delta_t / self.agent_params.dt))
         while(self.joystick_on):
 
             # gather information about the world state based off the simulator
             self.joystick_sense()
-
             # create a plan for the next steps of the trajectory
             self.joystick_plan()
-
             # send a command to the robot
             self.joystick_act()
 

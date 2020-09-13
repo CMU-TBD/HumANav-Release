@@ -9,7 +9,7 @@ import multiprocessing
 from simulators.simulator_helper import SimulatorHelper
 from simulators.sim_state import SimState, HumanState, AgentState
 from params.central_params import get_path_to_socnav, create_simulator_params, get_seed
-# from utils.utils import *
+from utils.utils import *
 from utils.image_utils import *
 
 
@@ -182,9 +182,6 @@ class CentralSimulator(SimulatorHelper):
 
             if((iteration * self.delta_t) > self.episode_params.max_time):
                 # hard limit of simulation
-                self.robot.power_off()
-                # last iteration to tell the joystick it is off
-                self.robot.update(iteration)
                 break
 
         # free all the gen_agents
@@ -351,7 +348,7 @@ class CentralSimulator(SimulatorHelper):
         # fps = 1 / duration # where the duration is the simulation capture rate
         duration = self.delta_t * (1.0 / self.params.fps_scale_down)
         for i in range(num_robots):
-            dirname = "tests/socnav/" + dir_title + "_movie"
+            dirname = "tests/socnav/" + dir_title + "_output"
             IMAGES_DIR = os.path.join(
                 self.params.socnav_params.socnav_dir, dirname)
             if with_multiprocessing:
@@ -359,7 +356,7 @@ class CentralSimulator(SimulatorHelper):
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
                     target=save_to_gif,
-                    args=(IMAGES_DIR, duration, dir_title + "_movie_%d" % (get_seed()), clear_old_files))
+                    args=(IMAGES_DIR, duration, dir_title + "_output_%d" % (get_seed()), clear_old_files))
                 )
                 rendering_processes[i].start()
             else:
@@ -602,7 +599,7 @@ class CentralSimulator(SimulatorHelper):
         data += "Prerec start indx: %d\n" % ep_params.prerec_start_indx
         data += "Total agents in scene: %d\n" % self.total_agents
         data += "****************SIMULATOR INFO****************\n"
-        data += "Simulator refresh rate: %0.3f\n" % self.delta_t
+        data += "Simulator refresh rate (s): %0.3f\n" % self.delta_t
         data += "Robot termination cause: %s\n" % self.robot.termination_cause
         num_successful = self.num_completed_agents + self.num_completed_prerecs
         data += "Num Successful agents: %d\n" % num_successful
@@ -617,19 +614,23 @@ class CentralSimulator(SimulatorHelper):
         rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
                                            self.robot.get_current_config().to_3D_numpy()
                                            )
-        data += "Robot displacement: %0.3f\n" % rob_displacement
-        data += "Max robot velocity: %0.3f\n" % np.max(
+        data += "Robot displacement (m): %0.3f\n" % rob_displacement
+        data += "Max robot velocity (m/s): %0.3f\n" % absmax(
             self.robot.vehicle_trajectory.speed_nk1())
-        data += "Max robot acceleration: %0.3f\n" % np.max(
+        data += "Max robot acceleration: %0.3f\n" % absmax(
             self.robot.vehicle_trajectory.acceleration_nk1())
-        data += "Max robot angular velocity: %0.3f\n" % np.max(
+        data += "Max robot angular velocity: %0.3f\n" % absmax(
             self.robot.vehicle_trajectory.angular_speed_nk1())
-        data += "Max robot angular acceleration: %0.3f\n" % np.max(
+        data += "Max robot angular acceleration: %0.3f\n" % absmax(
             self.robot.vehicle_trajectory.angular_acceleration_nk1())
-
-        with open(abs_filename, 'w') as f:
-            f.write(data)
-            f.close()
+        try:
+            with open(abs_filename, 'w') as f:
+                f.write(data)
+                f.close()
+            print("%sSuccessfully wrote episode log to %s%s" %
+                  (color_green, filename, color_reset))
+        except:
+            print("%sWriting episode log failed%s" % (color_red, color_reset))
 
     """ BEGIN THREAD UTILS """
 
@@ -650,6 +651,7 @@ class CentralSimulator(SimulatorHelper):
             assert(r.world_state is not None)
             # send first transaction to the joystick
             print("sending episode data to joystick")
+            r.simulator_running = True
             r.send_to_joystick(r.world_state.to_json(include_map=True))
             r_listener_thread = threading.Thread(target=r.listen_to_joystick)
             if(power_on):
@@ -673,8 +675,14 @@ class CentralSimulator(SimulatorHelper):
             assert(self.robot is not None)
             # turn off the robot
             self.robot.power_off()
+            self.robot.simulator_running = False
             # close robot listener threads
             if(r_listener_thread.is_alive() and self.params.join_threads):
+                # TODO: connect to the socket and close it
+                import socket
+                from simulators.robot_agent import RoboAgent
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+                    (RoboAgent.host, RoboAgent.port_recv))
                 r_listener_thread.join()
             del(r_listener_thread)
         return

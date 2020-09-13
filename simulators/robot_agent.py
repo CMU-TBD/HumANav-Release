@@ -37,6 +37,8 @@ class RoboAgent(Agent):
         self.repeat_joystick = False
         # told the joystick that the robot is powered off
         self.notified_joystick = False
+        # used to keep the listener thread alive even if the robot isnt
+        self.simulator_running = False
 
     def simulation_init(self, sim_map, with_planner=False):
         super().simulation_init(sim_map, with_planner=with_planner)
@@ -119,7 +121,8 @@ class RoboAgent(Agent):
                                                                sim_mode='ideal'
                                                                )
             self.num_executed += 1
-            self.vehicle_trajectory.append_along_time_axis(t_seg)
+            self.vehicle_trajectory.append_along_time_axis(
+                t_seg, track_trajectory_acceleration=True)
             # act trajectory segment
             self.current_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
@@ -160,17 +163,14 @@ class RoboAgent(Agent):
 
     def send_sim_state(self):
         # send the (JSON serialized) world state per joystick's request
-        if self.running:
-            if self.joystick_requests_world:
-                world_state = self.world_state.to_json(
-                    robot_on=self.running,
-                    include_map=False
-                )
-                self.send_to_joystick(world_state)
-                # immediately note that the world has been sent:
-                self.joystick_requests_world = False
-        else:
-            self.power_off()
+        if self.joystick_requests_world:
+            world_state = self.world_state.to_json(
+                robot_on=self.running,
+                include_map=False
+            )
+            self.send_to_joystick(world_state)
+            # immediately note that the world has been sent:
+            self.joystick_requests_world = False
 
     def send_to_joystick(self, message: str):
         with lock:
@@ -195,15 +195,18 @@ class RoboAgent(Agent):
         joystick about the input commands as well as the world requests
         """
         RoboAgent.joystick_receiver_socket.listen(1)
-        self.running = True  # initialize listener
-        while(self.running):
+        while(self.simulator_running):
             connection, client = RoboAgent.joystick_receiver_socket.accept()
             data_b, response_len = conn_recv(connection, buffr_amnt=128)
             # close connection to be reaccepted when the joystick sends data
             connection.close()
             if(data_b is not b'' and response_len > 0):
                 data_str = data_b.decode("utf-8")  # bytes to str
-                self.manage_data(data_str)
+                if(not self.running):
+                    # with the robot_on=False flag
+                    self.send_sim_state()
+                else:
+                    self.manage_data(data_str)
 
     def is_keyword(self, data_str):
         # non json important keyword

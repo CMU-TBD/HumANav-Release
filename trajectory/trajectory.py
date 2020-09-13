@@ -322,8 +322,7 @@ class Trajectory(object):
         self._angular_speed_nk1 = self._angular_speed_nk1[:, :horizon]
         self._angular_acceleration_nk1 = self._angular_acceleration_nk1[:, :horizon]
         self.k = horizon
-        self.valid_horizons_n1 = np.clip_by_value(
-            self.valid_horizons_n1, 0, horizon)
+        self.valid_horizons_n1 = np.clip(self.valid_horizons_n1, 0, horizon)
 
     @classmethod
     def concat_along_time_axis(cls, trajectories):
