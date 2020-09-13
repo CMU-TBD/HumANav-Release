@@ -122,7 +122,7 @@ class CentralSimulator(SimulatorHelper):
         self.init_prerec_threads(sim_t=0, current_state=None)
 
         # get initial state
-        current_state = self.save_state(0, self.delta_t)
+        current_state = self.save_state(0, self.delta_t, 0)
         if self.robot is None:
             print("%sNo robot in simulator%s" % (color_red, color_reset))
             return
@@ -148,6 +148,8 @@ class CentralSimulator(SimulatorHelper):
         self.print_sim_progress(iteration)
 
         while self.t <= self.episode_params.max_time:
+            wall_t = time.clock() - start_time
+
             # Complete thread operations
             agent_threads = \
                 self.init_agent_threads(self.t, self.delta_t, current_state)
@@ -166,7 +168,7 @@ class CentralSimulator(SimulatorHelper):
 
             # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
-            current_state = self.save_state(self.t, self.delta_t)
+            current_state = self.save_state(self.t, self.delta_t, wall_t)
             self.robot.update_world(current_state)
 
             # update simulator time
@@ -234,7 +236,7 @@ class CentralSimulator(SimulatorHelper):
               "T = %.3f" % (self.t),
               "\r", end="")
 
-    def save_state(self, sim_t: float, delta_t: float):
+    def save_state(self, sim_t: float, delta_t: float, wall_t: float):
         """Captures the current state of the world to be saved to self.states
 
         Args:
@@ -260,7 +262,7 @@ class CentralSimulator(SimulatorHelper):
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
         current_state = SimState(saved_env,
                                  saved_agents, saved_prerecs, saved_robots,
-                                 sim_t, delta_t, self.episode_params.name,
+                                 sim_t, wall_t, delta_t, self.episode_params.name,
                                  self.episode_params.max_time)
 
         # Save current state to a class dictionary indexed by simulator time
@@ -613,7 +615,7 @@ class CentralSimulator(SimulatorHelper):
             self.robot.commands)
         data += "Num commands executed by robot: %d\n" % self.robot.num_executed
         rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
-                                           self.robot.get_current_config().to_numpy_3D()
+                                           self.robot.get_current_config().to_3D_numpy()
                                            )
         data += "Robot displacement: %0.3f\n" % rob_displacement
         data += "Max robot velocity: %0.3f\n" % np.max(
@@ -625,8 +627,9 @@ class CentralSimulator(SimulatorHelper):
         data += "Max robot angular acceleration: %0.3f\n" % np.max(
             self.robot.vehicle_trajectory.angular_acceleration_nk1())
 
-        with open('episode_log.txt', 'w') as f:
-            f.write(data,)
+        with open(abs_filename, 'w') as f:
+            f.write(data)
+            f.close()
 
     """ BEGIN THREAD UTILS """
 

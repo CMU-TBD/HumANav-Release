@@ -112,13 +112,14 @@ class SimState():
 
     def __init__(self, environment: dict = None, gen_agents: dict = None,
                  prerecs: dict = None, robots: dict = None, sim_t: float = None,
-                 delta_t: float = None, episode_name: str = None,
+                 wall_t: float = None, delta_t: float = None, episode_name: str = None,
                  max_time: float = None):
         self.environment = environment
         self.gen_agents = gen_agents
         self.prerecs = prerecs
         self.robots = robots
         self.sim_t = sim_t
+        self.wall_t = wall_t
         self.delta_t = delta_t
         self.robot_on = True
         self.episode_name = episode_name
@@ -141,6 +142,9 @@ class SimState():
 
     def get_sim_t(self):
         return self.sim_t
+
+    def get_wall_t(self):
+        return self.wall_t
 
     def get_delta_t(self):
         return self.delta_t
@@ -217,6 +221,7 @@ class SimState():
         new_state.robot_on: bool = json_str['robot_on']
         new_state.episode_name: str = json_str['episode_name']
         new_state.episode_max_time: str = json_str['episode_max_time']
+        new_state.wall_t = None
         return new_state
 
     @ staticmethod
