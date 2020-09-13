@@ -96,6 +96,9 @@ class RoboAgent(Agent):
         # enforce planning termination upon condition
         self._enforce_episode_termination_conditions()
 
+        if(self.vehicle_trajectory.k >= self.collision_point_k):
+            self.end_acting = True
+
         if(self.get_collided()):
             assert(self.termination_cause == 'Collision')
             self.power_off()
