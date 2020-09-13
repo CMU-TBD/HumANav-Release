@@ -317,7 +317,7 @@ def generate_config_from_pos_3(pos_3, dt=0.1, v=0, w=0):
 def generate_random_config(environment, dt=0.1,
                            max_vel=0.6):
     pos_3 = generate_random_pos_in_environment(environment)
-    return generate_config_from_pos_3(pos_3, dt=dt, speed=max_vel)
+    return generate_config_from_pos_3(pos_3, dt=dt, v=max_vel)
 
 # For generating positional arguments in an environment
 

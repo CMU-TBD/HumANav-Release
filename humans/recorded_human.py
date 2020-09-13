@@ -54,7 +54,7 @@ class PrerecordedHuman(Human):
         self.check_collisions(self.world_state, include_prerecs=False)
         self.current_step += 1  # Has executed one more step
         self.current_config = \
-            generate_config_from_pos_3(state[:3], speed=state[3])
+            generate_config_from_pos_3(state[:3], v=state[3])
         # dummy "command" since these agents "teleport" from one step to another
         # below code is just to keep track of the agent's trajectories as they move
         null_command = np.array([[[0, 0]]], dtype=np.float32)

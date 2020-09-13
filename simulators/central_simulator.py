@@ -122,7 +122,7 @@ class CentralSimulator(SimulatorHelper):
         self.init_prerec_threads(sim_t=0, current_state=None)
 
         # get initial state
-        current_state = self.save_state(0, self.delta_t, 0)
+        current_state = self.save_state(0, self.delta_t)
         if self.robot is None:
             print("%sNo robot in simulator%s" % (color_red, color_reset))
             return
@@ -148,9 +148,6 @@ class CentralSimulator(SimulatorHelper):
         self.print_sim_progress(iteration)
 
         while self.t <= self.episode_params.max_time:
-            # update "wall clock" time
-            wall_clock = time.clock() - start_time
-
             # Complete thread operations
             agent_threads = \
                 self.init_agent_threads(self.t, self.delta_t, current_state)
@@ -169,7 +166,7 @@ class CentralSimulator(SimulatorHelper):
 
             # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
-            current_state = self.save_state(self.t, self.delta_t, wall_clock)
+            current_state = self.save_state(self.t, self.delta_t)
             self.robot.update_world(current_state)
 
             # update simulator time
@@ -202,7 +199,9 @@ class CentralSimulator(SimulatorHelper):
 
         # capture final wall clock (completion) time
         wall_clock = time.clock() - start_time
-        print("\nSimulation completed in", wall_clock, "seconds")
+        print("\nSimulation completed in", wall_clock, "real world seconds")
+
+        self.generate_episode_log()
 
         # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames(filename=self.episode_params.name + "_obs")
@@ -235,7 +234,7 @@ class CentralSimulator(SimulatorHelper):
               "T = %.3f" % (self.t),
               "\r", end="")
 
-    def save_state(self, sim_t: float, delta_t: float, wall_t: float):
+    def save_state(self, sim_t: float, delta_t: float):
         """Captures the current state of the world to be saved to self.states
 
         Args:
@@ -261,12 +260,14 @@ class CentralSimulator(SimulatorHelper):
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
         current_state = SimState(saved_env,
                                  saved_agents, saved_prerecs, saved_robots,
-                                 sim_t, wall_t, delta_t, self.episode_params.name,
+                                 sim_t, delta_t, self.episode_params.name,
                                  self.episode_params.max_time)
 
         # Save current state to a class dictionary indexed by simulator time
         self.states[sim_t] = current_state
         return current_state
+
+    """ BEGIN IMAGE UTILS """
 
     def generate_frames(self, filename: str = "obs"):
         """Generates a png frame for each world state saved in self.states. Note, based off the
@@ -576,15 +577,62 @@ class CentralSimulator(SimulatorHelper):
                          state.get_environment(), camera_pos_13,
                          state.get_gen_agents(), state.get_prerecs(), state.get_robots(),
                          state.get_sim_t(), state.get_wall_t(), self.episode_params.name + filename,
-                         'tests/socnav/' + self.episode_params.name + '_movie')
+                         'tests/socnav/' + self.episode_params.name + '_output')
         # Delete state to save memory after frames are generated
         del(state)
 
-    """BEGIN thread utils"""
+    """ END IMAGE UTILS """
+
+    def generate_episode_log(self, filename='episode_log.txt'):
+        import io
+        abs_filename = os.path.join(get_path_to_socnav(),
+                                    'tests/socnav/' + self.episode_params.name + '_output',
+                                    filename)
+        touch(abs_filename)  # create if dosent already exist
+        ep_params = self.episode_params
+        data = ""
+        data += "****************EPISODE INFO****************\n"
+        data += "Episode name: %s\n" % ep_params.name
+        data += "Building name: %s\n" % ep_params.map_name
+        data += "Robot start: %s\n" % str(ep_params.robot_start_goal[0])
+        data += "Robot goal: %s\n" % str(ep_params.robot_start_goal[1])
+        data += "Time budget: %.3f\n" % ep_params.max_time
+        data += "Prerec start indx: %d\n" % ep_params.prerec_start_indx
+        data += "Total agents in scene: %d\n" % self.total_agents
+        data += "****************SIMULATOR INFO****************\n"
+        data += "Simulator refresh rate: %0.3f\n" % self.delta_t
+        data += "Robot termination cause: %s\n" % self.robot.termination_cause
+        num_successful = self.num_completed_agents + self.num_completed_prerecs
+        data += "Num Successful agents: %d\n" % num_successful
+        num_collision = self.num_collided_agents + self.num_collided_prerecs
+        data += "Num Collided agents: %d\n" % num_collision
+        num_timeout = self.total_agents - (num_successful + num_collision)
+        data += "Num Timeout agents: %d\n" % num_timeout
+        data += "****************ROBOT INFO****************\n"
+        data += "Num commands received from joystick: %d\n" % len(
+            self.robot.commands)
+        data += "Num commands executed by robot: %d\n" % self.robot.num_executed
+        rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
+                                           self.robot.get_current_config().to_numpy_3D()
+                                           )
+        data += "Robot displacement: %0.3f\n" % rob_displacement
+        data += "Max robot velocity: %0.3f\n" % np.max(
+            self.robot.vehicle_trajectory.speed_nk1())
+        data += "Max robot acceleration: %0.3f\n" % np.max(
+            self.robot.vehicle_trajectory.acceleration_nk1())
+        data += "Max robot angular velocity: %0.3f\n" % np.max(
+            self.robot.vehicle_trajectory.angular_speed_nk1())
+        data += "Max robot angular acceleration: %0.3f\n" % np.max(
+            self.robot.vehicle_trajectory.angular_acceleration_nk1())
+
+        with open('episode_log.txt', 'w') as f:
+            f.write(data,)
+
+    """ BEGIN THREAD UTILS """
 
     def init_robot_listener_thread(self, power_on=True):
-        """Initializes the robot listener by establishing socket connections to 
-        the joystick, transmitting the (constant) obstacle map (environment), 
+        """Initializes the robot listener by establishing socket connections to
+        the joystick, transmitting the (constant) obstacle map (environment),
         and starting the robot thread.
 
         Args:
@@ -703,4 +751,4 @@ class CentralSimulator(SimulatorHelper):
             t.join()
             del(t)
 
-    """END thread utils"""
+    """ END THREAD UTILS """
