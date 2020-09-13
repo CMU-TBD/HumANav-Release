@@ -3,6 +3,7 @@ import sys
 import os
 import copy
 import time
+from utils.utils import *
 from objectives.goal_distance import GoalDistance
 
 
@@ -27,12 +28,8 @@ class AgentHelper(object):
             end_episode = True
             for i, condition in enumerate(p.episode_termination_reasons):
                 if (time_idxs[i] != np.inf):
-                    color = "green"
-                    if (condition is "Timeout"):
-                        color = "blue"
-                    elif (condition is "Collision"):
-                        color = "red"
-                    self.termination_cause = color
+                    self.termination_cause = condition
+                    color = termination_cause_to_color(condition)
             # clipping the trajectory only ends it early, we want it to actually reach the goal
             # vehicle_trajectory.clip_along_time_axis(termination_time)
             if(self.planner is not None and self.planner_data is not None):

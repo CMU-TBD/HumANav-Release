@@ -181,14 +181,13 @@ class JoystickBase():
     def manage_sim_state_data(self, sim_state_json: dict):
         # case where the robot sends a power-off signal
         if not sim_state_json['robot_on']:
-            # TODO: fix cause for 'success' state
-            print("\npowering off joystick, robot episode terminated with:",
-                  sim_state_json['termination_cause'])
+            term_status = sim_state_json['termination_cause']
+            term_color = color_print(termination_cause_to_color(term_status))
+            print("\npowering off joystick, robot terminated with: %s%s%s" %
+                  (term_color, term_status, color_reset))
             self.power_off()
             return False  # robot is off, do not continue
         else:
-            # TODO: make this not a SimState (since that requires importing sim_state.py)
-            # and instead just keep as a dictionary for now.
             current_world = SimState.from_json(sim_state_json)
             # only update the SimStates for non-environment configs
             self.update_knowledge_from_episode(current_world)
@@ -286,7 +285,7 @@ class JoystickBase():
 
     """ END PANDAS UTILS """
 
-    """ BEGIN socket utils"""
+    """ BEGIN SOCKET UTILS """
 
     def close_recv_socket(self):
         if self.joystick_on:
@@ -320,6 +319,8 @@ class JoystickBase():
         have a communication channel with the external robot process """
         self.robot_sender_socket = \
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.robot_sender_socket.setsockopt(  # avoid nasty TIMEOUT bug
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             self.robot_sender_socket.connect((self.host, self.port_send))
         except:
@@ -338,6 +339,8 @@ class JoystickBase():
         RobotAgent that sends it's SimStates serialized through json as a 'sense'"""
         self.robot_receiver_socket = \
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.robot_receiver_socket.setsockopt(  # avoid nasty TIMEOUT bug
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.robot_receiver_socket.bind((self.host, self.port_recv))
         # wait for a connection
         self.robot_receiver_socket.listen(1)
@@ -346,4 +349,6 @@ class JoystickBase():
               (color_green, color_reset))
         return connection, client
 
-    """ END socket utils """
+    """ END SOCKET UTILS """
+
+    # TODO: add graphics utils

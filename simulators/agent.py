@@ -40,7 +40,7 @@ class Agent(AgentHelper):
         # cosmetic items (for drawing the trajectories)
         possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
         self.color = random.choice(possible_colors)
-        self.termination_cause = None
+        self.termination_cause = "Timeout"
 
     def init(self):
         self.planned_next_config = copy.deepcopy(self.current_config)
@@ -88,7 +88,7 @@ class Agent(AgentHelper):
         return self.has_collided
 
     def get_completed(self):
-        return self.end_acting and self.termination_cause == "green"
+        return self.end_acting and self.termination_cause == "Success"
 
     def get_radius(self):
         return self.params.radius
@@ -191,6 +191,7 @@ class Agent(AgentHelper):
                     euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
                 # instantly collide and stop updating
                 self.has_collided = True
+                self.termination_cause = "Collision"
                 self.collision_point_k = self.vehicle_trajectory.k  # this instant
                 self.end_acting = True
 

@@ -283,6 +283,21 @@ def termination_cause_to_color(cause: str):
     return None
 
 
+def color_print(color: str):
+    col_str = color_reset
+    if color == "green":
+        col_str = color_green
+    elif color == "red":
+        col_str = color_red
+    elif color == "blue":
+        col_str = color_blue
+    elif color == "yellow":
+        col_str = color_yellow
+    elif color == "orange":
+        col_str = color_orange
+    return col_str
+
+
 """ BEGIN configs functions """
 
 

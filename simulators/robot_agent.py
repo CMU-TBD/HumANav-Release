@@ -34,8 +34,6 @@ class RoboAgent(Agent):
         self.repeat_joystick = False
         # told the joystick that the robot is powered off
         self.notified_joystick = False
-        # termination cause of the episode for the robot
-        self.robot_termination = 'Timeout'  # assumed timeout at first
 
     def simulation_init(self, sim_map, with_planner=False):
         super().simulation_init(sim_map, with_planner=with_planner)
@@ -90,14 +88,17 @@ class RoboAgent(Agent):
         if(not self.end_episode):
             # check for collisions with other gen_agents
             self.check_collisions(self.world_state)
+
             # enforce planning termination upon condition
+            # NOTE: enforce_episode_terminator updates the self.end_episode & end_acting flags
             self._enforce_episode_termination_conditions()
-            # NOTE: enforce_episode_terminator updates the self.end_episode flag
-            if(self.termination_cause == 'green'):
-                # only green when the agent planner succeeds
-                self.robot_termination = "Success"
-            elif(self.has_collided):
-                self.robot_termination = 'Collision'
+
+            if(self.get_collided()):
+                assert(self.termination_cause == 'Collision')
+                self.power_off()
+
+            if(self.get_completed()):
+                assert(self.termination_cause == "Success")
                 self.power_off()
 
     def execute(self):
@@ -151,7 +152,7 @@ class RoboAgent(Agent):
             try:
                 quit_message = self.world_state.to_json(
                     robot_on=False,
-                    termination_cause=self.robot_termination
+                    termination_cause=self.termination_cause
                 )
                 self.send_to_joystick(quit_message)
             except:
@@ -234,8 +235,10 @@ class RoboAgent(Agent):
     @staticmethod
     def establish_joystick_receiver_connection():
         """This is akin to a server connection (robot is server)"""
-        RoboAgent.joystick_receiver_socket = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM)
+        RoboAgent.joystick_receiver_socket = \
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        RoboAgent.joystick_receiver_socket.setsockopt(  # avoid nasty TIMEOUT bug
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         RoboAgent.joystick_receiver_socket.bind(
             (RoboAgent.host, RoboAgent.port_recv))
         # wait for a connection
@@ -251,6 +254,8 @@ class RoboAgent(Agent):
         """This is akin to a client connection (joystick is client)"""
         RoboAgent.joystick_sender_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
+        RoboAgent.joystick_sender_socket.setsockopt(  # avoid nasty TIMEOUT bug
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         address = ((RoboAgent.host, RoboAgent.port_send))
         try:
             RoboAgent.joystick_sender_socket.connect(address)

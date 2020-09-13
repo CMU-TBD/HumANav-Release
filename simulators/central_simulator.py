@@ -218,21 +218,6 @@ class CentralSimulator(SimulatorHelper):
                               res=self.environment["map_scale"] * 100,
                               trav=self.environment["traversibles"][0])
 
-    def num_conditions_in_agents(self, condition: str):
-        """Counts the number of termination causes matching condition in all the generated gen_agents
-
-        Args:
-            condition (str): either "green" (success), "red" (collision), or "blue" (timeout)
-
-        Returns:
-            num (int): number of termination causes matching condition
-        """
-        num: int = 0
-        for a in self.agents.values():
-            if(a.termination_cause is condition):
-                num = num + 1
-        return num
-
     def print_sim_progress(self, rendered_frames: int):
         """prints an inline simulation progress message based off agent planning termination
             TODO: account for agent<->agent collisions
@@ -661,7 +646,7 @@ class CentralSimulator(SimulatorHelper):
                 agent_threads.append(threading.Thread(
                     target=a.update, args=(sim_t, t_step, current_state,)))
             else:
-                if(a.termination_cause == "green"):
+                if(a.termination_cause == "Success"):
                     self.num_completed_agents += 1
                 else:
                     self.num_collided_agents += 1
