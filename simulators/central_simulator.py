@@ -180,13 +180,6 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             self.print_sim_progress(iteration)
 
-            # if((iteration * self.delta_t) > self.episode_params.max_time):
-            #     # hard limit of simulation
-            #     self.robot.power_off()
-            #     # last iteration to tell the joystick it is off
-            #     self.robot.update(iteration)
-            #     break
-
         self.robot.power_off()
 
         # free all the gen_agents

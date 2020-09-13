@@ -40,7 +40,7 @@ def get_dataset(dataset_name, imset, data_dir, surreal_params=None):
                                                 data_dir=data_dir,
                                                 surreal_params=surreal_params)
     else:
-        logging.fatal('Not one of sbpd')
+        assert(False and 'Not one of sbpd')
     return dataset
 
 
