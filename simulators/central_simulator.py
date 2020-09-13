@@ -180,9 +180,14 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             self.print_sim_progress(iteration)
 
-            if((iteration * self.delta_t) > self.episode_params.max_time):
-                # hard limit of simulation
-                break
+            # if((iteration * self.delta_t) > self.episode_params.max_time):
+            #     # hard limit of simulation
+            #     self.robot.power_off()
+            #     # last iteration to tell the joystick it is off
+            #     self.robot.update(iteration)
+            #     break
+
+        self.robot.power_off()
 
         # free all the gen_agents
         for a in self.agents.values():
@@ -193,8 +198,6 @@ class CentralSimulator(SimulatorHelper):
         for p in self.prerecs.values():
             p = None
             del(p)
-
-        self.decommission_robot(r_t)
 
         # capture final wall clock (completion) time
         wall_clock = time.clock() - start_time
@@ -209,6 +212,9 @@ class CentralSimulator(SimulatorHelper):
         # convert all the generated frames into a gif file
         self.save_frames_to_gif(clear_old_files=True,
                                 dir_title=self.episode_params.name)
+
+        # finally close the robot listener thread
+        self.decommission_robot(r_t)
 
     def _init_obstacle_map(self, renderer=None, ):
         """ Initializes the sbpd map."""
