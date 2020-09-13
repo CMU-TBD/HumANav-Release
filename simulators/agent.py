@@ -19,6 +19,7 @@ from params.central_params import create_agent_params
 
 
 class Agent(AgentHelper):
+    # TODO: clean up AgentHelper into a proper virtual class
     def __init__(self, start, goal, name=None, with_init=True):
         if name is None:
             self.name = generate_name(20)
@@ -31,10 +32,6 @@ class Agent(AgentHelper):
         # path planning and acting fields
         self.end_episode = False
         self.end_acting = False
-        # for collisions with other gen_agents
-        self.has_collided = False
-        # has not yet completed its trajectory
-        self.has_completed = False
         if(with_init):
             self.init()
         # cosmetic items (for drawing the trajectories)
@@ -85,7 +82,7 @@ class Agent(AgentHelper):
         return self.vehicle_trajectory
 
     def get_collided(self):
-        return self.has_collided
+        return self.end_acting and self.termination_cause == "Collision"
 
     def get_completed(self):
         return self.end_acting and self.termination_cause == "Success"
@@ -190,10 +187,9 @@ class Agent(AgentHelper):
             if(a.get_name() is not self.get_name() and
                     euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
                 # instantly collide and stop updating
-                self.has_collided = True
                 self.termination_cause = "Collision"
-                self.collision_point_k = self.vehicle_trajectory.k  # this instant
                 self.end_acting = True
+                self.collision_point_k = self.vehicle_trajectory.k  # this instant
 
     def check_collisions(self, world_state, include_agents=True, include_prerecs=True, include_robots=True):
         if world_state is not None:
@@ -235,10 +231,9 @@ class Agent(AgentHelper):
 
                 # considers a full on collision once the agent has passed its "collision point"
                 if self.path_step >= self.collision_point_k:
-                    self.has_collided = True
                     self.end_acting = True
 
-                if self.end_acting or self.has_collided:
+                if self.end_acting:
                     if self.params.verbose:
                         print("terminated act for agent", self.get_name())
                     # save memory by deleting control pipeline (very memory intensive)

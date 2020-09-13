@@ -29,6 +29,7 @@ class AgentHelper(object):
             for i, condition in enumerate(p.episode_termination_reasons):
                 if (time_idxs[i] != np.inf):
                     self.termination_cause = condition
+                    self.end_acting = True
                     color = termination_cause_to_color(condition)
             # clipping the trajectory only ends it early, we want it to actually reach the goal
             # vehicle_trajectory.clip_along_time_axis(termination_time)

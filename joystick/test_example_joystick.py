@@ -1,8 +1,8 @@
-from simulators.example_joystick import JoystickExample
+from simulators.example_joystick import JoystickRandom
 
 
 def test_joystick():
-    J = JoystickExample()
+    J = JoystickRandom()
     J.establish_sender_connection()
     J.establish_receiver_connection()
     # first listen() for the episode names

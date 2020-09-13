@@ -90,6 +90,15 @@ class JoystickBase():
         message = self.create_message(r_status, v_cmds, w_cmds, self.t, sense)
         self.send_to_robot(message)
 
+    def joystick_sense(self):
+        raise NotImplementedError
+
+    def joystick_plan(self):
+        raise NotImplementedError
+
+    def joystick_act(self):
+        raise NotImplementedError
+
     def update_loop(self):
         raise NotImplementedError
 
@@ -103,16 +112,6 @@ class JoystickBase():
             print("Finished all episodes")
         else:
             self.current_ep = None
-
-    def power_off(self):
-        if self.joystick_on:
-            print("%sConnection closed by robot%s" % (color_red, color_reset))
-            self.joystick_on = False
-            try:
-                # if the robot socket is still alive, notify it that the joystick has stopped
-                self.robot_input([], [], False, override_power_off=True)
-            except:
-                pass
 
     """ BEGIN LISTEN UTILS """
 
@@ -185,7 +184,7 @@ class JoystickBase():
             term_color = color_print(termination_cause_to_color(term_status))
             print("\npowering off joystick, robot terminated with: %s%s%s" %
                   (term_color, term_status, color_reset))
-            self.power_off()
+            self.joystick_on = False
             return False  # robot is off, do not continue
         else:
             current_world = SimState.from_json(sim_state_json)
@@ -297,22 +296,23 @@ class JoystickBase():
                 print("%sClosing listener socket%s" % (color_red, color_reset))
             self.robot_receiver_socket.close()
 
-    def send_to_robot(self, json_message: str):
+    def send_to_robot(self, message: str):
         # Create a TCP/IP socket
         self.robot_sender_socket = \
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Connect the socket to the port where the server is listening
         robot_addr = (self.host, self.port_send)
+        assert(isinstance(message, str))
         try:
             self.robot_sender_socket.connect(robot_addr)
-            self.robot_sender_socket.sendall(bytes(json_message, "utf-8"))
+            self.robot_sender_socket.sendall(bytes(message, "utf-8"))
             self.robot_sender_socket.close()
         except:  # used to turn off the joystick
-            self.power_off()
+            self.joystick_on = False
             return
         # Send data
         if self.joystick_params.print_data:
-            print("sent", json_message)
+            print("sent", message)
 
     def establish_sender_connection(self):
         """Creates the initial handshake between the joystick and the robot to
@@ -329,9 +329,7 @@ class JoystickBase():
             exit(1)
         print("%sJoystick->Robot connection established%s" %
               (color_green, color_reset))
-        assert(self.robot_sender_socket is not None)
-        # set socket timeout
-        self.robot_sender_socket.settimeout(5)
+        assert(self.robot_sender_socket)
 
     def establish_receiver_connection(self):
         """Creates the initial handshake between the joystick and the meta test
