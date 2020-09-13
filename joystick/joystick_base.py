@@ -19,6 +19,7 @@ class JoystickBase():
         # episode fields
         self.episode_names = []
         self.current_ep = None
+        self.sim_state_now = None
         # main fields
         self.joystick_on = True  # status of the joystick
         # socket fields
@@ -45,6 +46,8 @@ class JoystickBase():
         # keeping an explicit log of every sim_state indexed by time
         if(self.joystick_params.track_sim_states):
             self.sim_states = {}  # log of simulator states indexed by time
+        else:
+            self.sim_states = None
 
         # tracking velocity and acceleration of the agents from the sim states
         if(self.joystick_params.track_vel_accel):
@@ -64,6 +67,12 @@ class JoystickBase():
 
     def get_episodes(self):
         return self.episode_names
+
+    def get_robot_start(self):
+        return self.current_ep.get_robot_start()
+
+    def get_robot_goal(self):
+        return self.current_ep.get_robot_goal()
 
     def _init_obstacle_map(self):
         raise NotImplementedError
@@ -172,28 +181,28 @@ class JoystickBase():
             self.joystick_on = False
             return False  # robot is off, do not continue
         else:
-            current_world = SimState.from_json(sim_state_json)
+            self.sim_state_now = SimState.from_json(sim_state_json)
             # only update the SimStates for non-environment configs
-            self.update_knowledge_from_episode(current_world)
+            self.update_knowledge_from_episode(self.sim_state_now)
 
             # update the history of past sim_states if requested
             if self.joystick_params.track_sim_states:
-                self.sim_states[current_world.get_sim_t()] = \
-                    current_world
+                self.sim_states[self.sim_state_now.get_sim_t()] = \
+                    self.sim_state_now
 
             print("%sUpdated state of the world for time = %.3f out of %.3f\r" %
-                  (color_blue, current_world.get_sim_t(),
+                  (color_blue, self.sim_state_now.get_sim_t(),
                    self.current_ep.get_time_budget()),
                   "%s" % color_reset, end="")
 
-            # self.track_vel_accel(current_world)  # TODO: remove
+            # self.track_vel_accel(self.sim_state_now)  # TODO: remove
 
             if self.joystick_params.write_pandas_log:
                 # used for file IO such as pandas logging
                 self.dirname = 'tests/socnav/' + self.current_ep.get_name() + \
                     '_movie/joystick_data'
                 # Write the Agent's trajectory data into a pandas file
-                self.update_logs(current_world)
+                self.update_logs(self.sim_state_now)
                 self.write_pandas()
         return True
 
