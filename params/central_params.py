@@ -159,6 +159,7 @@ def create_test_params(test: str):
     p.agents_end = eval(test_p.get('agents_end'))
     p.robot_start_goal = eval(test_p.get('robot_start_goal'))
     p.max_time = test_p.getfloat('max_time')
+    p.write_episode_log = test_p.getboolean('write_episode_log')
     return p
 
 

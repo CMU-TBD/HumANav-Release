@@ -200,7 +200,8 @@ class CentralSimulator(SimulatorHelper):
         wall_clock = time.clock() - start_time
         print("\nSimulation completed in", wall_clock, "real world seconds")
 
-        self.generate_episode_log()
+        if(self.episode_params.write_episode_log):
+            self.generate_episode_log()
 
         # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames(filename=self.episode_params.name + "_obs")
