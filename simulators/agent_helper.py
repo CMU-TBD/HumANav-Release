@@ -29,10 +29,9 @@ class AgentHelper(object):
             for i, condition in enumerate(p.episode_termination_reasons):
                 if (time_idxs[i] != np.inf):
                     self.termination_cause = condition
-                    self.end_acting = True
+                    self.collision_point_k = termination_time
                     color = termination_cause_to_color(condition)
-            # clipping the trajectory only ends it early, we want it to actually reach the goal
-            # vehicle_trajectory.clip_along_time_axis(termination_time)
+            self.vehicle_trajectory.clip_along_time_axis(termination_time)
             if(self.planner is not None and self.planner_data is not None):
                 self.planner_data, planner_data_last_step, last_step_data_valid = \
                     self.planner.mask_and_concat_data_along_batch_dim(
