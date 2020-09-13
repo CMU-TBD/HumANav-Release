@@ -319,8 +319,6 @@ class JoystickBase():
         have a communication channel with the external robot process """
         self.robot_sender_socket = \
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.robot_sender_socket.setsockopt(  # avoid nasty TIMEOUT bug
-            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             self.robot_sender_socket.connect((self.host, self.port_send))
         except:
@@ -337,8 +335,6 @@ class JoystickBase():
         RobotAgent that sends it's SimStates serialized through json as a 'sense'"""
         self.robot_receiver_socket = \
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.robot_receiver_socket.setsockopt(  # avoid nasty TIMEOUT bug
-            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.robot_receiver_socket.bind((self.host, self.port_recv))
         # wait for a connection
         self.robot_receiver_socket.listen(1)

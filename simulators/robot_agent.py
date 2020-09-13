@@ -241,8 +241,6 @@ class RoboAgent(Agent):
         """This is akin to a server connection (robot is server)"""
         RoboAgent.joystick_receiver_socket = \
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        RoboAgent.joystick_receiver_socket.setsockopt(  # avoid nasty TIMEOUT bug
-            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         RoboAgent.joystick_receiver_socket.bind(
             (RoboAgent.host, RoboAgent.port_recv))
         # wait for a connection
@@ -258,8 +256,6 @@ class RoboAgent(Agent):
         """This is akin to a client connection (joystick is client)"""
         RoboAgent.joystick_sender_socket = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM)
-        RoboAgent.joystick_sender_socket.setsockopt(  # avoid nasty TIMEOUT bug
-            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         address = ((RoboAgent.host, RoboAgent.port_send))
         try:
             RoboAgent.joystick_sender_socket.connect(address)
