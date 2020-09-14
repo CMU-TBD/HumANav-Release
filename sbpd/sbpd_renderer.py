@@ -1,4 +1,4 @@
-from humanav import sbpd
+from sbpd import sbpd
 from mp_env.render import swiftshader_renderer as sr
 from mp_env import map_utils as mu
 from utils import depth_utils as du
@@ -19,8 +19,10 @@ class SBPDRenderer():
     def __init__(self, params):
         self.p = params
 
-        d = sbpd.get_dataset(self.p.dataset_name, 'all', data_dir=self.p.sbpd_data_dir)
-        self.building = d.load_data(self.p.building_name, self.p.robot_params, self.p.flip)
+        d = sbpd.get_dataset(self.p.dataset_name, 'all',
+                             data_dir=self.p.sbpd_data_dir)
+        self.building = d.load_data(
+            self.p.building_name, self.p.robot_params, self.p.flip)
 
         assert(len(self.p.camera_params.modalities) == 1)
         # Instantiating a camera/ shader object is only needed
@@ -78,7 +80,7 @@ class SBPDRenderer():
         """
         # Scale thetas by 1/delta_theta as the building object
         # internally scales theta by delta_theta
-        nodes_n3 = np.concatenate([starts_n2*1.,
+        nodes_n3 = np.concatenate([starts_n2 * 1.,
                                    thetas_n1 / self.building.robot.delta_theta], axis=1)
         imgs_nmk3 = self.building.render_nodes(nodes_n3)
         return imgs_nmk3
@@ -93,13 +95,14 @@ class SBPDRenderer():
 
         traversible_map = self.building.map.traversible * 1.
 
-        # In the topview the positive x axis points to the right and 
+        # In the topview the positive x axis points to the right and
         # the positive y axis points up. The robot is located at
         # (0, (crop_size[0]-1)/2) (in pixel coordinates) facing directly to the right
-        x_axis_n2 = np.concatenate([np.cos(thetas_n1), np.sin(thetas_n1)], axis=1)
+        x_axis_n2 = np.concatenate(
+            [np.cos(thetas_n1), np.sin(thetas_n1)], axis=1)
         y_axis_n2 = -np.concatenate([np.cos(thetas_n1 + np.pi / 2.),
                                      np.sin(thetas_n1 + np.pi / 2.)], axis=1)
-        robot_loc_2 = np.array([0, (crop_size[0]-1.)/2.])
+        robot_loc_2 = np.array([0, (crop_size[0] - 1.) / 2.])
 
         crops_nmk = mu.generate_egocentric_maps([traversible_map], [1.0], [crop_size[0]],
                                                 starts_n2, x_axis_n2, y_axis_n2, dst_theta=0.,
@@ -107,7 +110,8 @@ class SBPDRenderer():
 
         # Invert the crops so that 1.0 corresponds to occupied space
         # and 0.0 corresponds to free space
-        crops_nmk1 = [np.logical_not(crop_mk[:, :, None])*1.0 for crop_mk in crops_nmk]
+        crops_nmk1 = [np.logical_not(
+            crop_mk[:, :, None]) * 1.0 for crop_mk in crops_nmk]
         return crops_nmk1
 
     def _get_depth_image(self, starts_n2, thetas_n1, xy_resolution, map_size):
@@ -119,16 +123,20 @@ class SBPDRenderer():
         robot = self.building.robot
         z_bins = [-10, robot.base, robot.base + robot.height]
 
-        nodes_n3 = np.concatenate([starts_n2, thetas_n1 / self.building.robot.delta_theta], axis=1)
+        nodes_n3 = np.concatenate(
+            [starts_n2, thetas_n1 / self.building.robot.delta_theta], axis=1)
         imgs = self.building.render_nodes(nodes_n3)
         tt = np.array(imgs)
 
         assert (r_obj.fov_horizontal == r_obj.fov_vertical)
-        cm = du.get_camera_matrix(r_obj.width, r_obj.height, r_obj.fov_vertical)
+        cm = du.get_camera_matrix(
+            r_obj.width, r_obj.height, r_obj.fov_vertical)
         XYZ = du.get_point_cloud_from_z(100. / tt[..., 0], cm)
         XYZ = XYZ * 100.  # convert to centimeters
-        XYZ = du.make_geocentric(XYZ, robot.sensor_height, robot.camera_elevation_degree)
-        count, isvalid = du.bin_points(XYZ * 1., map_size, z_bins, xy_resolution)
+        XYZ = du.make_geocentric(
+            XYZ, robot.sensor_height, robot.camera_elevation_degree)
+        count, isvalid = du.bin_points(
+            XYZ * 1., map_size, z_bins, xy_resolution)
         count = [x[0, ...] for x in np.split(count, count.shape[0], 0)]
         isvalid = [x[0, ...] for x in np.split(isvalid, isvalid.shape[0], 0)]
         return imgs, count, isvalid
@@ -160,6 +168,7 @@ class SBPDRenderer():
                 data = {'resolution': resolution,
                         'traversible': traversible}
                 with open(os.path.join(traversible_dir, 'data.pkl'), 'wb') as f:
-                    pickle.dump(data, f, protocol=2) # Save with protocol = 2 for python2.7
+                    # Save with protocol = 2 for python2.7
+                    pickle.dump(data, f, protocol=2)
 
-        return resolution, traversible 
+        return resolution, traversible

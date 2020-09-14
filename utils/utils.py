@@ -165,6 +165,11 @@ def euclidean_dist2(p1: list, p2: list):
     return np.sqrt(diff_x**2 + diff_y**2)
 
 
+def absmax(x):
+    # returns maximum based off magnitude, not sign
+    return max(x.min(), x.max(), key=abs)
+
+
 def touch(path: str):
     """Creates an empty file at a specific file location
 
@@ -283,24 +288,41 @@ def termination_cause_to_color(cause: str):
     return None
 
 
+def color_print(color: str):
+    col_str = color_reset
+    if color == "green":
+        col_str = color_green
+    elif color == "red":
+        col_str = color_red
+    elif color == "blue":
+        col_str = color_blue
+    elif color == "yellow":
+        col_str = color_yellow
+    elif color == "orange":
+        col_str = color_orange
+    return col_str
+
+
 """ BEGIN configs functions """
 
 
-def generate_config_from_pos_3(pos_3, dt=0.1, speed=0):
+def generate_config_from_pos_3(pos_3, dt=0.1, v=0, w=0):
     pos_n11 = np.array([[[pos_3[0], pos_3[1]]]], dtype=np.float32)
     heading_n11 = np.array([[[pos_3[2]]]], dtype=np.float32)
-    speed_nk1 = np.ones((1, 1, 1), dtype=np.float32) * speed
+    speed_nk1 = np.ones((1, 1, 1), dtype=np.float32) * v
+    angular_speed_nk1 = np.ones((1, 1, 1), dtype=np.float32) * w
     return SystemConfig(dt, 1, 1,
                         position_nk2=pos_n11,
                         heading_nk1=heading_n11,
                         speed_nk1=speed_nk1,
+                        angular_speed_nk1=angular_speed_nk1,
                         variable=False)
 
 
 def generate_random_config(environment, dt=0.1,
                            max_vel=0.6):
     pos_3 = generate_random_pos_in_environment(environment)
-    return generate_config_from_pos_3(pos_3, dt=dt, speed=max_vel)
+    return generate_config_from_pos_3(pos_3, dt=dt, v=max_vel)
 
 # For generating positional arguments in an environment
 

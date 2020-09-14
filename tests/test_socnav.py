@@ -43,7 +43,9 @@ def create_params():
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],
-               max_time=20)
+               max_time=23,
+               write_episode_log=False  # don't write episode log for test_socnav
+               )
 
     # Tilt the camera 10 degree down from the horizontal axis
     p.robot_params.physical_params.camera_elevation_degree = -10

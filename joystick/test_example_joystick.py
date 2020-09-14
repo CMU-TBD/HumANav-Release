@@ -1,21 +1,22 @@
-from simulators.example_joystick import Joystick
+from simulators.example_joystick import JoystickWithPlanner as Joystick
 
 
 def test_joystick():
     J = Joystick()
     J.establish_sender_connection()
     J.establish_receiver_connection()
-    # TODO: return an int encoding the manage_data type in listen_once()
-    assert(J.listen_once())  # first listen() for the episode names
+    # first listen() for the episode names
+    assert(J.get_all_episode_names())
     episodes = J.get_episodes()
     # we want to run on at least one episode
     assert(len(episodes) > 0)
     for ep_title in episodes:
         print("Waiting for episode: {}".format(ep_title))
-        J.listen_once()  # second listen() for the specific episode details
+        # second listen() for the specific episode details
+        J.get_episode_metadata()
         assert(J.current_ep and J.current_ep.get_name() == ep_title)
         J.init_control_pipeline()
-        J.update()
+        J.update_loop()
 
 
 if __name__ == '__main__':

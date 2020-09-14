@@ -15,10 +15,9 @@ surreal/code/config
 .vscode/
 LB_WayPtNav_Data/
 surreal/code/config
-params/params_example.ini
 tests/humanav/
 tests/visual-nav/
 tests/socnav/
-params/renderer_params.py
 .idea*
-params/params.ini
+build/
+dist/

@@ -9,7 +9,7 @@ import multiprocessing
 from simulators.simulator_helper import SimulatorHelper
 from simulators.sim_state import SimState, HumanState, AgentState
 from params.central_params import get_path_to_socnav, create_simulator_params, get_seed
-# from utils.utils import *
+from utils.utils import *
 from utils.image_utils import *
 
 
@@ -38,6 +38,7 @@ class CentralSimulator(SimulatorHelper):
         # keep track of all robots in dictionary with names as the key
         self.robots = {}
         # keep track of all prerecorded humans in a dictionary like the otherwise
+        self.backstage_prerecs = {}
         self.prerecs = {}
         # keep a single (important) robot as a value
         self.robot = None
@@ -68,12 +69,24 @@ class CentralSimulator(SimulatorHelper):
             # generic agent initializer but without a planner (already have trajectories)
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False)
-            self.prerecs[name] = a
+            # added to backstage prerecs which will add to self.prerecs when the time is right
+            self.backstage_prerecs[name] = a
         else:
             # initialize agent and add to simulator
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=True)
             self.agents[name] = a
+
+    def init_sim_data(self):
+        # Create pre-simulation metadata
+        self.total_agents: int = len(self.agents) + len(self.backstage_prerecs)
+        print("Running simulation on", self.total_agents, "agents")
+        self.num_collided_agents = 0
+        self.num_collided_prerecs = 0
+        self.num_completed_agents = 0
+        self.num_completed_prerecs = 0
+        # scale the simulator time
+        self.delta_t = self.params.delta_t_scale * self.params.dt
 
     def exists_running_agent(self):
         """Checks whether or not a generated agent is still running (acting)
@@ -102,12 +115,11 @@ class CentralSimulator(SimulatorHelper):
         threads running their update() functions and updating the robot with commands from the
         external joystick process.
         """
-        num_agents: int = len(self.agents) + len(self.prerecs)
-        self.og_num_prerecs = len(self.prerecs)  # before they get completed
-        print("Running simulation on", num_agents, "agents")
+        # initialize pre-simulation metadata
+        self.init_sim_data()
 
-        # scale the simulator time
-        self.delta_t = self.params.delta_t_scale * self.params.dt
+        # add the first (when t=0) agents to the self.prerecs dict
+        self.init_prerec_threads(sim_t=0, current_state=None)
 
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
@@ -132,12 +144,11 @@ class CentralSimulator(SimulatorHelper):
                   self.params.dt, "or increase simulation delta_t%s" % (color_reset))
             exit(1)
 
-        iteration = 1  # loop iteration
+        iteration = 0  # loop iteration
         self.print_sim_progress(iteration)
 
         while self.t <= self.episode_params.max_time:
-            # update "wall clock" time
-            wall_clock = time.clock() - start_time
+            wall_t = time.clock() - start_time
 
             # Complete thread operations
             agent_threads = \
@@ -157,7 +168,7 @@ class CentralSimulator(SimulatorHelper):
 
             # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
-            current_state = self.save_state(self.t, self.delta_t, wall_clock)
+            current_state = self.save_state(self.t, self.delta_t, wall_t)
             self.robot.update_world(current_state)
 
             # update simulator time
@@ -169,12 +180,7 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             self.print_sim_progress(iteration)
 
-            if((iteration * self.delta_t) > self.episode_params.max_time):
-                # hard limit of simulation
-                self.robot.power_off()
-                # last iteration to tell the joystick it is off
-                self.robot.update(iteration)
-                break
+        self.robot.power_off()
 
         # free all the gen_agents
         for a in self.agents.values():
@@ -186,11 +192,12 @@ class CentralSimulator(SimulatorHelper):
             p = None
             del(p)
 
-        self.decommission_robot(r_t)
-
         # capture final wall clock (completion) time
         wall_clock = time.clock() - start_time
-        print("\nSimulation completed in", wall_clock, "seconds")
+        print("\nSimulation completed in", wall_clock, "real world seconds")
+
+        if(self.episode_params.write_episode_log):
+            self.generate_episode_log()
 
         # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames(filename=self.episode_params.name + "_obs")
@@ -199,6 +206,9 @@ class CentralSimulator(SimulatorHelper):
         self.save_frames_to_gif(clear_old_files=True,
                                 dir_title=self.episode_params.name)
 
+        # finally close the robot listener thread
+        self.decommission_robot(r_t)
+
     def _init_obstacle_map(self, renderer=None, ):
         """ Initializes the sbpd map."""
         p = self.params.obstacle_map_params
@@ -206,37 +216,20 @@ class CentralSimulator(SimulatorHelper):
                               res=self.environment["map_scale"] * 100,
                               trav=self.environment["traversibles"][0])
 
-    def num_conditions_in_agents(self, condition: str):
-        """Counts the number of termination causes matching condition in all the generated gen_agents
-
-        Args:
-            condition (str): either "green" (success), "red" (collision), or "blue" (timeout)
-
-        Returns:
-            num (int): number of termination causes matching condition
-        """
-        num: int = 0
-        for a in self.agents.values():
-            if(a.termination_cause is condition):
-                num = num + 1
-        return num
-
     def print_sim_progress(self, rendered_frames: int):
         """prints an inline simulation progress message based off agent planning termination
             TODO: account for agent<->agent collisions
         Args:
             rendered_frames (int): how many frames have been generated so far
         """
-        print("A:", len(self.agents),
-              "%sSuccess:" % (color_green),
-              self.num_conditions_in_agents("green") +
-              (self.og_num_prerecs - len(self.prerecs)),
-              "%sCollide:" % (color_red),
-              self.num_conditions_in_agents("red"),
-              "%sTime:" % (color_blue),
-              self.num_conditions_in_agents("blue"),
-              "%sFrames:" % (color_reset),
-              rendered_frames - 1,
+        num_completed_agents = self.num_completed_agents + self.num_completed_prerecs
+        num_collided_agents = self.num_collided_agents + self.num_collided_prerecs
+        num_timeout = self.total_agents - num_completed_agents - num_collided_agents
+        print("A:", self.total_agents,
+              "%sSuccess:" % (color_green), num_completed_agents,
+              "%sCollide:" % (color_red), num_collided_agents,
+              "%sTime:" % (color_blue), num_timeout,
+              "%sFrames:" % (color_reset), rendered_frames,
               "T = %.3f" % (self.t),
               "\r", end="")
 
@@ -273,6 +266,8 @@ class CentralSimulator(SimulatorHelper):
         self.states[sim_t] = current_state
         return current_state
 
+    """ BEGIN IMAGE UTILS """
+
     def generate_frames(self, filename: str = "obs"):
         """Generates a png frame for each world state saved in self.states. Note, based off the
         render_3D options, the function will generate the frames in multiple separate processes to
@@ -289,7 +284,8 @@ class CentralSimulator(SimulatorHelper):
         fps = (1.0 / self.delta_t) * self.params.fps_scale_down
         print("%sRendering movie with fps=%d%s" %
               (color_orange, fps, color_reset))
-        num_frames = int(len(self.states) * self.params.fps_scale_down)
+        num_frames = \
+            int(np.ceil(len(self.states) * self.params.fps_scale_down))
         np.set_printoptions(precision=3)
         if(not self.params.render_3D):
             # optimized to use multiple processes
@@ -300,25 +296,24 @@ class CentralSimulator(SimulatorHelper):
             for p, s in enumerate(self.states.values()):
                 if(skip == 0):
                     # pool.apply_async(self.convert_state_to_frame, args=(s, filename + str(p) + ".png"))
+                    frame += 1
                     gif_processes.append(multiprocessing.Process(
                         target=self.convert_state_to_frame,
                         args=(s, filename + str(p) + ".png"))
                     )
                     gif_processes[-1].start()
-                    print("Started processes:", frame + 1,
+                    print("Started processes:", frame,
                           "out of", num_frames, "\r", end="")
                     # reset skip counter for frames
                     skip = int(1.0 / self.params.fps_scale_down) - 1
-                    frame += 1
                 else:
                     # skip certain other frames as directed by the fps_scale_down
                     skip -= 1
             print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
-                frame += 1
-                print("Generated Frames:", frame, "out of", num_frames,
-                      "%.3f" % (frame / num_frames), "\r", end="")
+                print("Generated Frames:", frame + 1, "out of", num_frames,
+                      "%.3f" % ((frame + 1) / num_frames), "\r", end="")
         else:
             # generate frames sequentially (non multiproceses)
             skip = 0
@@ -353,7 +348,7 @@ class CentralSimulator(SimulatorHelper):
         # fps = 1 / duration # where the duration is the simulation capture rate
         duration = self.delta_t * (1.0 / self.params.fps_scale_down)
         for i in range(num_robots):
-            dirname = "tests/socnav/" + dir_title + "_movie"
+            dirname = "tests/socnav/" + dir_title + "_output"
             IMAGES_DIR = os.path.join(
                 self.params.socnav_params.socnav_dir, dirname)
             if with_multiprocessing:
@@ -361,12 +356,12 @@ class CentralSimulator(SimulatorHelper):
                 # and the assumption here is that is a small number
                 rendering_processes.append(multiprocessing.Process(
                     target=save_to_gif,
-                    args=(IMAGES_DIR, duration, dir_title + "_movie_%d" %(get_seed()), clear_old_files))
+                    args=(IMAGES_DIR, duration, dir_title + "_output_%d" % (get_seed()), clear_old_files))
                 )
                 rendering_processes[i].start()
             else:
                 # sequentially
-                save_to_gif(IMAGES_DIR, duration, gif_filename="movie_%d" %(get_seed()),
+                save_to_gif(IMAGES_DIR, duration, gif_filename="movie_%d" % (get_seed()),
                             clear_old_files=clear_old_files)
 
         for p in rendering_processes:
@@ -581,15 +576,67 @@ class CentralSimulator(SimulatorHelper):
                          state.get_environment(), camera_pos_13,
                          state.get_gen_agents(), state.get_prerecs(), state.get_robots(),
                          state.get_sim_t(), state.get_wall_t(), self.episode_params.name + filename,
-                         'tests/socnav/' + self.episode_params.name + '_movie')
+                         'tests/socnav/' + self.episode_params.name + '_output')
         # Delete state to save memory after frames are generated
         del(state)
 
-    """BEGIN thread utils"""
+    """ END IMAGE UTILS """
+
+    def generate_episode_log(self, filename='episode_log.txt'):
+        import io
+        abs_filename = os.path.join(get_path_to_socnav(),
+                                    'tests/socnav/' + self.episode_params.name + '_output',
+                                    filename)
+        touch(abs_filename)  # create if dosent already exist
+        ep_params = self.episode_params
+        data = ""
+        data += "****************EPISODE INFO****************\n"
+        data += "Episode name: %s\n" % ep_params.name
+        data += "Building name: %s\n" % ep_params.map_name
+        data += "Robot start: %s\n" % str(ep_params.robot_start_goal[0])
+        data += "Robot goal: %s\n" % str(ep_params.robot_start_goal[1])
+        data += "Time budget: %.3f\n" % ep_params.max_time
+        data += "Prerec start indx: %d\n" % ep_params.prerec_start_indx
+        data += "Total agents in scene: %d\n" % self.total_agents
+        data += "****************SIMULATOR INFO****************\n"
+        data += "Simulator refresh rate (s): %0.3f\n" % self.delta_t
+        data += "Robot termination cause: %s\n" % self.robot.termination_cause
+        num_successful = self.num_completed_agents + self.num_completed_prerecs
+        data += "Num Successful agents: %d\n" % num_successful
+        num_collision = self.num_collided_agents + self.num_collided_prerecs
+        data += "Num Collided agents: %d\n" % num_collision
+        num_timeout = self.total_agents - (num_successful + num_collision)
+        data += "Num Timeout agents: %d\n" % num_timeout
+        data += "****************ROBOT INFO****************\n"
+        data += "Num commands received from joystick: %d\n" % len(
+            self.robot.commands)
+        data += "Num commands executed by robot: %d\n" % self.robot.num_executed
+        rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
+                                           self.robot.get_current_config().to_3D_numpy()
+                                           )
+        data += "Robot displacement (m): %0.3f\n" % rob_displacement
+        data += "Max robot velocity (m/s): %0.3f\n" % absmax(
+            self.robot.vehicle_trajectory.speed_nk1())
+        data += "Max robot acceleration: %0.3f\n" % absmax(
+            self.robot.vehicle_trajectory.acceleration_nk1())
+        data += "Max robot angular velocity: %0.3f\n" % absmax(
+            self.robot.vehicle_trajectory.angular_speed_nk1())
+        data += "Max robot angular acceleration: %0.3f\n" % absmax(
+            self.robot.vehicle_trajectory.angular_acceleration_nk1())
+        try:
+            with open(abs_filename, 'w') as f:
+                f.write(data)
+                f.close()
+            print("%sSuccessfully wrote episode log to %s%s" %
+                  (color_green, filename, color_reset))
+        except:
+            print("%sWriting episode log failed%s" % (color_red, color_reset))
+
+    """ BEGIN THREAD UTILS """
 
     def init_robot_listener_thread(self, power_on=True):
-        """Initializes the robot listener by establishing socket connections to 
-        the joystick, transmitting the (constant) obstacle map (environment), 
+        """Initializes the robot listener by establishing socket connections to
+        the joystick, transmitting the (constant) obstacle map (environment),
         and starting the robot thread.
 
         Args:
@@ -603,14 +650,15 @@ class CentralSimulator(SimulatorHelper):
         if(r is not None):
             assert(r.world_state is not None)
             # send first transaction to the joystick
-            print("sending map to joystick")
+            print("sending episode data to joystick")
+            r.simulator_running = True
             r.send_to_joystick(r.world_state.to_json(include_map=True))
             r_listener_thread = threading.Thread(target=r.listen_to_joystick)
             if(power_on):
                 r_listener_thread.start()
             # wait until joystick is ready
             while(not r.joystick_ready):
-                # wait until joystick recieves the environment (once)
+                # wait until joystick receives the environment (once)
                 time.sleep(0.01)
             print("Robot powering on")
             return r_listener_thread
@@ -627,8 +675,14 @@ class CentralSimulator(SimulatorHelper):
             assert(self.robot is not None)
             # turn off the robot
             self.robot.power_off()
+            self.robot.simulator_running = False
             # close robot listener threads
             if(r_listener_thread.is_alive() and self.params.join_threads):
+                # TODO: connect to the socket and close it
+                import socket
+                from simulators.robot_agent import RoboAgent
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+                    (RoboAgent.host, RoboAgent.port_recv))
                 r_listener_thread.join()
             del(r_listener_thread)
         return
@@ -645,12 +699,21 @@ class CentralSimulator(SimulatorHelper):
             agent_threads (list): list of all spawned (not started) agent threads
         """
         agent_threads = []
-        for a in self.agents.values():
-            agent_threads.append(threading.Thread(
-                target=a.update, args=(sim_t, t_step, current_state,)))
+        all_agents = list(self.agents.values())
+        for a in all_agents:
+            if(not a.end_acting):
+                agent_threads.append(threading.Thread(
+                    target=a.update, args=(sim_t, t_step, current_state,)))
+            else:
+                if(a.termination_cause == "Success"):
+                    self.num_completed_agents += 1
+                else:
+                    self.num_collided_agents += 1
+                self.agents.pop(a.get_name())
+                del(a)
         return agent_threads
 
-    def init_prerec_threads(self, sim_t: float, current_state: SimState):
+    def init_prerec_threads(self, sim_t: float, current_state: SimState = None):
         """Spawns a new prerec thread for each running prerecorded agent
 
         Args:
@@ -661,15 +724,23 @@ class CentralSimulator(SimulatorHelper):
             prerec_threads (list): list of all spawned (not started) prerecorded agent threads
         """
         prerec_threads = []
-        prerec_agents = list(self.prerecs.values())
-        for a in prerec_agents:
-            if(not a.end_acting):
-                prerec_threads.append(threading.Thread(
-                    target=a.update, args=(sim_t, current_state,)))
+        all_prerec_agents = list(self.backstage_prerecs.values())
+        for a in all_prerec_agents:
+            if(not a.end_acting and a.get_start_time() <= sim_t < a.get_end_time()):
+                # only add (or keep) agents in the time frame
+                self.prerecs[a.get_name()] = a
+                if(current_state):  # not None
+                    prerec_threads.append(threading.Thread(
+                        target=a.update, args=(sim_t, current_state,)))
             else:
-                # remove the agent once it's completed its trajectory
-                self.prerecs.pop(a.get_name())
-                del(a)
+                # remove agent since its not within the time frame or finished
+                if(a.get_name() in self.prerecs.keys()):
+                    if(a.get_collided()):
+                        self.num_collided_prerecs += 1
+                    else:
+                        self.num_completed_prerecs += 1
+                    self.prerecs.pop(a.get_name())
+                    del(a)
         return prerec_threads
 
     def start_threads(self, thread_group):
@@ -691,4 +762,4 @@ class CentralSimulator(SimulatorHelper):
             t.join()
             del(t)
 
-    """END thread utils"""
+    """ END THREAD UTILS """

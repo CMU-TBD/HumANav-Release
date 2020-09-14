@@ -23,8 +23,8 @@ class PrerecordedHuman(Human):
         self.max_steps = len(self.record_data)
         self.next_step = self.record_data[1]
         self.world_state = None
-        start = generate_config_from_pos_3(record_data[0][:3], speed=0)
-        goal = generate_config_from_pos_3(record_data[-1][:3], speed=0)
+        start = generate_config_from_pos_3(record_data[0][:3])
+        goal = generate_config_from_pos_3(record_data[-1][:3])
         init_configs = HumanConfigs(start, goal)
         if(generate_appearance):
             appearance = HumanAppearance.generate_random_human_appearance(
@@ -32,6 +32,15 @@ class PrerecordedHuman(Human):
         else:
             appearance = None
         super().__init__(name, appearance, init_configs)
+
+    def get_start_time(self):
+        return self.record_data[0][-1]
+
+    def get_end_time(self):
+        return self.record_data[-1][-1]
+
+    def get_completed(self):
+        return self.end_acting and self.end_episode
 
     def simulation_init(self, sim_map, with_planner=True):
         """ Initializes important fields for the CentralSimulator"""
@@ -44,15 +53,14 @@ class PrerecordedHuman(Human):
     def execute(self, state):
         self.check_collisions(self.world_state, include_prerecs=False)
         self.current_step += 1  # Has executed one more step
-        self.set_current_config(
-            generate_config_from_pos_3(state[:3], speed=state[3]))
+        self.current_config = \
+            generate_config_from_pos_3(state[:3], v=state[3])
         # dummy "command" since these agents "teleport" from one step to another
+        # below code is just to keep track of the agent's trajectories as they move
         null_command = np.array([[[0, 0]]], dtype=np.float32)
-        # NOTE: the format for the acceleration commands to the open loop for the robot is:
-        # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-        t_seg, actions_nk2 = Agent.apply_control_open_loop(self, self.current_config,
-                                                           null_command, 1, sim_mode='ideal'
-                                                           )
+        t_seg, _ = Agent.apply_control_open_loop(self, self.current_config,
+                                                 null_command, 1, sim_mode='ideal'
+                                                 )
         self.vehicle_trajectory.append_along_time_axis(t_seg)
 
     def update(self, time, world_state):

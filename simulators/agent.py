@@ -19,6 +19,7 @@ from params.central_params import create_agent_params
 
 
 class Agent(AgentHelper):
+    # TODO: clean up AgentHelper into a proper virtual class
     def __init__(self, start, goal, name=None, with_init=True):
         if name is None:
             self.name = generate_name(20)
@@ -31,14 +32,12 @@ class Agent(AgentHelper):
         # path planning and acting fields
         self.end_episode = False
         self.end_acting = False
-        # for collisions with other gen_agents
-        self.has_collided = False
         if(with_init):
             self.init()
         # cosmetic items (for drawing the trajectories)
         possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
         self.color = random.choice(possible_colors)
-        self.termination_cause = None 
+        self.termination_cause = "Timeout"
 
     def init(self):
         self.planned_next_config = copy.deepcopy(self.current_config)
@@ -83,7 +82,10 @@ class Agent(AgentHelper):
         return self.vehicle_trajectory
 
     def get_collided(self):
-        return self.has_collided
+        return self.end_acting and self.termination_cause == "Collision"
+
+    def get_completed(self):
+        return self.end_acting and self.termination_cause == "Success"
 
     def get_radius(self):
         return self.params.radius
@@ -122,19 +124,17 @@ class Agent(AgentHelper):
         self.commanded_actions_1kf = self.episode_data['commanded_actions_1kf']
         self.obj_val = self._compute_objective_value()
 
-    def update(self, t, t_step, sim_state=None):
+    def update(self, t, sim_dt, sim_state=None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         self.sim_states.append(sim_state)
         if(self.params.verbose_printing):
             print("start: ", self.get_start_config().position_nk2())
             print("goal: ", self.get_goal_config().position_nk2())
 
-        # self.velocities[get_sim_t(sim_state)] = compute_all_velocities(self.sim_states)
-        # self.accelerations[get_sim_t(sim_state)] = compute_all_accelerations(self.sim_states)
-
         # Generate the next trajectory segment, update next config, update actions/data
         self.plan()
-        action_dt = int(np.floor(t_step / self.params.dt))
+
+        action_dt = int(np.floor(sim_dt / self.params.dt))
         self.act(action_dt, world_state=sim_state)
 
     def plan(self):
@@ -185,9 +185,9 @@ class Agent(AgentHelper):
             if(a.get_name() is not self.get_name() and
                     euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
                 # instantly collide and stop updating
-                self.has_collided = True
-                self.collision_point_k = self.vehicle_trajectory.k  # this instant
+                self.termination_cause = "Collision"
                 self.end_acting = True
+                self.collision_point_k = self.vehicle_trajectory.k  # this instant
 
     def check_collisions(self, world_state, include_agents=True, include_prerecs=True, include_robots=True):
         if world_state is not None:
@@ -229,19 +229,13 @@ class Agent(AgentHelper):
 
                 # considers a full on collision once the agent has passed its "collision point"
                 if self.path_step >= self.collision_point_k:
-                    self.has_collided = True
                     self.end_acting = True
 
-                if self.end_acting or self.has_collided:
+                if self.end_acting:
                     if self.params.verbose:
                         print("terminated act for agent", self.get_name())
                     # save memory by deleting control pipeline (very memory intensive)
                     del self.planner
-
-        # NOTE: can use the following if want to update further tracked variables, but sometimes
-        # this is buggy when the action is not fully completed
-        # else:
-        #     self.update_final()
 
     def _process_planner_data(self):
         """

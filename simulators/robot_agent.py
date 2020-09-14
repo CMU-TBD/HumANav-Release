@@ -11,6 +11,9 @@ import threading
 import sys
 
 
+lock = threading.Lock()  # for asynchronous data sending
+
+
 class RoboAgent(Agent):
     joystick_receiver_socket = None
     joystick_sender_socket = None
@@ -34,8 +37,8 @@ class RoboAgent(Agent):
         self.repeat_joystick = False
         # told the joystick that the robot is powered off
         self.notified_joystick = False
-        # termination cause of the episode for the robot
-        self.robot_termination = 'Timeout'  # assumed timeout at first
+        # used to keep the listener thread alive even if the robot isnt
+        self.simulator_running = False
 
     def simulation_init(self, sim_map, with_planner=False):
         super().simulation_init(sim_map, with_planner=with_planner)
@@ -45,7 +48,7 @@ class RoboAgent(Agent):
         self.running = True
         self.last_command = None
         self.num_executed = 0  # keeps track of the latest command that is to be executed
-        self.amnt_per_joystick = 1
+        self.amnd_per_batch = 1
 
     # Getters for the robot class
 
@@ -60,18 +63,14 @@ class RoboAgent(Agent):
         self.world_state = state
 
     def get_num_executed(self):
-        return int(np.floor(len(self.commands) / self.amnt_per_joystick))
+        return int(np.floor(len(self.commands) / self.amnd_per_batch))
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
         """
         Sample a new random robot agent from all required features
         """
-        robot_name = None
-        if(name is None):
-            robot_name = generate_name(20)
-        else:
-            robot_name = name
+        robot_name = "robot_agent"  # constant name for the robot since there will only ever be one
         # In order to print more readable arrays
         np.set_printoptions(precision=2)
         pos_2 = configs.get_start_config().to_3D_numpy()
@@ -91,22 +90,25 @@ class RoboAgent(Agent):
 
     def check_termination_conditions(self):
         """use this to take in a world state and compute obstacles (gen_agents/walls) to affect the robot"""
-        if(not self.end_episode):
-            # check for collisions with other gen_agents
-            self.check_collisions(self.world_state)
-            # enforce planning termination upon condition
-            self._enforce_episode_termination_conditions()
-            if(self.termination_cause == 'green'):
-                # only green when the agent planner succeeds
-                self.robot_termination = "Success"
-            # NOTE: enforce_episode_terminator updates the self.end_episode variable
-            if(self.end_episode or self.has_collided):
-                self.has_collided = True
-                self.robot_termination = 'Collision'
-                self.power_off()
+        # check for collisions with other gen_agents
+        self.check_collisions(self.world_state)
+
+        # enforce planning termination upon condition
+        self._enforce_episode_termination_conditions()
+
+        if(self.vehicle_trajectory.k >= self.collision_point_k):
+            self.end_acting = True
+
+        if(self.get_collided()):
+            assert(self.termination_cause == 'Collision')
+            self.power_off()
+
+        if(self.get_completed()):
+            assert(self.termination_cause == "Success")
+            self.power_off()
 
     def execute(self):
-        for _ in range(self.amnt_per_joystick):
+        for _ in range(self.amnd_per_batch):
             if(not self.running):
                 break
             self.check_termination_conditions()
@@ -122,7 +124,8 @@ class RoboAgent(Agent):
                                                                sim_mode='ideal'
                                                                )
             self.num_executed += 1
-            self.vehicle_trajectory.append_along_time_axis(t_seg)
+            self.vehicle_trajectory.append_along_time_axis(
+                t_seg, track_trajectory_acceleration=True)
             # act trajectory segment
             self.current_config = \
                 SystemConfig.init_config_from_trajectory_time_index(
@@ -138,25 +141,22 @@ class RoboAgent(Agent):
             self.check_termination_conditions()
             if self.num_executed < len(self.commands):
                 self.execute()
-            # block joystick until recieves next command
-            while (self.running and iteration >= self.get_num_executed() + 1):
+            # block joystick until recieves next command or finish sending world
+            while (self.running and (self.joystick_requests_world or iteration >= self.get_num_executed())):
                 time.sleep(0.001)
-            # send the (JSON serialized) world state per joystick's request
-            self.ping_joystick()
-            # quit the robot if it died
         else:
             self.power_off()
 
     def power_off(self):
         # if the robot is already "off" do nothing
         if(self.running):
-            print("\nRobot powering off, recieved",
+            print("\nRobot powering off, received",
                   len(self.commands), "commands")
             self.running = False
             try:
                 quit_message = self.world_state.to_json(
                     robot_on=False,
-                    termination_cause=self.robot_termination
+                    termination_cause=self.termination_cause
                 )
                 self.send_to_joystick(quit_message)
             except:
@@ -164,9 +164,9 @@ class RoboAgent(Agent):
 
     """BEGIN socket utils"""
 
-    def ping_joystick(self):
-        # only send when joystick requests
-        if (self.joystick_requests_world and self.running):
+    def send_sim_state(self):
+        # send the (JSON serialized) world state per joystick's request
+        if self.joystick_requests_world:
             world_state = self.world_state.to_json(
                 robot_on=self.running,
                 include_map=False
@@ -175,68 +175,74 @@ class RoboAgent(Agent):
             # immediately note that the world has been sent:
             self.joystick_requests_world = False
 
-    def send_to_joystick(self, message):
-        # Create a TCP/IP socket
-        RoboAgent.joystick_sender_socket = \
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Connect the socket to the port where the server is listening
-        server_address = ((RoboAgent.host, RoboAgent.port_send))
-        try:
-            RoboAgent.joystick_sender_socket.connect(server_address)
-        except ConnectionRefusedError:  # used to turn off the joystick
-            self.joystick_running = False
-            print("%sConnection closed by joystick%s" %
-                  (color_red, color_reset))
-            self.power_off()
-            return
-        # Send data
-        if(not isinstance(message, str)):
-            message = str(message)
-        RoboAgent.joystick_sender_socket.sendall(bytes(message, "utf-8"))
-        RoboAgent.joystick_sender_socket.close()
+    def send_to_joystick(self, message: str):
+        with lock:
+            assert(isinstance(message, str))
+            # Create a TCP/IP socket
+            RoboAgent.joystick_sender_socket = \
+                socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Connect the socket to the port where the server is listening
+            server_address = ((RoboAgent.host, RoboAgent.port_send))
+            try:
+                RoboAgent.joystick_sender_socket.connect(server_address)
+            except ConnectionRefusedError:  # used to turn off the joystick
+                self.joystick_running = False
+                # print("%sConnection closed by joystick%s" % (color_red, color_reset))
+                return
+            # Send data
+            RoboAgent.joystick_sender_socket.sendall(bytes(message, "utf-8"))
+            RoboAgent.joystick_sender_socket.close()
 
     def listen_to_joystick(self):
         """Constantly connects to the robot listener socket and receives information from the
         joystick about the input commands as well as the world requests
         """
         RoboAgent.joystick_receiver_socket.listen(1)
-        self.running = True  # initialize listener
-        while(self.running):
+        while(self.simulator_running):
             connection, client = RoboAgent.joystick_receiver_socket.accept()
             data_b, response_len = conn_recv(connection, buffr_amnt=128)
             # close connection to be reaccepted when the joystick sends data
             connection.close()
-            if(data_b is not b''):
+            if(data_b is not b'' and response_len > 0):
                 data_str = data_b.decode("utf-8")  # bytes to str
-                data = json.loads(data_str)
-                # NOTE: this COULD use joystick_on parameter in the incoming data.
-                if(data["joystick_on"]):
-                    if(data["j_time"] >= 0):  # normal command input
-                        lin_vels: list = data["lin_vels"]
-                        ang_vels: list = data["ang_vels"]
-                        assert(len(lin_vels) == len(ang_vels))
-                        self.amnt_per_joystick = len(lin_vels)
-                        for i in range(self.amnt_per_joystick):
-                            np_data = np.array(
-                                [lin_vels[i], ang_vels[i]], dtype=np.float32)
-                            # add at least one command
-                            self.commands.append(np_data)
-                            if(self.repeat_joystick):  # if need be, repeat n-1 times
-                                repeat_amnt = \
-                                    int(np.floor(
-                                        (self.params.robot_params.physical_params.repeat_freq / self.amnt_per_joystick) - 1))
-                                for i in range(repeat_amnt):
-                                    # adds command to local list of individual commands
-                                    self.commands.append(np_data)
-                    # only sent by joystick when "ready" and needs the map
-                    elif data["j_time"] == -1:
-                        self.joystick_ready = True
-                    # whether or not the world state is requested
-                    if(data["req_world"] is True):
-                        # to send the world in the next update
-                        self.joystick_requests_world = True
+                if(not self.running):
+                    # with the robot_on=False flag
+                    self.send_sim_state()
+                else:
+                    self.manage_data(data_str)
 
-    @staticmethod
+    def is_keyword(self, data_str):
+        # non json important keyword
+        if(data_str == "sense"):
+            self.joystick_requests_world = True
+            self.send_sim_state()
+            return True
+        elif(data_str == "ready"):
+            self.joystick_ready = True
+            return True
+        return False
+
+    def manage_data(self, data_str: str):
+        if(not self.is_keyword(data_str)):
+            data = json.loads(data_str)
+            # TODO: clean up this messy data management
+            v_cmds: list = data["v_cmds"]
+            w_cmds: list = data["w_cmds"]
+            assert(len(v_cmds) == len(w_cmds))
+            self.amnd_per_batch = len(v_cmds)
+            for i in range(self.amnd_per_batch):
+                np_data = np.array(
+                    [v_cmds[i], w_cmds[i]], dtype=np.float32)
+                # add at least one command
+                self.commands.append(np_data)
+                if(self.repeat_joystick):  # if need be, repeat n-1 times
+                    repeat_amnt = int(np.floor(
+                        (self.params.robot_params.physical_params.repeat_freq / self.amnd_per_batch) - 1))
+                    for i in range(repeat_amnt):
+                        # adds command to local list of individual commands
+                        self.commands.append(np_data)
+
+    @ staticmethod
     def establish_joystick_receiver_connection():
         """This is akin to a server connection (robot is server)"""
         RoboAgent.joystick_receiver_socket = socket.socket(
@@ -251,7 +257,7 @@ class RoboAgent(Agent):
               (color_green, color_reset))
         return connection, client
 
-    @staticmethod
+    @ staticmethod
     def establish_joystick_sender_connection():
         """This is akin to a client connection (joystick is client)"""
         RoboAgent.joystick_sender_socket = socket.socket(
