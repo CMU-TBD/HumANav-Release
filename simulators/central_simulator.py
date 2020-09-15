@@ -125,14 +125,13 @@ class CentralSimulator(SimulatorHelper):
         current_state = self.save_state(0, self.delta_t, 0)
         if self.robot is None:
             print("%sNo robot in simulator%s" % (color_red, color_reset))
-            return
+        else:
+            # give the robot knowledge of the initial world
+            self.robot.repeat_joystick = not self.params.block_joystick
+            self.robot.update_world(current_state)
 
-        # give the robot knowledge of the initial world
-        self.robot.repeat_joystick = not self.params.block_joystick
-        self.robot.update_world(current_state)
-
-        # initialize the robot to establish joystick connection
-        r_t = self.init_robot_listener_thread()
+            # initialize the robot to establish joystick connection
+            r_t = self.init_robot_listener_thread()
 
         # keep track of wall-time in the simulator
         start_time = time.clock()
@@ -159,8 +158,9 @@ class CentralSimulator(SimulatorHelper):
             self.start_threads(agent_threads)
             self.start_threads(prerec_threads)
 
-            # calls a single iteration of the robot update
-            self.robot.update(iteration)
+            if(self.robot):
+                # calls a single iteration of the robot update
+                self.robot.update(iteration)
 
             # join all thread groups
             self.join_threads(agent_threads)
@@ -169,7 +169,9 @@ class CentralSimulator(SimulatorHelper):
             # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
             current_state = self.save_state(self.t, self.delta_t, wall_t)
-            self.robot.update_world(current_state)
+
+            if(self.robot):
+                self.robot.update_world(current_state)
 
             # update simulator time
             self.t += self.delta_t
@@ -180,7 +182,8 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             self.print_sim_progress(iteration)
 
-        self.robot.power_off()
+        if(self.robot):
+            self.robot.power_off()
 
         # free all the gen_agents
         for a in self.agents.values():
@@ -206,8 +209,9 @@ class CentralSimulator(SimulatorHelper):
         self.save_frames_to_gif(clear_old_files=True,
                                 dir_title=self.episode_params.name)
 
-        # finally close the robot listener thread
-        self.decommission_robot(r_t)
+        if(self.robot):
+            # finally close the robot listener thread
+            self.decommission_robot(r_t)
 
     def _init_obstacle_map(self, renderer=None, ):
         """ Initializes the sbpd map."""
@@ -547,9 +551,13 @@ class CentralSimulator(SimulatorHelper):
             state (SimState): the state of the world to convert to an image
             filename (str): the name of the resulting image (unindexed)
         """
-        robot = list(state.get_robots().values())[0]
-        camera_pos_13 = \
-            robot.get_current_config().to_3D_numpy()
+        if(self.robot):
+            robot = list(state.get_robots().values())[0]
+            camera_pos_13 = \
+                robot.get_current_config().to_3D_numpy()
+        else:
+            robot = None
+            camera_pos_13 = state.get_environment()["room_center"]
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
         # NOTE: 3d renderer can only be used with sequential plotting, much slower
@@ -600,29 +608,30 @@ class CentralSimulator(SimulatorHelper):
         data += "Total agents in scene: %d\n" % self.total_agents
         data += "****************SIMULATOR INFO****************\n"
         data += "Simulator refresh rate (s): %0.3f\n" % self.delta_t
-        data += "Robot termination cause: %s\n" % self.robot.termination_cause
         num_successful = self.num_completed_agents + self.num_completed_prerecs
         data += "Num Successful agents: %d\n" % num_successful
         num_collision = self.num_collided_agents + self.num_collided_prerecs
         data += "Num Collided agents: %d\n" % num_collision
         num_timeout = self.total_agents - (num_successful + num_collision)
         data += "Num Timeout agents: %d\n" % num_timeout
-        data += "****************ROBOT INFO****************\n"
-        data += "Num commands received from joystick: %d\n" % len(
-            self.robot.commands)
-        data += "Num commands executed by robot: %d\n" % self.robot.num_executed
-        rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
-                                           self.robot.get_current_config().to_3D_numpy()
-                                           )
-        data += "Robot displacement (m): %0.3f\n" % rob_displacement
-        data += "Max robot velocity (m/s): %0.3f\n" % absmax(
-            self.robot.vehicle_trajectory.speed_nk1())
-        data += "Max robot acceleration: %0.3f\n" % absmax(
-            self.robot.vehicle_trajectory.acceleration_nk1())
-        data += "Max robot angular velocity: %0.3f\n" % absmax(
-            self.robot.vehicle_trajectory.angular_speed_nk1())
-        data += "Max robot angular acceleration: %0.3f\n" % absmax(
-            self.robot.vehicle_trajectory.angular_acceleration_nk1())
+        if(self.robot):
+            data += "****************ROBOT INFO****************\n"
+            data += "Robot termination cause: %s\n" % self.robot.termination_cause
+            data += "Num commands received from joystick: %d\n" % len(
+                self.robot.commands)
+            data += "Num commands executed by robot: %d\n" % self.robot.num_executed
+            rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
+                                               self.robot.get_current_config().to_3D_numpy()
+                                               )
+            data += "Robot displacement (m): %0.3f\n" % rob_displacement
+            data += "Max robot velocity (m/s): %0.3f\n" % absmax(
+                self.robot.vehicle_trajectory.speed_nk1())
+            data += "Max robot acceleration: %0.3f\n" % absmax(
+                self.robot.vehicle_trajectory.acceleration_nk1())
+            data += "Max robot angular velocity: %0.3f\n" % absmax(
+                self.robot.vehicle_trajectory.angular_speed_nk1())
+            data += "Max robot angular acceleration: %0.3f\n" % absmax(
+                self.robot.vehicle_trajectory.angular_acceleration_nk1())
         try:
             with open(abs_filename, 'w') as f:
                 f.write(data)
@@ -671,21 +680,20 @@ class CentralSimulator(SimulatorHelper):
         Args:
             r_listener_thread (Thread): the robot update thread to join
         """
-        if(r_listener_thread is not None):
-            assert(self.robot is not None)
-            # turn off the robot
-            self.robot.power_off()
-            self.robot.simulator_running = False
-            # close robot listener threads
-            if(r_listener_thread.is_alive() and self.params.join_threads):
-                # TODO: connect to the socket and close it
-                import socket
-                from simulators.robot_agent import RoboAgent
-                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
-                    (RoboAgent.host, RoboAgent.port_recv))
-                r_listener_thread.join()
-            del(r_listener_thread)
-        return
+        if(self.robot):
+            if(r_listener_thread):
+                # turn off the robot
+                self.robot.power_off()
+                self.robot.simulator_running = False
+                # close robot listener threads
+                if(r_listener_thread.is_alive() and self.params.join_threads):
+                    # TODO: connect to the socket and close it
+                    import socket
+                    from simulators.robot_agent import RoboAgent
+                    socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+                        (RoboAgent.host, RoboAgent.port_recv))
+                    r_listener_thread.join()
+                del(r_listener_thread)
 
     def init_agent_threads(self, sim_t: float, t_step: float, current_state: SimState):
         """Spawns a new agent thread for each agent (running or finished)

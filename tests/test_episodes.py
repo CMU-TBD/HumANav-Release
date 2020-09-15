@@ -52,6 +52,9 @@ def create_params():
 
 
 def establish_joystick_handshake(p):
+    if(p.episode_params.without_robot):
+        # lite-mode episode does not include a robot
+        return
     import socket
     import json
     import time
@@ -66,7 +69,7 @@ def establish_joystick_handshake(p):
     RoboAgent.establish_joystick_sender_connection()
     # send the preliminary episodes that the socnav is going to run
     json_dict = {}
-    json_dict['episodes'] = list(p.episode_params.keys())
+    json_dict['episodes'] = list(p.episode_params.tests.keys())
     episodes = json.dumps(json_dict)
     # Create a TCP/IP socket
     send_episodes_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -77,9 +80,10 @@ def establish_joystick_handshake(p):
     send_episodes_socket.close()
 
 
-def close_robot_sockets():
-    RoboAgent.joystick_sender_socket.close()
-    RoboAgent.joystick_receiver_socket.close()
+def close_robot_sockets(p):
+    if(not p.episode_params.without_robot):
+        RoboAgent.joystick_sender_socket.close()
+        RoboAgent.joystick_receiver_socket.close()
 
 
 def generate_robot(robot_start_goal, simulator):
@@ -193,10 +197,11 @@ def test_episodes():
     and rendering topview, rgb, and depth images.
     """
     p = create_params()  # used to instantiate the camera and its parameters
+
     establish_joystick_handshake(p)
 
-    for i, test in enumerate(list(p.episode_params.keys())):
-        episode = p.episode_params[test]
+    for i, test in enumerate(list(p.episode_params.tests.keys())):
+        episode = p.episode_params.tests[test]
         r = None  # free 'old' renderer
         if(i == 0 or (episode.map_name != p.building_name)):
             # update map to match the episode
@@ -221,7 +226,6 @@ def test_episodes():
             # In order to print more readable arrays
             np.set_printoptions(precision=3)
 
-            # TODO: make this a param element
             room_center = \
                 np.array([traversible.shape[1] * 0.5,
                           traversible.shape[0] * 0.5,
@@ -246,16 +250,17 @@ def test_episodes():
         """
 
         simulator = CentralSimulator(
-            environment,
+            environment=environment,
             renderer=r,
             render_3D=p.render_3D,
             episode_params=episode
         )
 
-        """
-        Generate the robots for the simulator
-        """
-        generate_robot(episode.robot_start_goal, simulator)
+        if(not p.episode_params.without_robot):
+            """
+            Generate the robots for the simulator
+            """
+            generate_robot(episode.robot_start_goal, simulator)
 
         """
         Add the prerecorded humans to the simulator
@@ -276,7 +281,7 @@ def test_episodes():
         if p.render_3D:  # only when rendering with opengl
             r.remove_all_humans()
 
-    close_robot_sockets()
+    close_robot_sockets(p)
 
 
 if __name__ == '__main__':

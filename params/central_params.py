@@ -164,13 +164,16 @@ def create_test_params(test: str):
 
 
 def create_episodes_params():
-    p = {}
-    # NOTE: returns a dictionary of DotMaps to use string notation
+    p = DotMap()
     # Load the dependencies
     epi_p = episodes_config['episodes_params']
+    p.without_robot = epi_p.getboolean('without_robot')
+    # NOTE: uses a dictionary of DotMaps to use string notation
     tests = eval(epi_p.get('tests'))
+    test_dict = {}
     for t in tests:
-        p[t] = create_test_params(test=t)
+        test_dict[t] = create_test_params(test=t)
+    p.tests = test_dict
     return p
 
 
