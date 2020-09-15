@@ -5,8 +5,12 @@
 ### Download SMPL data & Render human meshes
 Follow the instructions in [`surreal/README.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/surreal/README.md) to correctly install the human meshes.
 
-### Download SD3DIS data
-Follow the instructions in [`sd3dis/README.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/sd3dis/README.md) to correctly install the building/area meshes. 
+### Download enrivonment data
+To download our custom curated maps (edited from the SD3DIS models) follow this link to our [official online drive](https://drive.google.com/drive/folders/1LAySlmE9dwrTghnL3Y5gE62K5cDJkPm1?usp=sharing) and download the `stanford_builder_parser_dataset` and place it in the `sd3dis` directory as is. 
+
+However, if you'd like to download and configure all the original maps, follow the instructuions in [`sd3dis/README.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/sd3dis/README.md) to correctly install the building/area meshes. 
+- Note that some of the unit tests from our current version use a modified map that can be downloaded from our drive. However to run `test_socnav` and `test_episodes` you will not need our custom maps. 
+  - However the default episodes are based off custom maps as well, simply use different tests or change the `map_name` in `episode_params.ini`
 
 Note: `tbd_SocNavBenchmark` is independent of the actual indoor office environment and human meshes used. In this work we use human meshes exported from the [SURREAL](https://www.di.ens.fr/willow/research/surreal/data/) dataset and scans of indoor office environments from the [S3DIS](http://buildingparser.stanford.edu/dataset.html) dataset. However, if you would like to use other meshes, please download and configure them yourself and update the parameters in `central_params.py` to point to your data installation.
 
@@ -68,5 +72,5 @@ python3 tests/all_unit_tests.py
 PYOPENGL_PLATFORM=egl PYTHONPATH='.' python3 tests/test_socnav.py
 ...
 # In a seperate shell (as a separate executable):
-python3 tests/test_joystick 
+python3 joystick/test_example_joystick.py 
 ```

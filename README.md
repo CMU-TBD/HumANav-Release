@@ -1,9 +1,9 @@
 # tbd_SocNavBenchmark
 Welcome to the Social Navigation Benchmark utility (SocNavBenchmark), a codebase for benchmarking robot planning algorithms against various episodes of containing multi-agent environments. We are a team of researches from Carnegie Mellon University's Robotics Institute at TBD Lab and HARP Lab. 
 
-![Expected Movie without OpenGL](https://github.com/GustavoSilvera/GustavoSilvera.github.io/blob/master/Images/proj/sim_without_humans.gif)
+![Expected Movie without OpenGL](https://raw.githubusercontent.com/GustavoSilvera/GustavoSilvera.github.io/master/Images/proj/sim_without_humans.gif)
 
-![Expected Movie with OpenGL](https://github.com/GustavoSilvera/GustavoSilvera.github.io/blob/master/Images/proj/sim_with_humans.gif)
+![Expected Movie with OpenGL](https://raw.githubusercontent.com/GustavoSilvera/GustavoSilvera.github.io/master/Images/proj/sim_with_humans.gif)
 
 ## External README's
 ### Installation
