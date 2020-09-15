@@ -4,7 +4,7 @@ from random import seed, random, randint
 # Humanav
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
-from simulators.robot_agent import RoboAgent
+from simulators.robot_agent import RobotAgent
 from socnav.socnav_renderer import SocNavRenderer
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
@@ -65,14 +65,14 @@ def establish_joystick_handshake(p):
     import json
     import time
     # sockets for communication
-    RoboAgent.host = socket.gethostname()
+    RobotAgent.host = socket.gethostname()
     # port for recieving commands from the joystick
-    RoboAgent.port_recv = p.robot_params.port
+    RobotAgent.port_recv = p.robot_params.port
     # port for sending commands to the joystick (successor of port_recv)
-    RoboAgent.port_send = RoboAgent.port_recv + 1
-    RoboAgent.establish_joystick_receiver_connection()
+    RobotAgent.port_send = RobotAgent.port_recv + 1
+    RobotAgent.establish_joystick_receiver_connection()
     time.sleep(0.01)
-    RoboAgent.establish_joystick_sender_connection()
+    RobotAgent.establish_joystick_sender_connection()
     # send the preliminary episodes that the socnav is going to run
     json_dict = {}
     json_dict['episodes'] = list(p.episode_params.tests.keys())
@@ -80,7 +80,7 @@ def establish_joystick_handshake(p):
     # Create a TCP/IP socket
     send_episodes_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Connect the socket to the port where the server is listening
-    server_address = ((RoboAgent.host, RoboAgent.port_send))
+    server_address = ((RobotAgent.host, RobotAgent.port_send))
     send_episodes_socket.connect(server_address)
     send_episodes_socket.sendall(bytes(episodes, "utf-8"))
     send_episodes_socket.close()
@@ -243,7 +243,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             """
             Generate the robots for the simulator
             """
-            robot_agent = RoboAgent.generate_random_robot_from_environment(
+            robot_agent = RobotAgent.generate_random_robot_from_environment(
                 environment
             )
             simulator.add_agent(robot_agent)
@@ -267,7 +267,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             r.remove_all_humans()
 
     if(not p.episode_params.without_robot):
-        RoboAgent.close_robot_sockets()
+        RobotAgent.close_robot_sockets()
 
 
 if __name__ == '__main__':

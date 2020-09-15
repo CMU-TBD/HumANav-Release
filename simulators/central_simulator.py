@@ -53,17 +53,17 @@ class CentralSimulator(SimulatorHelper):
 
     def add_agent(self, a):
         """Adds an agent member to the central simulator's pool of gen_agents
-        NOTE: this function works for robots (RoboAgent), prerecorded gen_agents (PrerecordedHuman),
+        NOTE: this function works for robots (RobotAgent), prerecorded gen_agents (PrerecordedHuman),
               and general gen_agents (Agent)
 
         Args:
-            a (Agent/PrerecordedAgent/RoboAgent): The agent to be added to the simulator
+            a (Agent/PrerecordedAgent/RobotAgent): The agent to be added to the simulator
         """
         assert(CentralSimulator.obstacle_map is not None)
         name = a.get_name()
-        from simulators.robot_agent import RoboAgent
+        from simulators.robot_agent import RobotAgent
         from humans.recorded_human import PrerecordedHuman
-        if isinstance(a, RoboAgent):
+        if isinstance(a, RobotAgent):
             # initialize the robot and add to simulator's known "robot" field
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False)
@@ -672,9 +672,9 @@ class CentralSimulator(SimulatorHelper):
                 if(r_listener_thread.is_alive() and self.params.join_threads):
                     # TODO: connect to the socket and close it
                     import socket
-                    from simulators.robot_agent import RoboAgent
+                    from simulators.robot_agent import RobotAgent
                     socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
-                        (RoboAgent.host, RoboAgent.port_recv))
+                        (RobotAgent.host, RobotAgent.port_recv))
                     r_listener_thread.join()
                 del(r_listener_thread)
 
