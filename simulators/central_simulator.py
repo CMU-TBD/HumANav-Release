@@ -327,7 +327,7 @@ class CentralSimulator(SimulatorHelper):
             for frame, p in enumerate(gif_processes):
                 p.join()
                 print("Finished processes:", frame + 1, "out of", num_frames,
-                      "%.3f%" % ((frame + 1) / num_frames) * 100, "\r", end="")
+                      "%.3f%%" % (((frame + 1) / num_frames) * 100), "\r", end="")
         else:
             # generate frames sequentially (non multiproceses)
             skip = 0

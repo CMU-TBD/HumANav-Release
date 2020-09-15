@@ -274,4 +274,9 @@ class RoboAgent(Agent):
         print("%sJoystick->Robot connection established%s" %
               (color_green, color_reset))
 
+    @ staticmethod
+    def close_robot_sockets():
+        RoboAgent.joystick_sender_socket.close()
+        RoboAgent.joystick_receiver_socket.close()
+
     """ END socket utils """

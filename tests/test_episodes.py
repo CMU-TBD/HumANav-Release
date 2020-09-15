@@ -1,10 +1,6 @@
-import matplotlib as mpl
-mpl.use('Agg')  # for rendering without a display
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 from random import seed, random, randint
-import pandas as pd
 # Humanav
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
@@ -15,7 +11,6 @@ from socnav.socnav_renderer import SocNavRenderer
 from simulators.central_simulator import CentralSimulator
 from params.central_params import get_seed, create_base_params
 from utils.utils import *
-from utils.image_utils import *
 
 # seed the random number generator
 random.seed(get_seed())
@@ -53,7 +48,7 @@ def create_params():
 
 def establish_joystick_handshake(p):
     if(p.episode_params.without_robot):
-        # lite-mode episode does not include a robot
+        # lite-mode episode does not include a robot or joystick
         return
     import socket
     import json
@@ -80,12 +75,6 @@ def establish_joystick_handshake(p):
     send_episodes_socket.close()
 
 
-def close_robot_sockets(p):
-    if(not p.episode_params.without_robot):
-        RoboAgent.joystick_sender_socket.close()
-        RoboAgent.joystick_receiver_socket.close()
-
-
 def generate_robot(robot_start_goal, simulator):
     assert(len(robot_start_goal) == 2)
     rob_start = generate_config_from_pos_3(robot_start_goal[0])
@@ -101,6 +90,7 @@ def generate_prerecorded_humans(max_time, start_indx, p, simulator, center_offse
     """"world_df" is a set of trajectories organized as a pandas dataframe.
     Each row is a pedestrian at a given frame (aka time point).
     The data was taken at 25 fps so between frames is 1/25th of a second. """
+    import pandas as pd
     if(start_indx != -1):
         datafile = os.path.join(
             p.socnav_dir, "tests/world_coordinate_inter.csv")
@@ -281,7 +271,8 @@ def test_episodes():
         if p.render_3D:  # only when rendering with opengl
             r.remove_all_humans()
 
-    close_robot_sockets(p)
+    if(not p.episode_params.without_robot):
+        RoboAgent.close_robot_sockets()
 
 
 if __name__ == '__main__':
