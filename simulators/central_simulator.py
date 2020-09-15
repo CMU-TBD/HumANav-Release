@@ -8,7 +8,7 @@ import threading
 import multiprocessing
 from simulators.simulator_helper import SimulatorHelper
 from simulators.sim_state import SimState, HumanState, AgentState
-from params.central_params import get_path_to_socnav, create_simulator_params, get_seed
+from params.central_params import create_simulator_params, get_seed
 from utils.utils import *
 from utils.image_utils import *
 
@@ -32,6 +32,10 @@ class CentralSimulator(SimulatorHelper):
         self.environment = environment
         self.params = create_simulator_params(render_3D=render_3D)
         self.episode_params = episode_params
+        # name of the directory to output everything
+        self.output_directory = \
+            os.path.join(self.params.socnav_params.socnav_dir,
+                         "tests/socnav/" + episode_params.name + "_lite")
         CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
@@ -213,8 +217,7 @@ class CentralSimulator(SimulatorHelper):
         self.generate_frames(filename=self.episode_params.name + "_obs")
 
         # convert all the generated frames into a gif file
-        self.save_frames_to_gif(clear_old_files=True,
-                                dir_title=self.episode_params.name)
+        self.save_frames_to_gif(clear_old_files=True)
 
         if(self.robot):
             # finally close the robot listener thread
@@ -320,11 +323,11 @@ class CentralSimulator(SimulatorHelper):
                 else:
                     # skip certain other frames as directed by the fps_scale_down
                     skip -= 1
-            print("\n")
+            # print("\n")
             for frame, p in enumerate(gif_processes):
                 p.join()
-                print("Generated Frames:", frame + 1, "out of", num_frames,
-                      "%.3f" % ((frame + 1) / num_frames), "\r", end="")
+                print("Finished processes:", frame + 1, "out of", num_frames,
+                      "%.3f%" % ((frame + 1) / num_frames) * 100, "\r", end="")
         else:
             # generate frames sequentially (non multiproceses)
             skip = 0
@@ -340,11 +343,10 @@ class CentralSimulator(SimulatorHelper):
                     skip = int(1.0 / self.params.fps_scale_down) - 1
                 else:
                     skip -= 1.0
-
         # newline to not interfere with previous prints
-        print("\n")
+        # print("\n")
 
-    def save_frames_to_gif(self, clear_old_files=True, dir_title="sim"):
+    def save_frames_to_gif(self, clear_old_files=True):
         """Convert a directory full of png's to a gif movie
         NOTE: One can also save to mp4 using imageio-ffmpeg or this bash script:
               "ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4"
@@ -355,11 +357,8 @@ class CentralSimulator(SimulatorHelper):
             return
         # fps = 1 / duration # where the duration is the simulation capture rate
         duration = self.delta_t * (1.0 / self.params.fps_scale_down)
-        dirname = "tests/socnav/" + dir_title + "_output"
-        IMAGES_DIR = \
-            os.path.join(self.params.socnav_params.socnav_dir, dirname)
         # sequentially
-        save_to_gif(IMAGES_DIR, duration, gif_filename="movie_%d" % (get_seed()),
+        save_to_gif(self.output_directory, duration, gif_filename="movie_%d" % (get_seed()),
                     clear_old_files=clear_old_files)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13,
@@ -432,7 +431,7 @@ class CentralSimulator(SimulatorHelper):
 
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment,
                     camera_pos_13, agents, prerecs, robots,
-                    sim_t: float, wall_t: float, filename: str, img_dir: str, with_zoom=False):
+                    sim_t: float, wall_t: float, filename: str, with_zoom=False):
         """Plots a single frame from information provided about the world state
 
         Args:
@@ -447,7 +446,6 @@ class CentralSimulator(SimulatorHelper):
             sim_t (float): the simulator time in seconds
             wall_t (float): the wall clock time in seconds
             filename (str): the name of the file to save
-            img_dir (str): the name of the directory to save the file
         """
         map_scale = environment["map_scale"]
         room_center = environment["room_center"]
@@ -516,8 +514,7 @@ class CentralSimulator(SimulatorHelper):
             ax.set_yticks([])
             ax.set_title('Depth')
 
-        full_file_name = \
-            os.path.join(p.socnav_params.socnav_dir, img_dir, filename)
+        full_file_name = os.path.join(self.output_directory, filename)
         if(not os.path.exists(full_file_name)):
             if(self.params.verbose_printing):
                 print('\033[31m', "Failed to find:", full_file_name,
@@ -574,8 +571,7 @@ class CentralSimulator(SimulatorHelper):
         self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                          state.get_environment(), camera_pos_13,
                          state.get_gen_agents(), state.get_prerecs(), state.get_robots(),
-                         state.get_sim_t(), state.get_wall_t(), self.episode_params.name + filename,
-                         'tests/socnav/' + self.episode_params.name + '_output')
+                         state.get_sim_t(), state.get_wall_t(), filename)
         # Delete state to save memory after frames are generated
         del(state)
 
@@ -583,9 +579,7 @@ class CentralSimulator(SimulatorHelper):
 
     def generate_episode_log(self, filename='episode_log.txt'):
         import io
-        abs_filename = os.path.join(get_path_to_socnav(),
-                                    'tests/socnav/' + self.episode_params.name + '_output',
-                                    filename)
+        abs_filename = os.path.join(self.output_directory, filename)
         touch(abs_filename)  # create if dosent already exist
         ep_params = self.episode_params
         data = ""
