@@ -13,69 +13,45 @@ class JoystickRandom(JoystickBase):
         # our 'positions' are modeled as (x, y, theta)
         self.robot_current = None    # current position of the robot
         super().__init__()
-
-    def _init_obstacle_map(self, renderer=0):
-        """ Initializes the sbpd map."""
-        p = self.agent_params.obstacle_map_params
-        env = self.current_ep.get_environment()
-        return p.obstacle_map(p, renderer,
-                              res=float(env["map_scale"]) * 100.,
-                              trav=np.array(env["traversibles"][0])
-                              )
+        # calculate the bounds of the velocity from the system dynamics
+        self.v_bounds = self.system_dynamics_params.v_bounds
+        self.w_bounds = self.system_dynamics_params.w_bounds
 
     def init_control_pipeline(self):
         self.agent_params = create_agent_params(with_obstacle_map=True)
-        self.obstacle_map = self._init_obstacle_map()
-        # TODO: establish explicit limits of freedom for users to use this code
-        # self.obj_fn = Agent._init_obj_fn(self, params=self.agent_params)
-        # self.obj_fn.add_objective(Agent._init_psc_objective(params=self.agent_params))
 
-        # Initialize Fast-Marching-Method map for agent's pathfinding
-        # self.fmm_map = Agent._init_fmm_map(self, params=self.agent_params)
-        # Agent._update_fmm_map(self)
+    def random_cmd(self, bounds, precision: int = 3):
+        return randint(int(bounds[0] * precision),
+                       int(bounds[1] * precision)) / precision
 
-        # Initialize system dynamics and planner fields
-        # self.planner = Agent._init_planner(self, params=self.agent_params)
-        # self.vehicle_data = self.planner.empty_data_dict()
-        # self.system_dynamics = Agent._init_system_dynamics(self, params=self.agent_params)
-        # self.vehicle_trajectory = Trajectory(dt=self.agent_params.dt, n=1, k=0)
-
-    def random_inputs(self, amnt: int, pr: int = 100):
+    def random_inputs(self, freq: int):
         # TODO: get these from params
-        v_bounds = [0, 1.2]
-        w_bounds = [-1.2, 1.2]
         v_cmds = []
         w_cmds = []
-        for _ in range(amnt):
+        for _ in range(freq):
             # add a random linear velocity command to send
-            rand_v_cmd = randint(v_bounds[0] * pr, v_bounds[1] * pr) / pr
-            v_cmds.append(rand_v_cmd)
+            v_cmds.append(self.random_cmd(self.v_bounds))
 
             # also add a random angular velocity command
-            rand_w_cmd = randint(w_bounds[0] * pr, w_bounds[1] * pr) / pr
-            w_cmds.append(rand_w_cmd)
+            w_cmds.append(self.random_cmd(self.w_bounds))
         # send the data in lists based off the simulator/joystick refresh rate
         self.send_cmds(v_cmds, w_cmds)
 
     def joystick_sense(self):
         # ping's the robot to request a sim state
         self.send_to_robot("sense")
-
         # listen to the robot's reply
         if(not self.listen_once()):
             # occurs if the robot is unavailable or it finished
             self.joystick_on = False
-
-        # NOTE: at this point, self.sim_state_now is updated with the
-        # most up-to-date simulation information
 
     def joystick_plan(self):
         pass
 
     def joystick_act(self):
         if(self.joystick_on):
-            num_actions_per_dt = \
-                int(np.floor(self.sim_delta_t / self.agent_params.dt))
+            num_actions_per_dt = int(
+                np.floor(self.sim_delta_t / self.agent_params.dt))
             # send a random to the robot
             self.random_inputs(num_actions_per_dt)
 
@@ -114,8 +90,11 @@ class JoystickWithPlanner(JoystickBase):
         self.robot_v = 0     # not tracked in the base simulator
         self.robot_w = 0     # not tracked in the base simulator
         super().__init__()
+        # get velocity bounds from the system dynamics params
+        self.v_bounds = self.system_dynamics_params.v_bounds
+        self.w_bounds = self.system_dynamics_params.w_bounds
 
-    def _init_obstacle_map(self, renderer=0):
+    def init_obstacle_map(self, renderer=0):
         """ Initializes the sbpd map."""
         p = self.agent_params.obstacle_map_params
         env = self.current_ep.get_environment()
@@ -131,7 +110,7 @@ class JoystickWithPlanner(JoystickBase):
         self.goal_config = generate_config_from_pos_3(self.get_robot_goal())
         # rest of the 'Agent' params used for the joystick planner
         self.agent_params = create_agent_params(with_obstacle_map=True)
-        self.obstacle_map = self._init_obstacle_map()
+        self.obstacle_map = self.init_obstacle_map()
         self.obj_fn = Agent._init_obj_fn(self, params=self.agent_params)
         self.obj_fn.add_objective(
             Agent._init_psc_objective(params=self.agent_params))
@@ -208,8 +187,12 @@ class JoystickWithPlanner(JoystickBase):
                 # only going to send the first simulator_joystick_update_ratio commands
                 clipped_cmds = self.commanded_actions[:num_cmds_per_step]
                 for v_cmd, w_cmd in clipped_cmds:
-                    v_cmds.append(float(v_cmd))
-                    w_cmds.append(float(w_cmd))
+                    v_cmd = round(float(v_cmd), 3)
+                    w_cmd = round(float(w_cmd), 3)
+                    assert(self.v_bounds[0] <= v_cmd <= self.v_bounds[1])
+                    assert(self.w_bounds[0] <= w_cmd <= self.w_bounds[1])
+                    v_cmds.append(v_cmd)
+                    w_cmds.append(w_cmd)
                 self.send_cmds(v_cmds, w_cmds)
                 # remove the sent commands
                 self.commanded_actions = self.commanded_actions[num_cmds_per_step:]

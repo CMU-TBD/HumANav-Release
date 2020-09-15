@@ -1,20 +1,15 @@
-import matplotlib as mpl
-mpl.use('Agg')  # for rendering without a display
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 from random import seed, random, randint
-import pandas as pd
 # Humanav
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
-from simulators.robot_agent import RoboAgent
+from simulators.robot_agent import RobotAgent
 from socnav.socnav_renderer import SocNavRenderer
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
-from params.central_params import get_seed, create_base_params, create_robot_params
+from params.central_params import get_seed, create_base_params
 from utils.utils import *
-from utils.image_utils import *
 
 # seed the random number generator
 random.seed(get_seed())
@@ -35,8 +30,11 @@ def create_params():
     p.robot_params = create_robot_params()
 
     # Introduce the episode params
-    p.episode_params = {}
-    p.episode_params['test_socnav'] = \
+    from params.central_params import create_episodes_params
+    p.episode_params = create_episodes_params()
+    # overwrite tests with custom basic test
+    p.episode_params.tests = {}
+    p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
                map_name='Double_Corridor_OG',
                prerec_start_indx=0,
@@ -59,10 +57,40 @@ def create_params():
     return p
 
 
+def establish_joystick_handshake(p):
+    if(p.episode_params.without_robot):
+        # lite-mode episode does not include a robot or joystick
+        return
+    import socket
+    import json
+    import time
+    # sockets for communication
+    RobotAgent.host = socket.gethostname()
+    # port for recieving commands from the joystick
+    RobotAgent.port_recv = p.robot_params.port
+    # port for sending commands to the joystick (successor of port_recv)
+    RobotAgent.port_send = RobotAgent.port_recv + 1
+    RobotAgent.establish_joystick_receiver_connection()
+    time.sleep(0.01)
+    RobotAgent.establish_joystick_sender_connection()
+    # send the preliminary episodes that the socnav is going to run
+    json_dict = {}
+    json_dict['episodes'] = list(p.episode_params.tests.keys())
+    episodes = json.dumps(json_dict)
+    # Create a TCP/IP socket
+    send_episodes_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # Connect the socket to the port where the server is listening
+    server_address = ((RobotAgent.host, RobotAgent.port_send))
+    send_episodes_socket.connect(server_address)
+    send_episodes_socket.sendall(bytes(episodes, "utf-8"))
+    send_episodes_socket.close()
+
+
 def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center_offset=np.array([0., 0.])):
     """"world_df" is a set of trajectories organized as a pandas dataframe.
     Each row is a pedestrian at a given frame (aka time point).
     The data was taken at 25 fps so between frames is 1/25th of a second. """
+    import pandas as pd
     if(num_pedestrians > 0 or num_pedestrians == -1):
         datafile = os.path.join(
             p.socnav_dir, "tests/world_coordinate_inter.csv")
@@ -121,37 +149,6 @@ def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center
                 record, generate_appearance=p.render_3D))
 
 
-def establish_joystick_handshake(p):
-    import socket
-    import json
-    import time
-    # sockets for communication
-    RoboAgent.host = socket.gethostname()
-    # port for recieving commands from the joystick
-    RoboAgent.port_recv = p.robot_params.port
-    # port for sending commands to the joystick (successor of port_recv)
-    RoboAgent.port_send = RoboAgent.port_recv + 1
-    RoboAgent.establish_joystick_receiver_connection()
-    time.sleep(0.01)
-    RoboAgent.establish_joystick_sender_connection()
-    # send the preliminary episodes that the socnav is going to run
-    json_dict = {}
-    json_dict['episodes'] = list(p.episode_params.keys())
-    episodes = json.dumps(json_dict)
-    # Create a TCP/IP socket
-    send_episodes_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Connect the socket to the port where the server is listening
-    server_address = ((RoboAgent.host, RoboAgent.port_send))
-    send_episodes_socket.connect(server_address)
-    send_episodes_socket.sendall(bytes(episodes, "utf-8"))
-    send_episodes_socket.close()
-
-
-def close_robot_sockets():
-    RoboAgent.joystick_sender_socket.close()
-    RoboAgent.joystick_receiver_socket.close()
-
-
 def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
     """
     Generate and add num_humans number of randomly generated humans to the simulator
@@ -184,16 +181,17 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     and rendering topview, rgb, and depth images.
     """
     p = create_params()  # used to instantiate the camera and its parameters
+
     establish_joystick_handshake(p)
 
-    for i, test in enumerate(list(p.episode_params.keys())):
-        episode = p.episode_params[test]
+    for i, test in enumerate(list(p.episode_params.tests.keys())):
+        episode = p.episode_params.tests[test]
         r = None  # free 'old' renderer
         if(i == 0 or (episode.map_name != p.building_name)):
             # update map to match the episode
             p.building_name = episode.map_name
-            print("%sStarting episode:" % color_yellow, test,
-                  "in building:", p.building_name, "%s" % color_reset)
+            print("%s\n\nStarting episode \"%s\" in building \"%s\"%s\n\n" %
+                  (color_yellow, test, p.building_name, color_reset))
             # get the renderer from the camera p
             r = SocNavRenderer.get_renderer(p)
             # obtain "resolution and traversible of building"
@@ -241,16 +239,19 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             render_3D=p.render_3D,
             episode_params=episode
         )
-        """
-        Generate the robots for the simulator
-        """
-        robot_agent = RoboAgent.generate_random_robot_from_environment(
-            environment
-        )
-        simulator.add_agent(robot_agent)
+        if(not p.episode_params.without_robot):
+            """
+            Generate the robots for the simulator
+            """
+            robot_agent = RobotAgent.generate_random_robot_from_environment(
+                environment
+            )
+            simulator.add_agent(robot_agent)
+
         """
         Add the prerecorded humans to the simulator
         """
+
         generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
                                     simulator, center_offset=np.array([14.0, 2.0]))
         """
@@ -265,7 +266,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         if p.render_3D:  # only when rendering with opengl
             r.remove_all_humans()
 
-    close_robot_sockets()
+    if(not p.episode_params.without_robot):
+        RobotAgent.close_robot_sockets()
 
 
 if __name__ == '__main__':

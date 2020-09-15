@@ -8,7 +8,7 @@ import threading
 import multiprocessing
 from simulators.simulator_helper import SimulatorHelper
 from simulators.sim_state import SimState, HumanState, AgentState
-from params.central_params import get_path_to_socnav, create_simulator_params, get_seed
+from params.central_params import create_simulator_params, get_seed
 from utils.utils import *
 from utils.image_utils import *
 
@@ -32,6 +32,10 @@ class CentralSimulator(SimulatorHelper):
         self.environment = environment
         self.params = create_simulator_params(render_3D=render_3D)
         self.episode_params = episode_params
+        # name of the directory to output everything
+        self.output_directory = \
+            os.path.join(self.params.socnav_params.socnav_dir,
+                         "tests/socnav/" + episode_params.name + "_output")
         CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
@@ -49,17 +53,17 @@ class CentralSimulator(SimulatorHelper):
 
     def add_agent(self, a):
         """Adds an agent member to the central simulator's pool of gen_agents
-        NOTE: this function works for robots (RoboAgent), prerecorded gen_agents (PrerecordedHuman),
+        NOTE: this function works for robots (RobotAgent), prerecorded gen_agents (PrerecordedHuman),
               and general gen_agents (Agent)
 
         Args:
-            a (Agent/PrerecordedAgent/RoboAgent): The agent to be added to the simulator
+            a (Agent/PrerecordedAgent/RobotAgent): The agent to be added to the simulator
         """
         assert(CentralSimulator.obstacle_map is not None)
         name = a.get_name()
-        from simulators.robot_agent import RoboAgent
+        from simulators.robot_agent import RobotAgent
         from humans.recorded_human import PrerecordedHuman
-        if isinstance(a, RoboAgent):
+        if isinstance(a, RobotAgent):
             # initialize the robot and add to simulator's known "robot" field
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False)
@@ -110,6 +114,13 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
+    def loop_condition(self):
+        if(self.robot):
+            # run for the full time if the robot exists
+            return self.t <= self.episode_params.max_time
+        # else just run until there are no more agents
+        return self.exists_running_agent() or self.exists_running_prerec()
+
     def simulate(self):
         """ A function that simulates an entire episode. The gen_agents are updated with simultaneous
         threads running their update() functions and updating the robot with commands from the
@@ -125,14 +136,13 @@ class CentralSimulator(SimulatorHelper):
         current_state = self.save_state(0, self.delta_t, 0)
         if self.robot is None:
             print("%sNo robot in simulator%s" % (color_red, color_reset))
-            return
+        else:
+            # give the robot knowledge of the initial world
+            self.robot.repeat_joystick = not self.params.block_joystick
+            self.robot.update_world(current_state)
 
-        # give the robot knowledge of the initial world
-        self.robot.repeat_joystick = not self.params.block_joystick
-        self.robot.update_world(current_state)
-
-        # initialize the robot to establish joystick connection
-        r_t = self.init_robot_listener_thread()
+            # initialize the robot to establish joystick connection
+            r_t = self.init_robot_listener_thread()
 
         # keep track of wall-time in the simulator
         start_time = time.clock()
@@ -147,7 +157,7 @@ class CentralSimulator(SimulatorHelper):
         iteration = 0  # loop iteration
         self.print_sim_progress(iteration)
 
-        while self.t <= self.episode_params.max_time:
+        while self.loop_condition():
             wall_t = time.clock() - start_time
 
             # Complete thread operations
@@ -159,8 +169,9 @@ class CentralSimulator(SimulatorHelper):
             self.start_threads(agent_threads)
             self.start_threads(prerec_threads)
 
-            # calls a single iteration of the robot update
-            self.robot.update(iteration)
+            if(self.robot):
+                # calls a single iteration of the robot update
+                self.robot.update(iteration)
 
             # join all thread groups
             self.join_threads(agent_threads)
@@ -169,7 +180,9 @@ class CentralSimulator(SimulatorHelper):
             # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
             current_state = self.save_state(self.t, self.delta_t, wall_t)
-            self.robot.update_world(current_state)
+
+            if(self.robot):
+                self.robot.update_world(current_state)
 
             # update simulator time
             self.t += self.delta_t
@@ -180,7 +193,8 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             self.print_sim_progress(iteration)
 
-        self.robot.power_off()
+        if(self.robot):
+            self.robot.power_off()
 
         # free all the gen_agents
         for a in self.agents.values():
@@ -203,11 +217,11 @@ class CentralSimulator(SimulatorHelper):
         self.generate_frames(filename=self.episode_params.name + "_obs")
 
         # convert all the generated frames into a gif file
-        self.save_frames_to_gif(clear_old_files=True,
-                                dir_title=self.episode_params.name)
+        self.save_frames_to_gif(clear_old_files=True)
 
-        # finally close the robot listener thread
-        self.decommission_robot(r_t)
+        if(self.robot):
+            # finally close the robot listener thread
+            self.decommission_robot(r_t)
 
     def _init_obstacle_map(self, renderer=None, ):
         """ Initializes the sbpd map."""
@@ -302,18 +316,19 @@ class CentralSimulator(SimulatorHelper):
                         args=(s, filename + str(p) + ".png"))
                     )
                     gif_processes[-1].start()
-                    print("Started processes:", frame,
-                          "out of", num_frames, "\r", end="")
+                    print("Started processes: %d out of %d, %.3f%% \r" %
+                          (frame, num_frames, 100.0 * (frame / num_frames)), end="")
                     # reset skip counter for frames
                     skip = int(1.0 / self.params.fps_scale_down) - 1
                 else:
                     # skip certain other frames as directed by the fps_scale_down
                     skip -= 1
-            print("\n")
+            print()  # not overwrite next line
             for frame, p in enumerate(gif_processes):
                 p.join()
-                print("Generated Frames:", frame + 1, "out of", num_frames,
-                      "%.3f" % ((frame + 1) / num_frames), "\r", end="")
+                print("Finished processes: %d out of %d, %.3f%% \r" %
+                      (frame + 1, num_frames, 100.0 * ((frame + 1) / num_frames)), end="")
+            print()  # not overwrite next line
         else:
             # generate frames sequentially (non multiproceses)
             skip = 0
@@ -330,42 +345,20 @@ class CentralSimulator(SimulatorHelper):
                 else:
                     skip -= 1.0
 
-        # newline to not interfere with previous prints
-        print("\n")
-
-    def save_frames_to_gif(self, clear_old_files=True, with_multiprocessing=True, dir_title="sim"):
+    def save_frames_to_gif(self, clear_old_files=True):
         """Convert a directory full of png's to a gif movie
         NOTE: One can also save to mp4 using imageio-ffmpeg or this bash script:
               "ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4"
         Args:
             clear_old_files (bool, optional): Whether or not to clear old image files. Defaults to True.
-            with_multiprocessing (bool, optional): for multiple directories of images, run with multiprocessing. Defaults to True.
         """
         if self.params.fps_scale_down == 0:
             return
-        num_robots = len(self.robots)
-        rendering_processes = []
         # fps = 1 / duration # where the duration is the simulation capture rate
         duration = self.delta_t * (1.0 / self.params.fps_scale_down)
-        for i in range(num_robots):
-            dirname = "tests/socnav/" + dir_title + "_output"
-            IMAGES_DIR = os.path.join(
-                self.params.socnav_params.socnav_dir, dirname)
-            if with_multiprocessing:
-                # little use to use pools here, since this is for multiple robot gen_agents in a scene
-                # and the assumption here is that is a small number
-                rendering_processes.append(multiprocessing.Process(
-                    target=save_to_gif,
-                    args=(IMAGES_DIR, duration, dir_title + "_output_%d" % (get_seed()), clear_old_files))
-                )
-                rendering_processes[i].start()
-            else:
-                # sequentially
-                save_to_gif(IMAGES_DIR, duration, gif_filename="movie_%d" % (get_seed()),
-                            clear_old_files=clear_old_files)
-
-        for p in rendering_processes:
-            p.join()
+        # sequentially
+        save_to_gif(self.output_directory, duration, gif_filename="movie_%d" % (get_seed()),
+                    clear_old_files=clear_old_files)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13,
                      agents, prerecs, robots, room_center, plot_quiver=False, plot_meter_tick=False):
@@ -437,7 +430,7 @@ class CentralSimulator(SimulatorHelper):
 
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment,
                     camera_pos_13, agents, prerecs, robots,
-                    sim_t: float, wall_t: float, filename: str, img_dir: str, with_zoom=False):
+                    sim_t: float, wall_t: float, filename: str, with_zoom=False):
         """Plots a single frame from information provided about the world state
 
         Args:
@@ -452,7 +445,6 @@ class CentralSimulator(SimulatorHelper):
             sim_t (float): the simulator time in seconds
             wall_t (float): the wall clock time in seconds
             filename (str): the name of the file to save
-            img_dir (str): the name of the directory to save the file
         """
         map_scale = environment["map_scale"]
         room_center = environment["room_center"]
@@ -521,8 +513,7 @@ class CentralSimulator(SimulatorHelper):
             ax.set_yticks([])
             ax.set_title('Depth')
 
-        full_file_name = \
-            os.path.join(p.socnav_params.socnav_dir, img_dir, filename)
+        full_file_name = os.path.join(self.output_directory, filename)
         if(not os.path.exists(full_file_name)):
             if(self.params.verbose_printing):
                 print('\033[31m', "Failed to find:", full_file_name,
@@ -547,9 +538,12 @@ class CentralSimulator(SimulatorHelper):
             state (SimState): the state of the world to convert to an image
             filename (str): the name of the resulting image (unindexed)
         """
-        robot = list(state.get_robots().values())[0]
-        camera_pos_13 = \
-            robot.get_current_config().to_3D_numpy()
+        if(self.robot):
+            robot = list(state.get_robots().values())[0]
+            camera_pos_13 = robot.get_current_config().to_3D_numpy()
+        else:
+            robot = None
+            camera_pos_13 = state.get_environment()["room_center"]
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
         # NOTE: 3d renderer can only be used with sequential plotting, much slower
@@ -564,19 +558,18 @@ class CentralSimulator(SimulatorHelper):
             for r_a in state.get_prerecs().values():
                 self.r.update_human(r_a)
             # Update human traversible
-            state.get_environment()["traversibles"][1] = \
-                self.r.get_human_traversible()
+            state.get_environment()[
+                "traversibles"][1] = self.r.get_human_traversible()
             # compute the rgb and depth images
-            rgb_image_1mk3, depth_image_1mk1 = \
-                render_rgb_and_depth(self.r, np.array([camera_pos_13]),
-                                     state.get_environment()["map_scale"],
-                                     human_visible=True)
+            rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(self.r, np.array([camera_pos_13]),
+                                                                    state.get_environment()[
+                "map_scale"],
+                human_visible=True)
         # plot the rbg, depth, and topview images if applicable
         self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                          state.get_environment(), camera_pos_13,
                          state.get_gen_agents(), state.get_prerecs(), state.get_robots(),
-                         state.get_sim_t(), state.get_wall_t(), self.episode_params.name + filename,
-                         'tests/socnav/' + self.episode_params.name + '_output')
+                         state.get_sim_t(), state.get_wall_t(), filename)
         # Delete state to save memory after frames are generated
         del(state)
 
@@ -584,9 +577,7 @@ class CentralSimulator(SimulatorHelper):
 
     def generate_episode_log(self, filename='episode_log.txt'):
         import io
-        abs_filename = os.path.join(get_path_to_socnav(),
-                                    'tests/socnav/' + self.episode_params.name + '_output',
-                                    filename)
+        abs_filename = os.path.join(self.output_directory, filename)
         touch(abs_filename)  # create if dosent already exist
         ep_params = self.episode_params
         data = ""
@@ -600,29 +591,30 @@ class CentralSimulator(SimulatorHelper):
         data += "Total agents in scene: %d\n" % self.total_agents
         data += "****************SIMULATOR INFO****************\n"
         data += "Simulator refresh rate (s): %0.3f\n" % self.delta_t
-        data += "Robot termination cause: %s\n" % self.robot.termination_cause
         num_successful = self.num_completed_agents + self.num_completed_prerecs
         data += "Num Successful agents: %d\n" % num_successful
         num_collision = self.num_collided_agents + self.num_collided_prerecs
         data += "Num Collided agents: %d\n" % num_collision
         num_timeout = self.total_agents - (num_successful + num_collision)
         data += "Num Timeout agents: %d\n" % num_timeout
-        data += "****************ROBOT INFO****************\n"
-        data += "Num commands received from joystick: %d\n" % len(
-            self.robot.commands)
-        data += "Num commands executed by robot: %d\n" % self.robot.num_executed
-        rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
-                                           self.robot.get_current_config().to_3D_numpy()
-                                           )
-        data += "Robot displacement (m): %0.3f\n" % rob_displacement
-        data += "Max robot velocity (m/s): %0.3f\n" % absmax(
-            self.robot.vehicle_trajectory.speed_nk1())
-        data += "Max robot acceleration: %0.3f\n" % absmax(
-            self.robot.vehicle_trajectory.acceleration_nk1())
-        data += "Max robot angular velocity: %0.3f\n" % absmax(
-            self.robot.vehicle_trajectory.angular_speed_nk1())
-        data += "Max robot angular acceleration: %0.3f\n" % absmax(
-            self.robot.vehicle_trajectory.angular_acceleration_nk1())
+        if(self.robot):
+            data += "****************ROBOT INFO****************\n"
+            data += "Robot termination cause: %s\n" % self.robot.termination_cause
+            data += "Num commands received from joystick: %d\n" % len(
+                self.robot.commands)
+            data += "Num commands executed by robot: %d\n" % self.robot.num_executed
+            rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
+                                               self.robot.get_current_config().to_3D_numpy()
+                                               )
+            data += "Robot displacement (m): %0.3f\n" % rob_displacement
+            data += "Max robot velocity (m/s): %0.3f\n" % absmax(
+                self.robot.vehicle_trajectory.speed_nk1())
+            data += "Max robot acceleration: %0.3f\n" % absmax(
+                self.robot.vehicle_trajectory.acceleration_nk1())
+            data += "Max robot angular velocity: %0.3f\n" % absmax(
+                self.robot.vehicle_trajectory.angular_speed_nk1())
+            data += "Max robot angular acceleration: %0.3f\n" % absmax(
+                self.robot.vehicle_trajectory.angular_acceleration_nk1())
         try:
             with open(abs_filename, 'w') as f:
                 f.write(data)
@@ -671,21 +663,20 @@ class CentralSimulator(SimulatorHelper):
         Args:
             r_listener_thread (Thread): the robot update thread to join
         """
-        if(r_listener_thread is not None):
-            assert(self.robot is not None)
-            # turn off the robot
-            self.robot.power_off()
-            self.robot.simulator_running = False
-            # close robot listener threads
-            if(r_listener_thread.is_alive() and self.params.join_threads):
-                # TODO: connect to the socket and close it
-                import socket
-                from simulators.robot_agent import RoboAgent
-                socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
-                    (RoboAgent.host, RoboAgent.port_recv))
-                r_listener_thread.join()
-            del(r_listener_thread)
-        return
+        if(self.robot):
+            if(r_listener_thread):
+                # turn off the robot
+                self.robot.power_off()
+                self.robot.simulator_running = False
+                # close robot listener threads
+                if(r_listener_thread.is_alive() and self.params.join_threads):
+                    # TODO: connect to the socket and close it
+                    import socket
+                    from simulators.robot_agent import RobotAgent
+                    socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
+                        (RobotAgent.host, RobotAgent.port_recv))
+                    r_listener_thread.join()
+                del(r_listener_thread)
 
     def init_agent_threads(self, sim_t: float, t_step: float, current_state: SimState):
         """Spawns a new agent thread for each agent (running or finished)

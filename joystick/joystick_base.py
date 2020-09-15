@@ -4,7 +4,7 @@ import os
 import numpy as np
 import random
 from utils.utils import *
-from params.central_params import create_robot_params, get_path_to_socnav, get_seed
+from params.central_params import create_robot_params, get_path_to_socnav, get_seed, create_system_dynamics_params
 from simulators.sim_state import SimState
 from simulators.episode import Episode
 
@@ -16,6 +16,7 @@ random.seed(get_seed())
 class JoystickBase():
     def __init__(self):
         self.joystick_params = create_robot_params()
+        self.system_dynamics_params = create_system_dynamics_params()
         # episode fields
         self.episode_names = []
         self.current_ep = None
@@ -69,7 +70,7 @@ class JoystickBase():
     def get_robot_goal(self):
         return self.current_ep.get_robot_goal()
 
-    def _init_obstacle_map(self):
+    def init_obstacle_map(self):
         raise NotImplementedError
 
     def init_control_pipeline(self):
