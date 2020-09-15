@@ -1,5 +1,5 @@
-from simulators.example_joystick import JoystickWithPlanner as Joystick
-# from simulators.example_joystick import JoystickRandom as Joystick
+from joystick.example_joystick import JoystickWithPlanner as Joystick
+# from joystick.example_joystick import JoystickRandom as Joystick
 
 
 def test_joystick():
