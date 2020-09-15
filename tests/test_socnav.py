@@ -75,7 +75,7 @@ def establish_joystick_handshake(p):
     RoboAgent.establish_joystick_sender_connection()
     # send the preliminary episodes that the socnav is going to run
     json_dict = {}
-    json_dict['episodes'] = list(p.episode_params.keys())
+    json_dict['episodes'] = list(p.episode_params.tests.keys())
     episodes = json.dumps(json_dict)
     # Create a TCP/IP socket
     send_episodes_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -190,8 +190,8 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         if(i == 0 or (episode.map_name != p.building_name)):
             # update map to match the episode
             p.building_name = episode.map_name
-            print("%sStarting episode:" % color_yellow, test,
-                  "in building:", p.building_name, "%s" % color_reset)
+            print("%s\n\nStarting episode \"%s\" in building \"%s\"%s\n\n" %
+                  (color_yellow, test, p.building_name, color_reset))
             # get the renderer from the camera p
             r = SocNavRenderer.get_renderer(p)
             # obtain "resolution and traversible of building"

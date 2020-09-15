@@ -220,6 +220,9 @@ class RoboAgent(Agent):
         elif(data_str == "ready"):
             self.joystick_ready = True
             return True
+        elif(data_str == "abandon"):
+            self.power_off()
+            return True
         return False
 
     def manage_data(self, data_str: str):

@@ -196,8 +196,8 @@ def test_episodes():
         if(i == 0 or (episode.map_name != p.building_name)):
             # update map to match the episode
             p.building_name = episode.map_name
-            print("%sStarting episode:" % color_yellow, test,
-                  "in building:", p.building_name, "%s" % color_reset)
+            print("%s\n\nStarting episode \"%s\" in building \"%s\"%s\n\n" %
+                  (color_yellow, test, p.building_name, color_reset))
             # get the renderer from the camera p
             r = SocNavRenderer.get_renderer(p)
             # obtain "resolution and traversible of building"

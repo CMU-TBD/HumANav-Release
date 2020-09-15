@@ -35,7 +35,7 @@ class CentralSimulator(SimulatorHelper):
         # name of the directory to output everything
         self.output_directory = \
             os.path.join(self.params.socnav_params.socnav_dir,
-                         "tests/socnav/" + episode_params.name + "_lite")
+                         "tests/socnav/" + episode_params.name + "_output")
         CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
@@ -316,18 +316,19 @@ class CentralSimulator(SimulatorHelper):
                         args=(s, filename + str(p) + ".png"))
                     )
                     gif_processes[-1].start()
-                    print("Started processes:", frame,
-                          "out of", num_frames, "\r", end="")
+                    print("Started processes: %d out of %d, %.3f%% \r" %
+                          (frame, num_frames, 100.0 * (frame / num_frames)), end="")
                     # reset skip counter for frames
                     skip = int(1.0 / self.params.fps_scale_down) - 1
                 else:
                     # skip certain other frames as directed by the fps_scale_down
                     skip -= 1
-            # print("\n")
+            print()  # not overwrite next line
             for frame, p in enumerate(gif_processes):
                 p.join()
-                print("Finished processes:", frame + 1, "out of", num_frames,
-                      "%.3f%%" % (((frame + 1) / num_frames) * 100), "\r", end="")
+                print("Finished processes: %d out of %d, %.3f%% \r" %
+                      (frame + 1, num_frames, 100.0 * ((frame + 1) / num_frames)), end="")
+            print()  # not overwrite next line
         else:
             # generate frames sequentially (non multiproceses)
             skip = 0
@@ -343,8 +344,6 @@ class CentralSimulator(SimulatorHelper):
                     skip = int(1.0 / self.params.fps_scale_down) - 1
                 else:
                     skip -= 1.0
-        # newline to not interfere with previous prints
-        # print("\n")
 
     def save_frames_to_gif(self, clear_old_files=True):
         """Convert a directory full of png's to a gif movie
@@ -541,8 +540,7 @@ class CentralSimulator(SimulatorHelper):
         """
         if(self.robot):
             robot = list(state.get_robots().values())[0]
-            camera_pos_13 = \
-                robot.get_current_config().to_3D_numpy()
+            camera_pos_13 = robot.get_current_config().to_3D_numpy()
         else:
             robot = None
             camera_pos_13 = state.get_environment()["room_center"]
@@ -560,13 +558,13 @@ class CentralSimulator(SimulatorHelper):
             for r_a in state.get_prerecs().values():
                 self.r.update_human(r_a)
             # Update human traversible
-            state.get_environment()["traversibles"][1] = \
-                self.r.get_human_traversible()
+            state.get_environment()[
+                "traversibles"][1] = self.r.get_human_traversible()
             # compute the rgb and depth images
-            rgb_image_1mk3, depth_image_1mk1 = \
-                render_rgb_and_depth(self.r, np.array([camera_pos_13]),
-                                     state.get_environment()["map_scale"],
-                                     human_visible=True)
+            rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(self.r, np.array([camera_pos_13]),
+                                                                    state.get_environment()[
+                "map_scale"],
+                human_visible=True)
         # plot the rbg, depth, and topview images if applicable
         self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                          state.get_environment(), camera_pos_13,
