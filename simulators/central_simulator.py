@@ -110,6 +110,13 @@ class CentralSimulator(SimulatorHelper):
                 return True
         return False
 
+    def loop_condition(self):
+        if(self.robot):
+            # run for the full time if the robot exists
+            return self.t <= self.episode_params.max_time
+        # else just run until there are no more agents
+        return self.exists_running_agent() or self.exists_running_prerec()
+
     def simulate(self):
         """ A function that simulates an entire episode. The gen_agents are updated with simultaneous
         threads running their update() functions and updating the robot with commands from the
@@ -146,7 +153,7 @@ class CentralSimulator(SimulatorHelper):
         iteration = 0  # loop iteration
         self.print_sim_progress(iteration)
 
-        while self.t <= self.episode_params.max_time:
+        while self.loop_condition():
             wall_t = time.clock() - start_time
 
             # Complete thread operations
@@ -337,39 +344,23 @@ class CentralSimulator(SimulatorHelper):
         # newline to not interfere with previous prints
         print("\n")
 
-    def save_frames_to_gif(self, clear_old_files=True, with_multiprocessing=True, dir_title="sim"):
+    def save_frames_to_gif(self, clear_old_files=True, dir_title="sim"):
         """Convert a directory full of png's to a gif movie
         NOTE: One can also save to mp4 using imageio-ffmpeg or this bash script:
               "ffmpeg -r 10 -i simulate_obs%01d.png -vcodec mpeg4 -y movie.mp4"
         Args:
             clear_old_files (bool, optional): Whether or not to clear old image files. Defaults to True.
-            with_multiprocessing (bool, optional): for multiple directories of images, run with multiprocessing. Defaults to True.
         """
         if self.params.fps_scale_down == 0:
             return
-        num_robots = len(self.robots)
-        rendering_processes = []
         # fps = 1 / duration # where the duration is the simulation capture rate
         duration = self.delta_t * (1.0 / self.params.fps_scale_down)
-        for i in range(num_robots):
-            dirname = "tests/socnav/" + dir_title + "_output"
-            IMAGES_DIR = os.path.join(
-                self.params.socnav_params.socnav_dir, dirname)
-            if with_multiprocessing:
-                # little use to use pools here, since this is for multiple robot gen_agents in a scene
-                # and the assumption here is that is a small number
-                rendering_processes.append(multiprocessing.Process(
-                    target=save_to_gif,
-                    args=(IMAGES_DIR, duration, dir_title + "_output_%d" % (get_seed()), clear_old_files))
-                )
-                rendering_processes[i].start()
-            else:
-                # sequentially
-                save_to_gif(IMAGES_DIR, duration, gif_filename="movie_%d" % (get_seed()),
-                            clear_old_files=clear_old_files)
-
-        for p in rendering_processes:
-            p.join()
+        dirname = "tests/socnav/" + dir_title + "_output"
+        IMAGES_DIR = \
+            os.path.join(self.params.socnav_params.socnav_dir, dirname)
+        # sequentially
+        save_to_gif(IMAGES_DIR, duration, gif_filename="movie_%d" % (get_seed()),
+                    clear_old_files=clear_old_files)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13,
                      agents, prerecs, robots, room_center, plot_quiver=False, plot_meter_tick=False):
