@@ -145,7 +145,9 @@ class PrerecordedHuman(Human):
 
     @staticmethod
     def generate_prerecorded_humans(start_idx: int, params, simulator,
-                                    offset=np.array([0, 0]), max_agents: int = -1,
+                                    offset=np.array([0, 0]),
+                                    max_agents: int = -1,
+                                    max_time: float = 10e7,
                                     csv_file: str = 'world_coordinate_inter.csv',
                                     fps: float = 25):
         """"world_df" is a set of trajectories organized as a pandas dataframe.
@@ -165,8 +167,6 @@ class PrerecordedHuman(Human):
             max_peds = max(all_peds)
             if(max_agents == -1):
                 max_agents = max_peds - 1
-            print("Gathering prerecorded agents from",
-                  start_idx, "to", start_idx + max_agents)
             for i in range(max_agents):
                 ped_id = i + start_idx + 1
                 if (ped_id > max_peds):
@@ -181,6 +181,11 @@ class PrerecordedHuman(Human):
                     # update start frame to be representative of "first" pedestrian
                     start_frame = list(ped_i['frame'])[0]
                 t_data = PrerecordedHuman.gather_times(ped_i, start_frame, fps)
+                if(t_data[0] > max_time):
+                    # assuming the data of the agents is sorted relatively based off time
+                    break
+                print("Generating prerecorded agents %d to %d \r" %
+                      (start_idx, ped_id), end="")
                 xytheta_data = PrerecordedHuman.gather_posn_data(ped_i, offset)
                 v_data = PrerecordedHuman.gather_vel_data(t_data, xytheta_data)
                 # combine the xytheta with the velocity
@@ -188,3 +193,5 @@ class PrerecordedHuman(Human):
                 new_agent = PrerecordedHuman(t_data=t_data, posn_data=config_data,
                                              generate_appearance=params.render_3D)
                 simulator.add_agent(new_agent)
+            # to not disturb the carriage-return print
+            print()
