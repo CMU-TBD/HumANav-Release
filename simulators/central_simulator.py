@@ -587,7 +587,7 @@ class CentralSimulator(SimulatorHelper):
         data += "Robot start: %s\n" % str(ep_params.robot_start_goal[0])
         data += "Robot goal: %s\n" % str(ep_params.robot_start_goal[1])
         data += "Time budget: %.3f\n" % ep_params.max_time
-        data += "Prerec start indx: %d\n" % ep_params.prerec_start_indx
+        # data += "Prerec start indx: %d\n" % ep_params.prerec_start_indx
         data += "Total agents in scene: %d\n" % self.total_agents
         data += "****************SIMULATOR INFO****************\n"
         data += "Simulator refresh rate (s): %0.3f\n" % self.delta_t

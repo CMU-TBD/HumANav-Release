@@ -154,7 +154,10 @@ def create_test_params(test: str):
     test_p = episodes_config[test]
     p.name = test
     p.map_name = test_p.get('map_name')
-    p.prerec_start_indx = test_p.getint('prerec_start_indx')
+    p.prerec_start_indxs = eval(test_p.get('prerec_start_indxs'))
+    p.prerec_data_filenames = eval(test_p.get('prerec_data_filenames'))
+    p.prerec_data_framerates = eval(test_p.get('prerec_data_framerates'))
+    p.prerec_posn_offsets = eval(test_p.get('prerec_posn_offset'))
     p.agents_start = eval(test_p.get('agents_start'))
     p.agents_end = eval(test_p.get('agents_end'))
     p.robot_start_goal = eval(test_p.get('robot_start_goal'))

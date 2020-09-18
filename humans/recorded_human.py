@@ -144,10 +144,15 @@ class PrerecordedHuman(Human):
         return config_data
 
     @staticmethod
-    def generate_prerecorded_humans(start_idx: int, params, simulator,
-                                    offset=np.array([0, 0]),
+    def generate_prerecorded_humans(simulator, params,
+                                    # use -1 to just include all agents (within time bounds)
                                     max_agents: int = -1,
+                                    # default is ~1000 days (ie. no time bound)
                                     max_time: float = 10e7,
+                                    # positional offset for the posn data
+                                    offset=[0, 0],
+                                    # which pedestrian to consider the 'first'
+                                    start_idx: int = 0,
                                     csv_file: str = 'world_coordinate_inter.csv',
                                     fps: float = 25):
         """"world_df" is a set of trajectories organized as a pandas dataframe.

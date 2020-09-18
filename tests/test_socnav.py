@@ -37,7 +37,10 @@ def create_params():
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
                map_name='Double_Corridor_OG',
-               prerec_start_indx=0,
+               prerec_start_indx=[15],
+               prerec_data_filenames=['world_coordinate_inter.csv'],
+               prerec_data_framerates=[25],
+               prerec_posn_offsets=[[16.0, -0.5]],
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],
@@ -188,12 +191,14 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         """
         Add the prerecorded humans to the simulator
         """
-        PrerecordedHuman.generate_prerecorded_humans(starting_prerec,
-                                                     p, simulator,
-                                                     max_agents=num_prerecorded,
-                                                     offset=np.array(
-                                                         [14.0, 2.0])
-                                                     )
+        for i in range(len(episode.prerec_data_filenames)):
+            PrerecordedHuman.generate_prerecorded_humans(simulator, p,
+                                                         max_agents=num_prerecorded,
+                                                         start_idx=starting_prerec,
+                                                         offset=episode.prerec_posn_offsets[i],
+                                                         csv_file=episode.prerec_data_filenames[i],
+                                                         fps=episode.prerec_data_framerates[i]
+                                                         )
         # generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
         #                             simulator, center_offset=np.array([14.0, 2.0]))
         """
@@ -215,5 +220,5 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 if __name__ == '__main__':
     # run basic room test with variable # of human
     test_socnav(num_generated_humans=5,
-                num_prerecorded=5,  # use -1 to include ALL prerecorded agents
+                num_prerecorded=15,  # use -1 to include ALL prerecorded agents
                 starting_prerec=15)
