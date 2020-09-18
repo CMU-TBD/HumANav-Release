@@ -255,8 +255,12 @@ def test_episodes():
         """
         Add the prerecorded humans to the simulator
         """
-        generate_prerecorded_humans(episode.max_time, episode.prerec_start_indx, p,
-                                    simulator, center_offset=np.array([14.0, 2.0]))
+        # generate_prerecorded_humans(episode.max_time, episode.prerec_start_indx, p,
+        #                             simulator, center_offset=np.array([14.0, 2.0]))
+        PrerecordedHuman.generate_prerecorded_humans(episode.prerec_start_indx, p,
+                                                     simulator,
+                                                     offset=np.array([14, 2]),
+                                                     max_time=episode.max_time)
 
         """
         Generate the autonomous human agents from the episode

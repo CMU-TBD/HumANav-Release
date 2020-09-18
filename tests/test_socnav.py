@@ -86,69 +86,6 @@ def establish_joystick_handshake(p):
     send_episodes_socket.close()
 
 
-def generate_prerecorded_humans(start_ped, num_pedestrians, p, simulator, center_offset=np.array([0., 0.])):
-    """"world_df" is a set of trajectories organized as a pandas dataframe.
-    Each row is a pedestrian at a given frame (aka time point).
-    The data was taken at 25 fps so between frames is 1/25th of a second. """
-    import pandas as pd
-    if(num_pedestrians > 0 or num_pedestrians == -1):
-        datafile = os.path.join(
-            p.socnav_dir, "tests/world_coordinate_inter.csv")
-        world_df = pd.read_csv(datafile, header=None).T
-        world_df.columns = ['frame', 'ped', 'y', 'x']
-        world_df[['frame', 'ped']] = world_df[['frame', 'ped']].astype('int')
-        start_frame = world_df['frame'][0]  # default start (of data)
-        max_peds = max(np.unique(world_df.ped))
-        if(num_pedestrians == -1):
-            num_pedestrians = max_peds - 1
-        print("Gathering prerecorded agents from",
-              start_ped, "to", start_ped + num_pedestrians)
-        for i in range(num_pedestrians):
-            ped_id = i + start_ped + 1
-            if (ped_id >= max_peds):  # need data to be within the bounds
-                print("%sRequested Prerec agent index out of bounds:" %
-                      (color_red), ped_id, "%s" % (color_reset))
-            if(ped_id not in np.unique(world_df.ped)):
-                continue
-            ped_i = world_df[world_df.ped == ped_id]
-            times = []
-            for j, f in enumerate(ped_i['frame']):
-                if(i == 0 and j == 0):
-                    start_frame = f  # update start frame to be representative of "first" pedestrian
-                relative_time = (f - start_frame) * (1 / 25.)
-                times.append(relative_time)
-            record = []
-            # generate a list of lists of positions (only x)
-            for x in ped_i['x']:
-                record.append([x + center_offset[0]])
-            # append y to the list of positions
-            for j, y in enumerate(ped_i['y']):
-                record[j].append(y + center_offset[1])
-            # append vector angles for all the agents
-            for j, pos_2 in enumerate(record):
-                if(j > 0):
-                    last_pos_2 = record[j - 1]
-                    theta = np.arctan2(
-                        pos_2[1] - last_pos_2[1], pos_2[0] - last_pos_2[0])
-                    record[j - 1].append(theta)
-                    if(j == len(record) - 1):
-                        record[j].append(theta)  # last element gets last angle
-            # append linear speed to the list of variables
-            for j, pos_2 in enumerate(record):
-                if(j > 0):
-                    last_pos_2 = record[j - 1]
-                    # calculating euclidean dist / delta_t
-                    delta_t = (times[j] - times[j - 1])
-                    speed = euclidean_dist2(pos_2, last_pos_2) / delta_t
-                    record[j].append(speed)  # last element gets last angle
-                else:
-                    record[0].append(0)  # initial speed is 0
-            for j, t in enumerate(times):  # lastly, append t to the list
-                record[j].append(t)
-            simulator.add_agent(PrerecordedHuman(
-                record, generate_appearance=p.render_3D))
-
-
 def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
     """
     Generate and add num_humans number of randomly generated humans to the simulator
@@ -251,9 +188,14 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         """
         Add the prerecorded humans to the simulator
         """
-
-        generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
-                                    simulator, center_offset=np.array([14.0, 2.0]))
+        PrerecordedHuman.generate_prerecorded_humans(starting_prerec,
+                                                     p, simulator,
+                                                     max_agents=num_prerecorded,
+                                                     offset=np.array(
+                                                         [14.0, 2.0])
+                                                     )
+        # generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
+        #                             simulator, center_offset=np.array([14.0, 2.0]))
         """
         Generate the autonomous human agents from the episode
         """
