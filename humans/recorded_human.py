@@ -156,8 +156,7 @@ class PrerecordedHuman(Human):
         import pandas as pd
         assert(fps > 0)
         if(max_agents > 0 or max_agents == -1):
-            datafile = os.path.join(
-                params.socnav_dir, "tests/world_coordinate_inter.csv")
+            datafile = os.path.join(params.socnav_dir, "tests/", csv_file)
             world_df = pd.read_csv(datafile, header=None).T
             world_df.columns = ['frame', 'ped', 'y', 'x']
             world_df[['frame', 'ped']] = \
@@ -173,6 +172,8 @@ class PrerecordedHuman(Human):
                     print("%sRequested Prerec agent index out of bounds:" %
                           (color_red), ped_id, "%s" % (color_reset))
                 if (ped_id not in all_peds):
+                    print("%sRequested agent %d not found in dataset: %s%s" %
+                          (color_red, ped_id, csv_file, color_reset))
                     # this can happen based off the dataset
                     continue
                 ped_i = world_df[world_df.ped == ped_id]
