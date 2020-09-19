@@ -40,7 +40,7 @@ def create_params():
                prerec_start_indx=[15],
                prerec_data_filenames=['world_coordinate_inter.csv'],
                prerec_data_framerates=[25],
-               prerec_posn_offsets=[[16.0, -0.5]],
+               prerec_posn_offsets=[[20.0, -0.5, 0.785]],
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],

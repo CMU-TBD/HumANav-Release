@@ -104,13 +104,21 @@ class PrerecordedHuman(Human):
 
     @staticmethod
     def gather_posn_data(ped_i, offset):
-        posn_data = []
+        xy_data = []
+        s = np.sin(offset[2])
+        c = np.cos(offset[2])
         # generate a list of lists of positions (only x)
         for x in ped_i['x']:
-            posn_data.append([x + offset[0]])
+            xy_data.append([x])
         # append y to the list of positions
         for j, y in enumerate(ped_i['y']):
-            posn_data[j].append(y + offset[1])
+            xy_data[j].append(y)
+        # apply the rotations to the x, y positions
+        posn_data = []
+        for (x, y) in xy_data:
+            x_rot = x * c - y * s
+            y_rot = x * s + y * c
+            posn_data.append([x_rot + offset[0], y_rot + offset[1]])
         # append vector angles for all the agents
         for j, pos_2 in enumerate(posn_data):
             if(j > 0):
@@ -153,7 +161,7 @@ class PrerecordedHuman(Human):
                                     # default is ~1000 days (ie. no time bound)
                                     max_time: float = 10e7,
                                     # positional offset for the posn data
-                                    offset=[0, 0],
+                                    offset=[0, 0, 0],
                                     # which pedestrian to consider the 'first'
                                     start_idx: int = 0,
                                     csv_file: str = 'world_coordinate_inter.csv',
