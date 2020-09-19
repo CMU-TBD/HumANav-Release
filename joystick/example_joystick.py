@@ -13,9 +13,6 @@ class JoystickRandom(JoystickBase):
         # our 'positions' are modeled as (x, y, theta)
         self.robot_current = None    # current position of the robot
         super().__init__()
-        # calculate the bounds of the velocity from the system dynamics
-        self.v_bounds = self.system_dynamics_params.v_bounds
-        self.w_bounds = self.system_dynamics_params.w_bounds
 
     def init_control_pipeline(self):
         self.agent_params = create_agent_params(with_obstacle_map=True)
@@ -30,16 +27,18 @@ class JoystickRandom(JoystickBase):
             w_cmds = []
             for _ in range(freq):
                 # add a random linear velocity command to send
-                v_cmds.append(self.random_cmd(self.v_bounds))
+                v_cmds.append(self.random_cmd(
+                    self.system_dynamics_params.v_bounds))
                 # also add a random angular velocity command
-                w_cmds.append(self.random_cmd(self.w_bounds))
+                w_cmds.append(self.random_cmd(
+                    self.system_dynamics_params.w_bounds))
             # send the data in lists based off the simulator/joystick refresh rate
             self.send_cmds(v_cmds, w_cmds)
         else:
             new_posn = []
             for _ in range(freq):
-                new_x = randint(0, 10)
-                new_y = randint(0, 10)
+                new_x = randint(2, 20)
+                new_y = randint(2, 10)
                 theta = randint(0, 314) / 50.
                 vel = 0
                 new_posn.append((new_x, new_y, theta, vel))
@@ -98,9 +97,6 @@ class JoystickWithPlanner(JoystickBase):
         self.robot_v = 0     # not tracked in the base simulator
         self.robot_w = 0     # not tracked in the base simulator
         super().__init__()
-        # get velocity bounds from the system dynamics params
-        self.v_bounds = self.system_dynamics_params.v_bounds
-        self.w_bounds = self.system_dynamics_params.w_bounds
 
     def init_obstacle_map(self, renderer=0):
         """ Initializes the sbpd map."""
@@ -180,33 +176,57 @@ class JoystickWithPlanner(JoystickBase):
         t_seg = Trajectory.new_traj_clip_along_time_axis(self.planner_data['trajectory'],
                                                          self.agent_params.control_horizon,
                                                          repeat_second_to_last_speed=True)
-
-        # From the new planned subtrajectory, parse it for the requisite v & w commands
-        _, commanded_actions_nkf = self.system_dynamics.parse_trajectory(t_seg)
-        self.commanded_actions = commanded_actions_nkf[0]
+        if(self.joystick_params.use_systen_dynamics):
+            # From the new planned subtrajectory, parse it for the requisite v & w commands
+            _, cmd_actions_nkf = self.system_dynamics.parse_trajectory(t_seg)
+            self.commanded_actions = cmd_actions_nkf[0]
+        else:
+            self.commanded_actions = t_seg
 
     def joystick_act(self):
         if(self.joystick_on):
             num_cmds_per_step = self.simulator_joystick_update_ratio
             # runs through the entire planned horizon just with a cmds_step of the above
-            for _ in range(int(np.floor(len(self.commanded_actions) / num_cmds_per_step))):
-                # initialize the command containers
-                v_cmds, w_cmds = [], []
-                # only going to send the first simulator_joystick_update_ratio commands
-                clipped_cmds = self.commanded_actions[:num_cmds_per_step]
-                for v_cmd, w_cmd in clipped_cmds:
-                    v_cmd = round(float(v_cmd), 3)
-                    w_cmd = round(float(w_cmd), 3)
-                    assert(self.v_bounds[0] <= v_cmd <= self.v_bounds[1])
-                    assert(self.w_bounds[0] <= w_cmd <= self.w_bounds[1])
-                    v_cmds.append(v_cmd)
-                    w_cmds.append(w_cmd)
-                self.send_cmds(v_cmds, w_cmds)
-                # remove the sent commands
-                self.commanded_actions = self.commanded_actions[num_cmds_per_step:]
-                # break if the robot finished
-                if(not self.joystick_on):
-                    break
+            if(self.joystick_params.use_system_dynamics):
+                # get velocity bounds from the system dynamics params
+                self.v_bounds = self.system_dynamics_params.v_bounds
+                self.w_bounds = self.system_dynamics_params.w_bounds
+                for _ in range(int(np.floor(len(self.commanded_actions) / num_cmds_per_step))):
+                    # initialize the command containers
+                    v_cmds, w_cmds = [], []
+                    # only going to send the first simulator_joystick_update_ratio commands
+                    clipped_cmds = self.commanded_actions[:num_cmds_per_step]
+                    for v_cmd, w_cmd in clipped_cmds:
+                        v_cmd = round(float(v_cmd), 3)
+                        w_cmd = round(float(w_cmd), 3)
+                        assert(self.v_bounds[0] <= v_cmd <= self.v_bounds[1])
+                        assert(self.w_bounds[0] <= w_cmd <= self.w_bounds[1])
+                        v_cmds.append(v_cmd)
+                        w_cmds.append(w_cmd)
+                    self.send_cmds(v_cmds, w_cmds)
+                    # remove the sent commands
+                    self.commanded_actions = self.commanded_actions[num_cmds_per_step:]
+                    # break if the robot finished
+                    if(not self.joystick_on):
+                        break
+            else:
+                for _ in range(int(np.floor(len(self.commanded_actions) / num_cmds_per_step))):
+                    # initialize the command containers
+                    xytv_posn = []
+                    # only going to send the first simulator_joystick_update_ratio commands
+                    clipped_xy = self.commanded_actions._position_nk2[0][:num_cmds_per_step]
+                    for i in range(len(clipped_xy)):
+                        x = self.commanded_actions._position_nk2[0][i][0]
+                        y = self.commanded_actions._position_nk2[0][i][1]
+                        th = self.commanded_actions._heading_nk1[0][i]
+                        v = self.commanded_actions._speed_nk1[0][i]
+                        v_cmds.append((x, y, th, v))
+                    self.send_cmds(v_cmds, w_cmds)
+                    # remove the sent commands
+                    self.commanded_actions = self.commanded_actions[num_cmds_per_step:]
+                    # break if the robot finished
+                    if(not self.joystick_on):
+                        break
 
     def update_loop(self):
         assert(self.sim_delta_t)

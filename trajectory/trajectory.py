@@ -75,6 +75,9 @@ class Trajectory(object):
             self._angular_acceleration_nk1 = np.zeros([n, k, 1], dtype=dtype) if angular_acceleration_nk1 is None \
                 else np.array(angular_acceleration_nk1, dtype=dtype)
 
+    def __len__(self):
+        return self.k
+
     def memory_usage_bytes(self):
         """
         A function which gives the memory usage of this trajectory object

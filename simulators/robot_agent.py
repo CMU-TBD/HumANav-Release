@@ -142,8 +142,8 @@ class RobotAgent(Agent):
             self.check_termination_conditions()
             joystick_input = self.joystick_inputs[self.num_executed][0]
             assert(len(joystick_input) == 4)  # has x,y,theta + velocity
-            new_pos3 = joystick_input[-1][:3]
-            new_v = joystick_input[-1][3]
+            new_pos3 = joystick_input[:3]
+            new_v = joystick_input[3]
             new_config = generate_config_from_pos_3(new_pos3, v=new_v)
             self.set_current_config(new_config)
             self.vehicle_trajectory.append_along_time_axis(
