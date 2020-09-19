@@ -139,6 +139,7 @@ def create_robot_params():
                camera_elevation_degree=rob_p.getfloat(
                    'camera_elevation_degree'),
                delta_theta=rob_p.getfloat('delta_theta'))
+    p.use_system_dynamics = create_joystick_params().use_system_dynamics
     return p
 
 

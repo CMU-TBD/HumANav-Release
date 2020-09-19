@@ -163,9 +163,11 @@ def compute_traversibility(map, robot_base, robot_height, robot_radius,
 
     selem = morphology.disk(robot_radius / map.resolution)
     # use _fill_holes to clean up the bitmap
+    # NOTE: tune the threshold to clean up 'noise' in the .obj map
+    thresh = 900
     obstacle_free = morphology.binary_dilation(
-        _fill_holes(num_obstcale_points > num_point_threshold, 40), selem) != True
-    valid_space = _fill_holes(num_points > num_point_threshold, 40)
+        _fill_holes(num_obstcale_points > num_point_threshold, thresh), selem) != True
+    valid_space = _fill_holes(num_points > num_point_threshold, thresh)
     traversible = np.concatenate((obstacle_free[..., np.newaxis],
                                   valid_space[..., np.newaxis]), axis=2)
     traversible = np.all(traversible, axis=2)

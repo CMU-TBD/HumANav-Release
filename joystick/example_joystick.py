@@ -25,17 +25,25 @@ class JoystickRandom(JoystickBase):
                        int(bounds[1] * precision)) / precision
 
     def random_inputs(self, freq: int):
-        # TODO: get these from params
-        v_cmds = []
-        w_cmds = []
-        for _ in range(freq):
-            # add a random linear velocity command to send
-            v_cmds.append(self.random_cmd(self.v_bounds))
-
-            # also add a random angular velocity command
-            w_cmds.append(self.random_cmd(self.w_bounds))
-        # send the data in lists based off the simulator/joystick refresh rate
-        self.send_cmds(v_cmds, w_cmds)
+        if(self.joystick_params.use_system_dynamics):
+            v_cmds = []
+            w_cmds = []
+            for _ in range(freq):
+                # add a random linear velocity command to send
+                v_cmds.append(self.random_cmd(self.v_bounds))
+                # also add a random angular velocity command
+                w_cmds.append(self.random_cmd(self.w_bounds))
+            # send the data in lists based off the simulator/joystick refresh rate
+            self.send_cmds(v_cmds, w_cmds)
+        else:
+            new_posn = []
+            for _ in range(freq):
+                new_x = randint(0, 10)
+                new_y = randint(0, 10)
+                theta = randint(0, 314) / 50.
+                vel = 0
+                new_posn.append((new_x, new_y, theta, vel))
+            self.send_posn(new_posn)
 
     def joystick_sense(self):
         # ping's the robot to request a sim state

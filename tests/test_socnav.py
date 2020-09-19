@@ -36,11 +36,11 @@ def create_params():
     p.episode_params.tests = {}
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
-               map_name='Double_Corridor_OG',
+               map_name='openspace',
                prerec_start_indx=[15],
                prerec_data_filenames=['world_coordinate_inter.csv'],
                prerec_data_framerates=[25],
-               prerec_posn_offsets=[[20.0, -0.5, 0.785]],
+               prerec_posn_offsets=[[12.4, -1.2, 0.55]],
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],

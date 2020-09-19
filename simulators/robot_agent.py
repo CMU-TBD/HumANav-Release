@@ -26,7 +26,7 @@ class RobotAgent(Agent):
         super().__init__(start_configs.get_start_config(),
                          start_configs.get_goal_config(),
                          name=name, with_init=False)
-        self.commands = []
+        self.joystick_inputs = []
         # robot's knowledge of the current state of the world
         self.world_state = None
         # josystick is ready once it has been sent an environment
@@ -63,7 +63,7 @@ class RobotAgent(Agent):
         self.world_state = state
 
     def get_num_executed(self):
-        return int(np.floor(len(self.commands) / self.amnd_per_batch))
+        return int(np.floor(len(self.joystick_inputs) / self.amnd_per_batch))
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
@@ -107,13 +107,13 @@ class RobotAgent(Agent):
             assert(self.termination_cause == "Success")
             self.power_off()
 
-    def execute(self):
+    def execute_commands(self):
         for _ in range(self.amnd_per_batch):
             if(not self.running):
                 break
             self.check_termination_conditions()
             current_config = self.get_current_config()
-            cmd_grp = self.commands[self.num_executed]
+            cmd_grp = self.joystick_inputs[self.num_executed]
             num_cmds_in_grp = len(cmd_grp)
             # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
             command = np.array([[cmd_grp]], dtype=np.float32)
@@ -135,11 +135,34 @@ class RobotAgent(Agent):
             if (self.params.verbose):
                 print(self.get_current_config().to_3D_numpy())
 
+    def execute_position(self):
+        for _ in range(self.amnd_per_batch):
+            if(not self.running):
+                break
+            self.check_termination_conditions()
+            joystick_input = self.joystick_inputs[self.num_executed][0]
+            assert(len(joystick_input) == 4)  # has x,y,theta + velocity
+            new_pos3 = joystick_input[-1][:3]
+            new_v = joystick_input[-1][3]
+            new_config = generate_config_from_pos_3(new_pos3, v=new_v)
+            self.set_current_config(new_config)
+            self.vehicle_trajectory.append_along_time_axis(
+                new_config, track_trajectory_acceleration=True)
+            self.num_executed += 1
+            if (self.params.verbose):
+                print(self.get_current_config().to_3D_numpy())
+
+    def execute(self):
+        if(self.params.robot_params.use_system_dynamics):
+            self.execute_commands()
+        else:
+            self.execute_position()
+
     def update(self, iteration):
         if self.running:
             # only execute the most recent commands
             self.check_termination_conditions()
-            if self.num_executed < len(self.commands):
+            if self.num_executed < len(self.joystick_inputs):
                 self.execute()
             # block joystick until recieves next command or finish sending world
             while (self.running and (self.joystick_requests_world or iteration >= self.get_num_executed())):
@@ -151,7 +174,7 @@ class RobotAgent(Agent):
         # if the robot is already "off" do nothing
         if(self.running):
             print("\nRobot powering off, received",
-                  len(self.commands), "commands")
+                  len(self.joystick_inputs), "commands")
             self.running = False
             try:
                 quit_message = self.world_state.to_json(
@@ -228,22 +251,28 @@ class RobotAgent(Agent):
     def manage_data(self, data_str: str):
         if(not self.is_keyword(data_str)):
             data = json.loads(data_str)
-            # TODO: clean up this messy data management
-            v_cmds: list = data["v_cmds"]
-            w_cmds: list = data["w_cmds"]
-            assert(len(v_cmds) == len(w_cmds))
-            self.amnd_per_batch = len(v_cmds)
+            if(self.params.robot_params.use_system_dynamics):
+                v_cmds: list = data["v_cmds"]
+                w_cmds: list = data["w_cmds"]
+                assert(len(v_cmds) == len(w_cmds))
+                self.amnd_per_batch = len(v_cmds)
+            else:
+                posn_cmd: list = data["pos_cmd"]
+                self.amnd_per_batch = len(posn_cmd)
             for i in range(self.amnd_per_batch):
-                np_data = np.array(
-                    [v_cmds[i], w_cmds[i]], dtype=np.float32)
-                # add at least one command
-                self.commands.append(np_data)
+                if(self.params.robot_params.use_system_dynamics):
+                    v = v_cmds[i]
+                    w = w_cmds[i]
+                    np_data = np.array([v, w], dtype=np.float32)
+                else:
+                    np_data = np.array([posn_cmd[i]], dtype=np.float32)
+                self.joystick_inputs.append(np_data)
                 if(self.repeat_joystick):  # if need be, repeat n-1 times
                     repeat_amnt = int(np.floor(
                         (self.params.robot_params.physical_params.repeat_freq / self.amnd_per_batch) - 1))
                     for i in range(repeat_amnt):
                         # adds command to local list of individual commands
-                        self.commands.append(np_data)
+                        self.joystick_inputs.append(np_data)
 
     @ staticmethod
     def establish_joystick_receiver_connection():

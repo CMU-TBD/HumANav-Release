@@ -601,7 +601,7 @@ class CentralSimulator(SimulatorHelper):
             data += "****************ROBOT INFO****************\n"
             data += "Robot termination cause: %s\n" % self.robot.termination_cause
             data += "Num commands received from joystick: %d\n" % len(
-                self.robot.commands)
+                self.robot.joystick_inputs)
             data += "Num commands executed by robot: %d\n" % self.robot.num_executed
             rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
                                                self.robot.get_current_config().to_3D_numpy()

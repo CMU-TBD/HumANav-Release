@@ -83,6 +83,12 @@ class JoystickBase():
         cmds = json.dumps(json_dict, indent=1)
         self.send_to_robot(cmds)
 
+    def send_posn(self, posn_cmds: list):
+        json_dict = {}
+        json_dict["pos_cmd"] = posn_cmds
+        posn = json.dumps(json_dict, indent=1)
+        self.send_to_robot(posn)
+
     def joystick_sense(self):
         raise NotImplementedError
 
