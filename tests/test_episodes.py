@@ -257,6 +257,7 @@ def test_episodes():
         """
         for i in range(len(episode.prerec_data_filenames)):
             PrerecordedHuman.generate_prerecorded_humans(simulator, p,
+                                                         init_delay=2,
                                                          max_time=episode.max_time,
                                                          offset=episode.prerec_posn_offsets[i],
                                                          start_idx=episode.prerec_start_indxs[i],

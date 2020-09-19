@@ -92,10 +92,13 @@ class PrerecordedHuman(Human):
     """ BEGIN GENERATION UTILS """
 
     @staticmethod
-    def gather_times(ped_i, start_time, fps: float):
+    def gather_times(ped_i, time_delay: float, start_frame: int, fps: float):
         times = []
-        for f in ped_i['frame']:
-            relative_time = (f - start_time) * (1. / fps)
+        for i, f in enumerate(ped_i['frame']):
+            relative_time = (f - start_frame) * (1. / fps)
+            if(i > 0):
+                # add the time delay to all the times except for the first
+                relative_time += time_delay
             times.append(relative_time)
         return times
 
@@ -144,7 +147,7 @@ class PrerecordedHuman(Human):
         return config_data
 
     @staticmethod
-    def generate_prerecorded_humans(simulator, params,
+    def generate_prerecorded_humans(simulator, params, init_delay: int = 2,
                                     # use -1 to just include all agents (within time bounds)
                                     max_agents: int = -1,
                                     # default is ~1000 days (ie. no time bound)
@@ -186,7 +189,8 @@ class PrerecordedHuman(Human):
                 if(i == 0):
                     # update start frame to be representative of "first" pedestrian
                     start_frame = list(ped_i['frame'])[0]
-                t_data = PrerecordedHuman.gather_times(ped_i, start_frame, fps)
+                t_data = PrerecordedHuman.gather_times(
+                    ped_i, init_delay, start_frame, fps)
                 if(t_data[0] > max_time):
                     # assuming the data of the agents is sorted relatively based off time
                     break

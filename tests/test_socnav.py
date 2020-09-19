@@ -193,6 +193,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         """
         for i in range(len(episode.prerec_data_filenames)):
             PrerecordedHuman.generate_prerecorded_humans(simulator, p,
+                                                         init_delay=2,
                                                          max_agents=num_prerecorded,
                                                          start_idx=starting_prerec,
                                                          offset=episode.prerec_posn_offsets[i],
@@ -221,4 +222,4 @@ if __name__ == '__main__':
     # run basic room test with variable # of human
     test_socnav(num_generated_humans=5,
                 num_prerecorded=15,  # use -1 to include ALL prerecorded agents
-                starting_prerec=15)
+                starting_prerec=0)
