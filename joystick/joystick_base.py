@@ -4,7 +4,7 @@ import os
 import numpy as np
 import random
 from utils.utils import *
-from params.central_params import create_robot_params, get_path_to_socnav, get_seed, create_system_dynamics_params
+from params.central_params import create_joystick_params, get_path_to_socnav, get_seed, create_system_dynamics_params
 from simulators.sim_state import SimState
 from simulators.episode import Episode
 
@@ -15,7 +15,7 @@ random.seed(get_seed())
 
 class JoystickBase():
     def __init__(self):
-        self.joystick_params = create_robot_params()
+        self.joystick_params = create_joystick_params()
         self.system_dynamics_params = create_system_dynamics_params()
         # episode fields
         self.episode_names = []

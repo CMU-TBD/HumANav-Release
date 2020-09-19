@@ -139,13 +139,19 @@ def create_robot_params():
                camera_elevation_degree=rob_p.getfloat(
                    'camera_elevation_degree'),
                delta_theta=rob_p.getfloat('delta_theta'))
-    # joystick params
-    p.sense_interval = max(1, rob_p.getint('sense_interval'))
-    p.track_sim_states = rob_p.getboolean('track_sim_states')
-    p.track_vel_accel = rob_p.getboolean('track_vel_accel')
-    p.write_pandas_log = rob_p.getboolean('write_pandas_log')
-    p.cmd_delay = rob_p.getfloat('cmd_delay')
-    p.generate_movie = rob_p.getboolean('generate_movie')
+    return p
+
+
+def create_joystick_params():
+    p = DotMap()
+    joystick_p = config['joystick_params']
+    p.port = config['robot_params'].getint('port')
+    p.use_system_dynamics = joystick_p.getboolean('use_system_dynamics')
+    p.track_vel_accel = joystick_p.getboolean('track_vel_accel')
+    p.print_data = joystick_p.getboolean('print_data')
+    p.track_sim_states = joystick_p.getboolean('track_sim_states')
+    p.write_pandas_log = joystick_p.getboolean('write_pandas_log')
+    p.generate_movie = joystick_p.getboolean('generate_movie')
     return p
 
 
