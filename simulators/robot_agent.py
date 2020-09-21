@@ -116,7 +116,7 @@ class RobotAgent(Agent):
             self.power_off()
 
     def _clip_vel(self, vel, bounds):
-        vel = round(float(vel), 3) * 2
+        vel = round(float(vel), 3)
         assert(bounds[0] < bounds[1])
         if(bounds[0] <= vel <= bounds[1]):
             return vel
