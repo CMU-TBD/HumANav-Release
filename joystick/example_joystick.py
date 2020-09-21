@@ -193,17 +193,12 @@ class JoystickWithPlanner(JoystickBase):
             self.w_bounds = self.system_dynamics_params.w_bounds
             for _ in range(int(np.floor(len(self.commands) / num_cmds_per_step))):
                 # initialize the command containers
-                v_cmds, w_cmds = [], []
+                velocity_cmds = []
                 # only going to send the first simulator_joystick_update_ratio commands
                 clipped_cmds = self.commands[:num_cmds_per_step]
                 for v_cmd, w_cmd in clipped_cmds:
-                    v_cmd = round(float(v_cmd), 3)
-                    w_cmd = round(float(w_cmd), 3)
-                    assert(self.v_bounds[0] <= v_cmd <= self.v_bounds[1])
-                    assert(self.w_bounds[0] <= w_cmd <= self.w_bounds[1])
-                    v_cmds.append(v_cmd)
-                    w_cmds.append(w_cmd)
-                self.send_cmds(v_cmds, w_cmds)
+                    velocity_cmds.append((float(v_cmd), float(w_cmd)))
+                self.send_cmds(velocity_cmds, send_vel_cmds=True)
                 # remove the sent commands
                 self.commands = self.commands[num_cmds_per_step:]
                 # break if the robot finished
@@ -282,7 +277,7 @@ class JoystickWithPlannerPosns(JoystickWithPlanner):
                     idx = j * num_cmds_per_step + i
                     (x, y, th, v) = self.from_conf(self.commands, idx)
                     xytv_cmds.append((x, y, th, v))
-                self.send_posn(xytv_cmds)
+                self.send_cmds(xytv_cmds, send_vel_cmds=False)
                 # break if the robot finished
                 if(not self.joystick_on):
                     break

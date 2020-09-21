@@ -115,22 +115,33 @@ class RobotAgent(Agent):
             assert(self.termination_cause == "Success")
             self.power_off()
 
-    def execute_commands(self):
+    def _clip_vel(self, vel, bounds):
+        vel = round(float(vel), 3) * 2
+        assert(bounds[0] < bounds[1])
+        if(bounds[0] <= vel <= bounds[1]):
+            return vel
+        clipped = min(max(bounds[0], vel), bounds[1])
+        print("velocity {} out of bounds, clipped to {}".format(vel, clipped))
+        return clipped
+
+    def execute_velocity_cmds(self):
         for _ in range(self.amnd_per_batch):
             if(not self.running):
                 break
             self.check_termination_conditions()
             current_config = self.get_current_config()
-            cmd_grp = self.joystick_inputs[self.num_executed]
-            num_cmds_in_grp = len(cmd_grp)
+            vel_cmd = self.joystick_inputs[self.num_executed]
+            assert(len(vel_cmd) == 2)  # always a 2 tuple of v and w
             # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
-            command = np.array([[cmd_grp]], dtype=np.float32)
+            v = self._clip_vel(vel_cmd[0], self.v_bounds)
+            w = self._clip_vel(vel_cmd[1], self.w_bounds)
             # NOTE: the format for the acceleration commands to the open loop for the robot is:
             # np.array([[[L, A]]], dtype=np.float32) where L is linear, A is angular
-            t_seg, actions_nk2 = Agent.apply_control_open_loop(self, current_config,
-                                                               command, num_cmds_in_grp,
-                                                               sim_mode='ideal'
-                                                               )
+            command = np.array([[[v, w]]], dtype=np.float32)
+            t_seg, _ = Agent.apply_control_open_loop(self, current_config,
+                                                     command, 1,
+                                                     sim_mode='ideal'
+                                                     )
             self.num_executed += 1
             self.vehicle_trajectory.append_along_time_axis(
                 t_seg, track_trajectory_acceleration=True)
@@ -143,7 +154,7 @@ class RobotAgent(Agent):
             if (self.params.verbose):
                 print(self.get_current_config().to_3D_numpy())
 
-    def execute_position(self):
+    def execute_position_cmds(self):
         for _ in range(self.amnd_per_batch):
             if(not self.running):
                 break
@@ -174,9 +185,9 @@ class RobotAgent(Agent):
 
     def execute(self):
         if(self.params.robot_params.use_system_dynamics):
-            self.execute_commands()
+            self.execute_velocity_cmds()
         else:
-            self.execute_position()
+            self.execute_position_cmds()
 
     def update(self, iteration):
         if self.running:
@@ -271,18 +282,14 @@ class RobotAgent(Agent):
         if(not self.is_keyword(data_str)):
             data = json.loads(data_str)
             if(self.params.robot_params.use_system_dynamics):
-                v_cmds: list = data["v_cmds"]
-                w_cmds: list = data["w_cmds"]
-                assert(len(v_cmds) == len(w_cmds))
+                v_cmds: list = data["vel_cmds"]
                 self.amnd_per_batch = len(v_cmds)
             else:
-                posn_cmd: list = data["pos_cmd"]
+                posn_cmd: list = data["pos_cmds"]
                 self.amnd_per_batch = len(posn_cmd)
             for i in range(self.amnd_per_batch):
                 if(self.params.robot_params.use_system_dynamics):
-                    v = v_cmds[i]
-                    w = w_cmds[i]
-                    np_data = np.array([v, w], dtype=np.float32)
+                    np_data = np.array(v_cmds[i], dtype=np.float32)
                 else:
                     np_data = np.array([posn_cmd[i]], dtype=np.float32)
                 self.joystick_inputs.append(np_data)

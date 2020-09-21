@@ -81,16 +81,22 @@ class JoystickBase():
     def init_control_pipeline(self):
         raise NotImplementedError
 
-    def send_cmds(self, v_cmds: list, w_cmds: list):
+    def send_cmds(self, cmds, send_vel_cmds: bool = True):
+        assert(send_vel_cmds == self.joystick_params.use_system_dynamics)
+        if(send_vel_cmds):
+            self.send_vels(cmds)
+        else:
+            self.send_posn(cmds)
+
+    def send_vels(self, vw_cmds: list):
         json_dict = {}
-        json_dict["v_cmds"] = v_cmds
-        json_dict["w_cmds"] = w_cmds
+        json_dict["vel_cmds"] = vw_cmds
         cmds = json.dumps(json_dict, indent=1)
         self.send_to_robot(cmds)
 
     def send_posn(self, posn_cmds: list):
         json_dict = {}
-        json_dict["pos_cmd"] = posn_cmds
+        json_dict["pos_cmds"] = posn_cmds
         posn = json.dumps(json_dict, indent=1)
         self.send_to_robot(posn)
 
