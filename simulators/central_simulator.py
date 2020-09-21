@@ -262,19 +262,17 @@ class CentralSimulator(SimulatorHelper):
         """
         # NOTE: when using a modular environment, make saved_env a deepcopy
         saved_env = self.environment
-        saved_agents = {}
+        pedestrians = {}
         for a in self.agents.values():
-            saved_agents[a.get_name()] = HumanState(a, deepcpy=True)
+            pedestrians[a.get_name()] = HumanState(a, deepcpy=True)
         # deepcopy all prerecorded gen_agents
-        saved_prerecs = {}
         for a in self.prerecs.values():
-            saved_prerecs[a.get_name()] = HumanState(a, deepcpy=True)
+            pedestrians[a.get_name()] = HumanState(a, deepcpy=True)
         # Save all the robots
         saved_robots = {}
         for r in self.robots.values():
             saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
-        current_state = SimState(saved_env,
-                                 saved_agents, saved_prerecs, saved_robots,
+        current_state = SimState(saved_env, pedestrians, saved_robots,
                                  sim_t, wall_t, delta_t, self.episode_params.name,
                                  self.episode_params.max_time)
 
@@ -363,7 +361,7 @@ class CentralSimulator(SimulatorHelper):
                     clear_old_files=clear_old_files)
 
     def plot_topview(self, ax, extent, traversible, human_traversible, camera_pos_13,
-                     agents, prerecs, robots, room_center, plot_quiver=False, plot_meter_tick=False):
+                     pedestrians, robots, room_center, plot_quiver=False, plot_meter_tick=False):
         """Uses matplotlib to plot a birds-eye-view image of the world by plotting the environment
         and the gen_agents on every frame. The frame also includes the simulator time and wall clock time
 
@@ -403,12 +401,8 @@ class CentralSimulator(SimulatorHelper):
         plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="bo",
                         collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True)
 
-        # plot all the simulated prerecorded gen_agents
-        plot_agent_dict(ax, ppm, prerecs, label="Prerec", normal_color="yo",
-                        collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False)
-
-        # plot all the randomly generated simulated gen_agents
-        plot_agent_dict(ax, ppm, agents, label="Agent", normal_color="go",
+        # plot all the simulated pedestrian agents
+        plot_agent_dict(ax, ppm, pedestrians, label="Pedestrian", normal_color="co",
                         collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False)
 
         if(plot_meter_tick):
@@ -431,7 +425,7 @@ class CentralSimulator(SimulatorHelper):
                         0.5, "1m", fontsize=14, verticalalignment='top')
 
     def plot_images(self, p, rgb_image_1mk3, depth_image_1mk1, environment,
-                    camera_pos_13, agents, prerecs, robots,
+                    camera_pos_13, pedestrians, robots,
                     sim_t: float, wall_t: float, filename: str, with_zoom=False):
         """Plots a single frame from information provided about the world state
 
@@ -480,7 +474,7 @@ class CentralSimulator(SimulatorHelper):
         ax.set_xlim(0., traversible.shape[1] * map_scale)
         ax.set_ylim(0., traversible.shape[0] * map_scale)
         self.plot_topview(ax, extent, traversible, human_traversible,
-                          camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=True)
+                          camera_pos_13, pedestrians, robots, room_center, plot_quiver=True)
         ax.legend()
         time_string = "sim_t=%.3f" % sim_t + " wall_t=%.3f" % wall_t
         ax.set_title(time_string, fontsize=20)
@@ -492,7 +486,7 @@ class CentralSimulator(SimulatorHelper):
             ax.set_xlim([room_center[0] - zoom, room_center[0] + zoom])
             ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
             self.plot_topview(ax, extent, traversible, human_traversible,
-                              camera_pos_13, agents, prerecs, robots, room_center, plot_quiver=True)
+                              camera_pos_13, pedestrians, robots, room_center, plot_quiver=True)
             ax.legend()
             ax.set_xticks([])
             ax.set_yticks([])
@@ -553,12 +547,10 @@ class CentralSimulator(SimulatorHelper):
             # TODO: Fix multiprocessing for properly deepcopied renderers
             # only when rendering with opengl
             assert(len(state.get_environment()["traversibles"]) == 2)
-            for a in state.get_gen_agents().values():
+            # update pedestrians humans
+            for a in state.get_pedestrians().values():
                 if(not a.get_collided()):
                     self.r.update_human(a)
-            # update prerecorded humans
-            for r_a in state.get_prerecs().values():
-                self.r.update_human(r_a)
             # Update human traversible
             state.get_environment()[
                 "traversibles"][1] = self.r.get_human_traversible()
@@ -570,7 +562,7 @@ class CentralSimulator(SimulatorHelper):
         # plot the rbg, depth, and topview images if applicable
         self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                          state.get_environment(), camera_pos_13,
-                         state.get_gen_agents(), state.get_prerecs(), state.get_robots(),
+                         state.get_pedestrians(), state.get_robots(),
                          state.get_sim_t(), state.get_wall_t(), filename)
         # Delete state to save memory after frames are generated
         del(state)
@@ -646,7 +638,7 @@ class CentralSimulator(SimulatorHelper):
             # send first transaction to the joystick
             print("sending episode data to joystick")
             r.simulator_running = True
-            r.send_to_joystick(r.world_state.to_json(include_map=True))
+            r.send_to_joystick(r.world_state.to_json(send_metadata=True))
             r_listener_thread = threading.Thread(target=r.listen_to_joystick)
             if(power_on):
                 r_listener_thread.start()

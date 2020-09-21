@@ -44,7 +44,8 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
         if(plot_trajectory and a.get_trajectory()):
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
         color = normal_color  # gen_agents are green and solid unless collided
-        start_goal_col = 'wo'  # white circle
+        start_col = 'wo'  # white circle
+        goal_col = 'go'  # green circle
         if(collided):
             color = collided_color  # collided gen_agents are drawn red
         if(i == 0):
@@ -52,17 +53,17 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
             ax.plot(pos_3[0], pos_3[1], color,
                     markersize=markersize, label=label)
             if(plot_start_goal and (start_3 is not None and goal_3 is not None)):
-                ax.plot(start_3[0], start_3[1], start_goal_col,
+                ax.plot(start_3[0], start_3[1], start_col,
                         markersize=start_goal_markersize, label=label + " start")
-                ax.plot(goal_3[0], goal_3[1], start_goal_col,
+                ax.plot(goal_3[0], goal_3[1], goal_col,
                         markersize=start_goal_markersize, label=label + " goal")
         else:
             ax.plot(pos_3[0], pos_3[1], color,
                     markersize=markersize)
             if(plot_start_goal and (start_3 is not None and goal_3 is not None)):
-                ax.plot(start_3[0], start_3[1], start_goal_col,
+                ax.plot(start_3[0], start_3[1], start_col,
                         markersize=start_goal_markersize)
-                ax.plot(goal_3[0], goal_3[1], start_goal_col,
+                ax.plot(goal_3[0], goal_3[1], goal_col,
                         markersize=start_goal_markersize)
         # plot the surrounding "force field" around the agent
         ax.plot(pos_3[0], pos_3[1], color,

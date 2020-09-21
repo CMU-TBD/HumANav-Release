@@ -110,13 +110,12 @@ class SimState():
 
     # environment = None
 
-    def __init__(self, environment: dict = None, gen_agents: dict = None,
-                 prerecs: dict = None, robots: dict = None, sim_t: float = None,
-                 wall_t: float = None, delta_t: float = None, episode_name: str = None,
-                 max_time: float = None):
+    def __init__(self, environment: dict = None, pedestrians: dict = None,
+                 robots: dict = None, sim_t: float = None, wall_t: float = None,
+                 delta_t: float = None, episode_name: str = None, max_time: float = None):
         self.environment = environment
-        self.gen_agents = gen_agents
-        self.prerecs = prerecs
+        # no distinction between prerecorded and auto agents
+        self.pedestrians = pedestrians  # new dict that the joystick will be sent
         self.robots = robots
         self.sim_t = sim_t
         self.wall_t = wall_t
@@ -131,11 +130,8 @@ class SimState():
     def get_map(self):
         return self.environment["map_traversible"]
 
-    def get_gen_agents(self):
-        return self.gen_agents
-
-    def get_prerecs(self):
-        return self.prerecs
+    def get_pedestrians(self):
+        return self.pedestrians
 
     def get_robots(self):
         return self.robots
@@ -160,17 +156,16 @@ class SimState():
 
     def get_all_agents(self, include_robot=False):
         all_agents = {}
-        all_agents.update(get_agents_from_type(self, "gen_agents"))
-        all_agents.update(get_agents_from_type(self, "prerecs"))
+        all_agents.update(self.get_pedestrians())
         if include_robot:
-            all_agents.update(get_agents_from_type(self, "robots"))
+            all_agents.update(self.get_robots())
         return all_agents
 
-    def to_json(self, robot_on=True, include_map=False, termination_cause=None):
+    def to_json(self, robot_on=True, send_metadata=False, termination_cause=None):
         json_dict = {}
         json_dict['robot_on'] = deepcopy(robot_on)  # true or false
         if robot_on:  # only send the world if the robot is ON
-            if include_map:
+            if send_metadata:
                 environment_json = \
                     SimState.to_json_dict(deepcopy(self.get_environment()))
                 episode_json = deepcopy(self.get_episode_name())
@@ -180,19 +175,17 @@ class SimState():
                 episode_json = {}
                 episode_max_time_json = {}
             # serialize all other fields
-            agents_json = \
-                SimState.to_json_dict(deepcopy(self.get_gen_agents()))
-            prerecs_json = \
-                SimState.to_json_dict(deepcopy(self.get_prerecs()))
+            ped_json = \
+                SimState.to_json_dict(deepcopy(self.get_pedestrians()))
+            # NOTE: the robot only includes its start/goal posn if sending metadata
             robots_json = \
                 SimState.to_json_dict(deepcopy(self.get_robots()),
-                                      include_start_goal=include_map)
+                                      include_start_goal=send_metadata)
             sim_t_json = deepcopy(self.get_sim_t())
             delta_t_json = deepcopy(self.get_delta_t())
             # append them to the json dictionary
             json_dict['environment'] = environment_json
-            json_dict['gen_agents'] = agents_json
-            json_dict['prerecs'] = prerecs_json
+            json_dict['pedestrians'] = ped_json
             json_dict['robots'] = robots_json
             json_dict['sim_t'] = sim_t_json
             json_dict['delta_t'] = delta_t_json
@@ -213,8 +206,8 @@ class SimState():
     def from_json(json_str: dict):
         new_state = SimState()
         new_state.environment = json_str['environment']
-        new_state.gen_agents = SimState.init_agent_dict(json_str['gen_agents'])
-        new_state.prerecs = SimState.init_agent_dict(json_str['prerecs'])
+        new_state.pedestrians = \
+            SimState.init_agent_dict(json_str['pedestrians'])
         new_state.robots = SimState.init_agent_dict(json_str['robots'])
         new_state.sim_t: float = json_str['sim_t']
         new_state.delta_t: float = json_str['delta_t']
@@ -255,8 +248,7 @@ class SimState():
 
 def get_all_agents(sim_state: dict, include_robot=False):
     all_agents = {}
-    all_agents.update(get_agents_from_type(sim_state, "gen_agents"))
-    all_agents.update(get_agents_from_type(sim_state, "prerecs"))
+    all_agents.update(get_agents_from_type(sim_state, "pedestrians"))
     if include_robot:
         all_agents.update(get_agents_from_type(sim_state, "robots"))
     return all_agents

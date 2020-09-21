@@ -218,7 +218,7 @@ class JoystickBase():
         name = current_world.get_episode_name()
         env = current_world.get_environment()
         # get all the agents in the scene except for the robot
-        agents = current_world.get_all_agents(include_robot=False)
+        agents = current_world.get_pedestrians()
         max_t = current_world.get_episode_max_time()
         # gather robot information
         robots = list(current_world.get_robots().values())

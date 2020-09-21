@@ -211,8 +211,7 @@ class RobotAgent(Agent):
         # send the (JSON serialized) world state per joystick's request
         if self.joystick_requests_world:
             world_state = self.world_state.to_json(
-                robot_on=self.running,
-                include_map=False
+                robot_on=self.running
             )
             self.send_to_joystick(world_state)
             # immediately note that the world has been sent:
