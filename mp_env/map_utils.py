@@ -121,7 +121,7 @@ def add_human_to_traversible(map, robot_base, robot_height, robot_radius,
     # Expand the occupied space to account for the robot base
     selem = morphology.disk(robot_radius / map.resolution)
     obstacle_free = morphology.binary_dilation(
-        _fill_holes(num_obstcale_points > num_point_threshold, 20), selem) != True
+        _fill_holes(num_obstcale_points > num_point_threshold, 90), selem) != True
 
     # Combine the occupancy information from the static map
     # and the human

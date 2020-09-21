@@ -395,7 +395,7 @@ class CentralSimulator(SimulatorHelper):
                     alphas[x][y] = not(human_traversible[x][y])
             ax.imshow(human_traversible, extent=extent, cmap='autumn_r',
                       vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
-            alphas = np.all(np.logical_not(human_traversible))
+            # alphas = np.all(np.logical_not(human_traversible))
 
         # Plot the camera (robots)
         plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="bo",
@@ -447,8 +447,7 @@ class CentralSimulator(SimulatorHelper):
         # Obstacles/building traversible
         traversible = environment["map_traversible"]
         human_traversible = None
-
-        if human_traversible in environment.keys():
+        if "human_traversible" in environment.keys():
             assert(p.render_3D)
             human_traversible = environment["human_traversible"]
         # Compute the real_world extent (in meters) of the traversible
@@ -546,19 +545,20 @@ class CentralSimulator(SimulatorHelper):
         if self.params.render_3D:
             # TODO: Fix multiprocessing for properly deepcopied renderers
             # only when rendering with opengl
-            assert(len(state.get_environment()["traversibles"]) == 2)
+            assert("human_traversible" in state.get_environment().keys())
             # update pedestrians humans
             for a in state.get_pedestrians().values():
-                if(not a.get_collided()):
-                    self.r.update_human(a)
+                self.r.update_human(a)
             # Update human traversible
-            state.get_environment()[
-                "traversibles"][1] = self.r.get_human_traversible()
+            # NOTE: this is technically not R-O since it modifies the human trav
+            # TODO: use a separate variable to keep SimStates as R-O
+            state.get_environment()["human_traversible"] = \
+                self.r.get_human_traversible()
             # compute the rgb and depth images
-            rgb_image_1mk3, depth_image_1mk1 = render_rgb_and_depth(self.r, np.array([camera_pos_13]),
-                                                                    state.get_environment()[
-                "map_scale"],
-                human_visible=True)
+            rgb_image_1mk3, depth_image_1mk1 = \
+                render_rgb_and_depth(self.r, np.array([camera_pos_13]),
+                                     state.get_environment()["map_scale"],
+                                     human_visible=True)
         # plot the rbg, depth, and topview images if applicable
         self.plot_images(self.params, rgb_image_1mk3, depth_image_1mk1,
                          state.get_environment(), camera_pos_13,
