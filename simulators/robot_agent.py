@@ -121,7 +121,8 @@ class RobotAgent(Agent):
         if(bounds[0] <= vel <= bounds[1]):
             return vel
         clipped = min(max(bounds[0], vel), bounds[1])
-        print("velocity {} out of bounds, clipped to {}".format(vel, clipped))
+        print("%svelocity %s out of bounds, clipped to %s%s" %
+              (color_red, vel, clipped, color_reset))
         return clipped
 
     def _clip_posn(self, old_pos3, new_pos3):
@@ -135,8 +136,8 @@ class RobotAgent(Agent):
         valid_x = max_vel * np.cos(new_pos3[2]) + old_pos3[0]
         valid_y = max_vel * np.sin(new_pos3[2]) + old_pos3[1]
         reachable_pos3 = [valid_x, valid_y, valid_theta]
-        print("position {} is unreachable with v bounds, clipped to {}".format(
-            new_pos3, reachable_pos3))
+        print("%sposition [%s] is unreachable with v bounds, clipped to [%s]%s" %
+              (color_red, list_print(new_pos3), iter_print(reachable_pos3), color_reset))
         return reachable_pos3
 
     def execute_velocity_cmds(self):

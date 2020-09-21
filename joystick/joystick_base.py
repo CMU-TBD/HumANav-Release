@@ -85,10 +85,18 @@ class JoystickBase():
         assert(send_vel_cmds == self.joystick_params.use_system_dynamics)
         if(send_vel_cmds):
             # needs v, w
-            assert(len(cmds[0]) == 2)
+            for command_grp in cmds:
+                if(len(command_grp) != 2):
+                    print("%sERROR: joystick expecting (v, w) for velocity commands. Got \"(%s)\"%s" % (
+                        color_red, list_print(command_grp), color_reset))
+                assert(len(command_grp) == 2)
         else:
             # needs x, y, th, v
-            assert(len(cmds[0]) == 4)
+            for command_grp in cmds:
+                if(len(command_grp) != 4):
+                    print("%sERROR: joystick expecting (x, y, theta, v) for positional commands. Got \"(%s)\"%s" % (
+                        color_red, list_print(command_grp), color_reset))
+                assert(len(command_grp) == 4)
         json_dict = {}
         json_dict["j_input"] = cmds
         serialized_cmds = json.dumps(json_dict, indent=1)
