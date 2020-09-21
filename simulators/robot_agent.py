@@ -51,7 +51,7 @@ class RobotAgent(Agent):
         self.running = True
         self.last_command = None
         self.num_executed = 0  # keeps track of the latest command that is to be executed
-        self.amnd_per_batch = 1
+        self.num_cmds_per_batch = 1
         # default simulator delta_t, to be updated via set_sim_delta_t() later
         self.sim_delta_t = 0.05
 
@@ -68,7 +68,7 @@ class RobotAgent(Agent):
         self.world_state = state
 
     def get_num_executed(self):
-        return int(np.floor(len(self.joystick_inputs) / self.amnd_per_batch))
+        return int(np.floor(len(self.joystick_inputs) / self.num_cmds_per_batch))
 
     def set_sim_delta_t(self, sim_delta_t):
         self.sim_delta_t = sim_delta_t
@@ -124,15 +124,30 @@ class RobotAgent(Agent):
         print("velocity {} out of bounds, clipped to {}".format(vel, clipped))
         return clipped
 
+    def _clip_posn(self, old_pos3, new_pos3):
+        assert(self.sim_delta_t > 0)
+        dist_to_new = euclidean_dist2(old_pos3, new_pos3)
+        if(abs(dist_to_new / self.sim_delta_t) <= self.v_bounds[1]):
+            return new_pos3
+        # create new position scaled off the invalid one
+        valid_theta = new_pos3[2]
+        max_vel = self.sim_delta_t * self.v_bounds[1]
+        valid_x = max_vel * np.cos(new_pos3[2]) + old_pos3[0]
+        valid_y = max_vel * np.sin(new_pos3[2]) + old_pos3[1]
+        reachable_pos3 = [valid_x, valid_y, valid_theta]
+        print("position {} is unreachable with v bounds, clipped to {}".format(
+            new_pos3, reachable_pos3))
+        return reachable_pos3
+
     def execute_velocity_cmds(self):
-        for _ in range(self.amnd_per_batch):
+        for _ in range(self.num_cmds_per_batch):
             if(not self.running):
                 break
             self.check_termination_conditions()
             current_config = self.get_current_config()
+            # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
             vel_cmd = self.joystick_inputs[self.num_executed]
             assert(len(vel_cmd) == 2)  # always a 2 tuple of v and w
-            # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
             v = self._clip_vel(vel_cmd[0], self.v_bounds)
             w = self._clip_vel(vel_cmd[1], self.w_bounds)
             # NOTE: the format for the acceleration commands to the open loop for the robot is:
@@ -155,25 +170,17 @@ class RobotAgent(Agent):
                 print(self.get_current_config().to_3D_numpy())
 
     def execute_position_cmds(self):
-        for _ in range(self.amnd_per_batch):
+        for _ in range(self.num_cmds_per_batch):
             if(not self.running):
                 break
             self.check_termination_conditions()
-            joystick_input = self.joystick_inputs[self.num_executed][0]
+            joystick_input = self.joystick_inputs[self.num_executed]
             assert(len(joystick_input) == 4)  # has x,y,theta,velocity
             new_pos3 = joystick_input[:3]
             new_v = joystick_input[3]
             old_pos3 = self.current_config.to_3D_numpy()
             # ensure the new position is reachable within velocity bounds
-            dist_to_new = euclidean_dist2(old_pos3, new_pos3)
-            assert(self.sim_delta_t > 0)
-            if(abs(dist_to_new / self.sim_delta_t) > self.v_bounds[1]):
-                # create new position scaled off the invalid one
-                valid_theta = new_pos3[2]
-                max_vel = self.sim_delta_t * self.v_bounds[1]
-                valid_x = max_vel * np.cos(new_pos3[2]) + old_pos3[0]
-                valid_y = max_vel * np.sin(new_pos3[2]) + old_pos3[1]
-                new_pos3 = [valid_x, valid_y, valid_theta]
+            new_pos3 = self._clip_posn(old_pos3, new_pos3)
             # move to the new position and update trajectory
             new_config = generate_config_from_pos_3(new_pos3, v=new_v)
             self.set_current_config(new_config)
@@ -281,21 +288,14 @@ class RobotAgent(Agent):
     def manage_data(self, data_str: str):
         if(not self.is_keyword(data_str)):
             data = json.loads(data_str)
-            if(self.params.robot_params.use_system_dynamics):
-                v_cmds: list = data["vel_cmds"]
-                self.amnd_per_batch = len(v_cmds)
-            else:
-                posn_cmd: list = data["pos_cmds"]
-                self.amnd_per_batch = len(posn_cmd)
-            for i in range(self.amnd_per_batch):
-                if(self.params.robot_params.use_system_dynamics):
-                    np_data = np.array(v_cmds[i], dtype=np.float32)
-                else:
-                    np_data = np.array([posn_cmd[i]], dtype=np.float32)
+            joystick_input: list = data["j_input"]
+            self.num_cmds_per_batch = len(joystick_input)
+            for i in range(self.num_cmds_per_batch):
+                np_data = np.array(joystick_input[i], dtype=np.float32)
                 self.joystick_inputs.append(np_data)
                 if(self.repeat_joystick):  # if need be, repeat n-1 times
                     repeat_amnt = int(np.floor(
-                        (self.params.robot_params.physical_params.repeat_freq / self.amnd_per_batch) - 1))
+                        (self.params.robot_params.physical_params.repeat_freq / self.num_cmds_per_batch) - 1))
                     for i in range(repeat_amnt):
                         # adds command to local list of individual commands
                         self.joystick_inputs.append(np_data)

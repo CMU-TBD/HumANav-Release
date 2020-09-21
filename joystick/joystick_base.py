@@ -84,21 +84,15 @@ class JoystickBase():
     def send_cmds(self, cmds, send_vel_cmds: bool = True):
         assert(send_vel_cmds == self.joystick_params.use_system_dynamics)
         if(send_vel_cmds):
-            self.send_vels(cmds)
+            # needs v, w
+            assert(len(cmds[0]) == 2)
         else:
-            self.send_posn(cmds)
-
-    def send_vels(self, vw_cmds: list):
+            # needs x, y, th, v
+            assert(len(cmds[0]) == 4)
         json_dict = {}
-        json_dict["vel_cmds"] = vw_cmds
-        cmds = json.dumps(json_dict, indent=1)
-        self.send_to_robot(cmds)
-
-    def send_posn(self, posn_cmds: list):
-        json_dict = {}
-        json_dict["pos_cmds"] = posn_cmds
-        posn = json.dumps(json_dict, indent=1)
-        self.send_to_robot(posn)
+        json_dict["j_input"] = cmds
+        serialized_cmds = json.dumps(json_dict, indent=1)
+        self.send_to_robot(serialized_cmds)
 
     def joystick_sense(self):
         raise NotImplementedError
