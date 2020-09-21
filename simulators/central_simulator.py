@@ -91,6 +91,7 @@ class CentralSimulator(SimulatorHelper):
         self.num_completed_prerecs = 0
         # scale the simulator time
         self.delta_t = self.params.delta_t_scale * self.params.dt
+        self.robot.set_sim_delta_t(self.delta_t)
 
     def exists_running_agent(self):
         """Checks whether or not a generated agent is still running (acting)

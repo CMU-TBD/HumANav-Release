@@ -43,12 +43,17 @@ class RobotAgent(Agent):
     def simulation_init(self, sim_map, with_planner=False):
         super().simulation_init(sim_map, with_planner=with_planner)
         self.params.robot_params = create_robot_params()
+        # velocity bounds when teleporting to positions (if not using sys dynamics)
+        self.v_bounds = self.params.system_dynamics_params.v_bounds
+        self.w_bounds = self.params.system_dynamics_params.w_bounds
         self.repeat_freq = self.params.repeat_freq
         # simulation update init
         self.running = True
         self.last_command = None
         self.num_executed = 0  # keeps track of the latest command that is to be executed
         self.amnd_per_batch = 1
+        # default simulator delta_t, to be updated via set_sim_delta_t() later
+        self.sim_delta_t = 0.05
 
     # Getters for the robot class
 
@@ -64,6 +69,9 @@ class RobotAgent(Agent):
 
     def get_num_executed(self):
         return int(np.floor(len(self.joystick_inputs) / self.amnd_per_batch))
+
+    def set_sim_delta_t(self, sim_delta_t):
+        self.sim_delta_t = sim_delta_t
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
@@ -141,9 +149,21 @@ class RobotAgent(Agent):
                 break
             self.check_termination_conditions()
             joystick_input = self.joystick_inputs[self.num_executed][0]
-            assert(len(joystick_input) == 4)  # has x,y,theta + velocity
+            assert(len(joystick_input) == 4)  # has x,y,theta,velocity
             new_pos3 = joystick_input[:3]
             new_v = joystick_input[3]
+            old_pos3 = self.current_config.to_3D_numpy()
+            # ensure the new position is reachable within velocity bounds
+            dist_to_new = euclidean_dist2(old_pos3, new_pos3)
+            assert(self.sim_delta_t > 0)
+            if(abs(dist_to_new / self.sim_delta_t) > self.v_bounds[1]):
+                # create new position scaled off the invalid one
+                valid_theta = new_pos3[2]
+                max_vel = self.sim_delta_t * self.v_bounds[1]
+                valid_x = max_vel * np.cos(new_pos3[2]) + old_pos3[0]
+                valid_y = max_vel * np.sin(new_pos3[2]) + old_pos3[1]
+                new_pos3 = [valid_x, valid_y, valid_theta]
+            # move to the new position and update trajectory
             new_config = generate_config_from_pos_3(new_pos3, v=new_v)
             self.set_current_config(new_config)
             self.vehicle_trajectory.append_along_time_axis(

@@ -200,8 +200,6 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
                                                          csv_file=episode.prerec_data_filenames[i],
                                                          fps=episode.prerec_data_framerates[i]
                                                          )
-        # generate_prerecorded_humans(starting_prerec, num_prerecorded, p,
-        #                             simulator, center_offset=np.array([14.0, 2.0]))
         """
         Generate the autonomous human agents from the episode
         """
