@@ -19,7 +19,10 @@ from params.central_params import create_agent_params
 
 
 class Agent(AgentHelper):
+    color_indx = 0
+    possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']
     # TODO: clean up AgentHelper into a proper virtual class
+
     def __init__(self, start, goal, name=None, with_init=True):
         if name is None:
             self.name = generate_name(20)
@@ -35,8 +38,11 @@ class Agent(AgentHelper):
         if(with_init):
             self.init()
         # cosmetic items (for drawing the trajectories)
-        possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']  # not white or black
-        self.color = random.choice(possible_colors)
+        if Agent.color_indx < len(Agent.possible_colors) - 1:
+            Agent.color_indx = Agent.color_indx + 1
+        else:
+            Agent.color_indx = 0
+        self.color = Agent.possible_colors[Agent.color_indx]
         self.termination_cause = "Timeout"
 
     def init(self):
@@ -189,12 +195,10 @@ class Agent(AgentHelper):
                 self.end_acting = True
                 self.collision_point_k = self.vehicle_trajectory.k  # this instant
 
-    def check_collisions(self, world_state, include_agents=True, include_prerecs=True, include_robots=True):
+    def check_collisions(self, world_state, include_agents=True, include_robots=True):
         if world_state is not None:
             own_pos = self.get_current_config().to_3D_numpy()
-            if include_agents and self._collision_in_group(own_pos, world_state.get_gen_agents().values()):
-                return True
-            if include_prerecs and self._collision_in_group(own_pos, world_state.get_prerecs().values()):
+            if include_agents and self._collision_in_group(own_pos, world_state.get_pedestrians().values()):
                 return True
             if include_robots and self._collision_in_group(own_pos, world_state.get_robots().values()):
                 return True

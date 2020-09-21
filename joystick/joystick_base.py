@@ -81,18 +81,26 @@ class JoystickBase():
     def init_control_pipeline(self):
         raise NotImplementedError
 
-    def send_cmds(self, v_cmds: list, w_cmds: list):
+    def send_cmds(self, cmds, send_vel_cmds: bool = True):
+        assert(send_vel_cmds == self.joystick_params.use_system_dynamics)
+        if(send_vel_cmds):
+            # needs v, w
+            for command_grp in cmds:
+                if(len(command_grp) != 2):
+                    print("%sERROR: joystick expecting (v, w) for velocity commands. Got \"(%s)\"%s" % (
+                        color_red, list_print(command_grp), color_reset))
+                assert(len(command_grp) == 2)
+        else:
+            # needs x, y, th, v
+            for command_grp in cmds:
+                if(len(command_grp) != 4):
+                    print("%sERROR: joystick expecting (x, y, theta, v) for positional commands. Got \"(%s)\"%s" % (
+                        color_red, list_print(command_grp), color_reset))
+                assert(len(command_grp) == 4)
         json_dict = {}
-        json_dict["v_cmds"] = v_cmds
-        json_dict["w_cmds"] = w_cmds
-        cmds = json.dumps(json_dict, indent=1)
-        self.send_to_robot(cmds)
-
-    def send_posn(self, posn_cmds: list):
-        json_dict = {}
-        json_dict["pos_cmd"] = posn_cmds
-        posn = json.dumps(json_dict, indent=1)
-        self.send_to_robot(posn)
+        json_dict["j_input"] = cmds
+        serialized_cmds = json.dumps(json_dict, indent=1)
+        self.send_to_robot(serialized_cmds)
 
     def joystick_sense(self):
         raise NotImplementedError
@@ -218,7 +226,7 @@ class JoystickBase():
         name = current_world.get_episode_name()
         env = current_world.get_environment()
         # get all the agents in the scene except for the robot
-        agents = current_world.get_all_agents(include_robot=False)
+        agents = current_world.get_pedestrians()
         max_t = current_world.get_episode_max_time()
         # gather robot information
         robots = list(current_world.get_robots().values())

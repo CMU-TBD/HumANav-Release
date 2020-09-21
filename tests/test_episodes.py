@@ -92,7 +92,6 @@ def generate_auto_humans(starts, goals, simulator, environment, p, r):
     """
     num_gen_humans = min(len(starts), len(goals))
     print("Generated Auto Humans:", num_gen_humans)
-    traversible = environment["traversibles"][0]
     for i in range(num_gen_humans):
         start_config = generate_config_from_pos_3(starts[i])
         goal_config = generate_config_from_pos_3(goals[i])
@@ -103,13 +102,11 @@ def generate_auto_humans(starts, goals, simulator, environment, p, r):
             generate_appearance=p.render_3D
         )
 
-        # update renderer
+        # update renderer and get human traversible if it exists
         if p.render_3D:
             r.add_human(new_human_i)
-            environment["traversibles"] = \
-                np.array([traversible, r.get_human_traversible()])
-        else:
-            environment["traversibles"] = np.array([traversible])
+            environment["human_traversible"] = \
+                np.array(r.get_human_traversible())
 
         # Input human fields into simulator
         simulator.add_agent(new_human_i)
@@ -164,10 +161,8 @@ def test_episodes():
             environment["room_center"] = room_center
             # obstacle traversible / human traversible
             if p.render_3D:
-                environment["traversibles"] = np.array(
-                    [traversible, human_traversible])
-            else:
-                environment["traversibles"] = np.array([traversible])
+                environment["human_traversible"] = np.array(human_traversible)
+            environment["map_traversible"] = np.array(traversible)
         """
         Creating planner, simulator, and control pipelines for the framework
         of a human trajectory and pathfinding. 

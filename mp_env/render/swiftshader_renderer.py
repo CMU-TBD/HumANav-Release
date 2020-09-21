@@ -692,6 +692,7 @@ class SwiftshaderRenderer():
                 num = entity['num']
                 glDeleteBuffers(1, [vbo])
                 glDeleteTextures(1, [tbo])
+                break  # no need to search further
 
     def __del__(self):
         # self.clear_scene()

@@ -303,6 +303,10 @@ def color_print(color: str):
     return col_str
 
 
+def list_print(l):
+    return ', '.join(map(str, l))
+
+
 """ BEGIN configs functions """
 
 
@@ -381,23 +385,27 @@ def generate_random_pos_in_environment(environment: dict):
     - Note that the obstacle_traversible and human_traversible are both
     checked to generate a valid pos_3.
     - Note that the "environment" holds the map scale and all the
-    individual traversibles
+    individual traversibles if they exists
     - Note that the map_scale primarily refers to the traversible's level
     of precision, it is best to use the dx_m provided in examples.py
     """
     map_scale = float(environment["map_scale"])
     # Combine the occupancy information from the static map and the human
-    if len(environment["traversibles"]) > 1:
-        # in this case there exists a "human" traversible as well
-        global_traversible = np.empty(environment["traversibles"][0].shape)
+    if "human_traversible" in environment.keys():
+        # in this case there exists a "human" traversible as well, and we
+        # don't want to generate one human in the traversible of another
+        global_traversible = np.empty(environment["map_traversible"].shape)
         global_traversible.fill(True)
-        for t in environment["traversibles"]:
-            # add 0th and all others that match shape
-            if t.shape == environment["traversibles"][0].shape:
-                global_traversible = np.stack([global_traversible, t], axis=2)
-                global_traversible = np.all(global_traversible, axis=2)
+        map_t = environment["map_traversible"]
+        human_t = environment["human_traversible"]
+        # append the map traversible
+        global_traversible = np.stack([global_traversible, map_t], axis=2)
+        global_traversible = np.all(global_traversible, axis=2)
+        # stack the human traversible on top of the map one
+        global_traversible = np.stack([global_traversible, human_t], axis=2)
+        global_traversible = np.all(global_traversible, axis=2)
     else:
-        global_traversible = environment["traversibles"][0]
+        global_traversible = environment["map_traversible"]
 
     # Generating new position as human's position
     pos_3 = np.array([0, 0, 0])  # start far out of the traversible

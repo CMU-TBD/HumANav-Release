@@ -195,8 +195,8 @@ class Building():
                 n_samples_per_face=env.n_samples_per_face, human_xy_center_2=pos_3[:2])
 
             self.traversible = map.traversible
-            self.ind_human_traversibles[human.get_name(
-            )] = map._human_traversible
+            self.ind_human_traversibles[human.get_name()] = \
+                map._human_traversible
             self.human_traversible = self.compute_human_traversible()
             self.map = map
         self.human_ego_vertices = (human_ego_vertices)
@@ -205,8 +205,8 @@ class Building():
         new_human_traversible = np.ones_like(self.map._traversible * 1.)
         for ID, _ in list(self.people.items()):
             if(ID in self.ind_human_traversibles):
-                new_human_traversible = np.stack(
-                    [new_human_traversible, self.ind_human_traversibles[ID]], axis=2)
+                new_human_traversible = \
+                    np.stack([new_human_traversible, self.ind_human_traversibles[ID]], axis=2)
                 new_human_traversible = np.all(new_human_traversible, axis=2)
         return new_human_traversible
 
