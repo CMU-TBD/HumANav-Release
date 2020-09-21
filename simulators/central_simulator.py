@@ -91,7 +91,8 @@ class CentralSimulator(SimulatorHelper):
         self.num_completed_prerecs = 0
         # scale the simulator time
         self.delta_t = self.params.delta_t_scale * self.params.dt
-        self.robot.set_sim_delta_t(self.delta_t)
+        if(self.robot):
+            self.robot.set_sim_delta_t(self.delta_t)
 
     def exists_running_agent(self):
         """Checks whether or not a generated agent is still running (acting)
@@ -229,7 +230,7 @@ class CentralSimulator(SimulatorHelper):
         p = self.params.obstacle_map_params
         return p.obstacle_map(p, renderer,
                               res=self.environment["map_scale"] * 100,
-                              trav=self.environment["traversibles"][0])
+                              map_trav=self.environment["map_traversible"])
 
     def print_sim_progress(self, rendered_frames: int):
         """prints an inline simulation progress message based off agent planning termination
@@ -450,12 +451,12 @@ class CentralSimulator(SimulatorHelper):
         map_scale = environment["map_scale"]
         room_center = environment["room_center"]
         # Obstacles/building traversible
-        traversible = environment["traversibles"][0]
+        traversible = environment["map_traversible"]
         human_traversible = None
 
-        if len(environment["traversibles"]) > 1:
+        if human_traversible in environment.keys():
             assert(p.render_3D)
-            human_traversible = environment["traversibles"][1]
+            human_traversible = environment["human_traversible"]
         # Compute the real_world extent (in meters) of the traversible
         extent = [0., traversible.shape[1], 0., traversible.shape[0]]
         extent = np.array(extent) * map_scale

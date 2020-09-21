@@ -104,7 +104,7 @@ class JoystickWithPlanner(JoystickBase):
         env = self.current_ep.get_environment()
         return p.obstacle_map(p, renderer,
                               res=float(env["map_scale"]) * 100.,
-                              trav=np.array(env["traversibles"][0])
+                              trav=np.array(env["map_traversible"])
                               )
 
     def init_control_pipeline(self):

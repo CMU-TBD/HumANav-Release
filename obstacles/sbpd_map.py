@@ -7,7 +7,7 @@ from systems.dubins_car import DubinsCar
 class SBPDMap(ObstacleMap):
     name = 'SBPDMap'
 
-    def __init__(self, params, renderer=None, res=None, trav=None):
+    def __init__(self, params, renderer=None, res=None, map_trav=None):
         """
         Initialize a map for Stanford Building Parser Dataset (SBPD)
         """
@@ -18,7 +18,7 @@ class SBPDMap(ObstacleMap):
         else:
             self._r = renderer
         self._initialize_occupancy_grid_for_map(
-            resolution=res, traversible=trav)
+            resolution=res, traversible=map_trav)
         self._initialize_fmm_map()
 
     def get_map_size_2(self):
