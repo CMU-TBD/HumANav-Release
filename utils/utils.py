@@ -386,9 +386,9 @@ def generate_random_pos_in_environment(environment: dict):
     of precision, it is best to use the dx_m provided in examples.py
     """
     map_scale = float(environment["map_scale"])
-    # Combine the occupancy information from the static map
-    # and the human
+    # Combine the occupancy information from the static map and the human
     if len(environment["traversibles"]) > 1:
+        # in this case there exists a "human" traversible as well
         global_traversible = np.empty(environment["traversibles"][0].shape)
         global_traversible.fill(True)
         for t in environment["traversibles"]:
@@ -400,7 +400,7 @@ def generate_random_pos_in_environment(environment: dict):
         global_traversible = environment["traversibles"][0]
 
     # Generating new position as human's position
-    pos_3 = np.array([-1, -1, 0])  # start far out of the traversible
+    pos_3 = np.array([0, 0, 0])  # start far out of the traversible
 
     # continuously generate random positions near the center until one is valid
     while not within_traversible(pos_3, global_traversible, map_scale):
@@ -408,9 +408,6 @@ def generate_random_pos_in_environment(environment: dict):
         new_y = random.randint(0, global_traversible.shape[1])
         new_theta = 2 * np.pi * random.random()  # bound by (0, 2*pi)
         pos_3 = np.array([new_x, new_y, new_theta])
-
-    # Random theta from 0 to pi
-    pos_3[2] = random.random() * 2 * np.pi
 
     return pos_3
 

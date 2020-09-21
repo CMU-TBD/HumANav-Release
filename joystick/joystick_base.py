@@ -4,7 +4,7 @@ import os
 import numpy as np
 import random
 from utils.utils import *
-from params.central_params import create_robot_params, get_path_to_socnav, get_seed, create_system_dynamics_params
+from params.central_params import create_joystick_params, get_path_to_socnav, get_seed
 from simulators.sim_state import SimState
 from simulators.episode import Episode
 
@@ -15,8 +15,13 @@ random.seed(get_seed())
 
 class JoystickBase():
     def __init__(self):
-        self.joystick_params = create_robot_params()
-        self.system_dynamics_params = create_system_dynamics_params()
+        self.joystick_params = create_joystick_params()
+        if(self.joystick_params.use_system_dynamics):
+            from params.central_params import create_system_dynamics_params
+            self.system_dynamics_params = create_system_dynamics_params()
+            print("Joystick using system dynamics")
+        else:
+            print("Joystick NOT using system dynamics")
         # episode fields
         self.episode_names = []
         self.current_ep = None
@@ -82,6 +87,12 @@ class JoystickBase():
         json_dict["w_cmds"] = w_cmds
         cmds = json.dumps(json_dict, indent=1)
         self.send_to_robot(cmds)
+
+    def send_posn(self, posn_cmds: list):
+        json_dict = {}
+        json_dict["pos_cmd"] = posn_cmds
+        posn = json.dumps(json_dict, indent=1)
+        self.send_to_robot(posn)
 
     def joystick_sense(self):
         raise NotImplementedError

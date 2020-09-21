@@ -91,6 +91,7 @@ class CentralSimulator(SimulatorHelper):
         self.num_completed_prerecs = 0
         # scale the simulator time
         self.delta_t = self.params.delta_t_scale * self.params.dt
+        self.robot.set_sim_delta_t(self.delta_t)
 
     def exists_running_agent(self):
         """Checks whether or not a generated agent is still running (acting)
@@ -587,7 +588,7 @@ class CentralSimulator(SimulatorHelper):
         data += "Robot start: %s\n" % str(ep_params.robot_start_goal[0])
         data += "Robot goal: %s\n" % str(ep_params.robot_start_goal[1])
         data += "Time budget: %.3f\n" % ep_params.max_time
-        data += "Prerec start indx: %d\n" % ep_params.prerec_start_indx
+        # data += "Prerec start indx: %d\n" % ep_params.prerec_start_indx
         data += "Total agents in scene: %d\n" % self.total_agents
         data += "****************SIMULATOR INFO****************\n"
         data += "Simulator refresh rate (s): %0.3f\n" % self.delta_t
@@ -601,7 +602,7 @@ class CentralSimulator(SimulatorHelper):
             data += "****************ROBOT INFO****************\n"
             data += "Robot termination cause: %s\n" % self.robot.termination_cause
             data += "Num commands received from joystick: %d\n" % len(
-                self.robot.commands)
+                self.robot.joystick_inputs)
             data += "Num commands executed by robot: %d\n" % self.robot.num_executed
             rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
                                                self.robot.get_current_config().to_3D_numpy()

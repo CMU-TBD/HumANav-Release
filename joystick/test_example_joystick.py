@@ -1,8 +1,16 @@
-from joystick.example_joystick import JoystickWithPlanner as Joystick
-# from joystick.example_joystick import JoystickRandom as Joystick
+from params.central_params import create_joystick_params
 
 
 def test_joystick():
+    joystick_params = create_joystick_params()
+    from joystick.example_joystick import JoystickRandom
+    if(joystick_params.use_system_dynamics):
+        # uses the joystick that sends velocity commands instead of positional
+        from joystick.example_joystick import JoystickWithPlanner as Joystick
+    else:
+        # uses the joystick that sends positional commands instead of velocity
+        from joystick.example_joystick import JoystickWithPlannerPosns as Joystick
+    """start the joystick process"""
     J = Joystick()
     J.establish_sender_connection()
     J.establish_receiver_connection()

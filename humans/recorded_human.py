@@ -92,22 +92,33 @@ class PrerecordedHuman(Human):
     """ BEGIN GENERATION UTILS """
 
     @staticmethod
-    def gather_times(ped_i, start_time, fps: float):
+    def gather_times(ped_i, time_delay: float, start_frame: int, fps: float):
         times = []
-        for f in ped_i['frame']:
-            relative_time = (f - start_time) * (1. / fps)
+        for i, f in enumerate(ped_i['frame']):
+            relative_time = (f - start_frame) * (1. / fps)
+            if(i > 0):
+                # add the time delay to all the times except for the first
+                relative_time += time_delay
             times.append(relative_time)
         return times
 
     @staticmethod
     def gather_posn_data(ped_i, offset):
-        posn_data = []
+        xy_data = []
+        s = np.sin(offset[2])
+        c = np.cos(offset[2])
         # generate a list of lists of positions (only x)
         for x in ped_i['x']:
-            posn_data.append([x + offset[0]])
+            xy_data.append([x])
         # append y to the list of positions
         for j, y in enumerate(ped_i['y']):
-            posn_data[j].append(y + offset[1])
+            xy_data[j].append(y)
+        # apply the rotations to the x, y positions
+        posn_data = []
+        for (x, y) in xy_data:
+            x_rot = x * c - y * s
+            y_rot = x * s + y * c
+            posn_data.append([x_rot + offset[0], y_rot + offset[1]])
         # append vector angles for all the agents
         for j, pos_2 in enumerate(posn_data):
             if(j > 0):
@@ -144,10 +155,15 @@ class PrerecordedHuman(Human):
         return config_data
 
     @staticmethod
-    def generate_prerecorded_humans(start_idx: int, params, simulator,
-                                    offset=np.array([0, 0]),
+    def generate_prerecorded_humans(simulator, params, init_delay: int = 2,
+                                    # use -1 to just include all agents (within time bounds)
                                     max_agents: int = -1,
+                                    # default is ~1000 days (ie. no time bound)
                                     max_time: float = 10e7,
+                                    # positional offset for the posn data
+                                    offset=[0, 0, 0],
+                                    # which pedestrian to consider the 'first'
+                                    start_idx: int = 0,
                                     csv_file: str = 'world_coordinate_inter.csv',
                                     fps: float = 25):
         """"world_df" is a set of trajectories organized as a pandas dataframe.
@@ -181,7 +197,8 @@ class PrerecordedHuman(Human):
                 if(i == 0):
                     # update start frame to be representative of "first" pedestrian
                     start_frame = list(ped_i['frame'])[0]
-                t_data = PrerecordedHuman.gather_times(ped_i, start_frame, fps)
+                t_data = PrerecordedHuman.gather_times(
+                    ped_i, init_delay, start_frame, fps)
                 if(t_data[0] > max_time):
                     # assuming the data of the agents is sorted relatively based off time
                     break

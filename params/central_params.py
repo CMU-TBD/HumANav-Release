@@ -139,13 +139,20 @@ def create_robot_params():
                camera_elevation_degree=rob_p.getfloat(
                    'camera_elevation_degree'),
                delta_theta=rob_p.getfloat('delta_theta'))
-    # joystick params
-    p.sense_interval = max(1, rob_p.getint('sense_interval'))
-    p.track_sim_states = rob_p.getboolean('track_sim_states')
-    p.track_vel_accel = rob_p.getboolean('track_vel_accel')
-    p.write_pandas_log = rob_p.getboolean('write_pandas_log')
-    p.cmd_delay = rob_p.getfloat('cmd_delay')
-    p.generate_movie = rob_p.getboolean('generate_movie')
+    p.use_system_dynamics = create_joystick_params().use_system_dynamics
+    return p
+
+
+def create_joystick_params():
+    p = DotMap()
+    joystick_p = config['joystick_params']
+    p.port = config['robot_params'].getint('port')
+    p.use_system_dynamics = joystick_p.getboolean('use_system_dynamics')
+    p.track_vel_accel = joystick_p.getboolean('track_vel_accel')
+    p.print_data = joystick_p.getboolean('print_data')
+    p.track_sim_states = joystick_p.getboolean('track_sim_states')
+    p.write_pandas_log = joystick_p.getboolean('write_pandas_log')
+    p.generate_movie = joystick_p.getboolean('generate_movie')
     return p
 
 
@@ -154,7 +161,10 @@ def create_test_params(test: str):
     test_p = episodes_config[test]
     p.name = test
     p.map_name = test_p.get('map_name')
-    p.prerec_start_indx = test_p.getint('prerec_start_indx')
+    p.prerec_start_indxs = eval(test_p.get('prerec_start_indxs'))
+    p.prerec_data_filenames = eval(test_p.get('prerec_data_filenames'))
+    p.prerec_data_framerates = eval(test_p.get('prerec_data_framerates'))
+    p.prerec_posn_offsets = eval(test_p.get('prerec_posn_offset'))
     p.agents_start = eval(test_p.get('agents_start'))
     p.agents_end = eval(test_p.get('agents_end'))
     p.robot_start_goal = eval(test_p.get('robot_start_goal'))
@@ -273,7 +283,7 @@ def create_control_pipeline_params():
     p.dir = os.path.join(base_data_dir(), 'control_pipelines')
 
     # The time interval between updates, global to system dynamics
-    p.dt = create_system_dynamics_params().dt
+    p.dt = p.system_dynamics_params.dt
 
     # Spline parameters
     from trajectory.spline.spline_3rd_order import Spline3rdOrder

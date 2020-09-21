@@ -324,6 +324,21 @@ class Trajectory(object):
         self.k = horizon
         self.valid_horizons_n1 = np.clip(self.valid_horizons_n1, 0, horizon)
 
+    def take_along_time_axis(self, horizon):
+        """ Utility function for taking all elements in a trajectory past
+        the time axis."""
+        if self.k <= horizon:
+            return
+
+        self._position_nk2 = self._position_nk2[:, horizon:]
+        self._speed_nk1 = self._speed_nk1[:, horizon:]
+        self._acceleration_nk1 = self._acceleration_nk1[:, horizon:]
+        self._heading_nk1 = self._heading_nk1[:, horizon:]
+        self._angular_speed_nk1 = self._angular_speed_nk1[:, horizon:]
+        self._angular_acceleration_nk1 = self._angular_acceleration_nk1[:, horizon:]
+        self.k = self.k - horizon
+        self.valid_horizons_n1 = np.clip(self.valid_horizons_n1, horizon, -1)
+
     @classmethod
     def concat_along_time_axis(cls, trajectories):
         """ Concatenates a list of trajectory objects
