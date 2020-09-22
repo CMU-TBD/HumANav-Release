@@ -125,10 +125,11 @@ class RobotAgent(Agent):
               (color_red, vel, clipped, color_reset))
         return clipped
 
-    def _clip_posn(self, old_pos3, new_pos3):
+    def _clip_posn(self, old_pos3, new_pos3, epsilon: float = 0.01):
+        # margin of error for the velocity bounds
         assert(self.sim_delta_t > 0)
         dist_to_new = euclidean_dist2(old_pos3, new_pos3)
-        if(abs(dist_to_new / self.sim_delta_t) <= self.v_bounds[1]):
+        if(abs(dist_to_new / self.sim_delta_t) <= self.v_bounds[1] + epsilon):
             return new_pos3
         # create new position scaled off the invalid one
         valid_theta = new_pos3[2]
@@ -137,7 +138,7 @@ class RobotAgent(Agent):
         valid_y = max_vel * np.sin(new_pos3[2]) + old_pos3[1]
         reachable_pos3 = [valid_x, valid_y, valid_theta]
         print("%sposition [%s] is unreachable with v bounds, clipped to [%s]%s" %
-              (color_red, list_print(new_pos3), iter_print(reachable_pos3), color_reset))
+              (color_red, iter_print(new_pos3), iter_print(reachable_pos3), color_reset))
         return reachable_pos3
 
     def execute_velocity_cmds(self):

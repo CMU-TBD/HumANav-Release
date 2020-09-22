@@ -303,7 +303,7 @@ def color_print(color: str):
     return col_str
 
 
-def list_print(l):
+def iter_print(l):
     return ', '.join(map(str, l))
 
 
