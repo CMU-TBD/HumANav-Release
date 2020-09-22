@@ -88,14 +88,14 @@ class JoystickBase():
             for command_grp in cmds:
                 if(len(command_grp) != 2):
                     print("%sERROR: joystick expecting (v, w) for velocity commands. Got \"(%s)\"%s" % (
-                        color_red, list_print(command_grp), color_reset))
+                        color_red, iter_print(command_grp), color_reset))
                 assert(len(command_grp) == 2)
         else:
             # needs x, y, th, v
             for command_grp in cmds:
                 if(len(command_grp) != 4):
                     print("%sERROR: joystick expecting (x, y, theta, v) for positional commands. Got \"(%s)\"%s" % (
-                        color_red, list_print(command_grp), color_reset))
+                        color_red, iter_print(command_grp), color_reset))
                 assert(len(command_grp) == 4)
         json_dict = {}
         json_dict["j_input"] = cmds
