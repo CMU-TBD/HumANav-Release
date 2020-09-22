@@ -47,7 +47,7 @@ The script will inform you of all packages being installed and their status, the
 #### Patch the OpenGL Installation
 In the terminal run the following commands.
 ```
-1. /PATH/TO/tbd_SocNavBenchmark/socnav
+1. cd /PATH/TO/tbd_SocNavBenchmark/socnav
 2. bash patches/apply_patches_3.sh
 # NOTE: after running get_packages.sh you should see:
 # HUNK #3 succeeded at 401 (offset 1 line).
