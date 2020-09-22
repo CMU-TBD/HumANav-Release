@@ -51,7 +51,7 @@ wget http://download.blender.org/release/Blender2.78/blender-2.78a-linux-glibc21
 tar xjf blender-2.78a-linux-glibc211-x86_64.tar.bz2 
 
 # Export the BLENDER_PATH
-export BLENDER_PATH='/path/to/blender/blender-2.78-linux-glibc219-x86_64'
+export BLENDER_PATH='/path/to/blender/blender-2.78-linux-glibc211-x86_64'
 
 # Install pip
 wget https://bootstrap.pypa.io/get-pip.py
