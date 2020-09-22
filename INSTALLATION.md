@@ -56,7 +56,7 @@ In the terminal run the following commands.
 If the script fails there are instructions in [`apply_patches_3.sh`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/socnav/patches/apply_patches_3.sh) describing how to manually apply the patch. 
 
 ### Manually patch pyassimp bug
-Additionally, this version of `pyassimp` has a bug which can be fixed by following [this commit](https://github.com/assimp/assimp/commit/b6d3cbcb61f4cc4c42678d5f183351f95c97c8d4) and simply changing `isinstance(obj,int)` to `isinstance(obj, (int, str, bytes))` on line 98 of `anaconda3/envs/tbd_socnavbench/lib/python3.6/site-packages/pyassimp/core.py`. Then try running the patches again, or manually (not recommended).
+Additionally, this version of `pyassimp` has a bug which can be fixed by following [this commit](https://github.com/assimp/assimp/commit/b6d3cbcb61f4cc4c42678d5f183351f95c97c8d4) and simply changing `isinstance(obj,int)` to `isinstance(obj, (int, str, bytes))` around line 92 of `anaconda3/envs/tbd_socnavbench/lib/python3.6/site-packages/pyassimp/core.py`. Then try running the patches again, or manually (not recommended).
 
 
 ## Run the tbd_SocNavBenchmark tests
