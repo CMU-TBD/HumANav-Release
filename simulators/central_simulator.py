@@ -397,6 +397,7 @@ class CentralSimulator(SimulatorHelper):
                       vmin=-.5, vmax=1.5, origin='lower', alpha=alphas)
             # alphas = np.all(np.logical_not(human_traversible))
 
+        # TODO: make plot_quiver a simulator-wide param for pedestrians and robot
         # Plot the camera (robots)
         plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="bo",
                         collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True)

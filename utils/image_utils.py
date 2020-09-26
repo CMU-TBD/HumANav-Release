@@ -18,56 +18,74 @@ def plot_image_observation(ax, img_mkd, size=None):
         raise NotImplementedError
 
 
+def gather_metadata(ppm, a, plot_start_goal, start, goal):
+    collided = a.get_collided()
+    markersize = a.get_radius() * ppm
+    pos_3 = a.get_current_config().to_3D_numpy()
+    traj_col = a.get_color()
+    start_3 = None
+    goal_3 = None
+    if(plot_start_goal):
+        try:
+            # set the start and goal if it exists in the agent, else use the provided
+            start_3 = a.get_start_config().to_3D_numpy()
+            goal_3 = a.get_goal_config().to_3D_numpy()
+        except:
+            # use the start_3 and goal_3 provided
+            start_3 = start
+            goal_3 = goal
+        assert(start_3 is not None)
+        assert(goal_3 is not None)
+
+    return collided, markersize, pos_3, traj_col, start_3, goal_3
+
+
+def gather_colors_and_labels(base_color: str, label: str, has_collided: bool, indx: int):
+    color = base_color  # gen_agents are green and solid unless collided
+    start_col = 'yo'  # yellow circle
+    goal_col = 'go'   # green circle
+    if(has_collided):
+        color = 'ro'  # collided agents are drawn red
+    draw_label = None
+    sl = None
+    gl = None
+    if(indx == 0):
+        # Only add label on the first humans
+        draw_label = label
+        sl = label + " start"
+        gl = label + " goal"
+    return color, start_col, goal_col, draw_label, sl, gl
+
+
 def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_color='bo',
                     collided_color='ro', plot_trajectory=True, plot_quiver=False,
                     plot_start_goal=False, start_3=None, goal_3=None):
     # plot all the simulated prerecorded gen_agents
     for i, a in enumerate(agents_dict.values()):
-        collided = a.get_collided()
-        markersize = a.get_radius() * ppm
-        pos_3 = a.get_current_config().to_3D_numpy()
-        traj_col = a.get_color()
-        if(plot_start_goal):
-            try:
-                agent_start = a.get_start_config().to_3D_numpy()
-                agent_goal = a.get_goal_config().to_3D_numpy()
-                # set the start and goal if it exists in the agent, else use the provided
-                start_3 = agent_start
-                goal_3 = agent_goal
-            except:
-                # use the start_3 and goal_3 provided
-                pass
-        if(plot_start_goal):
-            assert(start_3 is not None)
-            assert(goal_3 is not None)
-        start_goal_markersize = markersize * 0.7
+
+        # gather important info regarding the values to plot
+        collided, ms, pos_3, traj_col, start_3, goal_3 = \
+            gather_metadata(ppm, a, plot_start_goal, start_3, goal_3)
+
+        # render agent's trajectory
         if(plot_trajectory and a.get_trajectory()):
             a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
-        color = normal_color  # gen_agents are green and solid unless collided
-        start_col = 'wo'  # white circle
-        goal_col = 'go'  # green circle
-        if(collided):
-            color = collided_color  # collided gen_agents are drawn red
-        if(i == 0):
-            # Only add label on the first humans
-            ax.plot(pos_3[0], pos_3[1], color,
-                    markersize=markersize, label=label)
-            if(plot_start_goal and (start_3 is not None and goal_3 is not None)):
-                ax.plot(start_3[0], start_3[1], start_col,
-                        markersize=start_goal_markersize, label=label + " start")
-                ax.plot(goal_3[0], goal_3[1], goal_col,
-                        markersize=start_goal_markersize, label=label + " goal")
-        else:
-            ax.plot(pos_3[0], pos_3[1], color,
-                    markersize=markersize)
-            if(plot_start_goal and (start_3 is not None and goal_3 is not None)):
-                ax.plot(start_3[0], start_3[1], start_col,
-                        markersize=start_goal_markersize)
-                ax.plot(goal_3[0], goal_3[1], goal_col,
-                        markersize=start_goal_markersize)
+
+        # gather colors/labels for the agent plot
+        color, start_col, goal_col, draw_label, sl, gl = \
+            gather_colors_and_labels(normal_color, label, collided, i)
+
+        # plot agent
+        ax.plot(pos_3[0], pos_3[1], color, markersize=ms, label=draw_label)
+
+        # plot start + goal
+        if(plot_start_goal):
+            ax.plot(start_3[0], start_3[1], start_col, markersize=ms, label=sl)
+            ax.plot(goal_3[0], goal_3[1], goal_col, markersize=ms, label=gl)
+
         # plot the surrounding "force field" around the agent
         ax.plot(pos_3[0], pos_3[1], color,
-                alpha=0.2, markersize=2. * markersize)
+                alpha=0.2, markersize=2. * ms)
         if(plot_quiver):
             # Agent heading
             ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
