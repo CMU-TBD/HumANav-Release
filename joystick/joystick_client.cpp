@@ -56,11 +56,8 @@ int conn_recv(const int &client_fd, string &data,
     {
         memset(buffer, 0, buffer_size); // clear buffer
         int chunk_amnt = recv(client_fd, buffer, sizeof(buffer), 0);
-        if (chunk_amnt < 0)
-        {
-            perror("recv() error");
+        if (chunk_amnt <= 0)
             break;
-        }
         response_len += chunk_amnt;
         // append newly received chunk to overall data
         data += string(buffer);
@@ -137,11 +134,13 @@ int init_recv_conn(struct sockaddr_in &robot_addr,
     int opt = 1;
     if ((robot_receiver_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
+        perror("socket() error");
         exit(EXIT_FAILURE);
     }
     if (setsockopt(robot_receiver_fd, SOL_SOCKET,
                    SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0)
     {
+        perror("setsockopt() error");
         exit(EXIT_FAILURE);
     }
     robot_addr.sin_family = AF_INET;
@@ -150,16 +149,19 @@ int init_recv_conn(struct sockaddr_in &robot_addr,
     if (bind(robot_receiver_fd, (struct sockaddr *)&robot_addr,
              sizeof(robot_addr)) < 0)
     {
+        perror("bind() error");
         exit(EXIT_FAILURE);
     }
     if (listen(robot_receiver_fd, 1) < 0)
     {
+        perror("listen() error");
         exit(EXIT_FAILURE);
     }
     int addr_len = sizeof(robot_receiver_fd);
     if ((client = accept(robot_receiver_fd, (struct sockaddr *)&robot_addr,
                          (socklen_t *)&addr_len)) < 0)
     {
+        perror("accept() error");
         exit(EXIT_FAILURE);
     }
     // success!
