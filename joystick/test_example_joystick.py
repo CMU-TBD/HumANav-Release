@@ -12,8 +12,8 @@ def test_joystick():
         from joystick.example_joystick import JoystickWithPlannerPosns as Joystick
     """start the joystick process"""
     J = Joystick()
-    J.establish_sender_connection()
-    J.establish_receiver_connection()
+    J.init_send_conn()
+    J.init_recv_conn()
     # first listen() for the episode names
     assert(J.get_all_episode_names())
     episodes = J.get_episodes()

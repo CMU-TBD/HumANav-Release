@@ -324,7 +324,7 @@ class JoystickBase():
         if self.joystick_params.print_data:
             print("sent", message)
 
-    def establish_sender_connection(self):
+    def init_send_conn(self):
         """Creates the initial handshake between the joystick and the robot to
         have a communication channel with the external robot process """
         self.robot_sender_socket = \
@@ -339,7 +339,7 @@ class JoystickBase():
               (color_green, color_reset))
         assert(self.robot_sender_socket)
 
-    def establish_receiver_connection(self):
+    def init_recv_conn(self):
         """Creates the initial handshake between the joystick and the meta test
         controller that sends information about the episodes as well as the 
         RobotAgent that sends it's SimStates serialized through json as a 'sense'"""
