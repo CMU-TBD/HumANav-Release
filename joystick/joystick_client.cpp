@@ -2,6 +2,9 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <unistd.h>
+#include <vector>
+#include <string>
 
 #define PORT_SEND 6000
 #define PORT_RECV 6001
@@ -10,18 +13,24 @@ using namespace std;
 
 void close_recv_socket();
 void send_to_robot();
-int establish_sender_connection();
-int establish_receiver_connection();
+int establish_sender_connection(int &robot_sender_fd);
+int establish_receiver_connection(int &robot_receiver_fd);
+void get_all_episode_names();
 
 int main(int argc, char *argv[])
 {
     cout << "Demo Joystick Interface in C++ (Random planner)" << endl;
     /// TODO: add suport for reading .ini param files from C++
     cout << "Initiated joystick at localhost:" << PORT_SEND << endl;
-    if (establish_sender_connection() < 0)
+    int robot_sender_fd = 0, robot_receiver_fd = 0;
+    if (establish_sender_connection(robot_sender_fd) < 0)
         return -1;
-    if (establish_receiver_connection() < 0)
+    if (establish_receiver_connection(robot_receiver_fd) < 0)
         return -1;
+    get_all_episode_names();
+    // once completed all episodes, close socket connections
+    close(robot_sender_fd);
+    close(robot_receiver_fd);
     return 0;
 }
 
@@ -34,13 +43,12 @@ void send_to_robot()
     //        so they can be used throughout the program
 }
 
-int establish_sender_connection()
+int establish_sender_connection(int &robot_sender_fd)
 {
     // "client" connection
-    int robot_sender_socket = 0;
     struct sockaddr_in robot_addr;
     // struct hostent *hent;
-    if ((robot_sender_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((robot_sender_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         cout << "\033[31m"
              << "Failed socket creation\n"
@@ -57,7 +65,7 @@ int establish_sender_connection()
         cout << "\nInvalid address/Address not supported \n";
         return -1;
     }
-    if (connect(robot_sender_socket, (struct sockaddr *)&robot_addr,
+    if (connect(robot_sender_fd, (struct sockaddr *)&robot_addr,
                 sizeof(robot_addr)) < 0)
     {
         cout << "\033[31m"
@@ -72,16 +80,16 @@ int establish_sender_connection()
          << "\033[00m" << endl;
     return 0;
 }
-int establish_receiver_connection()
+int establish_receiver_connection(int &robot_receiver_fd)
 {
-    int robot_receiver_socket, client;
+    int client;
     struct sockaddr_in robot_addr;
     int opt = 1;
-    if ((robot_receiver_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((robot_receiver_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         exit(EXIT_FAILURE);
     }
-    if (setsockopt(robot_receiver_socket, SOL_SOCKET,
+    if (setsockopt(robot_receiver_fd, SOL_SOCKET,
                    SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0)
     {
         exit(EXIT_FAILURE);
@@ -90,17 +98,17 @@ int establish_receiver_connection()
     robot_addr.sin_addr.s_addr = INADDR_ANY;
     robot_addr.sin_port = htons(PORT_RECV);
 
-    if (bind(robot_receiver_socket, (struct sockaddr *)&robot_addr,
+    if (bind(robot_receiver_fd, (struct sockaddr *)&robot_addr,
              sizeof(robot_addr)) < 0)
     {
         exit(EXIT_FAILURE);
     }
-    if (listen(robot_receiver_socket, 1) < 0)
+    if (listen(robot_receiver_fd, 1) < 0)
     {
         exit(EXIT_FAILURE);
     }
-    int addrlen = sizeof(robot_receiver_socket);
-    if ((client = accept(robot_receiver_socket, (struct sockaddr *)&robot_addr,
+    int addrlen = sizeof(robot_receiver_fd);
+    if ((client = accept(robot_receiver_fd, (struct sockaddr *)&robot_addr,
                          (socklen_t *)&addrlen)) < 0)
     {
         exit(EXIT_FAILURE);
