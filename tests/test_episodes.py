@@ -46,35 +46,6 @@ def create_params():
     return p
 
 
-def establish_joystick_handshake(p):
-    if(p.episode_params.without_robot):
-        # lite-mode episode does not include a robot or joystick
-        return
-    import socket
-    import json
-    import time
-    # sockets for communication
-    RobotAgent.host = socket.gethostname()
-    # port for recieving commands from the joystick
-    RobotAgent.port_recv = p.robot_params.port
-    # port for sending commands to the joystick (successor of port_recv)
-    RobotAgent.port_send = RobotAgent.port_recv + 1
-    RobotAgent.establish_joystick_receiver_connection()
-    time.sleep(0.01)
-    RobotAgent.establish_joystick_sender_connection()
-    # send the preliminary episodes that the socnav is going to run
-    json_dict = {}
-    json_dict['episodes'] = list(p.episode_params.tests.keys())
-    episodes = json.dumps(json_dict)
-    # Create a TCP/IP socket
-    send_episodes_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Connect the socket to the port where the server is listening
-    server_address = ((RobotAgent.host, RobotAgent.port_send))
-    send_episodes_socket.connect(server_address)
-    send_episodes_socket.sendall(bytes(episodes, "utf-8"))
-    send_episodes_socket.close()
-
-
 def generate_robot(robot_start_goal, simulator):
     assert(len(robot_start_goal) == 2)
     rob_start = generate_config_from_pos_3(robot_start_goal[0])
@@ -119,7 +90,7 @@ def test_episodes():
     """
     p = create_params()  # used to instantiate the camera and its parameters
 
-    establish_joystick_handshake(p)
+    RobotAgent.establish_joystick_handshake(p)
 
     for i, test in enumerate(list(p.episode_params.tests.keys())):
         episode = p.episode_params.tests[test]
