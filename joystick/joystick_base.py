@@ -31,7 +31,7 @@ class JoystickBase():
         # socket fields
         self.robot_sender_socket = None    # the socket for sending commands to the robot
         self.robot_receiver_socket = None  # world info receiver socket
-        self.host = socket.gethostname()   # using localhost for now
+        self.host = '127.0.0.1'   # using localhost for now
         self.port_send = self.joystick_params.port  # sender port
         self.port_recv = self.port_send + 1         # receiver port
         print("Initiated joystick at", self.host, self.port_send)

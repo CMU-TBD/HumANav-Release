@@ -1,9 +1,10 @@
 #include <iostream>
 #include <sys/socket.h>
+#include <netdb.h>
 #include <arpa/inet.h>
 
 #define PORT_SEND 6000
-#define PORT_RECV (PORT_SEND + 1)
+#define PORT_RECV 6001
 
 using namespace std;
 
@@ -16,7 +17,7 @@ int main(int argc, char *argv[])
 {
     cout << "Demo Joystick Interface in C++ (Random planner)" << endl;
     /// TODO: add suport for reading .ini param files from C++
-    cout << "Initiated joystick at localhost" << endl;
+    cout << "Initiated joystick at localhost:" << PORT_SEND << endl;
     if (establish_sender_connection() < 0)
         return -1;
     if (establish_receiver_connection() < 0)
@@ -38,6 +39,7 @@ int establish_sender_connection()
     // "client" connection
     int robot_sender_socket = 0;
     struct sockaddr_in robot_addr;
+    // struct hostent *hent;
     if ((robot_sender_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         cout << "\033[31m"
@@ -48,7 +50,13 @@ int establish_sender_connection()
     // bind the host and port to the socket
     robot_addr.sin_family = AF_INET;
     robot_addr.sin_port = htons(PORT_SEND);
-
+    // robot_addr.sin_addr.s_addr = "goosinator";
+    // Convert localhost from text to binary form
+    if (inet_pton(AF_INET, "127.0.0.1", &(robot_addr.sin_addr.s_addr)) <= 0)
+    {
+        cout << "\nInvalid address/Address not supported \n";
+        return -1;
+    }
     if (connect(robot_sender_socket, (struct sockaddr *)&robot_addr,
                 sizeof(robot_addr)) < 0)
     {
