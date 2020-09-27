@@ -46,38 +46,24 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-int conn_recv(const int &sock_fd, string &data,
+int conn_recv(const int &client_fd, string &data,
               const int buffer_size = 128)
 {
     int response_len = 0;
     char buffer[buffer_size];
-    fd_set read;
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = 0;
-    FD_ZERO(&read);
-    FD_SET(sock_fd, &read);
-    select(sock_fd + 1, &read, NULL, NULL, &tv);
-    if (FD_ISSET(sock_fd, &read))
+
+    while (true)
     {
-        while (true)
+        memset(buffer, 0, buffer_size); // clear buffer
+        int chunk_amnt = recv(client_fd, buffer, sizeof(buffer), 0);
+        if (chunk_amnt < 0)
         {
-            memset(buffer, 0, buffer_size); // clear buffer
-            int chunk_amnt = recv(sock_fd, buffer, sizeof(buffer), 0);
-            if (chunk_amnt < 0)
-            {
-                perror("recv() error");
-                break;
-            }
-            response_len += chunk_amnt;
-            // append newly received chunk to overall data
-            cout << buffer << endl;
-            data += string(buffer);
+            perror("recv() error");
+            break;
         }
-    }
-    else
-    {
-        cout << "Received nothing from server" << endl;
+        response_len += chunk_amnt;
+        // append newly received chunk to overall data
+        data += string(buffer);
     }
     return response_len;
 }
@@ -93,19 +79,18 @@ void send_to_robot() {}
 int listen_once(const struct sockaddr_in &addr,
                 const int &receiver_fd)
 {
-    int client;
+    int client_fd;
     int addr_len = sizeof(receiver_fd);
-    if ((client = accept(receiver_fd, (struct sockaddr *)&addr,
-                         (socklen_t *)&addr_len)) < 0)
+    if ((client_fd = accept(receiver_fd, (struct sockaddr *)&addr,
+                            (socklen_t *)&addr_len)) < 0)
     {
         cout << "\033[31m"
              << "Unable to accept connection\n"
              << "\033[00m" << endl;
         return -1;
     }
-    connect(receiver_fd, (struct sockaddr *)&addr, sizeof(addr));
     string data = ""; // incoming data
-    int response_len = conn_recv(receiver_fd, data);
+    int response_len = conn_recv(client_fd, data);
     cout << "Received " << response_len << " from server:" << endl
          << data << endl;
     return 0;
