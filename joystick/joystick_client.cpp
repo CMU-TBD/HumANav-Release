@@ -15,7 +15,8 @@ using namespace std;
 void get_all_episode_names(const struct sockaddr_in &addr,
                            const int &receiver_fd,
                            vector<string> &episodes);
-void send_to_robot();
+int send_to_robot(const struct sockaddr_in &robot_addr, const int &sender_fd,
+                  const string &message);
 int listen_once(const struct sockaddr_in &addr,
                 const int &receiver_fd);
 int init_send_conn(struct sockaddr_in &robot_addr,
@@ -42,7 +43,7 @@ int main(int argc, char *argv[])
     vector<string> episode_names;
     get_all_episode_names(receiver_addr, receiver_fd, episode_names);
     listen_once(receiver_addr, receiver_fd);
-    // send_to_robot(sender_addr, sender_fd, "ready");
+    send_to_robot(sender_addr, sender_fd, "ready");
     listen_once(receiver_addr, receiver_fd);
     // get_all_episode_names(&receiver_addr, &receiver_fd, &episode_names);
     // once completed all episodes, close socket connections
@@ -50,20 +51,22 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-int conn_recv(const int &client_fd, string &data,
+int conn_recv(const int &client_fd, vector<char> &data,
               const int buffer_size = 128)
 {
     int response_len = 0;
+    // does not need to be cleared as we only read what is set
     char buffer[buffer_size];
+    data.clear();
     while (true)
     {
-        memset(buffer, 0, buffer_size); // clear buffer
         int chunk_amnt = recv(client_fd, buffer, sizeof(buffer), 0);
         if (chunk_amnt <= 0)
             break;
         response_len += chunk_amnt;
         // append newly received chunk to overall data
-        data += string(buffer);
+        for (size_t i = 0; i < chunk_amnt; i++)
+            data.push_back(buffer[i]);
     }
     return response_len;
 }
@@ -81,7 +84,24 @@ void close_sockets(const int &sender_fd, const int &receiver_fd)
     close(sender_fd);
     close(receiver_fd);
 }
-void send_to_robot() {}
+int send_to_robot(const struct sockaddr_in &robot_addr, const int &sender_fd,
+                  const string &message)
+{
+    // may return -1 if it is already connected, in which case carry on
+    connect(sender_fd, (struct sockaddr *)&robot_addr, sizeof(robot_addr));
+    const void *buf = message.c_str();
+    const size_t buf_len = message.size();
+    if (send(sender_fd, buf, buf_len, 0) < 0)
+    {
+        cout << "\033[31m"
+             << "Unable to send message to server\n"
+             << "\033[00m" << endl;
+        return -1;
+    }
+    /// TODO: add verbose check
+    cout << "sent \"" << message << "\"" << endl;
+    return 0;
+}
 int listen_once(const struct sockaddr_in &addr,
                 const int &receiver_fd)
 {
@@ -95,10 +115,15 @@ int listen_once(const struct sockaddr_in &addr,
              << "\033[00m" << endl;
         return -1;
     }
-    string data = ""; // incoming data
+    vector<char> data;
     int response_len = conn_recv(client_fd, data);
-    cout << "Received " << response_len << " from server:" << endl
-         << data << endl;
+    for (auto &c : data)
+        cout << c;
+    // TODO: add versbosity check
+    cout << endl
+         << "\033[36m"
+         << "Received " << response_len << " from server:"
+         << "\033[00m" << endl;
     return 0;
 }
 int init_send_conn(struct sockaddr_in &robot_addr,
