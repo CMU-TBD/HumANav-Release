@@ -12,18 +12,19 @@
 
 using namespace std;
 
-void get_all_episode_names(const struct sockaddr_in &addr,
-                           const int &receiver_fd,
-                           vector<string> &episodes);
-int send_to_robot(struct sockaddr_in &robot_addr, int &sender_fd,
-                  const string &message);
-int listen_once(const struct sockaddr_in &addr,
-                const int &receiver_fd);
-int init_send_conn(struct sockaddr_in &robot_addr,
-                   int &sender_fd);
-int init_recv_conn(struct sockaddr_in &robot_addr,
-                   int &receiver_fd);
+void get_all_episode_names(vector<string> &episodes);
+void get_episode_metadata(vector<char> &metadata);
+int send_to_robot(const string &message);
+int listen_once(vector<char> &data);
+int init_send_conn(struct sockaddr_in &addr, int &sender_fd);
+int init_recv_conn(struct sockaddr_in &addr, int &receiver_fd);
 void close_sockets(const int &sender_fd, const int &receiver_fd);
+
+// global socket information to use throughout the program
+struct sockaddr_in sender_addr;
+int sender_fd = 0;
+struct sockaddr_in receiver_addr;
+int receiver_fd = 0;
 
 int main(int argc, char *argv[])
 {
@@ -31,37 +32,35 @@ int main(int argc, char *argv[])
     /// TODO: add suport for reading .ini param files from C++
     cout << "Initiated joystick at localhost:" << PORT_SEND << endl;
     // establish socket that sends data to robot
-    int sender_fd = 0;
-    struct sockaddr_in sender_addr;
     if (init_send_conn(sender_addr, sender_fd) < 0)
         return -1;
     // establish socket that receives data from robot
-    int receiver_fd = 0;
-    struct sockaddr_in receiver_addr;
     if (init_recv_conn(receiver_addr, receiver_fd) < 0)
         return -1;
     vector<string> episode_names;
-    get_all_episode_names(receiver_addr, receiver_fd, episode_names);
-    listen_once(receiver_addr, receiver_fd);
-    sleep(5);
-    send_to_robot(sender_addr, sender_fd, "ready\0");
-    listen_once(receiver_addr, receiver_fd);
-    // get_all_episode_names(&receiver_addr, &receiver_fd, &episode_names);
+    get_all_episode_names(episode_names);
+    vector<char> episode_metadata;
+    get_episode_metadata(episode_metadata);
+
+    for (auto &ep : episode_names)
+    {
+        // init control pipeline
+        // update_loop();
+    }
     // once completed all episodes, close socket connections
     close_sockets(sender_fd, receiver_fd);
     return 0;
 }
 
-int conn_recv(const int &client_fd, vector<char> &data,
-              const int buffer_size = 128)
+int conn_recv(const int conn_fd, vector<char> &data, const int buf_size = 128)
 {
     int response_len = 0;
     // does not need to be cleared as we only read what is set
-    char buffer[buffer_size];
+    char buffer[buf_size];
     data.clear();
     while (true)
     {
-        int chunk_amnt = recv(client_fd, buffer, sizeof(buffer), 0);
+        int chunk_amnt = recv(conn_fd, buffer, sizeof(buffer), 0);
         if (chunk_amnt <= 0)
             break;
         response_len += chunk_amnt;
@@ -72,30 +71,35 @@ int conn_recv(const int &client_fd, vector<char> &data,
     return response_len;
 }
 
-void get_all_episode_names(const struct sockaddr_in &addr,
-                           const int &receiver_fd,
-                           vector<string> &episodes)
+void get_all_episode_names(vector<string> &episodes)
 {
     int ep_len;
-    ep_len = listen_once(addr, receiver_fd);
+    vector<char> raw_data;
+    ep_len = listen_once(raw_data);
+    // parse the episode names from the raw data
+    // episodes = ...
 }
 
-void close_sockets(const int &sender_fd, const int &receiver_fd)
+void get_episode_metadata(vector<char> &metadata)
 {
-    close(sender_fd);
-    close(receiver_fd);
+    int ep_len;
+    vector<char> raw_data;
+    ep_len = listen_once(raw_data);
+    // parse the episode_names raw data from the connection
+    // update_knowledge_from_episode(raw_data)
+    // episodes = ...
+    send_to_robot("ready");
 }
-int send_to_robot(struct sockaddr_in &robot_addr, int &sender_fd,
-                  const string &message)
+
+void close_sockets(const int &send_fd, const int &recv_fd)
 {
-    // may return -1 if it is already connected, in which case carry on
-    // if (connect(sender_fd, (struct sockaddr *)&robot_addr,
-    //             sizeof(robot_addr)) < 0)
-    // {
-    //     perror("connect(): ");
-    //     return -1;
-    // }
-    init_send_conn(robot_addr, sender_fd);
+    close(send_fd);
+    close(recv_fd);
+}
+int send_to_robot(const string &message)
+{
+    // create the TCP/IP socket and connect to the server (robot)
+    init_send_conn(sender_addr, sender_fd);
     const void *buf = message.c_str();
     const size_t buf_len = message.size();
     int amnt_sent;
@@ -108,15 +112,15 @@ int send_to_robot(struct sockaddr_in &robot_addr, int &sender_fd,
     }
     close(sender_fd);
     /// TODO: add verbose check
-    cout << "sent " << amnt_sent << " bytes: \"" << message << "\"" << endl;
+    cout << "sent " << amnt_sent << " bytes: "
+         << "\"" << message << "\"" << endl;
     return 0;
 }
-int listen_once(const struct sockaddr_in &addr,
-                const int &receiver_fd)
+int listen_once(vector<char> &data)
 {
     int client_fd;
     int addr_len = sizeof(receiver_fd);
-    if ((client_fd = accept(receiver_fd, (struct sockaddr *)&addr,
+    if ((client_fd = accept(receiver_fd, (struct sockaddr *)&receiver_addr,
                             (socklen_t *)&addr_len)) < 0)
     {
         cout << "\033[31m"
@@ -124,7 +128,6 @@ int listen_once(const struct sockaddr_in &addr,
              << "\033[00m" << endl;
         return -1;
     }
-    vector<char> data;
     int response_len = conn_recv(client_fd, data);
     // TODO: add versbosity check
     for (auto &c : data)
