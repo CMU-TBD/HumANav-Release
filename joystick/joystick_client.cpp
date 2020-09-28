@@ -15,7 +15,7 @@ using namespace std;
 void get_all_episode_names(const struct sockaddr_in &addr,
                            const int &receiver_fd,
                            vector<string> &episodes);
-int send_to_robot(const struct sockaddr_in &robot_addr, const int &sender_fd,
+int send_to_robot(struct sockaddr_in &robot_addr, int &sender_fd,
                   const string &message);
 int listen_once(const struct sockaddr_in &addr,
                 const int &receiver_fd);
@@ -43,7 +43,8 @@ int main(int argc, char *argv[])
     vector<string> episode_names;
     get_all_episode_names(receiver_addr, receiver_fd, episode_names);
     listen_once(receiver_addr, receiver_fd);
-    send_to_robot(sender_addr, sender_fd, "ready");
+    sleep(5);
+    send_to_robot(sender_addr, sender_fd, "ready\0");
     listen_once(receiver_addr, receiver_fd);
     // get_all_episode_names(&receiver_addr, &receiver_fd, &episode_names);
     // once completed all episodes, close socket connections
@@ -84,22 +85,30 @@ void close_sockets(const int &sender_fd, const int &receiver_fd)
     close(sender_fd);
     close(receiver_fd);
 }
-int send_to_robot(const struct sockaddr_in &robot_addr, const int &sender_fd,
+int send_to_robot(struct sockaddr_in &robot_addr, int &sender_fd,
                   const string &message)
 {
     // may return -1 if it is already connected, in which case carry on
-    connect(sender_fd, (struct sockaddr *)&robot_addr, sizeof(robot_addr));
+    // if (connect(sender_fd, (struct sockaddr *)&robot_addr,
+    //             sizeof(robot_addr)) < 0)
+    // {
+    //     perror("connect(): ");
+    //     return -1;
+    // }
+    init_send_conn(robot_addr, sender_fd);
     const void *buf = message.c_str();
     const size_t buf_len = message.size();
-    if (send(sender_fd, buf, buf_len, 0) < 0)
+    int amnt_sent;
+    if ((amnt_sent = send(sender_fd, buf, buf_len, 0)) < 0)
     {
         cout << "\033[31m"
              << "Unable to send message to server\n"
              << "\033[00m" << endl;
         return -1;
     }
+    close(sender_fd);
     /// TODO: add verbose check
-    cout << "sent \"" << message << "\"" << endl;
+    cout << "sent " << amnt_sent << " bytes: \"" << message << "\"" << endl;
     return 0;
 }
 int listen_once(const struct sockaddr_in &addr,
@@ -117,12 +126,12 @@ int listen_once(const struct sockaddr_in &addr,
     }
     vector<char> data;
     int response_len = conn_recv(client_fd, data);
+    // TODO: add versbosity check
     for (auto &c : data)
         cout << c;
-    // TODO: add versbosity check
     cout << endl
          << "\033[36m"
-         << "Received " << response_len << " from server:"
+         << "Received " << response_len << " bytes from server^"
          << "\033[00m" << endl;
     return 0;
 }
