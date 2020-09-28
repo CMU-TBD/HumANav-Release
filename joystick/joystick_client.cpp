@@ -15,8 +15,7 @@ using namespace std;
 void get_all_episode_names(const struct sockaddr_in &addr,
                            const int &receiver_fd,
                            vector<string> &episodes);
-int send_to_robot(const struct sockaddr_in &robot_addr, const int &sender_fd,
-                  const string &message);
+void send_to_robot();
 int listen_once(const struct sockaddr_in &addr,
                 const int &receiver_fd);
 int init_send_conn(struct sockaddr_in &robot_addr,
@@ -82,23 +81,7 @@ void close_sockets(const int &sender_fd, const int &receiver_fd)
     close(sender_fd);
     close(receiver_fd);
 }
-int send_to_robot(const struct sockaddr_in &robot_addr, const int &sender_fd,
-                  const string &message)
-{
-    if (connect(sender_fd, (struct sockaddr *)&robot_addr, sizeof(robot_addr)) < 0)
-    {
-        cout << "\033[31m"
-             << "Unable to send to robot\n"
-             << "\033[00m" << endl;
-        return -1;
-    }
-    const void *buf = message.c_str();
-    const size_t buf_len = message.size();
-    send(sender_fd, buf, buf_len, 0);
-    /// TODO: add verbose check
-    cout << "sent " << message << endl;
-    return 0;
-}
+void send_to_robot() {}
 int listen_once(const struct sockaddr_in &addr,
                 const int &receiver_fd)
 {
