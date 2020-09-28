@@ -12,15 +12,18 @@
 
 using namespace std;
 
-void get_all_episode_names(vector<string> &episodes);
-void close_recv_socket();
-void send_to_robot();
+void get_all_episode_names(const struct sockaddr_in &addr,
+                           const int &receiver_fd,
+                           vector<string> &episodes);
+int send_to_robot(const struct sockaddr_in &robot_addr, const int &sender_fd,
+                  const string &message);
 int listen_once(const struct sockaddr_in &addr,
                 const int &receiver_fd);
 int init_send_conn(struct sockaddr_in &robot_addr,
                    int &sender_fd);
 int init_recv_conn(struct sockaddr_in &robot_addr,
                    int &receiver_fd);
+void close_sockets(const int &sender_fd, const int &receiver_fd);
 
 int main(int argc, char *argv[])
 {
@@ -37,12 +40,14 @@ int main(int argc, char *argv[])
     struct sockaddr_in receiver_addr;
     if (init_recv_conn(receiver_addr, receiver_fd) < 0)
         return -1;
+    vector<string> episode_names;
+    get_all_episode_names(receiver_addr, receiver_fd, episode_names);
     listen_once(receiver_addr, receiver_fd);
-    // vector<string> episode_names;
+    // send_to_robot(sender_addr, sender_fd, "ready");
+    listen_once(receiver_addr, receiver_fd);
     // get_all_episode_names(&receiver_addr, &receiver_fd, &episode_names);
     // once completed all episodes, close socket connections
-    close(sender_fd);
-    close(receiver_fd);
+    close_sockets(sender_fd, receiver_fd);
     return 0;
 }
 
@@ -51,7 +56,6 @@ int conn_recv(const int &client_fd, string &data,
 {
     int response_len = 0;
     char buffer[buffer_size];
-
     while (true)
     {
         memset(buffer, 0, buffer_size); // clear buffer
@@ -65,14 +69,36 @@ int conn_recv(const int &client_fd, string &data,
     return response_len;
 }
 
-void get_all_episode_names(struct sockaddr_in &addr,
+void get_all_episode_names(const struct sockaddr_in &addr,
                            const int &receiver_fd,
                            vector<string> &episodes)
 {
+    int ep_len;
+    ep_len = listen_once(addr, receiver_fd);
 }
 
-void close_recv_socket() {}
-void send_to_robot() {}
+void close_sockets(const int &sender_fd, const int &receiver_fd)
+{
+    close(sender_fd);
+    close(receiver_fd);
+}
+int send_to_robot(const struct sockaddr_in &robot_addr, const int &sender_fd,
+                  const string &message)
+{
+    if (connect(sender_fd, (struct sockaddr *)&robot_addr, sizeof(robot_addr)) < 0)
+    {
+        cout << "\033[31m"
+             << "Unable to send to robot\n"
+             << "\033[00m" << endl;
+        return -1;
+    }
+    const void *buf = message.c_str();
+    const size_t buf_len = message.size();
+    send(sender_fd, buf, buf_len, 0);
+    /// TODO: add verbose check
+    cout << "sent " << message << endl;
+    return 0;
+}
 int listen_once(const struct sockaddr_in &addr,
                 const int &receiver_fd)
 {

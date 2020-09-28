@@ -115,7 +115,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
                 from humans.human_appearance import HumanAppearance
                 HumanAppearance.dataset = surreal_data
                 human_traversible = np.empty(traversible.shape)
-                human_traversible.fill(True)  # initially all good
+                human_traversible.fill(1)  # initially all good
 
             # In order to print more readable arrays
             np.set_printoptions(precision=3)
@@ -136,7 +136,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             # obstacle traversible / human traversible
             if p.render_3D:
                 environment["human_traversible"] = np.array(human_traversible)
-            environment["map_traversible"] = np.array(traversible)
+            environment["map_traversible"] = 1. * np.array(traversible)
         """
         Creating planner, simulator, and control pipelines for the framework
         of a human trajectory and pathfinding. 
