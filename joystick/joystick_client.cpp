@@ -80,7 +80,11 @@ void joystick_plan(unordered_map<float, SimState> &hist)
 void send_cmd(const float v, const float w)
 {
     json message;
-    message["j_input"] = {v, w};
+    // Recall, commands are sent as list of lists where inner lists
+    // form the commands v & w, but the outer list contains these commands
+    // in case multiple should be sent across a single update (ie. when
+    // simulator dt and joystick dt don't match)
+    message["j_input"] = {{v, w}};
     send_to_robot(message.dump());
 }
 void joystick_act()
