@@ -21,3 +21,4 @@ tests/socnav/
 .idea*
 build/
 dist/
+joystick/joystick_cpp/json.hpp

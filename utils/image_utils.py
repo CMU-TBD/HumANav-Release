@@ -87,6 +87,7 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
         ax.plot(pos_3[0], pos_3[1], color,
                 alpha=0.2, markersize=2. * ms)
         if(plot_quiver):
+            # TODO: use scale_units: xy instead of inches, scale=1
             # Agent heading
             ax.quiver(pos_3[0], pos_3[1], np.cos(pos_3[2]), np.sin(pos_3[2]),
                       scale=150.0 / ppm, scale_units='inches')

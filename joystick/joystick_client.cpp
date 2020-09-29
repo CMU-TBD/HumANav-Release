@@ -1,14 +1,17 @@
 #include <iostream>
 #include <vector>
 #include <string>
-#include "joystick_cpp/sockets.h"
-#include "joystick_cpp/episode.h"
-#include "joystick_cpp/agents.h"
+// external json parser (https://github.com/nlohmann/json)
+#include "joystick_cpp/json.hpp"
+#include "joystick_cpp/sockets.hpp"
+#include "joystick_cpp/episode.hpp"
+#include "joystick_cpp/agents.hpp"
 
 using namespace std;
+using json = nlohmann::json; // for convenience
 
 void get_all_episode_names(vector<string> &episodes);
-void get_episode_metadata(vector<char> &metadata);
+void get_episode_metadata(vector<Episode> &metadata);
 
 int main(int argc, char *argv[])
 {
@@ -23,7 +26,7 @@ int main(int argc, char *argv[])
         return -1;
     vector<string> episode_names;
     get_all_episode_names(episode_names);
-    vector<char> episode_metadata;
+    vector<Episode> episode_metadata;
     get_episode_metadata(episode_metadata);
 
     for (auto &ep : episode_names)
@@ -43,9 +46,15 @@ void get_all_episode_names(vector<string> &episodes)
     ep_len = listen_once(raw_data);
     // parse the episode names from the raw data
     // episodes = ...
+    cout << "Received episodes: [";
+    for (auto &s : episodes)
+    {
+        cout << "\"" << s << "\" ";
+    }
+    cout << "]" << endl;
 }
 
-void get_episode_metadata(vector<char> &metadata)
+void get_episode_metadata(vector<Episode> &metadata)
 {
     int ep_len;
     vector<char> raw_data;
