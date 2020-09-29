@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <unordered_map>
 #include <string>
 // external json parser (https://github.com/nlohmann/json)
 #include "joystick_cpp/json.hpp"
@@ -11,7 +12,7 @@ using namespace std;
 using json = nlohmann::json; // for convenience
 
 void get_all_episode_names(vector<string> &episodes);
-void get_episode_metadata(vector<Episode> &metadata);
+void get_episode_metadata(Episode &ep);
 
 int main(int argc, char *argv[])
 {
@@ -26,11 +27,11 @@ int main(int argc, char *argv[])
         return -1;
     vector<string> episode_names;
     get_all_episode_names(episode_names);
-    vector<Episode> episode_metadata;
-    get_episode_metadata(episode_metadata);
-
+    // run the episode loop on individual episodes
     for (auto &ep : episode_names)
     {
+        Episode current_episode;
+        get_episode_metadata(current_episode);
         // init control pipeline
         // update_loop();
     }
@@ -45,22 +46,46 @@ void get_all_episode_names(vector<string> &episodes)
     vector<char> raw_data;
     ep_len = listen_once(raw_data);
     // parse the episode names from the raw data
-    // episodes = ...
+    json ep_data = json::parse(raw_data);
     cout << "Received episodes: [";
-    for (auto &s : episodes)
+    for (auto &s : ep_data["episodes"])
     {
-        cout << "\"" << s << "\" ";
+        cout << s;
+        episodes.push_back(s);
     }
     cout << "]" << endl;
 }
 
-void get_episode_metadata(vector<Episode> &metadata)
+void get_episode_metadata(Episode &ep)
 {
     int ep_len;
     vector<char> raw_data;
     ep_len = listen_once(raw_data);
     // parse the episode_names raw data from the connection
-    // update_knowledge_from_episode(raw_data)
+    json metadata = json::parse(raw_data);
+    // gather data from json
+    string title = metadata["episode_name"];
+    vector<vector<int>> map_trav = metadata["environment"]["map_traversible"];
+    vector<vector<int>> h_trav = metadata["environment"]["human_traversible"];
+    vector<float> room_center = metadata["environment"]["room_center"];
+    float dx_m = metadata["environment"]["map_scale"];
+    unordered_map<string, AgentState> agents =
+        AgentState::construct_from_dict(metadata["pedestrians"]);
+    float max_time = metadata["episode_max_time"];
+    float sim_t = metadata["sim_t"];
+    // NOTE there is an assumption that there is only one robot in the
+    // simulator at once, and its *name* is "robot_agent"
+    vector<float> r_start = metadata["robots"]["robot_agent"]["start_config"];
+    vector<float> r_goal = metadata["robots"]["robot_agent"]["goal_config"];
+
+    ep = Episode(title, map_trav, h_trav, room_center,
+                 dx_m, agents, max_time, r_start, r_goal);
     // episodes = ...
     send_to_robot("ready");
+}
+void send_cmd(const float in_x, const float in_y)
+{
+    json message;
+    message["j_input"] = {in_x, in_y};
+    send_to_robot(message.dump());
 }
