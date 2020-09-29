@@ -2,20 +2,27 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <cstdlib> // rand()
 // external json parser (https://github.com/nlohmann/json)
 #include "joystick_cpp/json.hpp"
 #include "joystick_cpp/sockets.hpp"
 #include "joystick_cpp/episode.hpp"
 #include "joystick_cpp/agents.hpp"
+#include "joystick_cpp/sim_state.hpp"
 
 using namespace std;
 using json = nlohmann::json; // for convenience
 
 void get_all_episode_names(vector<string> &episodes);
 void get_episode_metadata(Episode &ep);
+void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist);
+void joystick_plan(unordered_map<float, SimState> &hist);
+void joystick_act();
+void update_loop();
 
 int main(int argc, char *argv[])
 {
+    srand(1); // seed random number generator
     cout << "Demo Joystick Interface in C++ (Random planner)" << endl;
     /// TODO: add suport for reading .ini param files from C++
     cout << "Initiated joystick at localhost:" << PORT_SEND << endl;
@@ -32,7 +39,6 @@ int main(int argc, char *argv[])
     {
         Episode current_episode;
         get_episode_metadata(current_episode);
-        current_episode.print();
         // would-be init control pipeline
         update_loop();
     }
@@ -41,11 +47,57 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+void update_loop()
+{
+    unordered_map<float, SimState> sim_state_hist;
+    bool robot_on = true;
+    while (robot_on)
+    {
+        joystick_sense(robot_on, sim_state_hist);
+        joystick_plan(sim_state_hist);
+        joystick_act();
+    }
+}
+void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist)
+{
+    vector<char> raw_data;
+    listen_once(raw_data);
+    // process the raw_data into a sim_state
+    json sim_state_json = json::parse(raw_data);
+    SimState new_state = SimState::construct_from_json(sim_state_json);
+    // the new time from the simulator
+    float current_time = new_state.get_sim_t();
+    // update robot running status
+    robot_on = new_state.get_robot_status();
+    // add new sim_state to the history
+    hist.insert({current_time, new_state});
+}
+void joystick_plan(unordered_map<float, SimState> &hist)
+{
+    // This is left as an exercise to the reader
+    return;
+}
+void send_cmd(const float v, const float w)
+{
+    json message;
+    message["j_input"] = {v, w};
+    send_to_robot(message.dump());
+}
+void joystick_act()
+{
+    // Currently send random commands
+    const float max_v = 1.2;
+    const float max_w = 1.1;
+    const int p = 100; // 2 decimal places of precision
+    float rand_v = ((rand() % int(p * max_v)) / float(p));
+    float rand_w = ((rand() % int(p * max_w)) / float(p));
+    send_cmd(rand_v, rand_w);
+}
 void get_all_episode_names(vector<string> &episodes)
 {
-    int ep_len;
+    int data_len;
     vector<char> raw_data;
-    ep_len = listen_once(raw_data);
+    data_len = listen_once(raw_data);
     // parse the episode names from the raw data
     json ep_data = json::parse(raw_data);
     cout << "Received episodes: [";
@@ -87,10 +139,4 @@ void get_episode_metadata(Episode &ep)
                  dx_m, agents, max_time, r_start, r_goal);
     // episodes = ...
     send_to_robot("ready");
-}
-void send_cmd(const float in_x, const float in_y)
-{
-    json message;
-    message["j_input"] = {in_x, in_y};
-    send_to_robot(message.dump());
 }
