@@ -32,8 +32,9 @@ int main(int argc, char *argv[])
     {
         Episode current_episode;
         get_episode_metadata(current_episode);
-        // init control pipeline
-        // update_loop();
+        current_episode.print();
+        // would-be init control pipeline
+        update_loop();
     }
     // once completed all episodes, close socket connections
     close_sockets(sender_fd, receiver_fd);
@@ -65,18 +66,22 @@ void get_episode_metadata(Episode &ep)
     json metadata = json::parse(raw_data);
     // gather data from json
     string title = metadata["episode_name"];
-    vector<vector<int>> map_trav = metadata["environment"]["map_traversible"];
-    vector<vector<int>> h_trav = metadata["environment"]["human_traversible"];
-    vector<float> room_center = metadata["environment"]["room_center"];
-    float dx_m = metadata["environment"]["map_scale"];
+    auto &env = metadata["environment"];
+    vector<vector<int>> map_trav = env["map_traversible"];
+    vector<vector<int>> h_trav = {}; //  not being sent currently
+    vector<float> room_center = env["room_center"];
+    float dx_m = 0.05; // TODO: fix map_scale being string-json?
+    // float dx_m = env["map_scale"];
     unordered_map<string, AgentState> agents =
         AgentState::construct_from_dict(metadata["pedestrians"]);
     float max_time = metadata["episode_max_time"];
     float sim_t = metadata["sim_t"];
     // NOTE there is an assumption that there is only one robot in the
     // simulator at once, and its *name* is "robot_agent"
-    vector<float> r_start = metadata["robots"]["robot_agent"]["start_config"];
-    vector<float> r_goal = metadata["robots"]["robot_agent"]["goal_config"];
+    auto &robots = metadata["robots"];
+    auto &robot = robots["robot_agent"];
+    vector<float> r_start = robot["start_config"];
+    vector<float> r_goal = robot["goal_config"];
 
     ep = Episode(title, map_trav, h_trav, room_center,
                  dx_m, agents, max_time, r_start, r_goal);

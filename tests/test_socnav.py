@@ -131,7 +131,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             # which is a constant and list of traversibles respectively
 
             environment = {}
-            environment["map_scale"] = dx_m
+            environment["map_scale"] = float(dx_m)
             environment["room_center"] = room_center
             # obstacle traversible / human traversible
             if p.render_3D:
