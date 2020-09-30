@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     }
     cout << "\033[32m"
          << "Finished all episodes"
-         << "\033[00m";
+         << "\033[00m" << endl;
     // once completed all episodes, close socket connections
     close_sockets(sender_fd, receiver_fd);
     return 0;

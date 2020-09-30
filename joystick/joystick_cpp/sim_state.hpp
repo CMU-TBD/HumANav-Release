@@ -26,14 +26,14 @@ public:
     }
     static SimState construct_from_json(const json &json_data)
     {
-        // first and foremost, every python sim_state has this flag:
+        // first and foremost, every python sim_state has these variables:
         bool rob_on = json_data["robot_on"];
+        float sim_t = json_data["sim_t"];
         // however, some variables may or may not be included
         string term_cause = ""; // only included if the robot has terminated
         // the remaining variables are included if the robot is still running
         AgentState rob;
         unordered_map<string, AgentState> peds;
-        float sim_t = 0;
 
         // not used for the SimStates for now
         // auto &env = json_data["environment"];
@@ -41,7 +41,6 @@ public:
         {
             peds = AgentState::construct_from_dict(json_data["pedestrians"]);
             // time of capture
-            sim_t = json_data["sim_t"];
             auto &sim_robots = json_data["robots"];
             // currently only one robot exists (and its name is "robot_agent")
             auto &robot_json = sim_robots["robot_agent"];
