@@ -12,6 +12,7 @@
 
 #define PORT_SEND 6000
 #define PORT_RECV (PORT_SEND + 1)
+#define LOCALHOST "127.0.0.1"
 
 using namespace std;
 
@@ -26,6 +27,11 @@ struct sockaddr_in sender_addr;
 int sender_fd = 0;
 struct sockaddr_in receiver_addr;
 int receiver_fd = 0;
+
+// global params (TODO: read from .ini file)
+const bool verbose = false;
+// number of times the sockets were connected
+size_t num_connections = 0;
 
 int conn_recv(const int conn_fd, vector<char> &data, const int buf_size = 128)
 {
@@ -54,21 +60,20 @@ void close_sockets(const int &send_fd, const int &recv_fd)
 int send_to_robot(const string &message)
 {
     // create the TCP/IP socket and connect to the server (robot)
-    init_send_conn(sender_addr, sender_fd);
+    if (init_send_conn(sender_addr, sender_fd) < 0)
+        return -1;
     const void *buf = message.c_str();
     const size_t buf_len = message.size();
     int amnt_sent;
     if ((amnt_sent = send(sender_fd, buf, buf_len, 0)) < 0)
     {
-        cout << "\033[31m"
-             << "Unable to send message to server\n"
-             << "\033[00m" << endl;
+        perror("\nsend() error: ");
         return -1;
     }
     close(sender_fd);
-    /// TODO: add verbose check
-    cout << "sent " << amnt_sent << " bytes: "
-         << "\"" << message << "\"" << endl;
+    if (verbose)
+        cout << "sent " << amnt_sent << " bytes: "
+             << "\"" << message << "\"" << endl;
     return 0;
 }
 int listen_once(vector<char> &data)
@@ -84,12 +89,12 @@ int listen_once(vector<char> &data)
         return -1;
     }
     int response_len = conn_recv(client_fd, data);
+    close(client_fd);
     // TODO: add versbosity check
-    // for (auto &c : data)
-    //     cout << c;
-    cout << "\033[36m"
-         << "Received " << response_len << " bytes from server"
-         << "\033[00m" << endl;
+    if (verbose)
+        cout << "\033[36m"
+             << "Received " << response_len << " bytes from server"
+             << "\033[00m" << endl;
     return 0;
 }
 int init_send_conn(struct sockaddr_in &robot_addr,
@@ -98,16 +103,14 @@ int init_send_conn(struct sockaddr_in &robot_addr,
     // "client" connection
     if ((robot_sender_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        cout << "\033[31m"
-             << "Failed socket creation\n"
-             << "\033[00m" << endl;
+        perror("\nsocket() error: ");
         return -1;
     }
     // bind the host and port to the socket
     robot_addr.sin_family = AF_INET;
     robot_addr.sin_port = htons(PORT_SEND);
     // Convert localhost from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &robot_addr.sin_addr.s_addr) <= 0)
+    if (inet_pton(AF_INET, LOCALHOST, &robot_addr.sin_addr.s_addr) <= 0)
     {
         cout << "\nInvalid address/Address not supported \n";
         return -1;
@@ -122,9 +125,10 @@ int init_send_conn(struct sockaddr_in &robot_addr,
         return -1;
     }
     // success!
-    cout << "\033[32m"
-         << "Robot <-- Joystick (sender) connection established"
-         << "\033[00m" << endl;
+    if (verbose || num_connections < 1)
+        cout << "\033[32m"
+             << "Robot <-- Joystick (sender) connection established"
+             << "\033[00m" << endl;
     return 0;
 }
 int init_recv_conn(struct sockaddr_in &robot_addr,
@@ -165,9 +169,12 @@ int init_recv_conn(struct sockaddr_in &robot_addr,
         exit(EXIT_FAILURE);
     }
     // success!
-    cout << "\033[32m"
-         << "Robot --> Joystick (receiver)zconnection established"
-         << "\033[00m" << endl;
+    if (verbose || num_connections < 1)
+        cout << "\033[32m"
+             << "Robot --> Joystick (receiver) connection established"
+             << "\033[00m" << endl;
+    // update count of the number of times the sockets have been connected
+    num_connections++;
     // client should always be nonnegative integer
     return client;
 }

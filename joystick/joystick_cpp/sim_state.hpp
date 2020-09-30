@@ -8,44 +8,51 @@ class SimState
 {
 public:
     SimState(AgentState &r, bool rob_on, float sim_time,
-             unordered_map<string, AgentState> &peds)
+             unordered_map<string, AgentState> &peds, string &term_cause)
     {
         robot = r;
         robot_on = rob_on;
-        // running_episode = episode_name;
-        pedestrians = peds;
         simulator_time = sim_time;
-        // max_time_s = time_budget;
+        pedestrians = peds;
+        termination_cause = term_cause;
     }
     const AgentState get_robot() const { return robot; }
     const bool get_robot_status() const { return robot_on; }
     const float get_sim_t() const { return simulator_time; }
-    // const float get_max_sim_t() const { return max_time_s; }
-    // const string get_episode_title() const { return running_episode; }
+    const string get_termination_cause() const { return termination_cause; }
     const unordered_map<string, AgentState> get_pedestrians() const
     {
         return pedestrians;
     }
     static SimState construct_from_json(const json &json_data)
     {
-        // not used for the SimStates for now
-        auto &env = json_data["environment"];
-        unordered_map<string, AgentState> peds =
-            AgentState::construct_from_dict(json_data["pedestrians"]);
-        // time budget for this episode
-        float t_budget = 20; //json_data["episode_max_time"];
-        // time of capture
-        float t = json_data["sim_t"];
+        // first and foremost, every python sim_state has this flag:
         bool rob_on = json_data["robot_on"];
-        // string ep_name = json_data["episode_name"];
-        // NOTE there is an assumption that there is only one robot in
-        // the simulator at once, and its *name* is "robot_agent"
-        auto &sim_robots = json_data["robots"];
-        // currently only one robot is supported
-        auto &robot_json = sim_robots["robot_agent"];
-        AgentState rob = AgentState::construct_from_json(robot_json);
+        // however, some variables may or may not be included
+        string term_cause = ""; // only included if the robot has terminated
+        // the remaining variables are included if the robot is still running
+        AgentState rob;
+        unordered_map<string, AgentState> peds;
+        float sim_t = 0;
+
+        // not used for the SimStates for now
+        // auto &env = json_data["environment"];
+        if (rob_on)
+        {
+            peds = AgentState::construct_from_dict(json_data["pedestrians"]);
+            // time of capture
+            sim_t = json_data["sim_t"];
+            auto &sim_robots = json_data["robots"];
+            // currently only one robot exists (and its name is "robot_agent")
+            auto &robot_json = sim_robots["robot_agent"];
+            rob = AgentState::construct_from_json(robot_json);
+        }
+        else
+        {
+            term_cause = json_data["termination_cause"];
+        }
         // construct the new SimState and return it
-        return SimState(rob, rob_on, t, peds);
+        return SimState(rob, rob_on, sim_t, peds, term_cause);
     }
 
 private:
@@ -53,8 +60,7 @@ private:
     bool robot_on;
     float simulator_time;
     unordered_map<string, AgentState> pedestrians;
-    string running_episode;
-    // float max_time_s;
+    string termination_cause;
 };
 
 #endif

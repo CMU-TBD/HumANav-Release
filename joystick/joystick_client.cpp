@@ -14,11 +14,14 @@ using namespace std;
 using json = nlohmann::json; // for convenience
 
 void get_all_episode_names(vector<string> &episodes);
-void get_episode_metadata(Episode &ep);
-void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist);
-void joystick_plan(unordered_map<float, SimState> &hist);
-void joystick_act();
-void update_loop();
+void get_episode_metadata(const string &title, Episode &ep);
+void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist,
+                    float &sim_time, const float max_time);
+void joystick_plan(const bool robot_on, const float sim_t,
+                   unordered_map<float, SimState> &hist);
+void joystick_act(const bool robot_on, const float sim_t,
+                  unordered_map<float, SimState> &hist);
+void update_loop(Episode &ep);
 
 int main(int argc, char *argv[])
 {
@@ -35,46 +38,69 @@ int main(int argc, char *argv[])
     vector<string> episode_names;
     get_all_episode_names(episode_names);
     // run the episode loop on individual episodes
-    for (auto &ep : episode_names)
+    for (auto &title : episode_names)
     {
         Episode current_episode;
-        get_episode_metadata(current_episode);
+        get_episode_metadata(title, current_episode);
         // would-be init control pipeline
-        update_loop();
+        update_loop(current_episode);
     }
+    cout << "\033[32m"
+         << "Finished all episodes"
+         << "\033[00m";
     // once completed all episodes, close socket connections
     close_sockets(sender_fd, receiver_fd);
     return 0;
 }
 
-void update_loop()
+void update_loop(Episode &ep)
 {
     unordered_map<float, SimState> sim_state_hist;
     bool robot_on = true;
+    float sim_t = 0;
+    const float max_t = ep.get_time_budget();
+    cout << "\033[35m"
+         << "Starting episode: " << ep.get_title() << "\033[00m" << endl;
     while (robot_on)
     {
-        joystick_sense(robot_on, sim_state_hist);
-        joystick_plan(sim_state_hist);
-        joystick_act();
+        joystick_sense(robot_on, sim_state_hist, sim_t, max_t);
+        joystick_plan(robot_on, sim_t, sim_state_hist);
+        joystick_act(robot_on, sim_t, sim_state_hist);
     }
+    cout << "\n\033[32m"
+         << "Finished episode: " << ep.get_title() << "\033[00m" << endl;
 }
 
-void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist)
+void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist,
+                    float &current_time, const float max_time)
 {
-    send_to_robot("sense"); // trigger the sense call
     vector<char> raw_data;
-    listen_once(raw_data);
-    // process the raw_data into a sim_state
-    json sim_state_json = json::parse(raw_data);
-    SimState new_state = SimState::construct_from_json(sim_state_json);
-    // the new time from the simulator
-    float current_time = new_state.get_sim_t();
-    // update robot running status
-    robot_on = new_state.get_robot_status();
-    // add new sim_state to the history
-    hist.insert({current_time, new_state});
+    // send keyword (trigger sense action) and await response
+    if (send_to_robot("sense") >= 0 && listen_once(raw_data) >= 0)
+    {
+        // process the raw_data into a sim_state
+        json sim_state_json = json::parse(raw_data);
+        SimState new_state = SimState::construct_from_json(sim_state_json);
+        // the new time from the simulator
+        current_time = new_state.get_sim_t();
+        // update robot running status
+        robot_on = new_state.get_robot_status();
+        // add print output:
+        cout << "\033[36m"
+             << "Updated state of the world for time = " << current_time
+             << " out of " << max_time << "\r\033[00m";
+        // add new sim_state to the history
+        hist.insert({current_time, new_state});
+    }
+    else
+    {
+        // connection failure, power off the robot
+        robot_on = false;
+        return;
+    }
 }
-void joystick_plan(unordered_map<float, SimState> &hist)
+void joystick_plan(const bool robot_on, const float sim_t,
+                   unordered_map<float, SimState> &hist)
 {
     // This is left as an exercise to the reader
     return;
@@ -89,15 +115,32 @@ void send_cmd(const float v, const float w)
     message["j_input"] = {{v, w}};
     send_to_robot(message.dump());
 }
-void joystick_act()
+void joystick_act(const bool robot_on, const float sim_t,
+                  unordered_map<float, SimState> &hist)
 {
-    // Currently send random commands
-    const float max_v = 1.2;
-    const float max_w = 1.1;
-    const int p = 100; // 2 decimal places of precision
-    float rand_v = ((rand() % int(p * max_v)) / float(p));
-    float rand_w = ((rand() % int(p * max_w)) / float(p));
-    send_cmd(rand_v, rand_w);
+    string termination_cause;
+    if (hist.find(sim_t) != hist.end())
+    {
+        SimState *sim_state = &hist.at(sim_t); // pointer (not deepcopy)
+        termination_cause = sim_state->get_termination_cause();
+    }
+    else
+        termination_cause = "Disconnection";
+    if (robot_on)
+    {
+        // Currently send random commands
+        const float max_v = 1.2;
+        const float max_w = 1.1;
+        const int p = 100; // 2 decimal places of precision
+        float rand_v = ((rand() % int(p * max_v)) / float(p));
+        float rand_w = ((rand() % int(p * max_w)) / float(p));
+        send_cmd(rand_v, rand_w);
+    }
+    else
+    {
+        cout << "\nPowering off joystick, robot terminated with: "
+             << termination_cause << endl;
+    }
 }
 void get_all_episode_names(vector<string> &episodes)
 {
@@ -115,35 +158,17 @@ void get_all_episode_names(vector<string> &episodes)
     cout << "]" << endl;
 }
 
-void get_episode_metadata(Episode &ep)
+void get_episode_metadata(const string &ep_name, Episode &ep)
 {
+    cout << "Waiting for episode: " << ep_name << endl;
     int ep_len;
     vector<char> raw_data;
     ep_len = listen_once(raw_data);
     // parse the episode_names raw data from the connection
     json metadata = json::parse(raw_data);
     // TODO: move to static Episode class
-    // gather data from json
-    string title = metadata["episode_name"];
-    auto &env = metadata["environment"];
-    vector<vector<int>> map_trav = env["map_traversible"];
-    vector<vector<int>> h_trav = {}; //  not being sent currently
-    vector<float> room_center = env["room_center"];
-    float dx_m = 0.05; // TODO: fix map_scale being string-json?
-    // float dx_m = env["map_scale"];
-    unordered_map<string, AgentState> agents =
-        AgentState::construct_from_dict(metadata["pedestrians"]);
-    float max_time = metadata["episode_max_time"];
-    float sim_t = metadata["sim_t"];
-    // NOTE there is an assumption that there is only one robot in the
-    // simulator at once, and its *name* is "robot_agent"
-    auto &robots = metadata["robots"];
-    auto &robot = robots["robot_agent"];
-    vector<float> r_start = robot["start_config"];
-    vector<float> r_goal = robot["goal_config"];
-
-    ep = Episode(title, map_trav, h_trav, room_center,
-                 dx_m, agents, max_time, r_start, r_goal);
-    // episodes = ...
+    ep = Episode::construct_from_json(metadata);
+    // notify the robot that all the metadata has been obtained
+    // to begin the simualtion
     send_to_robot("ready");
 }
