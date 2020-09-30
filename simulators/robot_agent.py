@@ -200,10 +200,6 @@ class RobotAgent(Agent):
 
     def update(self, iteration):
         if self.running:
-            # only execute the most recent commands
-            self.check_termination_conditions()
-            if self.num_executed < len(self.joystick_inputs):
-                self.execute()
             # block joystick until recieves next command or finish sending world
             while (self.running and (self.joystick_requests_world or iteration >= self.get_num_executed())):
                 if(self.joystick_requests_world):
@@ -211,6 +207,10 @@ class RobotAgent(Agent):
                     self.send_sim_state()
                     break
                 time.sleep(0.001)
+            # only execute the most recent commands
+            self.check_termination_conditions()
+            if self.num_executed < len(self.joystick_inputs):
+                self.execute()
         else:
             self.power_off()
 
