@@ -23,26 +23,24 @@ class JoystickRandom(JoystickBase):
 
     def random_inputs(self, freq: int):
         if(self.joystick_params.use_system_dynamics):
-            v_cmds = []
-            w_cmds = []
+            velocity_cmds = []
             for _ in range(freq):
                 # add a random linear velocity command to send
-                v_cmds.append(self.random_cmd(
-                    self.system_dynamics_params.v_bounds))
+                v = self.random_cmd(self.system_dynamics_params.v_bounds)
                 # also add a random angular velocity command
-                w_cmds.append(self.random_cmd(
-                    self.system_dynamics_params.w_bounds))
+                w = self.random_cmd(self.system_dynamics_params.w_bounds)
+                velocity_cmds.append((v, w))
             # send the data in lists based off the simulator/joystick refresh rate
-            self.send_cmds(v_cmds, w_cmds)
+            self.send_cmds(velocity_cmds, send_vel_cmds=True)
         else:
-            new_posn = []
+            new_posns = []
             for _ in range(freq):
                 new_x = randint(2, 20)
                 new_y = randint(2, 10)
                 theta = randint(0, 314) / 50.
                 vel = 0
-                new_posn.append((new_x, new_y, theta, vel))
-            self.send_posn(new_posn)
+                new_posns.append((new_x, new_y, theta, vel))
+            self.send_cmds(new_posns, send_vel_cmds=False)
 
     def joystick_sense(self):
         # ping's the robot to request a sim state
@@ -126,8 +124,8 @@ class JoystickWithPlanner(JoystickBase):
         # Initialize system dynamics and planner fields
         self.planner = Agent._init_planner(self, params=self.agent_params)
         self.vehicle_data = self.planner.empty_data_dict()
-        self.system_dynamics = \
-            Agent._init_system_dynamics(self, params=self.agent_params)
+        self.system_dynamics = Agent._init_system_dynamics(
+            self, params=self.agent_params)
         # init robot current config from the starting position
         self.robot_current = self.current_ep.get_robot_start().copy()
         # init a list of commands that will be sent to the robot
@@ -151,10 +149,10 @@ class JoystickWithPlanner(JoystickBase):
         self.robot_current = robot.get_current_config().to_3D_numpy()
 
         # Updating robot speeds (linear and angular) based off simulator data
-        self.robot_v = \
-            euclidean_dist2(self.robot_current, robot_prev) / self.sim_delta_t
-        self.robot_w = \
-            (self.robot_current[2] - robot_prev[2]) / self.sim_delta_t
+        self.robot_v = euclidean_dist2(
+            self.robot_current, robot_prev) / self.sim_delta_t
+        self.robot_w = (
+            self.robot_current[2] - robot_prev[2]) / self.sim_delta_t
 
     def joystick_plan(self):
         """ Runs the planner for one step from config to generate a
@@ -166,10 +164,9 @@ class JoystickWithPlanner(JoystickBase):
                                                   dt=self.agent_params.dt,
                                                   v=self.robot_v,
                                                   w=self.robot_w)
-        self.planner_data = \
-            self.planner.optimize(robot_config,
-                                  self.goal_config,
-                                  sim_state_hist=self.sim_states)
+        self.planner_data = self.planner.optimize(robot_config,
+                                                  self.goal_config,
+                                                  sim_state_hist=self.sim_states)
 
         # TODO: make sure the planning control horizon is greater than the
         # simulator_joystick_update_ratio else it will not plan far enough
@@ -212,8 +209,8 @@ class JoystickWithPlanner(JoystickBase):
         # TODO: do I need the listener thing?
         self.robot_receiver_socket.listen(1)  # init listener thread
         self.joystick_on = True
-        self.simulator_joystick_update_ratio = \
-            int(np.floor(self.sim_delta_t / self.agent_params.dt))
+        self.simulator_joystick_update_ratio = int(
+            np.floor(self.sim_delta_t / self.agent_params.dt))
         while(self.joystick_on):
             # gather information about the world state based off the simulator
             self.joystick_sense()
@@ -252,10 +249,9 @@ class JoystickWithPlannerPosns(JoystickWithPlanner):
             [x, y, th] = self.robot_current
             v = self.robot_v
         robot_config = generate_config_from_pos_3(pos_3=(x, y, th), v=v)
-        self.planner_data = \
-            self.planner.optimize(robot_config,
-                                  self.goal_config,
-                                  sim_state_hist=self.sim_states)
+        self.planner_data = self.planner.optimize(robot_config,
+                                                  self.goal_config,
+                                                  sim_state_hist=self.sim_states)
 
         # TODO: make sure the planning control horizon is greater than the
         # simulator_joystick_update_ratio else it will not plan far enough
@@ -269,8 +265,7 @@ class JoystickWithPlannerPosns(JoystickWithPlanner):
         if(self.joystick_on):
             num_cmds_per_step = self.simulator_joystick_update_ratio
             # runs through the entire planned horizon just with a cmds_step of the above
-            num_steps = \
-                int(np.floor(self.commands.k / num_cmds_per_step))
+            num_steps = int(np.floor(self.commands.k / num_cmds_per_step))
             for j in range(num_steps):
                 xytv_cmds = []
                 for i in range(num_cmds_per_step):
