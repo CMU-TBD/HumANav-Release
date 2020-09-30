@@ -209,6 +209,7 @@ class RobotAgent(Agent):
                 if(self.joystick_requests_world):
                     # ping the joystick with the current sim_state
                     self.send_sim_state()
+                    break
                 time.sleep(0.001)
         else:
             self.power_off()

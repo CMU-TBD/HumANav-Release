@@ -15,8 +15,8 @@ using json = nlohmann::json; // for convenience
 
 void get_all_episode_names(vector<string> &episodes);
 void get_episode_metadata(const string &title, Episode &ep);
-void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist,
-                    float &sim_time, const float max_time);
+void joystick_sense(bool &robot_on, float &sim_time,
+                    unordered_map<float, SimState> &hist, const float max_time);
 void joystick_plan(const bool robot_on, const float sim_t,
                    unordered_map<float, SimState> &hist);
 void joystick_act(const bool robot_on, const float sim_t,
@@ -63,16 +63,19 @@ void update_loop(Episode &ep)
          << "Starting episode: " << ep.get_title() << "\033[00m" << endl;
     while (robot_on)
     {
-        joystick_sense(robot_on, sim_state_hist, sim_t, max_t);
+        // gather information about the world state based off the simulator
+        joystick_sense(robot_on, sim_t, sim_state_hist, max_t);
+        // create a plan for the next steps of the trajectory
         joystick_plan(robot_on, sim_t, sim_state_hist);
+        // send commands to the robot to execute
         joystick_act(robot_on, sim_t, sim_state_hist);
     }
     cout << "\n\033[32m"
          << "Finished episode: " << ep.get_title() << "\033[00m" << endl;
 }
 
-void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist,
-                    float &current_time, const float max_time)
+void joystick_sense(bool &robot_on, float &current_time,
+                    unordered_map<float, SimState> &hist, const float max_time)
 {
     vector<char> raw_data;
     // send keyword (trigger sense action) and await response
@@ -87,8 +90,9 @@ void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist,
         robot_on = new_state.get_robot_status();
         // add print output:
         cout << "\033[36m"
+             << "\33[2K" // clear old line
              << "Updated state of the world for time = " << current_time
-             << " out of " << max_time << "\r\033[00m";
+             << " out of " << max_time << "\033[00m\r" << flush;
         // add new sim_state to the history
         hist.insert({current_time, new_state});
     }
