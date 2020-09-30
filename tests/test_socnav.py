@@ -60,35 +60,6 @@ def create_params():
     return p
 
 
-def establish_joystick_handshake(p):
-    if(p.episode_params.without_robot):
-        # lite-mode episode does not include a robot or joystick
-        return
-    import socket
-    import json
-    import time
-    # sockets for communication
-    RobotAgent.host = socket.gethostname()
-    # port for recieving commands from the joystick
-    RobotAgent.port_recv = p.robot_params.port
-    # port for sending commands to the joystick (successor of port_recv)
-    RobotAgent.port_send = RobotAgent.port_recv + 1
-    RobotAgent.establish_joystick_receiver_connection()
-    time.sleep(0.01)
-    RobotAgent.establish_joystick_sender_connection()
-    # send the preliminary episodes that the socnav is going to run
-    json_dict = {}
-    json_dict['episodes'] = list(p.episode_params.tests.keys())
-    episodes = json.dumps(json_dict)
-    # Create a TCP/IP socket
-    send_episodes_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Connect the socket to the port where the server is listening
-    server_address = ((RobotAgent.host, RobotAgent.port_send))
-    send_episodes_socket.connect(server_address)
-    send_episodes_socket.sendall(bytes(episodes, "utf-8"))
-    send_episodes_socket.close()
-
-
 def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
     """
     Generate and add num_humans number of randomly generated humans to the simulator
@@ -121,7 +92,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     p = create_params()  # used to instantiate the camera and its parameters
 
-    establish_joystick_handshake(p)
+    RobotAgent.establish_joystick_handshake(p)
 
     for i, test in enumerate(list(p.episode_params.tests.keys())):
         episode = p.episode_params.tests[test]
@@ -144,7 +115,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
                 from humans.human_appearance import HumanAppearance
                 HumanAppearance.dataset = surreal_data
                 human_traversible = np.empty(traversible.shape)
-                human_traversible.fill(True)  # initially all good
+                human_traversible.fill(1)  # initially all good
 
             # In order to print more readable arrays
             np.set_printoptions(precision=3)
@@ -160,12 +131,12 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             # which is a constant and list of traversibles respectively
 
             environment = {}
-            environment["map_scale"] = dx_m
+            environment["map_scale"] = float(dx_m)
             environment["room_center"] = room_center
             # obstacle traversible / human traversible
             if p.render_3D:
                 environment["human_traversible"] = np.array(human_traversible)
-            environment["map_traversible"] = np.array(traversible)
+            environment["map_traversible"] = 1. * np.array(traversible)
         """
         Creating planner, simulator, and control pipelines for the framework
         of a human trajectory and pathfinding. 

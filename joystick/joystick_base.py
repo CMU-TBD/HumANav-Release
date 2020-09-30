@@ -31,7 +31,7 @@ class JoystickBase():
         # socket fields
         self.robot_sender_socket = None    # the socket for sending commands to the robot
         self.robot_receiver_socket = None  # world info receiver socket
-        self.host = socket.gethostname()   # using localhost for now
+        self.host = '127.0.0.1'   # using localhost for now
         self.port_send = self.joystick_params.port  # sender port
         self.port_recv = self.port_send + 1         # receiver port
         print("Initiated joystick at", self.host, self.port_send)
@@ -191,6 +191,7 @@ class JoystickBase():
         if not sim_state_json['robot_on']:
             term_status = sim_state_json['termination_cause']
             term_color = color_print(termination_cause_to_color(term_status))
+            # TODO: print the "updated state of the world..." for this sim_t, more exact
             print("\npowering off joystick, robot terminated with: %s%s%s" %
                   (term_color, term_status, color_reset))
             self.joystick_on = False
@@ -324,7 +325,7 @@ class JoystickBase():
         if self.joystick_params.print_data:
             print("sent", message)
 
-    def establish_sender_connection(self):
+    def init_send_conn(self):
         """Creates the initial handshake between the joystick and the robot to
         have a communication channel with the external robot process """
         self.robot_sender_socket = \
@@ -339,7 +340,7 @@ class JoystickBase():
               (color_green, color_reset))
         assert(self.robot_sender_socket)
 
-    def establish_receiver_connection(self):
+    def init_recv_conn(self):
         """Creates the initial handshake between the joystick and the meta test
         controller that sends information about the episodes as well as the 
         RobotAgent that sends it's SimStates serialized through json as a 'sense'"""

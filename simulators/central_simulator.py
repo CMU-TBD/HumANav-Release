@@ -179,15 +179,15 @@ class CentralSimulator(SimulatorHelper):
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
 
+            # update simulator time
+            self.t += self.delta_t
+
             # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
             current_state = self.save_state(self.t, self.delta_t, wall_t)
 
             if(self.robot):
                 self.robot.update_world(current_state)
-
-            # update simulator time
-            self.t += self.delta_t
 
             # update iteration count
             iteration += 1
