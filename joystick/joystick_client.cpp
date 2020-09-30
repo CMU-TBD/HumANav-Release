@@ -58,8 +58,10 @@ void update_loop()
         joystick_act();
     }
 }
+
 void joystick_sense(bool &robot_on, unordered_map<float, SimState> &hist)
 {
+    send_to_robot("sense"); // trigger the sense call
     vector<char> raw_data;
     listen_once(raw_data);
     // process the raw_data into a sim_state
@@ -120,6 +122,7 @@ void get_episode_metadata(Episode &ep)
     ep_len = listen_once(raw_data);
     // parse the episode_names raw data from the connection
     json metadata = json::parse(raw_data);
+    // TODO: move to static Episode class
     // gather data from json
     string title = metadata["episode_name"];
     auto &env = metadata["environment"];

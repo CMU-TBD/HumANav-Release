@@ -73,13 +73,21 @@ int send_to_robot(const string &message)
 }
 int listen_once(vector<char> &data)
 {
-    int client_fd = init_recv_conn(receiver_addr, receiver_fd);
+    int client_fd;
+    int addr_len = sizeof(receiver_addr);
+    if ((client_fd = accept(receiver_fd, (struct sockaddr *)&receiver_addr,
+                            (socklen_t *)&addr_len)) < 0)
+    {
+        cout << "\033[31m"
+             << "Unable to accept connection\n"
+             << "\033[00m" << endl;
+        return -1;
+    }
     int response_len = conn_recv(client_fd, data);
     // TODO: add versbosity check
     // for (auto &c : data)
     //     cout << c;
-    cout << endl
-         << "\033[36m"
+    cout << "\033[36m"
          << "Received " << response_len << " bytes from server"
          << "\033[00m" << endl;
     return 0;
@@ -158,7 +166,7 @@ int init_recv_conn(struct sockaddr_in &robot_addr,
     }
     // success!
     cout << "\033[32m"
-         << "Robot --> Joystick (receiver) connection established"
+         << "Robot --> Joystick (receiver)zconnection established"
          << "\033[00m" << endl;
     // client should always be nonnegative integer
     return client;
