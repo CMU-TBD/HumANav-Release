@@ -191,6 +191,7 @@ class JoystickBase():
         if not sim_state_json['robot_on']:
             term_status = sim_state_json['termination_cause']
             term_color = color_print(termination_cause_to_color(term_status))
+            # TODO: print the "updated state of the world..." for this sim_t, more exact
             print("\npowering off joystick, robot terminated with: %s%s%s" %
                   (term_color, term_status, color_reset))
             self.joystick_on = False

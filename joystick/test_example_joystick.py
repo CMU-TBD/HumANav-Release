@@ -11,7 +11,7 @@ def test_joystick():
         # uses the joystick that sends positional commands instead of velocity
         from joystick.example_joystick import JoystickWithPlannerPosns as Joystick
     """start the joystick process"""
-    J = Joystick()
+    J = JoystickRandom()
     J.init_send_conn()
     J.init_recv_conn()
     # first listen() for the episode names

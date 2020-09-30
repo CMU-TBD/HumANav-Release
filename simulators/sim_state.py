@@ -164,6 +164,7 @@ class SimState():
     def to_json(self, robot_on=True, send_metadata=False, termination_cause=None):
         json_dict = {}
         json_dict['robot_on'] = deepcopy(robot_on)  # true or false
+        sim_t_json = deepcopy(self.get_sim_t())
         if robot_on:  # only send the world if the robot is ON
             if send_metadata:
                 environment_json = \
@@ -181,18 +182,18 @@ class SimState():
             robots_json = \
                 SimState.to_json_dict(deepcopy(self.get_robots()),
                                       include_start_goal=send_metadata)
-            sim_t_json = deepcopy(self.get_sim_t())
             delta_t_json = deepcopy(self.get_delta_t())
             # append them to the json dictionary
             json_dict['environment'] = environment_json
             json_dict['pedestrians'] = ped_json
             json_dict['robots'] = robots_json
-            json_dict['sim_t'] = sim_t_json
             json_dict['delta_t'] = delta_t_json
             json_dict['episode_name'] = episode_json
             json_dict['episode_max_time'] = episode_max_time_json
         else:
             json_dict['termination_cause'] = deepcopy(termination_cause)
+        # sim_state should always have time
+        json_dict['sim_t'] = sim_t_json
         return json.dumps(json_dict, indent=1)
 
     @ staticmethod

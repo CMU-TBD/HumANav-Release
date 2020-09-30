@@ -206,6 +206,9 @@ class RobotAgent(Agent):
                 self.execute()
             # block joystick until recieves next command or finish sending world
             while (self.running and (self.joystick_requests_world or iteration >= self.get_num_executed())):
+                if(self.joystick_requests_world):
+                    # ping the joystick with the current sim_state
+                    self.send_sim_state()
                 time.sleep(0.001)
         else:
             self.power_off()
@@ -268,8 +271,7 @@ class RobotAgent(Agent):
             if(data_b is not b'' and response_len > 0):
                 data_str = data_b.decode("utf-8")  # bytes to str
                 if(not self.running):
-                    # with the robot_on=False flag
-                    self.send_sim_state()
+                    self.joystick_requests_world = True
                 else:
                     self.manage_data(data_str)
 
@@ -277,7 +279,6 @@ class RobotAgent(Agent):
         # non json important keyword
         if(data_str == "sense"):
             self.joystick_requests_world = True
-            self.send_sim_state()
             return True
         elif(data_str == "ready"):
             self.joystick_ready = True
