@@ -54,6 +54,30 @@ public:
     unordered_map<string, AgentState> get_agents() const { return agents; }
     float get_time_budget() const { return max_time_s; }
     env_t get_environment() const { return env; }
+    static Episode construct_from_json(const json &metadata)
+    {
+        // gather data from json
+        string title = metadata["episode_name"];
+        auto &env = metadata["environment"];
+        vector<vector<int>> map_trav = env["map_traversible"];
+        vector<vector<int>> h_trav = {}; //  not being sent currently
+        vector<float> room_center = env["room_center"];
+        float dx_m = 0.05; // TODO: fix map_scale being string-json?
+        // float dx_m = env["map_scale"];
+        unordered_map<string, AgentState> agents =
+            AgentState::construct_from_dict(metadata["pedestrians"]);
+        float max_time = metadata["episode_max_time"];
+        float sim_t = metadata["sim_t"];
+        // NOTE there is an assumption that there is only one robot in the
+        // simulator at once, and its *name* is "robot_agent"
+        auto &robots = metadata["robots"];
+        auto &robot = robots["robot_agent"];
+        vector<float> r_start = robot["start_config"];
+        vector<float> r_goal = robot["goal_config"];
+
+        return Episode(title, map_trav, h_trav, room_center,
+                       dx_m, agents, max_time, r_start, r_goal);
+    }
     void print() const
     {
         cout << "Episode: " << get_title() << endl;
@@ -68,7 +92,7 @@ public:
         float goal_theta = get_robot_goal()[2];
         cout << "Robot goal: " << goal_x << ", " << goal_y
              << ", " << goal_theta << endl;
-        }
+    }
 
 private:
     string title;
