@@ -10,35 +10,59 @@
 #include <cstring>
 #include <string>
 
-#define PORT_SEND 6000
+#define PORT_SEND 6000 // default for tbd_socnavbench
 #define PORT_RECV (PORT_SEND + 1)
-#define LOCALHOST "127.0.0.1"
+#define LOCALHOST "127.0.0.1" // local host
 
 using namespace std;
 
-int send_to_robot(const string &message);
-int listen_once(vector<char> &data);
-int init_send_conn(struct sockaddr_in &addr, int &sender_fd);
-int init_recv_conn(struct sockaddr_in &addr, int &receiver_fd);
-void close_sockets(const int &sender_fd, const int &receiver_fd);
-
-// global socket information to use throughout the program
+// Global socket information to use throughout the program
+/* socket address of the sending-socket, to send commands to the robot */
 struct sockaddr_in sender_addr;
+/* file descriptor of the sending-socket, to send commands to the robot */
 int sender_fd = 0;
+
+/* socket address of the receiver-socket, to listen to the robot */
 struct sockaddr_in receiver_addr;
+/* file descriptor of the receiver-socket, to listen to the robot */
 int receiver_fd = 0;
 
-// global params (TODO: read from .ini file)
+/** 
+ * @brief initializes the 'sender' (client) connection to the simulator
+ * @param[in] robot_addr The address of the robot-sender socket
+ * @param[in] robot_sender_fd The file descriptor of the robot-sender socket
+ * @returns 0 if successful, -1 otherwise
+ */
+int init_send_conn(struct sockaddr_in &addr, int &sender_fd);
+
+/** 
+ * @brief initializes the 'receiver' (server) connection to the simulator
+ * @param[in] robot_addr The address of the robot-receiver socket
+ * @param[in] robot_receiver_fd The file descriptor of the robot-receiver socket
+ * @returns client_fd if successful (nonnegative), -1 otherwise
+ */
+int init_recv_conn(struct sockaddr_in &addr, int &receiver_fd);
+
+/// TODO: read these in from the .ini param file instead of hardcoding
+
+/** @brief Whether or not to include verbose printing */
 const bool verbose = false;
-// number of times the sockets were connected
+
+/** @brief The number of times when the sockets were connected */
 size_t num_connections = 0;
 
-int conn_recv(const int conn_fd, vector<char> &data, const int buf_size = 128)
+/** 
+ * @brief receives all the data from a client descriptor into a buffer at a certain rate
+ * @param[in] conn_fd The file descriptor of the connection to receive from 
+ * @param[out] buffer The resulting buffer to write the data into
+ * @param[in] buffer_amnt The maximum amount to recv() at a time
+ * @returns response_len The number of bytes received from the socket connection
+ */
+int conn_recv(const int conn_fd, vector<char> &data, const int buf_amnt = 128)
 {
-    int response_len = 0;
-    // does not need to be cleared as we only read what is set
-    char buffer[buf_size];
     data.clear();
+    int response_len = 0;
+    char buffer[buf_amnt];
     while (true)
     {
         int chunk_amnt = recv(conn_fd, buffer, sizeof(buffer), 0);
@@ -52,11 +76,22 @@ int conn_recv(const int conn_fd, vector<char> &data, const int buf_size = 128)
     return response_len;
 }
 
+/** 
+ * @brief Closes the input sockets manually
+ * @param[in] send_fd The file descriptor of the "sending" socket
+ * @param[in] recv_fd The file descriptor of the "receiving" socket
+ */
 void close_sockets(const int &send_fd, const int &recv_fd)
 {
     close(send_fd);
     close(recv_fd);
 }
+
+/** 
+ * @brief sends a message (string) to the robot
+ * @param[in] message The string to send to the robot, can be json string or literal
+ * @returns 0 if successful, -1 otherwise
+ */
 int send_to_robot(const string &message)
 {
     // create the TCP/IP socket and connect to the server (robot)
@@ -76,6 +111,12 @@ int send_to_robot(const string &message)
              << "\"" << message << "\"" << endl;
     return 0;
 }
+
+/** 
+ * @brief waits for a response from the server and receives it all
+ * @param[in] data The buffer to write the data into
+ * @returns 0 if successful, -1 otherwise
+ */
 int listen_once(vector<char> &data)
 {
     int client_fd;
@@ -90,13 +131,19 @@ int listen_once(vector<char> &data)
     }
     int response_len = conn_recv(client_fd, data);
     close(client_fd);
-    // TODO: add versbosity check
     if (verbose)
         cout << "\033[36m"
              << "Received " << response_len << " bytes from server"
              << "\033[00m" << endl;
     return 0;
 }
+
+/** 
+ * @brief initializes the 'sender' (client) connection to the simulator
+ * @param[in] robot_addr The address of the robot-sender socket
+ * @param[in] robot_sender_fd The file descriptor of the robot-sender socket
+ * @returns 0 if successful, -1 otherwise
+ */
 int init_send_conn(struct sockaddr_in &robot_addr,
                    int &robot_sender_fd)
 {
@@ -125,12 +172,19 @@ int init_send_conn(struct sockaddr_in &robot_addr,
         return -1;
     }
     // success!
-    if (verbose || num_connections < 1)
+    if (verbose || num_connections < 1) // at least print the first time
         cout << "\033[32m"
              << "Robot <-- Joystick (sender) connection established"
              << "\033[00m" << endl;
     return 0;
 }
+
+/** 
+ * @brief initializes the 'receiver' (server) connection to the simulator
+ * @param[in] robot_addr The address of the robot-receiver socket
+ * @param[in] robot_receiver_fd The file descriptor of the robot-receiver socket
+ * @returns client_fd if successful (nonnegative), -1 otherwise
+ */
 int init_recv_conn(struct sockaddr_in &robot_addr,
                    int &robot_receiver_fd)
 {
@@ -169,7 +223,7 @@ int init_recv_conn(struct sockaddr_in &robot_addr,
         exit(EXIT_FAILURE);
     }
     // success!
-    if (verbose || num_connections < 1)
+    if (verbose || num_connections < 1) // at least print the first time
         cout << "\033[32m"
              << "Robot --> Joystick (receiver) connection established"
              << "\033[00m" << endl;
