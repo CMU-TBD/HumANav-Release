@@ -12,7 +12,30 @@ using namespace std;
  * @brief Container for the "environment" which holds the traversibles along with
  * the map scale. 
  * */
-struct env_t;
+struct env_t
+{
+    float dx_scale;
+    vector<float> room_center;
+    vector<vector<int>> building_traversible;
+    vector<vector<int>> human_traversible;
+    env_t()
+    {
+        dx_scale = 0;
+        building_traversible = {};
+        human_traversible = {};
+    }
+    /** 
+     * @brief Update the fields in the environment
+     * */
+    void update_environment(vector<vector<int>> &building_trav,
+                            vector<vector<int>> &human_trav,
+                            float scale)
+    {
+        dx_scale = scale;
+        building_traversible = building_trav;
+        human_traversible = human_trav;
+    }
+};
 
 class Episode
 {
@@ -149,32 +172,3 @@ private:
 };
 
 #endif
-
-/**
- * @brief Container for the "environment" which holds the traversibles along with
- * the map scale. 
- * */
-struct env_t
-{
-    float dx_scale;
-    vector<float> room_center;
-    vector<vector<int>> building_traversible;
-    vector<vector<int>> human_traversible;
-    env_t()
-    {
-        dx_scale = 0;
-        building_traversible = {};
-        human_traversible = {};
-    }
-    /** 
-     * @brief Update the fields in the environment
-     * */
-    void update_environment(vector<vector<int>> &building_trav,
-                            vector<vector<int>> &human_trav,
-                            float scale)
-    {
-        dx_scale = scale;
-        building_traversible = building_trav;
-        human_traversible = human_trav;
-    }
-};
