@@ -15,6 +15,7 @@
 class SimState
 {
 public:
+    SimState() {}
     /** @brief Constructor for SimState instances
      * @param[in] robot_agent The AgentState of the robot in the simulator
      * @param[in] rob_on The status of the robot (on or off)

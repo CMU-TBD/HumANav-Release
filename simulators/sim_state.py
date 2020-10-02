@@ -120,7 +120,7 @@ class SimState():
         self.sim_t = sim_t
         self.wall_t = wall_t
         self.delta_t = delta_t
-        self.robot_on = True
+        self.robot_on = True  # TODO: why keep this if not using explicitly?
         self.episode_name = episode_name
         self.episode_max_time = max_time
 
