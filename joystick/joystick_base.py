@@ -336,7 +336,7 @@ class JoystickBase():
             print("%sUnable to connect to robot%s" % (color_red, color_reset))
             print("Make sure you have a simulation instance running")
             exit(1)
-        print("%sJoystick->Robot connection established%s" %
+        print("%sRobot <-- Joystick (sender) connection established%s" %
               (color_green, color_reset))
         assert(self.robot_sender_socket)
 
@@ -350,7 +350,7 @@ class JoystickBase():
         # wait for a connection
         self.robot_receiver_socket.listen(1)
         connection, client = self.robot_receiver_socket.accept()
-        print("%sRobot---->Joystick connection established%s" %
+        print("%sRobot --> Joystick (receiver) connection established%s" %
               (color_green, color_reset))
         return connection, client
 

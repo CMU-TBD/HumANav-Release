@@ -140,6 +140,8 @@ void joystick_sense(bool &robot_on, float &current_time,
         // update robot running status
         robot_on = new_state.get_robot_status();
         // add print output:
+        cout.setf(ios::fixed, ios::floatfield);
+        cout.precision(3);
         cout << "\033[36m"
              << "\33[2K" // clear old line
              << "Updated state of the world for time = " << current_time
@@ -194,7 +196,7 @@ void joystick_act(const bool robot_on, const float sim_t,
     string termination_cause;
     if (hist.find(sim_t) != hist.end())
     {
-        SimState *sim_state = &hist.at(sim_t); // pointer (not deepcopy)
+        const SimState *sim_state = &hist.at(sim_t); // pointer (not deepcopy)
         termination_cause = sim_state->get_termination_cause();
     }
     else
@@ -205,8 +207,10 @@ void joystick_act(const bool robot_on, const float sim_t,
         const float max_v = 1.2;
         const float max_w = 1.1;
         const int p = 100; // 2 decimal places of precision
+        // between [0 and max_V]
         float rand_v = ((rand() % int(p * max_v)) / float(p));
-        float rand_w = ((rand() % int(p * max_w)) / float(p));
+        // between [-max_w and max_w]
+        float rand_w = ((rand() % int(2 * p * max_w)) / float(p)) - max_w;
         send_cmd(rand_v, rand_w);
     }
     else

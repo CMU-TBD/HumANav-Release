@@ -323,7 +323,7 @@ class RobotAgent(Agent):
         RobotAgent.joystick_receiver_socket.listen(1)
         print("Waiting for Joystick connection...")
         connection, client = RobotAgent.joystick_receiver_socket.accept()
-        print("%sRobot---->Joystick connection established%s" %
+        print("%sRobot <-- Joystick (receiver) connection established%s" %
               (color_green, color_reset))
         return connection, client
 
@@ -341,7 +341,7 @@ class RobotAgent(Agent):
             print("Make sure you have a joystick instance running")
             exit(1)
         assert(RobotAgent.joystick_sender_socket is not None)
-        print("%sJoystick->Robot connection established%s" %
+        print("%sRobot --> Joystick (sender) connection established%s" %
               (color_green, color_reset))
 
     @ staticmethod
