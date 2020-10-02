@@ -44,6 +44,8 @@ class Agent(AgentHelper):
             Agent.color_indx = 0
         self.color = Agent.possible_colors[Agent.color_indx]
         self.termination_cause = "Timeout"
+        # name of the agent that the agent collided with (if applicable)
+        self.collider = "None"
 
     def init(self):
         self.planned_next_config = copy.deepcopy(self.current_config)
@@ -188,12 +190,15 @@ class Agent(AgentHelper):
     def _collision_in_group(self, own_pos: np.array, group: list):
         for a in group:
             othr_pos = a.get_current_config().to_3D_numpy()
-            if(a.get_name() is not self.get_name() and
-                    euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
+            is_same_agent: bool = a.get_name() is self.get_name()
+            if(not is_same_agent and euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
                 # instantly collide and stop updating
                 self.termination_cause = "Collision"
                 self.end_acting = True
                 self.collision_point_k = self.vehicle_trajectory.k  # this instant
+                # name of the first agent that the agent collided with (applicable)
+                self.collider = a.get_name()
+                break
 
     def check_collisions(self, world_state, include_agents=True, include_robots=True):
         if world_state is not None:

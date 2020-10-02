@@ -211,7 +211,7 @@ class CentralSimulator(SimulatorHelper):
               self.sim_wall_clock, "real world seconds")
 
         if(self.episode_params.write_episode_log):
-            self.generate_episode_log()
+            self.generate_sim_log()
 
         # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames(filename=self.episode_params.name + "_obs")
@@ -400,7 +400,7 @@ class CentralSimulator(SimulatorHelper):
 
     """ END IMAGE UTILS """
 
-    def generate_episode_log(self, filename='episode_log.txt'):
+    def generate_sim_log(self, filename='episode_log.txt'):
         import io
         abs_filename = os.path.join(self.params.output_directory, filename)
         touch(abs_filename)  # create if dosent already exist
@@ -426,23 +426,24 @@ class CentralSimulator(SimulatorHelper):
         if(self.robot):
             data += "****************ROBOT INFO****************\n"
             data += "Robot termination cause: %s\n" % self.robot.termination_cause
-            data += "Num commands received from joystick: %d\n" % len(
-                self.robot.joystick_inputs)
-            data += "Total time blocking for joystick input (s): %0.3f\n" % self.robot.get_block_t_total(
-            )
+            if(self.robot.termination_cause == "Collision"):
+                data += "Robot collided with agent: %s\n" % self.robot.collider
+            data += "Num commands received from joystick: %d\n" % \
+                len(self.robot.joystick_inputs)
+            data += "Total time blocking for joystick input (s): %0.3f\n" % \
+                self.robot.get_block_t_total()
             data += "Num commands executed by robot: %d\n" % self.robot.num_executed
             rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
-                                               self.robot.get_current_config().to_3D_numpy()
-                                               )
+                                               self.robot.get_current_config().to_3D_numpy())
             data += "Robot displacement (m): %0.3f\n" % rob_displacement
-            data += "Max robot velocity (m/s): %0.3f\n" % absmax(
-                self.robot.vehicle_trajectory.speed_nk1())
-            data += "Max robot acceleration: %0.3f\n" % absmax(
-                self.robot.vehicle_trajectory.acceleration_nk1())
-            data += "Max robot angular velocity: %0.3f\n" % absmax(
-                self.robot.vehicle_trajectory.angular_speed_nk1())
-            data += "Max robot angular acceleration: %0.3f\n" % absmax(
-                self.robot.vehicle_trajectory.angular_acceleration_nk1())
+            data += "Max robot velocity (m/s): %0.3f\n" % \
+                absmax(self.robot.vehicle_trajectory.speed_nk1())
+            data += "Max robot acceleration: %0.3f\n" % \
+                absmax(self.robot.vehicle_trajectory.acceleration_nk1())
+            data += "Max robot angular velocity: %0.3f\n" % \
+                absmax(self.robot.vehicle_trajectory.angular_speed_nk1())
+            data += "Max robot angular acceleration: %0.3f\n" % \
+                absmax(self.robot.vehicle_trajectory.angular_acceleration_nk1())
         try:
             with open(abs_filename, 'w') as f:
                 f.write(data)
