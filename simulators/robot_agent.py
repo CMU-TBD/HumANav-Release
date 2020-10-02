@@ -39,6 +39,8 @@ class RobotAgent(Agent):
         self.notified_joystick = False
         # used to keep the listener thread alive even if the robot isnt
         self.simulator_running = False
+        # amount of time the robot is blocking on the joystick
+        self.block_time_total = 0
 
     def simulation_init(self, sim_map, with_planner=False):
         super().simulation_init(sim_map, with_planner=with_planner)
@@ -72,6 +74,9 @@ class RobotAgent(Agent):
 
     def set_sim_delta_t(self, sim_delta_t):
         self.sim_delta_t = sim_delta_t
+
+    def get_block_t_total(self):
+        return self.block_time_total
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
@@ -201,12 +206,15 @@ class RobotAgent(Agent):
     def update(self, iteration):
         if self.running:
             # block joystick until recieves next command or finish sending world
+            init_block_t = time.time()
             while (self.running and (self.joystick_requests_world or iteration >= self.get_num_executed())):
                 if(self.joystick_requests_world):
                     # ping the joystick with the current sim_state
                     self.send_sim_state()
                     break
-                time.sleep(0.001)
+                time.sleep(0.01)
+            # captures the amount of time that the robot is blocking on the joystick
+            self.block_time_total += time.time() - init_block_t
             # only execute the most recent commands
             self.check_termination_conditions()
             if self.num_executed < len(self.joystick_inputs):

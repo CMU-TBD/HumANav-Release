@@ -147,7 +147,7 @@ class CentralSimulator(SimulatorHelper):
             r_t = self.init_robot_listener_thread()
 
         # keep track of wall-time in the simulator
-        start_time = time.clock()
+        start_time = time.time()
 
         # save initial state before the simulator is spawned
         self.t = 0.0
@@ -160,7 +160,7 @@ class CentralSimulator(SimulatorHelper):
         self.print_sim_progress(iteration)
 
         while self.loop_condition():
-            wall_t = time.clock() - start_time
+            wall_t = time.time() - start_time
 
             # Complete thread operations
             agent_threads = \
@@ -209,7 +209,7 @@ class CentralSimulator(SimulatorHelper):
             del(p)
 
         # capture final wall clock (completion) time
-        wall_clock = time.clock() - start_time
+        wall_clock = time.time() - start_time
         print("\nSimulation completed in", wall_clock, "real world seconds")
 
         if(self.episode_params.write_episode_log):
@@ -597,6 +597,7 @@ class CentralSimulator(SimulatorHelper):
             data += "Robot termination cause: %s\n" % self.robot.termination_cause
             data += "Num commands received from joystick: %d\n" % len(
                 self.robot.joystick_inputs)
+            data += "Total time (s) blocking for joystick input: %0.3f\n" % self.robot.get_block_t_total()
             data += "Num commands executed by robot: %d\n" % self.robot.num_executed
             rob_displacement = euclidean_dist2(ep_params.robot_start_goal[0],
                                                self.robot.get_current_config().to_3D_numpy()
