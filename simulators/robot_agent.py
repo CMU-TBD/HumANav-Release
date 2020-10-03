@@ -32,7 +32,7 @@ class RobotAgent(Agent):
         # josystick is ready once it has been sent an environment
         self.joystick_ready = False
         # To send the world state on the next joystick ping
-        self.joystick_requests_world = False
+        self.joystick_requests_world = -1
         # whether or not to repeat the last joystick input
         self.repeat_joystick = False
         # told the joystick that the robot is powered off
@@ -205,20 +205,26 @@ class RobotAgent(Agent):
 
     def update(self, iteration):
         if self.running:
-            # block joystick until recieves next command or finish sending world
+            # send a sim_state if it was requested by the joystick
+            if(self.joystick_requests_world == 0):
+                # has processed all prior commands
+                self.send_sim_state()
+
+            # only block on act()'s
             init_block_t = time.time()
-            while (self.running and (self.joystick_requests_world or iteration >= self.get_num_executed())):
-                if(self.joystick_requests_world):
-                    # ping the joystick with the current sim_state
-                    self.send_sim_state()
-                    break
+            while (self.running and self.num_executed >= len(self.joystick_inputs)):
+                if(self.num_executed == len(self.joystick_inputs)):
+                    if(self.joystick_requests_world == 0):
+                        self.send_sim_state()
                 time.sleep(0.01)
-            # captures the amount of time that the robot is blocking on the joystick
-            self.block_time_total += time.time() - init_block_t
-            # only execute the most recent commands
-            self.check_termination_conditions()
-            if self.num_executed < len(self.joystick_inputs):
+            self.block_time_total = time.time() - init_block_t
+
+            # execute the next command in the queue
+            if(self.num_executed < len(self.joystick_inputs)):
+                # execute all the commands on the 'queue'
                 self.execute()
+                # decrement counter
+                self.joystick_requests_world -= 1
         else:
             self.power_off()
 
@@ -241,13 +247,13 @@ class RobotAgent(Agent):
 
     def send_sim_state(self):
         # send the (JSON serialized) world state per joystick's request
-        if self.joystick_requests_world:
+        if self.joystick_requests_world == 0:
             world_state = self.world_state.to_json(
                 robot_on=self.running
             )
             self.send_to_joystick(world_state)
             # immediately note that the world has been sent:
-            self.joystick_requests_world = False
+            self.joystick_requests_world = -1
 
     def send_to_joystick(self, message: str):
         with lock:
@@ -280,14 +286,15 @@ class RobotAgent(Agent):
             if(data_b is not b'' and response_len > 0):
                 data_str = data_b.decode("utf-8")  # bytes to str
                 if(not self.running):
-                    self.joystick_requests_world = True
+                    self.joystick_requests_world = 0
                 else:
                     self.manage_data(data_str)
 
     def is_keyword(self, data_str):
         # non json important keyword
         if(data_str == "sense"):
-            self.joystick_requests_world = True
+            self.joystick_requests_world = \
+                len(self.joystick_inputs) - (self.num_executed)
             return True
         elif(data_str == "ready"):
             self.joystick_ready = True
