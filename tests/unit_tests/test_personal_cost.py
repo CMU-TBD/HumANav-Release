@@ -222,10 +222,10 @@ def main_test():
     # obtain "resolution and traversible of building"
     dx_cm, traversible = r.get_config()
 
+    #  TODO this env dict creation should be some sort of function
     environment = {}
     environment["map_scale"] = 5 / 100  # dx_m
     environment["room_center"] = np.array([14, 14., 0.])  # room_center
-    # obstacle traversible / human traversible TODO ?
     environment["traversibles"] = np.array([traversible])
 
     # construct simulator

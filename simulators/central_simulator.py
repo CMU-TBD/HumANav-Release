@@ -20,7 +20,6 @@ class CentralSimulator(SimulatorHelper):
         """ Initializer for the central simulator
 
         Args:
-            params (Map): parameter configuration file from test_socnav.py
             environment (dict): dictionary housing the obj map (bitmap) and more
             renderer (optional): OpenGL renderer for 3D models. Defaults to None
             episode_params (str, optional): Name of the episode test that the simulator runs
@@ -364,7 +363,7 @@ class CentralSimulator(SimulatorHelper):
             state (SimState): the state of the world to convert to an image
             filename (str): the name of the resulting image (unindexed)
         """
-        if(self.robot):
+        if self.robot:
             robot = list(state.get_robots().values())[0]
             camera_pos_13 = robot.get_current_config().to_3D_numpy()
         else:

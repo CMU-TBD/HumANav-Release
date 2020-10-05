@@ -55,7 +55,7 @@ class AgentState():
     def to_json(self, include_start_goal=False):
         name_json = SimState.to_json_type(deepcopy(self.name))
         # NOTE: the configs are just being serialized with their 3D positions
-        if(include_start_goal):
+        if include_start_goal:
             start_json = SimState.to_json_type(
                 self.get_start_config().to_3D_numpy())
             goal_json = SimState.to_json_type(
@@ -67,7 +67,7 @@ class AgentState():
         json_dict = {}
         json_dict['name'] = name_json
         # NOTE: the start and goal (of the robot) are only sent when the environment is sent
-        if(include_start_goal):
+        if include_start_goal:
             json_dict['start_config'] = start_json
             json_dict['goal_config'] = goal_json
         json_dict['current_config'] = current_json

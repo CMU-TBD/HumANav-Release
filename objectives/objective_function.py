@@ -29,6 +29,9 @@ class ObjectiveFunction(object):
         Evaluate each objective corresponding to a system trajectory or sim_state
         sim_states are only relevant for personal_space cost functions
         """
+
+        objective_values_by_tag = []
+
         for objective in self.objectives:
             try:
                 obj_value = objective.evaluate_objective(trajectory)
@@ -37,7 +40,7 @@ class ObjectiveFunction(object):
             # maybe import here and then an isinstance?
             except TypeError:
                 obj_value = objective.evaluate_objective(trajectory, sim_state_hist)
-            objective_values_by_tag = [[objective.tag, obj_value]]
+            objective_values_by_tag += [[objective.tag, obj_value]]
         return objective_values_by_tag
 
     def evaluate_function(self, trajectory, sim_state_hist=None):

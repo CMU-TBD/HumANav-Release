@@ -206,21 +206,21 @@ class RobotAgent(Agent):
     def update(self, iteration):
         if self.running:
             # send a sim_state if it was requested by the joystick
-            if(self.joystick_requests_world == 0):
+            if self.joystick_requests_world == 0:
                 # has processed all prior commands
                 self.send_sim_state()
 
             # only block on act()'s
             init_block_t = time.time()
-            while (self.running and self.num_executed >= len(self.joystick_inputs)):
-                if(self.num_executed == len(self.joystick_inputs)):
-                    if(self.joystick_requests_world == 0):
+            while self.running and self.num_executed >= len(self.joystick_inputs):
+                if self.num_executed == len(self.joystick_inputs):
+                    if self.joystick_requests_world == 0:
                         self.send_sim_state()
                 time.sleep(0.01)
             self.block_time_total += time.time() - init_block_t
 
             # execute the next command in the queue
-            if(self.num_executed < len(self.joystick_inputs)):
+            if self.num_executed < len(self.joystick_inputs):
                 # execute all the commands on the 'queue'
                 self.execute()
                 # decrement counter

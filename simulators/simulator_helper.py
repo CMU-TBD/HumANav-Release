@@ -1,5 +1,6 @@
 import numpy as np
 from utils.angle_utils import angle_normalize
+import pandas as pd
 
 
 class SimulatorHelper(object):
@@ -165,3 +166,68 @@ class SimulatorHelper(object):
         else:
             time_idx = np.array(np.inf)
         return time_idx
+
+
+"""central sim - pandas utils"""
+def sim_states_to_dataframe(sim):
+    """
+    Convert all states for non-robot agents into df
+    :param sim:
+    :return:
+    """
+    from simulators.central_simulator import CentralSimulator
+
+    if isinstance(sim, CentralSimulator):
+        all_states = sim.states
+    elif isinstance(sim, dict):
+        all_states = sim
+
+    cols = ["sim_step", "agent_name", "x", "y", "theta"]
+    agent_info = {}  # for now store radius, later store traversibles
+    df = pd.DataFrame(columns=cols)
+
+    for sim_step, sim_state in all_states.items():
+        for agent_name, agent in sim_state.get_all_agents(True).items():
+
+            if not isinstance(agent, dict):
+                traj = np.squeeze(agent.vehicle_trajectory.position_and_heading_nk3())
+                agent_info[agent_name] = [agent.get_radius()]
+            else:
+                traj = np.squeeze(agent["trajectory"])
+                agent_info[agent_name] = [agent["radius"]]
+
+            if len(traj) == 0:
+                continue
+            elif len(traj) > 1 and len(traj.shape) > 1:
+                traj = traj[-1]
+
+            if len(traj)!=3:
+                print(sim_step, traj)
+                pass
+            x, y, th = traj
+
+            df.loc[len(df)] = [sim_step, agent_name, x, y, th]
+
+    return df, agent_info
+
+
+def add_sim_state_to_dataframe(sim_step, sim_state, df, agent_info):
+    """
+        append agents at sim_step*delta_t into df
+        :param sim:
+        :return:
+    """
+    for agent_name, agent in sim_state.items():
+        if not isinstance(agent, dict):
+            traj = np.squeeze(agent.vehicle_trajectory.position_and_heading_nk3())
+            if not agent_name in agent_info.keys():
+                agent_info[agent_name] = [agent.get_radius()]
+        else:
+            traj = np.squeeze(agent["trajectory"])
+            if not agent_name in agent_info.keys():
+                agent_info[agent_name] = [agent["radius"]]
+
+        x, y, th = traj
+        df.append([sim_step, agent_name, x, y, th])
+
+    return df, agent_info

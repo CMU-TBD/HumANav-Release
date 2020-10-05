@@ -95,7 +95,7 @@ def test_episodes():
     for i, test in enumerate(list(p.episode_params.tests.keys())):
         episode = p.episode_params.tests[test]
         r = None  # free 'old' renderer
-        if(i == 0 or (episode.map_name != p.building_name)):
+        if i == 0 or (episode.map_name != p.building_name):
             # update map to match the episode
             p.building_name = episode.map_name
             print("%s\n\nStarting episode \"%s\" in building \"%s\"%s\n\n" %
@@ -146,7 +146,7 @@ def test_episodes():
             episode_params=episode
         )
 
-        if(not p.episode_params.without_robot):
+        if not p.episode_params.without_robot:
             """
             Generate the robots for the simulator
             """
@@ -168,7 +168,8 @@ def test_episodes():
         """
         Generate the autonomous human agents from the episode
         """
-        generate_auto_humans(episode.agents_start, episode.agents_end,
+        if episode.use_gen_agents:
+            generate_auto_humans(episode.agents_start, episode.agents_end,
                              simulator, environment, p, r)
 
         # run simulation
@@ -178,7 +179,7 @@ def test_episodes():
         if p.render_3D:  # only when rendering with opengl
             r.remove_all_humans()
 
-    if(not p.episode_params.without_robot):
+    if not p.episode_params.without_robot:
         RobotAgent.close_robot_sockets()
 
 
