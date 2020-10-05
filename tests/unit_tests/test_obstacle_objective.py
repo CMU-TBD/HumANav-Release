@@ -112,10 +112,9 @@ def test_avoid_obstacle(visualize=False):
     expected_infringement /= (m1 - m0)
     expected_objective = 25. * expected_infringement * expected_infringement
 
-    assert np.allclose(objective_values_13[
-                       0], expected_objective, atol=1e-4)
+    assert np.allclose(objective_values_13[0], expected_objective, atol=1e-4)
     assert np.allclose(objective_values_13[0], p.test_obs_obj_ans, atol=1e-4)
-    if(visualize):
+    if visualize:
         """
         create a 1 x 3 (or 1 x 4) image of the obstacle map itself (as a traversible plot), 
         next to its corresponding angle_map, and distance_map. Optionally plotting the trajectory

@@ -190,7 +190,8 @@ def sim_states_to_dataframe(sim):
         for agent_name, agent in sim_state.get_all_agents(True).items():
 
             if not isinstance(agent, dict):
-                traj = np.squeeze(agent.vehicle_trajectory.position_and_heading_nk3())
+                # traj = np.squeeze(agent.vehicle_trajectory.position_and_heading_nk3())
+                traj = np.squeeze(agent.current_config.position_and_heading_nk3())
                 agent_info[agent_name] = [agent.get_radius()]
             else:
                 traj = np.squeeze(agent["trajectory"])
@@ -198,12 +199,13 @@ def sim_states_to_dataframe(sim):
 
             if len(traj) == 0:
                 continue
-            elif len(traj) > 1 and len(traj.shape) > 1:
-                traj = traj[-1]
-
+            # elif len(traj) > 1 and len(traj.shape) > 1:
+            #     traj = traj[-1]
+            #
             if len(traj)!=3:
                 print(sim_step, traj)
-                pass
+                raise
+
             x, y, th = traj
 
             df.loc[len(df)] = [sim_step, agent_name, x, y, th]

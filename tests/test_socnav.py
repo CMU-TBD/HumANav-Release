@@ -44,7 +44,7 @@ def create_params():
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],
-               max_time=23,
+               max_time=100,
                write_episode_log=False  # don't write episode log for test_socnav
                )
 
@@ -87,7 +87,7 @@ def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
 
 def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
-    Code for loading a random human into the environment
+    Code for loading random humans into the environment
     and rendering topview, rgb, and depth images.
     """
     p = create_params()  # used to instantiate the camera and its parameters
@@ -97,7 +97,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     for i, test in enumerate(list(p.episode_params.tests.keys())):
         episode = p.episode_params.tests[test]
         r = None  # free 'old' renderer
-        if(i == 0 or (episode.map_name != p.building_name)):
+        if i == 0 or (episode.map_name != p.building_name):
             # update map to match the episode
             p.building_name = episode.map_name
             print("%s\n\nStarting episode \"%s\" in building \"%s\"%s\n\n" %
@@ -126,10 +126,10 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
                           traversible.shape[0] * 0.5,
                           0.0]
                          ) * dx_m
+
             # Create default environment which is a dictionary
             # containing ["map_scale", "traversibles"]
             # which is a constant and list of traversibles respectively
-
             environment = {}
             environment["map_scale"] = float(dx_m)
             environment["room_center"] = room_center
@@ -147,7 +147,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             render_3D=p.render_3D,
             episode_params=episode
         )
-        if(not p.episode_params.without_robot):
+        if not p.episode_params.without_robot:
             """
             Generate the robots for the simulator
             """
@@ -156,18 +156,30 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             )
             simulator.add_agent(robot_agent)
 
+            # hardcode for testing purposes
+            # from humans.human_configs import HumanConfigs
+            #
+            # start_conf = generate_config_from_pos_3([33., 2., 1.91])
+            # # start_conf = generate_config_from_pos_3([30, 9, 1.91])
+            # goal_conf = generate_config_from_pos_3([7.5, 10, 4.1])
+            # configs = HumanConfigs(start_conf, goal_conf)
+            # robot_agent = RobotAgent.generate_robot(
+            #     configs
+            # )
+            # simulator.add_agent(robot_agent)
+
         """
         Add the prerecorded humans to the simulator
         """
         for i in range(len(episode.prerec_data_filenames)):
             PrerecordedHuman.generate_prerecorded_humans(simulator, p,
-                                                         init_delay=2,
-                                                         max_agents=num_prerecorded,
-                                                         start_idx=starting_prerec,
-                                                         offset=episode.prerec_posn_offsets[i],
-                                                         csv_file=episode.prerec_data_filenames[i],
-                                                         fps=episode.prerec_data_framerates[i]
-                                                         )
+                                 init_delay=2,
+                                 max_agents=num_prerecorded,
+                                 start_idx=starting_prerec,
+                                 offset=episode.prerec_posn_offsets[i],
+                                 csv_file=episode.prerec_data_filenames[i],
+                                 fps=episode.prerec_data_framerates[i]
+                                 )
         """
         Generate the autonomous human agents from the episode
         """
@@ -180,12 +192,12 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         if p.render_3D:  # only when rendering with opengl
             r.remove_all_humans()
 
-    if(not p.episode_params.without_robot):
+    if not p.episode_params.without_robot:
         RobotAgent.close_robot_sockets()
 
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(num_generated_humans=5,
-                num_prerecorded=15,  # use -1 to include ALL prerecorded agents
-                starting_prerec=0)
+    test_socnav(num_generated_humans=0,
+                num_prerecorded=25,  # use -1 to include ALL prerecorded agents
+                starting_prerec=15)

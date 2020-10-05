@@ -19,7 +19,7 @@ def success(central_sim: CentralSimulator):
 
 
 def total_sim_time_taken(central_sim: CentralSimulator):
-    last_step_num = list(central_sim.states.keys())[-1]
+    last_step_num = max(list(central_sim.states.keys()))
     return last_step_num * central_sim.delta_t
 
 
@@ -64,6 +64,36 @@ def robot_velocity(central_sim: CentralSimulator, percentile=False):
     return robot_vel
 
 
+def robot_acceleration(central_sim: CentralSimulator, percentile=False):
+    # extract the bot traj and drop the heading
+    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    delta_t = central_sim.delta_t
+    robot_displacement = np.diff(robot_trajectory, axis=0)
+    robot_vel = robot_displacement/delta_t
+    robot_acc = np.diff(robot_vel, axis=0)/delta_t
+
+    if percentile:
+        # TODO run for all peds
+        df = central_sim.sim_df
+        pass
+    return robot_acc
+
+
+def robot_jerk(central_sim: CentralSimulator, percentile=False):
+    # extract the bot traj and drop the heading
+    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    delta_t = central_sim.delta_t
+    robot_vel = np.diff(robot_trajectory, axis=0) / delta_t
+    robot_acc = np.diff(robot_vel, axis=0) / delta_t
+    robot_jrk = np.diff(robot_acc, axis=0) / delta_t
+
+    if percentile:
+        # TODO run for all peds
+        df = central_sim.sim_df
+        pass
+    return robot_jrk
+
+
 def robot_motion_energy(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and drop the heading
     robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
@@ -79,6 +109,18 @@ def robot_motion_energy(central_sim: CentralSimulator, percentile=False):
 
 
 # path
+def path_length(central_sim: CentralSimulator, percentile=False):
+    # extract the bot traj and drop the heading
+    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_goal = np.squeeze(central_sim.robot.goal_config.position_and_heading_nk3())[:-1]
+    robot_path_ln = cost_functions.path_length(robot_trajectory)
+    if percentile:
+        # TODO run for all peds
+        df = central_sim.sim_df
+        pass
+    return robot_path_ln
+
+
 def path_length_ratio(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and drop the heading
     robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
@@ -114,10 +156,13 @@ def path_irregularity(central_sim: CentralSimulator, percentile=False):
 
 
 # pedestrian related
-
 def time_to_collision(central_sim: CentralSimulator, percentile=False):
-    ped_df = central_sim.sim_df
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    sim_df = central_sim.sim_df
+    robot_indcs = (sim_df.agent_name == 'robot_agent')
+    ped_df = central_sim.sim_df[~robot_indcs]
+    bot_df = central_sim.sim_df[robot_indcs]
+    robot_trajectory = np.vstack([bot_df.x, bot_df.y, bot_df.theta]).T
+
     delta_t = central_sim.delta_t
     robot_displacement = np.diff(robot_trajectory, axis=0)
     robot_inst_vel = robot_displacement / delta_t
@@ -155,17 +200,21 @@ def time_to_collision(central_sim: CentralSimulator, percentile=False):
 
 
 def closest_pedestrian_distance(central_sim: CentralSimulator, percentile=False):
-    ped_df = central_sim.sim_df
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    sim_df = central_sim.sim_df
+    robot_indcs = (sim_df.agent_name == 'robot_agent')
+    ped_df = central_sim.sim_df[~robot_indcs]
+    bot_df = central_sim.sim_df[robot_indcs]
+    robot_trajectory = np.vstack([bot_df.x, bot_df.y]).T
+    # robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
     delta_t = central_sim.delta_t
 
     cpd = np.zeros((len(robot_trajectory)))
     for sim_step in range(len(robot_trajectory)):
         ped_inst = ped_df[ped_df.sim_step == sim_step]
         # compute the robot-pedestrian joining unit vector
-        ped_inst_posns = np.vstack([ped_inst.x, ped_inst.y])
-        botped_vectors = robot_trajectory[sim_step, :] - ped_inst_posns
+        ped_inst_posns = np.vstack([ped_inst.x, ped_inst.y]).T
+        botped_vectors = robot_trajectory[sim_step] - ped_inst_posns
         botped_distances = np.linalg.norm(botped_vectors, axis=1)
-        cpd[sim_step] = botped_distances
+        cpd[sim_step] = np.min(botped_distances)
 
     return cpd
