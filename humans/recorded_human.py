@@ -103,16 +103,34 @@ class PrerecordedHuman(Human):
         return times
 
     @staticmethod
+    # TODO vectorize
     def gather_posn_data(ped_i, offset):
         xy_data = []
         s = np.sin(offset[2])
         c = np.cos(offset[2])
-        # generate a list of lists of positions (only x)
-        for x in ped_i['x']:
-            xy_data.append([x])
-        # append y to the list of positions
-        for j, y in enumerate(ped_i['y']):
-            xy_data[j].append(y)
+        swapaxes=False
+        flipaxes=True
+        if swapaxes:
+            # generate a list of lists of positions (only x)
+            for y in ped_i['y']:
+                xy_data.append([y])
+            # append y to the list of positions
+            for j, x in enumerate(ped_i['x']):
+                xy_data[j].append(-x)
+        elif flipaxes:
+            # generate a list of lists of positions (only x)
+            for x in ped_i['x']:
+                xy_data.append([-x])
+            # append y to the list of positions
+            for j, y in enumerate(ped_i['y']):
+                xy_data[j].append(-y)
+        else:
+            # generate a list of lists of positions (only x)
+            for x in ped_i['x']:
+                xy_data.append([x])
+            # append y to the list of positions
+            for j, y in enumerate(ped_i['y']):
+                xy_data[j].append(y)
         # apply the rotations to the x, y positions
         posn_data = []
         for (x, y) in xy_data:
@@ -121,20 +139,54 @@ class PrerecordedHuman(Human):
             posn_data.append([x_rot + offset[0], y_rot + offset[1]])
         # append vector angles for all the agents
         for j, pos_2 in enumerate(posn_data):
-            if(j > 0):
+            if j > 0:
                 last_pos_2 = posn_data[j - 1]
                 theta = np.arctan2(
                     pos_2[1] - last_pos_2[1], pos_2[0] - last_pos_2[0])
                 posn_data[j - 1].append(theta)
-                if(j == len(posn_data) - 1):
+                if j == len(posn_data) - 1:
                     # last element gets last angle
                     posn_data[j].append(theta)
         return posn_data
 
     @staticmethod
+    def gather_posn_data_vec(ped_i, offset):
+        xy_data = np.vstack([ped_i.x, ped_i.y]).T
+        s = np.sin(offset[2])
+        c = np.cos(offset[2])
+
+        # apply the rotations to the x, y positions
+        x_rot = xy_data[:, 0] * c - xy_data[:, 1] * s + offset[0]
+        y_rot = xy_data[:, 0] * s + xy_data[:, 1] * c + offset[1]
+        xy_rot = np.vstack([x_rot, y_rot]).T
+
+        # append vector angles for all the agents
+        xy_rot_diff = np.diff(xy_rot, axis=0)
+        thetas = np.arctan2(xy_rot_diff[:, 1], xy_rot_diff[:, 0])
+        thetas = np.hstack((thetas, thetas[-1]))
+        xytheta = np.vstack((xy_rot.T, thetas)).T
+
+        return xytheta
+
+    @staticmethod
     def gather_vel_data(time_data, posn_data):
         # return linear speed to the list of variables
         v_data = []
+        for j, pos_2 in enumerate(posn_data):
+            if(j > 0):
+                last_pos_2 = posn_data[j - 1]
+                # calculating euclidean dist / delta_t
+                delta_t = (time_data[j] - time_data[j - 1])
+                speed = euclidean_dist2(pos_2, last_pos_2) / delta_t
+                v_data.append(speed)  # last element gets last angle
+            else:
+                v_data.append(0)  # initial speed is 0
+        return v_data
+
+    @staticmethod
+    def gather_vel_data_vec(time_data, posn_data):
+        # return linear speed to the list of variables
+        posn_data
         for j, pos_2 in enumerate(posn_data):
             if(j > 0):
                 last_pos_2 = posn_data[j - 1]
@@ -171,7 +223,7 @@ class PrerecordedHuman(Human):
         The data was taken at 25 fps so between frames is 1/25th of a second. """
         import pandas as pd
         assert(fps > 0)
-        if(max_agents > 0 or max_agents == -1):
+        if max_agents > 0 or max_agents == -1:
             datafile = os.path.join(params.socnav_dir, "tests/", csv_file)
             world_df = pd.read_csv(datafile, header=None).T
             world_df.columns = ['frame', 'ped', 'y', 'x']
@@ -180,26 +232,26 @@ class PrerecordedHuman(Human):
             start_frame = world_df['frame'][0]  # default start (of data)
             all_peds = np.unique(world_df.ped)
             max_peds = max(all_peds)
-            if(max_agents == -1):
+            if max_agents == -1:
                 max_agents = max_peds - 1
             for i in range(max_agents):
                 ped_id = i + start_idx + 1
-                if (ped_id > max_peds):
+                if ped_id > max_peds:
                     print("%sRequested Prerec agent index out of bounds:" %
-                          (color_red), ped_id, "%s" % (color_reset))
-                if (ped_id not in all_peds):
+                          color_red, ped_id, "%s" % color_reset)
+                if ped_id not in all_peds:
                     print("%sRequested agent %d not found in dataset: %s%s" %
                           (color_red, ped_id, csv_file, color_reset))
                     # this can happen based off the dataset
                     continue
                 ped_i = world_df[world_df.ped == ped_id]
                 # gather data
-                if(i == 0):
+                if i == 0:
                     # update start frame to be representative of "first" pedestrian
                     start_frame = list(ped_i['frame'])[0]
                 t_data = PrerecordedHuman.gather_times(
                     ped_i, init_delay, start_frame, fps)
-                if(t_data[0] > max_time):
+                if t_data[0] > max_time:
                     # assuming the data of the agents is sorted relatively based off time
                     break
                 print("Generating prerecorded agents %d to %d \r" %

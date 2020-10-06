@@ -434,7 +434,7 @@ class CentralSimulator(SimulatorHelper):
             # individual
             "personal_space_cost",
             "closest_pedestrian_distance"
-            # "time_to_collision",
+            "time_to_collision",
             # others
             # Time to collision
             # Planning-based?

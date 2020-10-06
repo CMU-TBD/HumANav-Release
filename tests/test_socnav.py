@@ -36,15 +36,15 @@ def create_params():
     p.episode_params.tests = {}
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
-               map_name='openspace',
-               prerec_start_indx=[15],
-               prerec_data_filenames=['world_coordinate_inter.csv'],
-               prerec_data_framerates=[25],
-               prerec_posn_offsets=[[12.4, -1.2, 0.55]],
+               map_name='Zara',
+               prerec_start_indx=[0],
+               prerec_data_filenames=['datasets/univ/world_coordinate_inter_adjustedFrameID.csv'],
+               prerec_data_framerates=[3],
+               prerec_posn_offsets=[[14, 6, 0]],  # 12.4, -1.2, 0.55]] openspace
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],
-               max_time=100,
+               max_time=10,
                write_episode_log=False  # don't write episode log for test_socnav
                )
 
@@ -56,8 +56,8 @@ def create_params():
         p.camera_params.modalities = ['rgb', 'disparity']
     else:
         p.camera_params.modalities = ['occupancy_grid']
-
     return p
+
 
 
 def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
@@ -199,5 +199,5 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 if __name__ == '__main__':
     # run basic room test with variable # of human
     test_socnav(num_generated_humans=0,
-                num_prerecorded=25,  # use -1 to include ALL prerecorded agents
-                starting_prerec=15)
+                num_prerecorded=15,  # use -1 to include ALL prerecorded agents
+                starting_prerec=0)

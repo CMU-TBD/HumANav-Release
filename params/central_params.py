@@ -12,6 +12,7 @@ seed = config['base_params'].getint('seed')
 # read params file for episodes configs
 episodes_config = configparser.ConfigParser()
 episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params.ini'))
+# episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params_socnav_test.ini'))
 
 
 def get_path_to_socnav():
