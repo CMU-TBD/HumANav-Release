@@ -36,11 +36,11 @@ def create_params():
     p.episode_params.tests = {}
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
-               map_name='openspace',
-               prerec_start_indx=[15],
-               prerec_data_filenames=['world_coordinate_inter.csv'],
-               prerec_data_framerates=[25],
-               prerec_posn_offsets=[[12.4, -1.2, 0.55]],
+               map_name='ETH',
+               prerec_start_indx=[0],
+               prerec_data_filenames=['world_coordinate_inter_eth.csv'],
+               prerec_data_framerates=[100],
+               prerec_posn_offsets=[[19.5, 15, 0]],
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],
@@ -186,6 +186,6 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
 if __name__ == '__main__':
     # run basic room test with variable # of human
-    test_socnav(num_generated_humans=5,
-                num_prerecorded=15,  # use -1 to include ALL prerecorded agents
+    test_socnav(num_generated_humans=0,
+                num_prerecorded=-1,  # use -1 to include ALL prerecorded agents
                 starting_prerec=0)

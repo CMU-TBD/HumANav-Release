@@ -23,6 +23,7 @@ import PIL
 import cv2
 import sys
 from utils.utils import Foo
+from params.central_params import create_base_params
 
 
 def _get_xy_bounding_box(vertex, padding):
@@ -120,8 +121,9 @@ def add_human_to_traversible(map, robot_base, robot_height, robot_radius,
 
     # Expand the occupied space to account for the robot base
     selem = morphology.disk(robot_radius / map.resolution)
+    thresh = create_base_params().building_thresh
     obstacle_free = morphology.binary_dilation(
-        _fill_holes(num_obstcale_points > num_point_threshold, 90), selem) != True
+        _fill_holes(num_obstcale_points > num_point_threshold, thresh), selem) != True
 
     # Combine the occupancy information from the static map
     # and the human
@@ -164,7 +166,7 @@ def compute_traversibility(map, robot_base, robot_height, robot_radius,
     selem = morphology.disk(robot_radius / map.resolution)
     # use _fill_holes to clean up the bitmap
     # NOTE: tune the threshold to clean up 'noise' in the .obj map
-    thresh = 900
+    thresh = create_base_params().building_thresh
     obstacle_free = morphology.binary_dilation(
         _fill_holes(num_obstcale_points > num_point_threshold, thresh), selem) != True
     valid_space = _fill_holes(num_points > num_point_threshold, thresh)

@@ -92,6 +92,7 @@ def create_base_params():
     p.seed = seed
     p.load_traversible_from_pickle_file = base_p.getboolean('load_traversible')
     p.render_3D = base_p.getboolean('render_3D')
+    p.building_thresh = base_p.getint('building_thresh')
     cam_p = config['camera_params']
     p.camera_params = \
         DotMap(modalities=eval(cam_p.get('modalities')),
@@ -343,6 +344,7 @@ def create_simulator_params(render_3D=False):
     else:
         print("Rendering depth and rgb images with 3D renderer")
     p.verbose_printing = sim_p.getboolean('verbose_printing')
+    p.clear_files = sim_p.getboolean('clear_files')
     # simulation tick rate
     p.dt = create_system_dynamics_params().dt
     return p
