@@ -16,7 +16,7 @@ random.seed(get_seed())
 class JoystickBase():
     def __init__(self):
         self.joystick_params = create_joystick_params()
-        if(self.joystick_params.use_system_dynamics):
+        if self.joystick_params.use_system_dynamics:
             from params.central_params import create_system_dynamics_params
             self.system_dynamics_params = create_system_dynamics_params()
             print("Joystick using system dynamics")
@@ -47,11 +47,11 @@ class JoystickBase():
             self.agent_log = {}  # log of all the agents as updated by sensing
 
         # keeping an explicit log of every sim_state indexed by time
-        if(self.joystick_params.track_sim_states):
+        if self.joystick_params.track_sim_states:
             self.sim_states = {}  # log of simulator states indexed by time
 
         # tracking velocity and acceleration of the agents from the sim states
-        if(self.joystick_params.track_vel_accel):
+        if self.joystick_params.track_vel_accel:
             global velocities
             from simulators.sim_state import compute_all_velocities as velocities
             global accelerations
@@ -60,7 +60,7 @@ class JoystickBase():
             self.accelerations = {}  # accelerations of all agents as sensed by the joystick
 
         # plotting the sim states received from the robot
-        if (self.joystick_params.generate_movie):
+        if self.joystick_params.generate_movie:
             import matplotlib as mpl
             mpl.use('Agg')  # for rendering without a display
             import matplotlib.pyplot as plt
@@ -83,17 +83,17 @@ class JoystickBase():
 
     def send_cmds(self, cmds, send_vel_cmds: bool = True):
         assert(send_vel_cmds == self.joystick_params.use_system_dynamics)
-        if(send_vel_cmds):
+        if send_vel_cmds:
             # needs v, w
             for command_grp in cmds:
-                if(len(command_grp) != 2):
+                if len(command_grp) != 2:
                     print("%sERROR: joystick expecting (v, w) for velocity commands. Got \"(%s)\"%s" % (
                         color_red, iter_print(command_grp), color_reset))
                 assert(len(command_grp) == 2)
         else:
             # needs x, y, th, v
             for command_grp in cmds:
-                if(len(command_grp) != 4):
+                if len(command_grp) != 4:
                     print("%sERROR: joystick expecting (x, y, theta, v) for positional commands. Got \"(%s)\"%s" % (
                         color_red, iter_print(command_grp), color_reset))
                 assert(len(command_grp) == 4)
@@ -235,7 +235,7 @@ class JoystickBase():
         assert(len(robots) == 1)
         robot = robots[0]
         # episode data
-        if(init_ep):
+        if init_ep:
             # only update start/goal when creating an episode
             r_start = robot.get_start_config().to_3D_numpy()
             r_goal = robot.get_goal_config().to_3D_numpy()
@@ -280,7 +280,7 @@ class JoystickBase():
                 agents_of_type[a].get_current_config().to_3D_numpy()
 
     def write_pandas(self):
-        assert(self.joystick_params.write_pandas_log)
+        assert self.joystick_params.write_pandas_log
         pd_df = pd.DataFrame(self.agent_log)
         abs_path = \
             os.path.join(get_path_to_socnav(), self.dirname, 'agent_data.csv')

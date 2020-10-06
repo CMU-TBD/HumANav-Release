@@ -49,6 +49,7 @@ class JoystickRandom(JoystickBase):
         if(not self.listen_once()):
             # occurs if the robot is unavailable or it finished
             self.joystick_on = False
+        print(self.sim_state_now.get_sim_t())
 
     def joystick_plan(self):
         pass
@@ -94,6 +95,7 @@ class JoystickWithPlanner(JoystickBase):
         self.robot_current = None    # current position of the robot
         self.robot_v = 0     # not tracked in the base simulator
         self.robot_w = 0     # not tracked in the base simulator
+        self.sim_times = []
         super().__init__()
 
     def init_obstacle_map(self, renderer=0):
@@ -134,10 +136,11 @@ class JoystickWithPlanner(JoystickBase):
     def joystick_sense(self):
         # ping's the robot to request a sim state
         self.send_to_robot("sense")
+
         # store previous pos3 of the robot (x, y, theta)
         robot_prev = self.robot_current.copy()  # copy since its just a list
         # listen to the robot's reply
-        if(not self.listen_once()):
+        if not self.listen_once():
             # occurs if the robot is unavailable or it finished
             self.joystick_on = False
 
@@ -153,6 +156,9 @@ class JoystickWithPlanner(JoystickBase):
             self.robot_current, robot_prev) / self.sim_delta_t
         self.robot_w = (
             self.robot_current[2] - robot_prev[2]) / self.sim_delta_t
+
+        self.sim_times += [round(self.sim_state_now.get_sim_t()
+                                 /self.sim_state_now.get_delta_t())]
 
     def joystick_plan(self):
         """ Runs the planner for one step from config to generate a
@@ -180,7 +186,7 @@ class JoystickWithPlanner(JoystickBase):
         self.commands = cmd_actions_nkf[0]
 
     def joystick_act(self):
-        if(self.joystick_on):
+        if self.joystick_on:
             # sends velocity commands within the robot's system dynamics
             assert(self.joystick_params.use_system_dynamics)
             # runs through the entire planned horizon just with a cmds_step
@@ -203,7 +209,7 @@ class JoystickWithPlanner(JoystickBase):
                     break
 
     def update_loop(self):
-        assert(self.sim_delta_t)
+        assert self.sim_delta_t
         print("simulator's refresh rate = %.4f" % self.sim_delta_t)
         print("joystick's refresh rate  = %.4f" % self.agent_params.dt)
         # TODO: do I need the listener thing?
@@ -219,6 +225,7 @@ class JoystickWithPlanner(JoystickBase):
             # send a command to the robot
             self.joystick_act()
         # complete this episode, move on to the next if need be
+        print(np.diff(self.sim_times))
         self.finish_episode()
 
 
@@ -262,7 +269,7 @@ class JoystickWithPlannerPosns(JoystickWithPlanner):
                                                                  repeat_second_to_last_speed=True)
 
     def joystick_act(self):
-        if(self.joystick_on):
+        if self.joystick_on:
             num_cmds_per_step = self.simulator_joystick_update_ratio
             # runs through the entire planned horizon just with a cmds_step of the above
             num_steps = int(np.floor(self.commands.k / num_cmds_per_step))
@@ -273,6 +280,10 @@ class JoystickWithPlannerPosns(JoystickWithPlanner):
                     (x, y, th, v) = self.from_conf(self.commands, idx)
                     xytv_cmds.append((x, y, th, v))
                 self.send_cmds(xytv_cmds, send_vel_cmds=False)
+
+                # to test the sequential sense
+                break
+
                 # break if the robot finished
-                if(not self.joystick_on):
+                if not self.joystick_on:
                     break

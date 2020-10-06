@@ -12,6 +12,7 @@ seed = config['base_params'].getint('seed')
 # read params file for episodes configs
 episodes_config = configparser.ConfigParser()
 episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params.ini'))
+# episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params_socnav_test.ini'))
 
 
 def get_path_to_socnav():
@@ -161,16 +162,25 @@ def create_test_params(test: str):
     p = DotMap()
     test_p = episodes_config[test]
     p.name = test
-    p.map_name = test_p.get('map_name')
-    p.prerec_start_indxs = eval(test_p.get('prerec_start_indxs'))
-    p.prerec_data_filenames = eval(test_p.get('prerec_data_filenames'))
-    p.prerec_data_framerates = eval(test_p.get('prerec_data_framerates'))
-    p.prerec_posn_offsets = eval(test_p.get('prerec_posn_offset'))
-    p.agents_start = eval(test_p.get('agents_start'))
-    p.agents_end = eval(test_p.get('agents_end'))
-    p.robot_start_goal = eval(test_p.get('robot_start_goal'))
-    p.max_time = test_p.getfloat('max_time')
-    p.write_episode_log = test_p.getboolean('write_episode_log')
+    # TODO why are these evals
+    try:
+        p.map_name = test_p.get('map_name')
+        p.prerec_start_indxs = eval(test_p.get('prerec_start_indxs'))
+        p.prerec_data_filenames = eval(test_p.get('prerec_data_filenames'))
+        p.prerec_data_framerates = eval(test_p.get('prerec_data_framerates'))
+        p.prerec_posn_offsets = eval(test_p.get('prerec_posn_offset'))
+        p.use_gen_agents = eval(test_p.get('use_gen_agents'))
+        if p.use_gen_agents:
+            p.agents_start = eval(test_p.get('agents_start'))
+            p.agents_end = eval(test_p.get('agents_end'))
+        p.robot_start_goal = eval(test_p.get('robot_start_goal'))
+        p.max_time = test_p.getfloat('max_time')
+        p.write_episode_log = test_p.getboolean('write_episode_log')
+
+    except TypeError:
+        print("Check that the episode_params file has all required fields")
+        exit(1)
+
     return p
 
 

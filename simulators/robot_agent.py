@@ -88,7 +88,8 @@ class RobotAgent(Agent):
         np.set_printoptions(precision=2)
         pos_2 = configs.get_start_config().to_3D_numpy()
         goal_2 = configs.get_goal_config().to_3D_numpy()
-        if(verbose):
+
+        if verbose:
             print("Robot", robot_name, "at", pos_2, "with goal", goal_2)
         return RobotAgent(robot_name, configs)
 
@@ -109,14 +110,14 @@ class RobotAgent(Agent):
         # enforce planning termination upon condition
         self._enforce_episode_termination_conditions()
 
-        if(self.vehicle_trajectory.k >= self.collision_point_k):
+        if self.vehicle_trajectory.k >= self.collision_point_k:
             self.end_acting = True
 
-        if(self.get_collided()):
+        if self.get_collided():
             assert(self.termination_cause == 'Collision')
             self.power_off()
 
-        if(self.get_completed()):
+        if self.get_completed():
             assert(self.termination_cause == "Success")
             self.power_off()
 
@@ -206,21 +207,21 @@ class RobotAgent(Agent):
     def update(self, iteration):
         if self.running:
             # send a sim_state if it was requested by the joystick
-            if(self.joystick_requests_world == 0):
+            if self.joystick_requests_world == 0:
                 # has processed all prior commands
                 self.send_sim_state()
 
             # only block on act()'s
             init_block_t = time.time()
-            while (self.running and self.num_executed >= len(self.joystick_inputs)):
-                if(self.num_executed == len(self.joystick_inputs)):
-                    if(self.joystick_requests_world == 0):
+            while self.running and self.num_executed >= len(self.joystick_inputs):
+                if self.num_executed == len(self.joystick_inputs):
+                    if self.joystick_requests_world == 0:
                         self.send_sim_state()
                 time.sleep(0.01)
             self.block_time_total += time.time() - init_block_t
 
             # execute the next command in the queue
-            if(self.num_executed < len(self.joystick_inputs)):
+            if self.num_executed < len(self.joystick_inputs):
                 # execute all the commands on the 'queue'
                 self.execute()
                 # decrement counter
@@ -230,7 +231,7 @@ class RobotAgent(Agent):
 
     def power_off(self):
         # if the robot is already "off" do nothing
-        if(self.running):
+        if self.running:
             print("\nRobot powering off, received",
                   len(self.joystick_inputs), "commands")
             self.running = False
@@ -305,14 +306,15 @@ class RobotAgent(Agent):
         return False
 
     def manage_data(self, data_str: str):
-        if(not self.is_keyword(data_str)):
+        if not self.is_keyword(data_str):
             data = json.loads(data_str)
             joystick_input: list = data["j_input"]
             self.num_cmds_per_batch = len(joystick_input)
+
             for i in range(self.num_cmds_per_batch):
                 np_data = np.array(joystick_input[i], dtype=np.float32)
                 self.joystick_inputs.append(np_data)
-                if(self.repeat_joystick):  # if need be, repeat n-1 times
+                if self.repeat_joystick:  # if need be, repeat n-1 times
                     repeat_amnt = int(np.floor(
                         (self.params.robot_params.physical_params.repeat_freq / self.num_cmds_per_batch) - 1))
                     for i in range(repeat_amnt):

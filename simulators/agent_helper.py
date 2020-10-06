@@ -27,12 +27,12 @@ class AgentHelper(object):
         if termination_time != np.inf:
             end_episode = True
             for i, condition in enumerate(p.episode_termination_reasons):
-                if (time_idxs[i] != np.inf):
+                if time_idxs[i] != np.inf:
                     self.termination_cause = condition
                     self.collision_point_k = termination_time
                     color = termination_cause_to_color(condition)
             self.vehicle_trajectory.clip_along_time_axis(termination_time)
-            if(self.planner is not None and self.planner_data is not None):
+            if self.planner is not None and self.planner_data is not None:
                 self.planner_data, planner_data_last_step, last_step_data_valid = \
                     self.planner.mask_and_concat_data_along_batch_dim(
                         self.planner_data,
