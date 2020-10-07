@@ -279,7 +279,8 @@ class CentralSimulator(SimulatorHelper):
         # Save current state to a class dictionary indexed by simulator time
         sim_t_step = round(sim_t / delta_t)
         self.states[sim_t_step] = current_state
-        print(sim_t_step, r.get_current_config().to_3D_numpy())
+        # debug prints
+        # print(sim_t_step, r.get_current_config().to_3D_numpy())
         return current_state
 
     """ BEGIN IMAGE UTILS """

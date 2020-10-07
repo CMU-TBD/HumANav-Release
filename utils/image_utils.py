@@ -122,7 +122,7 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
     img_scale = \
         ax.transData.transform((0, 1)) - ax.transData.transform((0, 0))
     # scale the pixels-per-meter based off the image scale
-    ppm = int(img_scale[1] * 0.5)
+    ppm = int(img_scale[1])
     ax.imshow(traversible, extent=extent, cmap='gray',
               vmin=-0.5, vmax=1.5, origin='lower')
     # Plot human traversible
