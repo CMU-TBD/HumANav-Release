@@ -108,8 +108,8 @@ class PrerecordedHuman(Human):
         xy_data = []
         s = np.sin(offset[2])
         c = np.cos(offset[2])
-        swapaxes=False
-        flipaxes=True
+        swapaxes = False
+        flipaxes = True
         if swapaxes:
             # generate a list of lists of positions (only x)
             for y in ped_i['y']:
@@ -211,20 +211,25 @@ class PrerecordedHuman(Human):
                                     # use -1 to just include all agents (within time bounds)
                                     max_agents: int = -1,
                                     # default is ~1000 days (ie. no time bound)
-                                    max_time: float = 10e7,
-                                    # positional offset for the posn data
-                                    offset=[0, 0, 0],
-                                    # which pedestrian to consider the 'first'
+                                    max_time: int = 10e7,
                                     start_idx: int = 0,
-                                    csv_file: str = 'world_coordinate_inter.csv',
-                                    fps: float = 25):
+                                    pedestrian_dataset: DotMap = None
+                                    ):
         """"world_df" is a set of trajectories organized as a pandas dataframe.
-        Each row is a pedestrian at a given frame (aka time point).
-        The data was taken at 25 fps so between frames is 1/25th of a second. """
+            Each row is a pedestrian at a given frame (aka time point).
+            The data was taken at 25 fps so between frames is 1/25th of a second. """
         import pandas as pd
+        csv_file = pedestrian_dataset.file_name
+        offset = pedestrian_dataset.offset
+        fps = pedestrian_dataset.fps
+        swapxy = pedestrian_dataset.swapxy
+        flipxn = pedestrian_dataset.flipxn
+        flipyn = pedestrian_dataset.flipyn
+
         assert(fps > 0)
         if max_agents > 0 or max_agents == -1:
-            datafile = os.path.join(params.socnav_dir, "tests/", csv_file)
+            datafile = \
+                os.path.join(params.socnav_dir, "tests/datasets/", csv_file)
             world_df = pd.read_csv(datafile, header=None).T
             world_df.columns = ['frame', 'ped', 'y', 'x']
             world_df[['frame', 'ped']] = \
@@ -238,10 +243,10 @@ class PrerecordedHuman(Human):
                 ped_id = i + start_idx + 1
                 if ped_id > max_peds:
                     print("%sRequested Prerec agent index out of bounds:" %
-                          color_red, ped_id, "%s" % color_reset)
+                            color_red, ped_id, "%s" % color_reset)
                 if ped_id not in all_peds:
                     print("%sRequested agent %d not found in dataset: %s%s" %
-                          (color_red, ped_id, csv_file, color_reset))
+                            (color_red, ped_id, csv_file, color_reset))
                     # this can happen based off the dataset
                     continue
                 ped_i = world_df[world_df.ped == ped_id]
@@ -255,13 +260,16 @@ class PrerecordedHuman(Human):
                     # assuming the data of the agents is sorted relatively based off time
                     break
                 print("Generating prerecorded agents %d to %d \r" %
-                      (start_idx, ped_id), end="")
-                xytheta_data = PrerecordedHuman.gather_posn_data(ped_i, offset)
-                v_data = PrerecordedHuman.gather_vel_data(t_data, xytheta_data)
+                        (start_idx, ped_id), end="")
+                xytheta_data = PrerecordedHuman.gather_posn_data(
+                    ped_i, offset)
+                v_data = PrerecordedHuman.gather_vel_data(
+                    t_data, xytheta_data)
                 # combine the xytheta with the velocity
-                config_data = PrerecordedHuman.to_configs(xytheta_data, v_data)
+                config_data = PrerecordedHuman.to_configs(
+                    xytheta_data, v_data)
                 new_agent = PrerecordedHuman(t_data=t_data, posn_data=config_data,
-                                             generate_appearance=params.render_3D)
+                                                generate_appearance=params.render_3D)
                 simulator.add_agent(new_agent)
             # to not disturb the carriage-return print
             print()

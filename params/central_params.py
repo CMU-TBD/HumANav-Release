@@ -5,19 +5,20 @@ import os
 
 # first thing to do is read params file
 config = configparser.ConfigParser()
-# config.read(os.path.join(os.getcwd(), 'params/params.ini'))
 config.read(os.path.join(os.getcwd(), 'params/params_example.ini'))
 seed = config['base_params'].getint('seed')
 
 # read params file for episodes configs
 episodes_config = configparser.ConfigParser()
 episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params.ini'))
-# episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params_socnav_test.ini'))
+
+dataset_config = configparser.ConfigParser()
+dataset_config.read(os.path.join(os.getcwd(), 'params/dataset_params.ini'))
 
 
 def get_path_to_socnav():
     # can use a literal string in params.ini as the path
-    ### PATH_TO_HUMANAV = config['base_params']['base_directory']
+    # PATH_TO_HUMANAV = config['base_params']['base_directory']
     # or just use the relative path
     PATH_TO_HUMANAV = os.getcwd()
     if(not os.path.exists(PATH_TO_HUMANAV)):
@@ -95,17 +96,16 @@ def create_base_params():
     p.render_3D = base_p.getboolean('render_3D')
     p.building_thresh = base_p.getint('building_thresh')
     cam_p = config['camera_params']
-    p.camera_params = \
-        DotMap(modalities=eval(cam_p.get('modalities')),
-               width=cam_p.getint('width'),
-               height=cam_p.getint('height'),
-               z_near=cam_p.getfloat('z_near'),
-               z_far=cam_p.getfloat('z_far'),
-               fov_horizontal=cam_p.getfloat('fov_horizontal'),
-               fov_vertical=cam_p.getfloat('fov_vertical'),
-               img_channels=cam_p.getint('img_channels'),
-               im_resize=cam_p.getfloat('im_resize'),
-               max_depth_meters=cam_p.getfloat('max_depth_meters'))
+    p.camera_params = DotMap(modalities=eval(cam_p.get('modalities')),
+                             width=cam_p.getint('width'),
+                             height=cam_p.getint('height'),
+                             z_near=cam_p.getfloat('z_near'),
+                             z_far=cam_p.getfloat('z_far'),
+                             fov_horizontal=cam_p.getfloat('fov_horizontal'),
+                             fov_vertical=cam_p.getfloat('fov_vertical'),
+                             img_channels=cam_p.getint('img_channels'),
+                             im_resize=cam_p.getfloat('im_resize'),
+                             max_depth_meters=cam_p.getfloat('max_depth_meters'))
     p.socnav_dir = get_path_to_socnav()
     p.traversible_dir = get_traversible_dir()
     if(p.render_3D):
@@ -113,17 +113,18 @@ def create_base_params():
         p.sbpd_data_dir = get_sbpd_data_dir()
         # Surreal Parameters
         surr_p = config['surreal_params']
-        p.surreal = \
-            DotMap(mode=surr_p['mode'],
-                   data_dir=get_surreal_mesh_dir(),
-                   texture_dir=get_surreal_texture_dir(),
-                   body_shapes_train=eval(surr_p.get('body_shapes_train')),
-                   body_shapes_test=eval(surr_p.get('body_shapes_test')),
-                   compute_human_traversible=surr_p.getboolean(
-                       'compute_human_traversible'),
-                   render_humans_in_gray_only=surr_p.getboolean(
-                       'render_humans_in_gray_only')
-                   )
+        p.surreal = DotMap(mode=surr_p['mode'],
+                           data_dir=get_surreal_mesh_dir(),
+                           texture_dir=get_surreal_texture_dir(),
+                           body_shapes_train=eval(
+                               surr_p.get('body_shapes_train')),
+                           body_shapes_test=eval(
+                               surr_p.get('body_shapes_test')),
+                           compute_human_traversible=surr_p.getboolean(
+            'compute_human_traversible'),
+            render_humans_in_gray_only=surr_p.getboolean(
+            'render_humans_in_gray_only')
+        )
     return p
 
 
@@ -133,14 +134,13 @@ def create_robot_params():
     rob_p = config['robot_params']
     p.port = rob_p.getint('port')
     p.repeat_freq: int = rob_p.getint('repeat_freq')
-    p.physical_params = \
-        DotMap(radius=rob_p.getfloat('radius'),
-               base=rob_p.getfloat('base'),
-               height=rob_p.getfloat('height'),
-               sensor_height=rob_p.getfloat('sensor_height'),
-               camera_elevation_degree=rob_p.getfloat(
-                   'camera_elevation_degree'),
-               delta_theta=rob_p.getfloat('delta_theta'))
+    p.physical_params = DotMap(radius=rob_p.getfloat('radius'),
+                               base=rob_p.getfloat('base'),
+                               height=rob_p.getfloat('height'),
+                               sensor_height=rob_p.getfloat('sensor_height'),
+                               camera_elevation_degree=rob_p.getfloat(
+        'camera_elevation_degree'),
+        delta_theta=rob_p.getfloat('delta_theta'))
     p.use_system_dynamics = create_joystick_params().use_system_dynamics
     return p
 
@@ -158,6 +158,19 @@ def create_joystick_params():
     return p
 
 
+def create_dataset_params(dataset_name: str):
+    p = DotMap()
+    dataset_p = dataset_config[dataset_name]
+    p.name = dataset_name
+    p.file_name = dataset_p.get('file_name')
+    p.offset = eval(dataset_p.get('offset'))
+    p.fps = dataset_p.getint('fps')
+    p.swapxy = dataset_p.getboolean('swapxy')
+    p.flipxn = dataset_p.getboolean('flipxn')
+    p.flipyn = dataset_p.getboolean('flipyn')
+    return p
+
+
 def create_test_params(test: str):
     p = DotMap()
     test_p = episodes_config[test]
@@ -165,18 +178,13 @@ def create_test_params(test: str):
     # TODO why are these evals
     try:
         p.map_name = test_p.get('map_name')
-        p.prerec_start_indxs = eval(test_p.get('prerec_start_indxs'))
-        p.prerec_data_filenames = eval(test_p.get('prerec_data_filenames'))
-        p.prerec_data_framerates = eval(test_p.get('prerec_data_framerates'))
-        p.prerec_posn_offsets = eval(test_p.get('prerec_posn_offset'))
-        p.use_gen_agents = eval(test_p.get('use_gen_agents'))
-        if p.use_gen_agents:
-            p.agents_start = eval(test_p.get('agents_start'))
-            p.agents_end = eval(test_p.get('agents_end'))
+        p.pedestrian_dataset = \
+            create_dataset_params(test_p.get('pedestrian_dataset'))
+        p.agents_start = eval(test_p.get('agents_start'))
+        p.agents_end = eval(test_p.get('agents_end'))
         p.robot_start_goal = eval(test_p.get('robot_start_goal'))
         p.max_time = test_p.getfloat('max_time')
         p.write_episode_log = test_p.getboolean('write_episode_log')
-
     except TypeError:
         print("Check that the episode_params file has all required fields")
         exit(1)
@@ -274,7 +282,9 @@ def create_system_dynamics_params():
                                    noise_lb=eval(dyn_p.get('noise_lb')),
                                    noise_ub=eval(dyn_p.get('noise_ub')),
                                    noise_mean=eval(dyn_p.get('noise_mean')),
-                                   noise_std=eval(dyn_p.get('noise_std'))))
+                                   noise_std=eval(dyn_p.get('noise_std'))
+                                   )
+               )
     return p
 
 
@@ -401,12 +411,14 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
                power=agent_p.getfloat('power_obstacle'),
                obstacle_cost=agent_p.getfloat('obstacle_cost'))
     # Angle Distance parameters
-    p.goal_angle_objective = DotMap(power=agent_p.getfloat('power_angle'),
-                                    angle_cost=agent_p.getfloat('angle_cost'))
+    p.goal_angle_objective = \
+        DotMap(power=agent_p.getfloat('power_angle'),
+               angle_cost=agent_p.getfloat('angle_cost'))
     # Goal Distance parameters
-    p.goal_distance_objective = DotMap(power=agent_p.getfloat('power_goal'),
-                                       goal_cost=agent_p.getfloat('goal_cost'),
-                                       goal_margin=agent_p.getfloat('goal_margin'))
+    p.goal_distance_objective = \
+        DotMap(power=agent_p.getfloat('power_goal'),
+               goal_cost=agent_p.getfloat('goal_cost'),
+               goal_margin=agent_p.getfloat('goal_margin'))
 
     # Personal Space cost parameters
     p.personal_space_objective = DotMap(power=1,

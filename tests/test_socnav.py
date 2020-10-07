@@ -30,17 +30,14 @@ def create_params():
     p.robot_params = create_robot_params()
 
     # Introduce the episode params
-    from params.central_params import create_episodes_params
+    from params.central_params import create_episodes_params, create_dataset_params
     p.episode_params = create_episodes_params()
     # overwrite tests with custom basic test
     p.episode_params.tests = {}
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
                map_name='Zara',
-               prerec_start_indx=[0],
-               prerec_data_filenames=['datasets/univ/world_coordinate_inter_adjustedFrameID.csv'],
-               prerec_data_framerates=[3],
-               prerec_posn_offsets=[[14, 6, 0]],  # 12.4, -1.2, 0.55]] openspace
+               pedestrian_dataset=create_dataset_params("eth"),
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],
@@ -57,7 +54,6 @@ def create_params():
     else:
         p.camera_params.modalities = ['occupancy_grid']
     return p
-
 
 
 def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
@@ -156,30 +152,29 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             )
             simulator.add_agent(robot_agent)
 
-            # hardcode for testing purposes
-            # from humans.human_configs import HumanConfigs
-            #
-            # start_conf = generate_config_from_pos_3([33., 2., 1.91])
-            # # start_conf = generate_config_from_pos_3([30, 9, 1.91])
-            # goal_conf = generate_config_from_pos_3([7.5, 10, 4.1])
-            # configs = HumanConfigs(start_conf, goal_conf)
-            # robot_agent = RobotAgent.generate_robot(
-            #     configs
-            # )
-            # simulator.add_agent(robot_agent)
+        # hardcode for testing purposes
+        # from humans.human_configs import HumanConfigs
+        #
+        # start_conf = generate_config_from_pos_3([33., 2., 1.91])
+        # # start_conf = generate_config_from_pos_3([30, 9, 1.91])
+        # goal_conf = generate_config_from_pos_3([7.5, 10, 4.1])
+        # configs = HumanConfigs(start_conf, goal_conf)
+        # robot_agent = RobotAgent.generate_robot(
+        #     configs
+        # )
+        # simulator.add_agent(robot_agent)
 
         """
         Add the prerecorded humans to the simulator
         """
-        for i in range(len(episode.prerec_data_filenames)):
-            PrerecordedHuman.generate_prerecorded_humans(simulator, p,
-                                 init_delay=2,
-                                 max_agents=num_prerecorded,
-                                 start_idx=starting_prerec,
-                                 offset=episode.prerec_posn_offsets[i],
-                                 csv_file=episode.prerec_data_filenames[i],
-                                 fps=episode.prerec_data_framerates[i]
-                                 )
+
+        PrerecordedHuman.generate_prerecorded_humans(simulator, p,
+                                                     init_delay=2,
+                                                     max_agents=num_prerecorded,
+                                                     start_idx=starting_prerec,
+                                                     max_time=episode.max_time,
+                                                     pedestrian_dataset=episode.pedestrian_dataset
+                                                     )
         """
         Generate the autonomous human agents from the episode
         """
