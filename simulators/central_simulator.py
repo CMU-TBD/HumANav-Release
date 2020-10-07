@@ -114,13 +114,8 @@ class CentralSimulator(SimulatorHelper):
 
     def loop_condition(self):
         if self.robot:
-            # run for the full time if the robot exists
-            if self.robot.end_acting:
-                # True if collided or succeeded
-                return False
-            else:
-                # go until timeout
-                return self.t <= self.episode_params.max_time
+            # stop the simulation if the robot has exited
+            return not self.robot.end_acting
         # else just run until there are no more agents
         return self.exists_running_agent() or self.exists_running_prerec()
 
@@ -160,7 +155,7 @@ class CentralSimulator(SimulatorHelper):
         iteration = 0  # loop iteration
         self.print_sim_progress(iteration)
 
-        while self.loop_condition():
+        while self.t <= self.episode_params.max_time and self.loop_condition():
             wall_t = time.time() - start_time
 
             # initiate thread operations
@@ -186,7 +181,6 @@ class CentralSimulator(SimulatorHelper):
             # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
             current_state = self.save_state(self.t, self.delta_t, wall_t)
-
             if self.robot:
                 self.robot.update_world(current_state)
 
@@ -282,10 +276,10 @@ class CentralSimulator(SimulatorHelper):
         current_state = SimState(saved_env, pedestrians, saved_robots,
                                  sim_t, wall_t, delta_t, self.episode_params.name,
                                  self.episode_params.max_time)
-
         # Save current state to a class dictionary indexed by simulator time
-        sim_t_step = round(sim_t/delta_t)
+        sim_t_step = round(sim_t / delta_t)
         self.states[sim_t_step] = current_state
+        print(sim_t_step, r.get_current_config().to_3D_numpy())
         return current_state
 
     """ BEGIN IMAGE UTILS """
@@ -411,6 +405,7 @@ class CentralSimulator(SimulatorHelper):
         del state
 
     """ END IMAGE UTILS """
+
     def generate_episode_score_report(self, filename='episode_score'):
         # should do this in some formal format
         # json? pandas? how to aggregate per episode?
@@ -460,7 +455,7 @@ class CentralSimulator(SimulatorHelper):
 
         # other ROBOT INFO
 
-        metrics_out["num_recv_joystick"]  = \
+        metrics_out["num_recv_joystick"] = \
             len(self.robot.joystick_inputs)
         metrics_out["num_exec_robot"] = \
             self.robot.num_executed
@@ -484,7 +479,8 @@ class CentralSimulator(SimulatorHelper):
             print("%sSuccessfully wrote episode metrics to %s%s" %
                   (color_green, abs_filename, color_reset))
         except:
-            print("%sWriting episode metrics failed%s" % (color_red, color_reset))
+            print("%sWriting episode metrics failed%s" %
+                  (color_red, color_reset))
 
         return
 

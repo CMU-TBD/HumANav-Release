@@ -51,7 +51,6 @@ class RobotAgent(Agent):
         self.repeat_freq = self.params.repeat_freq
         # simulation update init
         self.running = True
-        self.last_command = None
         self.num_executed = 0  # keeps track of the latest command that is to be executed
         self.num_cmds_per_batch = 1
         # default simulator delta_t, to be updated via set_sim_delta_t() later
@@ -310,10 +309,11 @@ class RobotAgent(Agent):
             data = json.loads(data_str)
             joystick_input: list = data["j_input"]
             self.num_cmds_per_batch = len(joystick_input)
-
+            # add input commands to queue to keep track of
             for i in range(self.num_cmds_per_batch):
                 np_data = np.array(joystick_input[i], dtype=np.float32)
                 self.joystick_inputs.append(np_data)
+                # duplicate commands if "repeating" instead of blocking
                 if self.repeat_joystick:  # if need be, repeat n-1 times
                     repeat_amnt = int(np.floor(
                         (self.params.robot_params.physical_params.repeat_freq / self.num_cmds_per_batch) - 1))

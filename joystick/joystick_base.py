@@ -206,10 +206,14 @@ class JoystickBase():
                 self.sim_states[self.sim_state_now.get_sim_t()] = \
                     self.sim_state_now
 
-            print("%sUpdated state of the world for time = %.3f out of %.3f\r" %
+            # print("%sUpdated state of the world for time = %.3f out of %.3f\r" %
+            #       (color_blue, self.sim_state_now.get_sim_t(),
+            #        self.current_ep.get_time_budget()),
+            #       "%s" % color_reset, end="")
+            print("%sUpdated state of the world for time = %.3f out of %.3f" %
                   (color_blue, self.sim_state_now.get_sim_t(),
                    self.current_ep.get_time_budget()),
-                  "%s" % color_reset, end="")
+                  "%s" % color_reset)
 
             # self.track_vel_accel(self.sim_state_now)  # TODO: remove
 

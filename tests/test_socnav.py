@@ -36,12 +36,12 @@ def create_params():
     p.episode_params.tests = {}
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
-               map_name='Zara',
-               pedestrian_dataset=create_dataset_params("eth"),
+               map_name='univ',
+               pedestrian_dataset=create_dataset_params("univ"),
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],
-               max_time=10,
+               max_time=40,
                write_episode_log=False  # don't write episode log for test_socnav
                )
 
@@ -145,11 +145,10 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         )
         if not p.episode_params.without_robot:
             """
-            Generate the robots for the simulator
+            Generate the robot(s) for the simulator
             """
-            robot_agent = RobotAgent.generate_random_robot_from_environment(
-                environment
-            )
+            robot_agent = \
+                RobotAgent.generate_random_robot_from_environment(environment)
             simulator.add_agent(robot_agent)
 
         # hardcode for testing purposes
@@ -194,5 +193,5 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 if __name__ == '__main__':
     # run basic room test with variable # of human
     test_socnav(num_generated_humans=0,
-                num_prerecorded=15,  # use -1 to include ALL prerecorded agents
+                num_prerecorded=-1,  # use -1 to include ALL prerecorded agents
                 starting_prerec=0)

@@ -158,7 +158,7 @@ class JoystickWithPlanner(JoystickBase):
             self.robot_current[2] - robot_prev[2]) / self.sim_delta_t
 
         self.sim_times += [round(self.sim_state_now.get_sim_t()
-                                 /self.sim_state_now.get_delta_t())]
+                                 / self.sim_state_now.get_delta_t())]
 
     def joystick_plan(self):
         """ Runs the planner for one step from config to generate a
@@ -215,8 +215,8 @@ class JoystickWithPlanner(JoystickBase):
         # TODO: do I need the listener thing?
         self.robot_receiver_socket.listen(1)  # init listener thread
         self.joystick_on = True
-        self.simulator_joystick_update_ratio = int(
-            np.floor(self.sim_delta_t / self.agent_params.dt))
+        self.simulator_joystick_update_ratio = \
+            int(np.floor(self.sim_delta_t / self.agent_params.dt))
         while(self.joystick_on):
             # gather information about the world state based off the simulator
             self.joystick_sense()

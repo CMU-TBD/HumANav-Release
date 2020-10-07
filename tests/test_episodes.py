@@ -155,22 +155,19 @@ def test_episodes():
         """
         Add the prerecorded humans to the simulator
         """
-        for i in range(len(episode.prerec_data_filenames)):
-            PrerecordedHuman.generate_prerecorded_humans(simulator, p,
-                                                         init_delay=2,
-                                                         max_time=episode.max_time,
-                                                         offset=episode.prerec_posn_offsets[i],
-                                                         start_idx=episode.prerec_start_indxs[i],
-                                                         csv_file=episode.prerec_data_filenames[i],
-                                                         fps=episode.prerec_data_framerates[i]
-                                                         )
+        PrerecordedHuman.generate_prerecorded_humans(simulator, p,
+                                                     init_delay=2,
+                                                     start_idx=0,
+                                                     max_time=episode.max_time,
+                                                     pedestrian_dataset=episode.pedestrian_dataset
+                                                     )
 
         """
         Generate the autonomous human agents from the episode
         """
         if episode.use_gen_agents:
             generate_auto_humans(episode.agents_start, episode.agents_end,
-                             simulator, environment, p, r)
+                                 simulator, environment, p, r)
 
         # run simulation
         simulator.simulate()

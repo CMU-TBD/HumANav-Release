@@ -104,34 +104,22 @@ class PrerecordedHuman(Human):
 
     @staticmethod
     # TODO vectorize
-    def gather_posn_data(ped_i, offset):
+    def gather_posn_data(ped_i, offset, swap_axes=False, scale_x=1, scale_y=1):
         xy_data = []
+        xy_order = ('x', 'y')
+        if(swap_axes):
+            xy_order = ('y', 'x')
+        # generate a list of lists of positions (only first variable)
+        for p in ped_i[xy_order[0]]:
+            scale = scale_y if xy_order[0] == 'y' else scale_x
+            xy_data.append([scale * p])
+        # append second variable to the list of positions
+        for j, p in enumerate(ped_i[xy_order[1]]):
+            scale = scale_x if xy_order[1] == 'x' else scale_y
+            xy_data[j].append(scale * p)
+        # apply the rotations to the x, y positions
         s = np.sin(offset[2])
         c = np.cos(offset[2])
-        swapaxes = False
-        flipaxes = True
-        if swapaxes:
-            # generate a list of lists of positions (only x)
-            for y in ped_i['y']:
-                xy_data.append([y])
-            # append y to the list of positions
-            for j, x in enumerate(ped_i['x']):
-                xy_data[j].append(-x)
-        elif flipaxes:
-            # generate a list of lists of positions (only x)
-            for x in ped_i['x']:
-                xy_data.append([-x])
-            # append y to the list of positions
-            for j, y in enumerate(ped_i['y']):
-                xy_data[j].append(-y)
-        else:
-            # generate a list of lists of positions (only x)
-            for x in ped_i['x']:
-                xy_data.append([x])
-            # append y to the list of positions
-            for j, y in enumerate(ped_i['y']):
-                xy_data[j].append(y)
-        # apply the rotations to the x, y positions
         posn_data = []
         for (x, y) in xy_data:
             x_rot = x * c - y * s
@@ -141,9 +129,10 @@ class PrerecordedHuman(Human):
         for j, pos_2 in enumerate(posn_data):
             if j > 0:
                 last_pos_2 = posn_data[j - 1]
-                theta = np.arctan2(
-                    pos_2[1] - last_pos_2[1], pos_2[0] - last_pos_2[0])
+                theta = np.arctan2(pos_2[1] - last_pos_2[1],
+                                   pos_2[0] - last_pos_2[0])
                 posn_data[j - 1].append(theta)
+                # append same theta to the last position
                 if j == len(posn_data) - 1:
                     # last element gets last angle
                     posn_data[j].append(theta)
@@ -219,14 +208,15 @@ class PrerecordedHuman(Human):
             Each row is a pedestrian at a given frame (aka time point).
             The data was taken at 25 fps so between frames is 1/25th of a second. """
         import pandas as pd
+        # gather metadata from pedestrian dataset
         csv_file = pedestrian_dataset.file_name
         offset = pedestrian_dataset.offset
         fps = pedestrian_dataset.fps
-        swapxy = pedestrian_dataset.swapxy
-        flipxn = pedestrian_dataset.flipxn
-        flipyn = pedestrian_dataset.flipyn
-
         assert(fps > 0)
+        swapxy = pedestrian_dataset.swapxy
+        scale_x = -1 if pedestrian_dataset.flipxn else 1
+        scale_y = -1 if pedestrian_dataset.flipyn else 1
+        # run through the amount of agents
         if max_agents > 0 or max_agents == -1:
             datafile = \
                 os.path.join(params.socnav_dir, "tests/datasets/", csv_file)
@@ -243,10 +233,10 @@ class PrerecordedHuman(Human):
                 ped_id = i + start_idx + 1
                 if ped_id > max_peds:
                     print("%sRequested Prerec agent index out of bounds:" %
-                            color_red, ped_id, "%s" % color_reset)
+                          color_red, ped_id, "%s" % color_reset)
                 if ped_id not in all_peds:
                     print("%sRequested agent %d not found in dataset: %s%s" %
-                            (color_red, ped_id, csv_file, color_reset))
+                          (color_red, ped_id, csv_file, color_reset))
                     # this can happen based off the dataset
                     continue
                 ped_i = world_df[world_df.ped == ped_id]
@@ -260,16 +250,16 @@ class PrerecordedHuman(Human):
                     # assuming the data of the agents is sorted relatively based off time
                     break
                 print("Generating prerecorded agents %d to %d \r" %
-                        (start_idx, ped_id), end="")
-                xytheta_data = PrerecordedHuman.gather_posn_data(
-                    ped_i, offset)
-                v_data = PrerecordedHuman.gather_vel_data(
-                    t_data, xytheta_data)
+                      (start_idx, ped_id), end="")
+                xytheta_data = PrerecordedHuman.gather_posn_data(ped_i, offset,
+                                                                 swap_axes=swapxy,
+                                                                 scale_x=scale_x,
+                                                                 scale_y=scale_y)
+                v_data = PrerecordedHuman.gather_vel_data(t_data, xytheta_data)
                 # combine the xytheta with the velocity
-                config_data = PrerecordedHuman.to_configs(
-                    xytheta_data, v_data)
+                config_data = PrerecordedHuman.to_configs(xytheta_data, v_data)
                 new_agent = PrerecordedHuman(t_data=t_data, posn_data=config_data,
-                                                generate_appearance=params.render_3D)
+                                             generate_appearance=params.render_3D)
                 simulator.add_agent(new_agent)
             # to not disturb the carriage-return print
             print()
