@@ -248,13 +248,12 @@ class JoystickWithPlannerPosns(JoystickWithPlanner):
         the subtrajectory, and relevant planner data
         - Access to sim_states from the self.current_world
         """
-        try:
-            # occurs when self.commands is a valid Trajectory with several configs
-            (x, y, th, v) = self.from_conf(self.commands, -1)  # last posn
-        except:
-            # occurs if self.commands has not yet been initialized to a Trajectory
-            [x, y, th] = self.robot_current
-            v = self.robot_v
+        # get information about robot by its "current position" which was updated in sense()
+        [x, y, th] = self.robot_current
+        v = self.robot_v
+        # can also try:
+        #     # assumes the robot has executed all the previous commands in self.commands
+        #     (x, y, th, v) = self.from_conf(self.commands, -1)
         robot_config = generate_config_from_pos_3(pos_3=(x, y, th), v=v)
         self.planner_data = self.planner.optimize(robot_config,
                                                   self.goal_config,
@@ -282,7 +281,7 @@ class JoystickWithPlannerPosns(JoystickWithPlanner):
                 self.send_cmds(xytv_cmds, send_vel_cmds=False)
 
                 # to test the sequential sense
-                break
+                # break
 
                 # break if the robot finished
                 if not self.joystick_on:
