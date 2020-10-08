@@ -155,7 +155,7 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         for dataset in episode.pedestrian_datasets:
             PrerecordedHuman.generate_pedestrians(simulator, p,
                                                   max_time=episode.max_time,
-                                                  pedestrian_dataset=dataset
+                                                  dataset=dataset
                                                   )
 
         if not p.episode_params.without_robot:

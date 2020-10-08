@@ -155,12 +155,11 @@ def test_episodes():
         """
         Add the prerecorded humans to the simulator
         """
-        PrerecordedHuman.generate_prerecorded_humans(simulator, p,
-                                                     init_delay=2,
-                                                     start_idx=0,
-                                                     max_time=episode.max_time,
-                                                     pedestrian_dataset=episode.pedestrian_dataset
-                                                     )
+        for dataset in episode.pedestrian_datasets:
+            PrerecordedHuman.generate_pedestrians(simulator, p,
+                                                  max_time=episode.max_time,
+                                                  dataset=dataset
+                                                  )
 
         """
         Generate the autonomous human agents from the episode

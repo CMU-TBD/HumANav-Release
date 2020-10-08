@@ -200,28 +200,27 @@ class PrerecordedHuman(Human):
     def generate_pedestrians(simulator, params,
                              # default is ~1000 days (ie. no time bound)
                              max_time: int = 10e7,
-                             pedestrian_dataset: DotMap = None
+                             dataset: DotMap = None
                              ):
         """"world_df" is a set of trajectories organized as a pandas dataframe.
             Each row is a pedestrian at a given frame (aka time point).
             The data was taken at 25 fps so between frames is 1/25th of a second. """
         import pandas as pd
         # gather metadata from pedestrian dataset
-        csv_file = pedestrian_dataset.file_name
-        offset = pedestrian_dataset.offset
-        fps = pedestrian_dataset.fps
-        start_t = pedestrian_dataset.start_t
-        init_delay = pedestrian_dataset.spawn_delay_s
-        start_idx = pedestrian_dataset.ped_range[0]
-        max_agents = \
-            -1 if pedestrian_dataset.ped_range[1] == -1 \
-            else pedestrian_dataset.ped_range[1] - start_idx
+        csv_file = dataset.file_name
+        offset = dataset.offset
+        fps = dataset.fps
+        start_t = dataset.start_t
+        spawn_delay_s = dataset.spawn_delay_s
+        start_idx = dataset.ped_range[0]  # start index
+        max_agents = -1 if dataset.ped_range[1] == -1 \
+            else dataset.ped_range[1] - start_idx
         assert(fps > 0)
-        swapxy = pedestrian_dataset.swapxy
-        scale_x = -1 if pedestrian_dataset.flipxn else 1
-        scale_y = -1 if pedestrian_dataset.flipyn else 1
+        swapxy = dataset.swapxy
+        scale_x = -1 if dataset.flipxn else 1
+        scale_y = -1 if dataset.flipyn else 1
         # run through the amount of agents
-        if max_agents > 0 or max_agents == -1:
+        if dataset.ped_range[0] != dataset.ped_range[1]:  # have a non-empty range
             datafile = \
                 os.path.join(params.socnav_dir, "tests/datasets/", csv_file)
             world_df = pd.read_csv(datafile, header=None).T
@@ -232,12 +231,10 @@ class PrerecordedHuman(Human):
             all_peds = np.unique(world_df.ped)
             max_peds = max(all_peds)
             if max_agents == -1:
+                # set to all pedestrians
                 max_agents = max_peds - 1
             for i in range(max_agents):
                 ped_id = i + start_idx + 1
-                if ped_id > max_peds:
-                    print("%sRequested Prerec agent index out of bounds:" %
-                          color_red, ped_id, "%s" % color_reset)
                 if ped_id not in all_peds:
                     print("%sRequested agent %d not found in dataset: %s%s" %
                           (color_red, ped_id, csv_file, color_reset))
@@ -248,13 +245,13 @@ class PrerecordedHuman(Human):
                 if i == 0:
                     # update start frame to be representative of "first" pedestrian
                     start_frame = list(ped_i['frame'])[0]
-                t_data = PrerecordedHuman.gather_times(ped_i, init_delay,
+                t_data = PrerecordedHuman.gather_times(ped_i, spawn_delay_s,
                                                        start_frame, start_t, fps)
                 if t_data[0] > max_time:
                     # assuming the data of the agents is sorted relatively based off time
                     break
-                print("Generating prerecorded agents %d to %d \r" %
-                      (start_idx, ped_id), end="")
+                print("Generating pedestrians from \"%s\" in range [%d, %d]: %d\r" %
+                      (dataset.name, dataset.ped_range[0], dataset.ped_range[1], ped_id), end="")
                 xytheta_data = PrerecordedHuman.gather_posn_data(ped_i, offset,
                                                                  swap_axes=swapxy,
                                                                  scale_x=scale_x,
