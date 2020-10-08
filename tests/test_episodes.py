@@ -157,7 +157,7 @@ def test_episodes():
         """
         PrerecordedHuman.generate_prerecorded_humans(simulator, p,
                                                      init_delay=2,
-                                                     start_idx=0,
+                                                     start_idx=episode.ped_start_idx,
                                                      max_time=episode.max_time,
                                                      pedestrian_dataset=episode.pedestrian_dataset
                                                      )

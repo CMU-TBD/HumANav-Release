@@ -10,7 +10,8 @@ seed = config['base_params'].getint('seed')
 
 # read params file for episodes configs
 episodes_config = configparser.ConfigParser()
-episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params.ini'))
+# episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params.ini'))
+episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params_val1.ini'))
 
 dataset_config = configparser.ConfigParser()
 dataset_config.read(os.path.join(os.getcwd(), 'params/dataset_params.ini'))
@@ -108,7 +109,7 @@ def create_base_params():
                              max_depth_meters=cam_p.getfloat('max_depth_meters'))
     p.socnav_dir = get_path_to_socnav()
     p.traversible_dir = get_traversible_dir()
-    if(p.render_3D):
+    if p.render_3D:
         # SBPD Data Directory
         p.sbpd_data_dir = get_sbpd_data_dir()
         # Surreal Parameters
@@ -175,7 +176,12 @@ def create_test_params(test: str):
     p = DotMap()
     test_p = episodes_config[test]
     p.name = test
-    # TODO why are these evals
+
+    if test_p.get('ped_start_idx') is None:
+        p.ped_start_idx = 0
+    else:
+        p.ped_start_idx = int(test_p.get('ped_start_idx'))
+
     try:
         p.map_name = test_p.get('map_name')
         p.pedestrian_dataset = \
@@ -359,7 +365,7 @@ def create_simulator_params(render_3D=False):
     # Load obstacle map params
     p.obstacle_map_params = create_obstacle_map_params()
     # much faster to only render the topview rather than use the 3D renderer
-    if(not p.render_3D):
+    if not p.render_3D:
         print("Rendering topview only")
     else:
         print("Rendering depth and rgb images with 3D renderer")

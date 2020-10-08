@@ -147,7 +147,7 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
     plot_agent_dict(ax, ppm, pedestrians, label="Pedestrian", normal_color="co",
                     collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False)
 
-    if(plot_meter_tick):
+    if plot_meter_tick:
         # plot other useful informational visuals in the topview
         # such as the key to the length of a "meter" unit
         plot_line_loc = room_center[:2] * 0.65
@@ -162,7 +162,7 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
                                        h, start[1] - h], col)  # tick left
         ax.plot([end[0], end[0]], [end[1] + h,
                                    end[1] - h], col)  # tick right
-        if(plot_quiver):
+        if plot_quiver:
             ax.text(0.5 * (start[0] + end[0]) - 0.2, start[1] +
                     0.5, "1m", fontsize=14, verticalalignment='top')
 
@@ -200,7 +200,7 @@ def render_scene(p, rgb_image_1mk3, depth_image_1mk1, environment,
     # count used to signify the number of images that will be generated in a single frame
     # default 1, for normal view (can add a second for zoomed view)
     plot_count = 1
-    if(with_zoom):
+    if with_zoom:
         plot_count += 1
         zoomed_img_plt_indx = plot_count  # 2
     if rgb_image_1mk3 is not None:
@@ -213,6 +213,7 @@ def render_scene(p, rgb_image_1mk3, depth_image_1mk1, environment,
     img_size = 10 * p.img_scale
     fig = plt.figure(figsize=(plot_count * img_size, img_size))
     ax = fig.add_subplot(1, plot_count, 1)
+    ax.set_aspect('equal')
     ax.set_xlim(0., traversible.shape[1] * map_scale)
     ax.set_ylim(0., traversible.shape[0] * map_scale)
     plot_topview(ax, extent, traversible, human_traversible,
@@ -221,7 +222,7 @@ def render_scene(p, rgb_image_1mk3, depth_image_1mk1, environment,
     time_string = "sim_t=%.3f" % sim_t + " wall_t=%.3f" % wall_t
     ax.set_title(time_string, fontsize=20)
 
-    if(with_zoom):
+    if with_zoom:
         # Plot the 5x5 meter occupancy grid centered around the camera
         zoom = 8.5  # zoom out in by a constant amount
         ax = fig.add_subplot(1, plot_count, zoomed_img_plt_indx)
@@ -252,8 +253,8 @@ def render_scene(p, rgb_image_1mk3, depth_image_1mk1, environment,
         ax.set_title('Depth')
 
     full_file_name = os.path.join(p.output_directory, filename)
-    if(not os.path.exists(full_file_name)):
-        if(p.verbose_printing):
+    if not os.path.exists(full_file_name):
+        if p.verbose_printing:
             print('\033[31m', "Failed to find:", full_file_name,
                   '\033[33m', "and therefore it will be created", '\033[0m')
         touch(full_file_name)  # Just as the bash command
@@ -265,7 +266,7 @@ def render_scene(p, rgb_image_1mk3, depth_image_1mk1, environment,
     plt.close('all')
     plt.close(fig)
     del fig
-    if(p.verbose_printing):
+    if p.verbose_printing:
         print('\033[32m', "Successfully rendered:",
               full_file_name, '\033[0m')
 
@@ -313,17 +314,17 @@ def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files
         try:
             images.append(imageio.imread(filename))
         except:
-            print("%sUnable to read file:" % (color_red), filename,
-                  "Try clearing the directory of old files and rerunning%s" % (color_reset))
+            print("%sUnable to read file:" % color_red, filename,
+                  "Try clearing the directory of old files and rerunning%s" % color_reset)
             exit(1)
         print("Movie progress:", i, "out of", num_images, "%.3f" %
               (i / num_images), "\r", end="")
     output_location = os.path.join(IMAGES_DIR, gif_filename + ".gif")
     kargs = {'duration': duration}  # 1/fps
     imageio.mimsave(output_location, images, 'GIF', **kargs)
-    print("%sRendered gif at" % (color_green), output_location, '\033[0m')
+    print("%sRendered gif at" % color_green, output_location, '\033[0m')
     # Clearing remaining files to not affect next render
     if clear_old_files:
         for f in files:
             os.remove(f)
-        print("%sCleaned directory" % (color_green), '\033[0m')
+        print("%sCleaned directory" % color_green, '\033[0m')

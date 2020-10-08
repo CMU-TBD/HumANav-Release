@@ -360,8 +360,9 @@ class CentralSimulator(SimulatorHelper):
         # fps = 1 / duration # where the duration is the simulation capture rate
         duration = self.delta_t * (1.0 / self.params.fps_scale_down)
         # sequentially
+        gif_filename = "movie_%s" % self.episode_params.name
         save_to_gif(self.params.output_directory, duration,
-                    gif_filename="movie_%d" % (get_seed()),
+                    gif_filename=gif_filename,
                     clear_old_files=self.params.clear_files)
 
     def render_sim_state(self, state: SimState, filename: str):

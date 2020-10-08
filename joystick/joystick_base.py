@@ -121,7 +121,7 @@ class JoystickBase():
         # If current episode is the last one, the joystick is done
         if self.current_ep.get_name() == self.episode_names[-1]:
             self.close_recv_socket()
-            print("Finished all episodes")
+            print("Finished all episodes\n\n")
         else:
             self.current_ep = None
 
