@@ -16,7 +16,8 @@ class CentralSimulator(SimulatorHelper):
     obstacle_map = None
 
     def __init__(self, environment: dict, renderer=None,
-                 render_3D: bool = None, episode_params=None):
+                 render_3D: bool = None, camera_pose=None,
+                 episode_params=None):
         """ Initializer for the central simulator
 
         Args:
@@ -28,6 +29,7 @@ class CentralSimulator(SimulatorHelper):
         self.environment = environment
         self.params = create_simulator_params(render_3D=render_3D)
         self.episode_params = episode_params
+        self.camera_pose = camera_pose
         # name of the directory to output everything
         self.params.output_directory = \
             os.path.join(self.params.socnav_params.socnav_dir,
@@ -107,10 +109,8 @@ class CentralSimulator(SimulatorHelper):
         Returns:
             bool: True if there is at least one running prerec, False otherwise
         """
-        for a in self.prerecs.values():
-            if (not a.end_acting):  # if there is even just a single prerec acting
-                return True
-        return False
+        # make sure there are still remaining pedestrians in the backstage
+        return not (not self.backstage_prerecs)
 
     def loop_condition(self):
         if self.robot:
@@ -376,7 +376,11 @@ class CentralSimulator(SimulatorHelper):
             camera_pos_13 = robot.get_current_config().to_3D_numpy()
         else:
             robot = None
-            camera_pos_13 = state.get_environment()["room_center"]
+            if(self.camera_pose is not None):
+                camera_pos_13 = self.camera_pose
+            else:
+                camera_pos_13 = state.get_environment()["room_center"]
+
         rgb_image_1mk3 = None
         depth_image_1mk1 = None
         # NOTE: 3d renderer can only be used with sequential plotting, much slower
@@ -657,6 +661,8 @@ class CentralSimulator(SimulatorHelper):
                     else:
                         self.num_completed_prerecs += 1
                     self.prerecs.pop(a.get_name())
+                    # also remove from back stage since they will no longer be used
+                    del(self.backstage_prerecs[a.get_name()])
                     del(a)
         return prerec_threads
 

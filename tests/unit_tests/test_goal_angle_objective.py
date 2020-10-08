@@ -67,7 +67,7 @@ def test_goal_angle_distance():
     dx_cm, traversible = r.get_config()
 
     obstacle_map = SBPDMap(p.obstacle_map_params,
-                           renderer=0, res=dx_cm, trav=traversible)
+                           renderer=0, res=dx_cm, map_trav=traversible)
     # obstacle_map = SBPDMap(p.obstacle_map_params)
     obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
     map_size_2 = obstacle_occupancy_grid.shape[::-1]

@@ -92,14 +92,15 @@ class PrerecordedHuman(Human):
     """ BEGIN GENERATION UTILS """
 
     @staticmethod
-    def gather_times(ped_i, time_delay: float, start_frame: int, fps: float):
+    def gather_times(ped_i, time_delay: float, start_frame: int, start_t: float, fps: float):
         times = []
         for i, f in enumerate(ped_i['frame']):
             relative_time = (f - start_frame) * (1. / fps)
             if(i > 0):
                 # add the time delay to all the times except for the first
                 relative_time += time_delay
-            times.append(relative_time)
+            # make sure all the times start relative to "start_t"
+            times.append(relative_time + start_t)
         return times
 
     @staticmethod
@@ -196,14 +197,11 @@ class PrerecordedHuman(Human):
         return config_data
 
     @staticmethod
-    def generate_prerecorded_humans(simulator, params, init_delay: int = 2,
-                                    # use -1 to just include all agents (within time bounds)
-                                    max_agents: int = -1,
-                                    # default is ~1000 days (ie. no time bound)
-                                    max_time: int = 10e7,
-                                    start_idx: int = 0,
-                                    pedestrian_dataset: DotMap = None
-                                    ):
+    def generate_pedestrians(simulator, params,
+                             # default is ~1000 days (ie. no time bound)
+                             max_time: int = 10e7,
+                             pedestrian_dataset: DotMap = None
+                             ):
         """"world_df" is a set of trajectories organized as a pandas dataframe.
             Each row is a pedestrian at a given frame (aka time point).
             The data was taken at 25 fps so between frames is 1/25th of a second. """
@@ -212,6 +210,12 @@ class PrerecordedHuman(Human):
         csv_file = pedestrian_dataset.file_name
         offset = pedestrian_dataset.offset
         fps = pedestrian_dataset.fps
+        start_t = pedestrian_dataset.start_t
+        init_delay = pedestrian_dataset.spawn_delay_s
+        start_idx = pedestrian_dataset.ped_range[0]
+        max_agents = \
+            -1 if pedestrian_dataset.ped_range[1] == -1 \
+            else pedestrian_dataset.ped_range[1] - start_idx
         assert(fps > 0)
         swapxy = pedestrian_dataset.swapxy
         scale_x = -1 if pedestrian_dataset.flipxn else 1
@@ -244,8 +248,8 @@ class PrerecordedHuman(Human):
                 if i == 0:
                     # update start frame to be representative of "first" pedestrian
                     start_frame = list(ped_i['frame'])[0]
-                t_data = PrerecordedHuman.gather_times(
-                    ped_i, init_delay, start_frame, fps)
+                t_data = PrerecordedHuman.gather_times(ped_i, init_delay,
+                                                       start_frame, start_t, fps)
                 if t_data[0] > max_time:
                     # assuming the data of the agents is sorted relatively based off time
                     break

@@ -217,7 +217,8 @@ def render_scene(p, rgb_image_1mk3, depth_image_1mk1, environment,
     ax.set_ylim(0., traversible.shape[0] * map_scale)
     plot_topview(ax, extent, traversible, human_traversible,
                  camera_pos_13, pedestrians, robots, room_center, plot_quiver=True)
-    ax.legend()
+    if(len(robots) > 0 or len(pedestrians) > 0):
+        ax.legend()
     time_string = "sim_t=%.3f" % sim_t + " wall_t=%.3f" % wall_t
     ax.set_title(time_string, fontsize=20)
 
@@ -229,7 +230,8 @@ def render_scene(p, rgb_image_1mk3, depth_image_1mk1, environment,
         ax.set_ylim([room_center[1] - zoom, room_center[1] + zoom])
         plot_topview(ax, extent, traversible, human_traversible,
                      camera_pos_13, pedestrians, robots, room_center, plot_quiver=True)
-        ax.legend()
+        if(len(robots) > 0 or len(pedestrians) > 0):
+            ax.legend()
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_title(time_string, fontsize=20)

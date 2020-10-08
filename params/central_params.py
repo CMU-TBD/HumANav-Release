@@ -158,28 +158,39 @@ def create_joystick_params():
     return p
 
 
-def create_dataset_params(dataset_name: str):
+def create_dataset(dataset_name: str):
     p = DotMap()
     dataset_p = dataset_config[dataset_name]
     p.name = dataset_name
     p.file_name = dataset_p.get('file_name')
-    p.offset = eval(dataset_p.get('offset'))
     p.fps = dataset_p.getint('fps')
+    p.ped_range = eval(dataset_p.get('ped_range'))
+    p.start_t = dataset_p.getfloat('start_t')
+    assert(p.start_t >= 0)
+    p.spawn_delay_s = dataset_p.getfloat('spawn_delay_s')
+    p.offset = eval(dataset_p.get('offset'))
     p.swapxy = dataset_p.getboolean('swapxy')
     p.flipxn = dataset_p.getboolean('flipxn')
     p.flipyn = dataset_p.getboolean('flipyn')
     return p
 
 
+def create_datasets_params(datasets: list):
+    # list of dotmaps for pedestrians datasets in use
+    pedestrian_datasets = []
+    for pdds in datasets:
+        pedestrian_datasets.append(create_dataset(pdds))
+    return pedestrian_datasets
+
+
 def create_test_params(test: str):
     p = DotMap()
     test_p = episodes_config[test]
     p.name = test
-    # TODO why are these evals
     try:
         p.map_name = test_p.get('map_name')
-        p.pedestrian_dataset = \
-            create_dataset_params(test_p.get('pedestrian_dataset'))
+        p.pedestrian_datasets = \
+            create_datasets_params(eval(test_p.get('pedestrian_datasets')))
         p.agents_start = eval(test_p.get('agents_start'))
         p.agents_end = eval(test_p.get('agents_end'))
         p.robot_start_goal = eval(test_p.get('robot_start_goal'))
@@ -188,7 +199,6 @@ def create_test_params(test: str):
     except TypeError:
         print("Check that the episode_params file has all required fields")
         exit(1)
-
     return p
 
 
@@ -275,16 +285,20 @@ def create_system_dynamics_params():
     p.linear_acc_max = dyn_p.getfloat('linear_acc_max')
     p.angular_acc_max = dyn_p.getfloat('angular_acc_max')
 
-    p.simulation_params = \
-        DotMap(simulation_mode=dyn_p.get('simulation_mode'),
-               noise_params=DotMap(is_noisy=dyn_p.getboolean('is_noisy'),
-                                   noise_type=dyn_p.get('noise_type'),
-                                   noise_lb=eval(dyn_p.get('noise_lb')),
-                                   noise_ub=eval(dyn_p.get('noise_ub')),
-                                   noise_mean=eval(dyn_p.get('noise_mean')),
-                                   noise_std=eval(dyn_p.get('noise_std'))
-                                   )
-               )
+    p.simulation_params = DotMap(simulation_mode=dyn_p.get('simulation_mode'),
+                                 noise_params=DotMap(is_noisy=dyn_p.getboolean('is_noisy'),
+                                                     noise_type=dyn_p.get(
+                                                         'noise_type'),
+                                                     noise_lb=eval(
+                                                         dyn_p.get('noise_lb')),
+                                                     noise_ub=eval(
+                                                         dyn_p.get('noise_ub')),
+                                                     noise_mean=eval(
+                                                         dyn_p.get('noise_mean')),
+                                                     noise_std=eval(
+                                                         dyn_p.get('noise_std'))
+                                                     )
+                                 )
     return p
 
 
@@ -405,20 +419,19 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
     # Define the Objectives
 
     # Obstacle Avoidance Objective
-    p.avoid_obstacle_objective = \
-        DotMap(obstacle_margin0=agent_p.getfloat('obstacle_margin0'),
-               obstacle_margin1=agent_p.getfloat('obstacle_margin1'),
-               power=agent_p.getfloat('power_obstacle'),
-               obstacle_cost=agent_p.getfloat('obstacle_cost'))
+    p.avoid_obstacle_objective = DotMap(obstacle_margin0=agent_p.getfloat('obstacle_margin0'),
+                                        obstacle_margin1=agent_p.getfloat(
+                                            'obstacle_margin1'),
+                                        power=agent_p.getfloat(
+                                            'power_obstacle'),
+                                        obstacle_cost=agent_p.getfloat('obstacle_cost'))
     # Angle Distance parameters
-    p.goal_angle_objective = \
-        DotMap(power=agent_p.getfloat('power_angle'),
-               angle_cost=agent_p.getfloat('angle_cost'))
+    p.goal_angle_objective = DotMap(power=agent_p.getfloat('power_angle'),
+                                    angle_cost=agent_p.getfloat('angle_cost'))
     # Goal Distance parameters
-    p.goal_distance_objective = \
-        DotMap(power=agent_p.getfloat('power_goal'),
-               goal_cost=agent_p.getfloat('goal_cost'),
-               goal_margin=agent_p.getfloat('goal_margin'))
+    p.goal_distance_objective = DotMap(power=agent_p.getfloat('power_goal'),
+                                       goal_cost=agent_p.getfloat('goal_cost'),
+                                       goal_margin=agent_p.getfloat('goal_margin'))
 
     # Personal Space cost parameters
     p.personal_space_objective = DotMap(power=1,
