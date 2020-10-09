@@ -36,9 +36,10 @@ def create_params():
     p.episode_params.tests = {}
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
-               map_name='ETH',
+               map_name='Zara',
                agents_start=[],
-               pedestrian_datasets=create_datasets_params(["eth-fast"]),
+               pedestrian_datasets=create_datasets_params(
+                   ["zara01", "zara02"]),
                agents_end=[],
                robot_start_goal=[],
                max_time=20,
@@ -163,15 +164,16 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             Generate the robot(s) for the simulator
             """
             # randomly generate robot
-            # robot_agent = \
-            #     RobotAgent.generate_random_robot_from_environment(environment)
+            robot_agent = \
+                RobotAgent.generate_random_robot_from_environment(environment)
             # or
             # create constant start/goal for testing purposes
-            from humans.human_configs import HumanConfigs
-            start_conf = generate_config_from_pos_3([12.5, 4.0, 1.57])
-            goal_conf = generate_config_from_pos_3([7.5, 8.1, 3.14])
-            configs = HumanConfigs(start_conf, goal_conf)
-            robot_agent = RobotAgent.generate_robot(configs)
+            # from humans.human_configs import HumanConfigs
+            # start_conf = generate_config_from_pos_3([12.5, 4.0, 1.57])
+            # goal_conf = generate_config_from_pos_3([7.5, 8.1, 3.14])
+            # configs = HumanConfigs(start_conf, goal_conf)
+            # robot_agent = RobotAgent.generate_robot(configs)
+
             simulator.add_agent(robot_agent)
         # run simulation
         simulator.simulate()

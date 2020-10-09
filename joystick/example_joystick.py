@@ -217,7 +217,7 @@ class JoystickWithPlanner(JoystickBase):
         self.joystick_on = True
         self.simulator_joystick_update_ratio = \
             int(np.floor(self.sim_delta_t / self.agent_params.dt))
-        while(self.joystick_on):
+        while self.joystick_on:
             # gather information about the world state based off the simulator
             self.joystick_sense()
             # create a plan for the next steps of the trajectory
@@ -225,7 +225,7 @@ class JoystickWithPlanner(JoystickBase):
             # send a command to the robot
             self.joystick_act()
         # complete this episode, move on to the next if need be
-        print(np.diff(self.sim_times))
+        # print(np.diff(self.sim_times))
         self.finish_episode()
 
 
@@ -279,9 +279,6 @@ class JoystickWithPlannerPosns(JoystickWithPlanner):
                     (x, y, th, v) = self.from_conf(self.commands, idx)
                     xytv_cmds.append((x, y, th, v))
                 self.send_cmds(xytv_cmds, send_vel_cmds=False)
-
-                # to test the sequential sense
-                # break
 
                 # break if the robot finished
                 if not self.joystick_on:
