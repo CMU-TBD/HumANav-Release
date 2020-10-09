@@ -10,8 +10,9 @@ seed = config['base_params'].getint('seed')
 
 # read params file for episodes configs
 episodes_config = configparser.ConfigParser()
-episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params.ini'))
-# episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params_val1.ini'))
+# episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params.ini'))
+episodes_config.read(os.path.join(
+    os.getcwd(), 'params/episode_params_val.ini'))
 
 dataset_config = configparser.ConfigParser()
 dataset_config.read(os.path.join(os.getcwd(), 'params/dataset_params.ini'))
@@ -122,10 +123,10 @@ def create_base_params():
                            body_shapes_test=eval(
                                surr_p.get('body_shapes_test')),
                            compute_human_traversible=surr_p.getboolean(
-            'compute_human_traversible'),
-            render_humans_in_gray_only=surr_p.getboolean(
-            'render_humans_in_gray_only')
-        )
+                               'compute_human_traversible'),
+                           render_humans_in_gray_only=surr_p.getboolean(
+                               'render_humans_in_gray_only')
+                           )
     return p
 
 
