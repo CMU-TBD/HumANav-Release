@@ -155,6 +155,23 @@ def path_irregularity(central_sim: CentralSimulator, percentile=False):
     return path_irr
 
 
+def goal_traversal_ratio(central_sim: CentralSimulator, percentile=False):
+    # extract the bot traj and the goal and drop the heading
+    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_end = robot_trajectory[-1, :]
+    robot_start = robot_trajectory[0, :]
+    robot_goal = np.squeeze(central_sim.robot.goal_config.position_and_heading_nk3())[:-1]
+    robot_path_ln = cost_functions.path_length(robot_trajectory)
+
+    # extract bot dist to goal and bot start to goal
+    start_goal_dist = np.linalg.norm(robot_start - robot_goal)
+    end_goal_dist = np.linalg.norm(robot_end - robot_goal)
+
+    goal_trav_ratio = end_goal_dist / start_goal_dist
+
+    return goal_trav_ratio
+
+
 # pedestrian related
 def time_to_collision(central_sim: CentralSimulator, percentile=False):
     sim_df = central_sim.sim_df

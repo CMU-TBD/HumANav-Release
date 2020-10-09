@@ -32,16 +32,17 @@ def create_params():
     # Introduce the episode params
     from params.central_params import create_episodes_params, create_dataset_params
     p.episode_params = create_episodes_params()
+    p.episode_params.without_robot = True
     # overwrite tests with custom basic test
     p.episode_params.tests = {}
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
-               map_name='univ',
-               pedestrian_dataset=create_dataset_params("univ"),
+               map_name='ETH',
+               pedestrian_dataset=create_dataset_params("eth"),
                agents_start=[],
                agents_end=[],
                robot_start_goal=[],
-               max_time=40,
+               max_time=20,
                write_episode_log=False  # don't write episode log for test_socnav
                )
 

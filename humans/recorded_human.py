@@ -6,23 +6,28 @@ from trajectory.trajectory import SystemConfig, Trajectory
 from params.central_params import create_agent_params
 from simulators.agent import Agent
 import numpy as np
+import scipy
 import socket
 import time
 import threading
 
 
 class PrerecordedHuman(Human):
-    def __init__(self, t_data, posn_data, generate_appearance=True, name=None):
+    def __init__(self, t_data, posn_data, interps, generate_appearance=True, name=None):
         self.name = generate_name(20) if not name else name
         assert(len(t_data) == len(posn_data))
         self.t_data = t_data
+        self.del_t = t_data[2] - t_data[1]  # useful to know the ground truth pedestrian data rate
         self.posn_data = posn_data
         self.sim_t = 0
         self.current_step = 0
+        self.current_precalc_step = 0
+        self.current_config = self.posn_data[0]
         self.next_step = self.posn_data[1]
         self.world_state = None
+        self.xinterp, self.yinterp, self.thinterp = interps
         init_configs = HumanConfigs(posn_data[0], posn_data[-1])
-        if(generate_appearance):
+        if generate_appearance:
             appearance = HumanAppearance.generate_random_human_appearance(
                 HumanAppearance)
         else:
@@ -35,11 +40,11 @@ class PrerecordedHuman(Human):
     def get_end_time(self):
         return self.t_data[-1]
 
-    def get_current_config(self, deepcpy=False):
-        return super().get_config(self.posn_data[self.current_step], deepcpy=deepcpy)
+    # def get_current_config(self, deepcpy=False):
+    #     return super().get_config(self.current_config, deepcpy=deepcpy)
 
     def get_current_time(self):
-        return self.t_data[self.current_step]
+        return self.t_data[self.current_precalc_step]
 
     def get_completed(self):
         return self.end_acting and self.end_episode
@@ -52,11 +57,29 @@ class PrerecordedHuman(Human):
         self.system_dynamics = Agent._init_system_dynamics(self)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
 
-    def execute(self, state, check_collisions_with_agents=False):
-        if(check_collisions_with_agents):
+    def get_interp_posns(self):
+        if self.sim_t < self.t_data[1]:
+            # TODO x, y would work with interp here, need a good solution for theta wrapping
+            posn_interp_conf = self.posn_data[0]
+        else:
+            x = self.xinterp(self.sim_t)
+            y = self.yinterp(self.sim_t)
+            prev_x, prev_y, _ = np.squeeze(self.posn_data[self.current_precalc_step].position_and_heading_nk3())
+            theta = np.arctan2((y - prev_y), (x - prev_x))
+            posn_interp = [
+                x,
+                y,
+                theta
+            ]
+            posn_interp_conf = generate_config_from_pos_3(posn_interp, v=0)
+        return posn_interp_conf
+
+    def execute(self, check_collisions_with_agents=False):
+        if check_collisions_with_agents:
             self.check_collisions(self.world_state, include_prerecs=False)
-        self.current_step += 1  # Has executed one more step
-        self.current_config = self.posn_data[self.current_step]
+
+        self.current_step += 1
+        self.current_config = self.get_interp_posns()
         # dummy "command" since these agents "teleport" from one step to another
         # below code is just to keep track of the agent's trajectories as they move
         null_command = np.array([[[0, 0]]], dtype=np.float32)
@@ -68,17 +91,19 @@ class PrerecordedHuman(Human):
     def update(self, sim_t, world_state):
         self.sim_t = sim_t
         self.world_state = world_state
-        self.has_collided = False
-        if(self.current_step < len(self.t_data)):
+        self.has_collided = False  # do we need this in the while then?
+        # if self.current_step < len(self.t_data):
+        if self.sim_t < self.t_data[-1]:
             # continue jumping through states until time limit is reached
-            while(not self.has_collided and self.sim_t > self.get_current_time()):
-                self.execute(self.next_step)
-                try:
-                    self.next_step = self.posn_data[self.current_step]
-                except IndexError:
-                    self.next_step = self.posn_data[-1]  # last one
-                    self.current_step = len(self.t_data) - 1
-                    break
+            self.execute()
+            # TODO now this step is performed in one go - what does this mean for collisions?
+            # while not self.has_collided and self.sim_t > self.get_current_time():
+            # this is to account for the delay_time / init_delay
+            self.current_precalc_step = \
+                int((self.sim_t- self.t_data[1] + self.del_t) / self.del_t) if self.sim_t > self.t_data[1] else 0
+            # if self.current_precalc_step == len(self.t_data):
+            #     self.current_precalc_step = len(self.t_data) - 1
+
         else:
             # tell the simulator this agent is done
             self.end_episode = True
@@ -92,22 +117,52 @@ class PrerecordedHuman(Human):
     """ BEGIN GENERATION UTILS """
 
     @staticmethod
+    def init_interp_fns(posn_data, times):
+        posn_data = np.array(posn_data)
+        times = np.array(times)
+        # correct for the fact that times of 0 is weird
+        # TODO make times 0 not be weird
+        times[0] = times[1] - (times[2] - times[1])
+
+        x = posn_data[:, 0]
+        y = posn_data[:, 1]
+        th = posn_data[:, 2]
+
+        xinterp = scipy.interpolate.interp1d(times, x, bounds_error=False, fill_value=(x[0], x[-1]))
+        yinterp = scipy.interpolate.interp1d(times, y, bounds_error=False, fill_value=(y[0], y[-1]))
+        thetainterp = scipy.interpolate.interp1d(times, th, bounds_error=False, fill_value=(th[0], th[-1]))
+        #
+        # prev_posn = np.array(self.posn_data[self.current_step])
+        # next_posn = np.array(self.posn_data[self.current_step + 1])
+        # interp_posn = np.zeros(3)
+        #
+        # supports = [self.t_data[self.current_step], self.t_data[self.current_step + 1]]
+        # for i in range(3):
+        #     vals = [prev_posn[i], next_posn[i]]
+        #     f = interpolate.interp1d(x, y)
+        return xinterp, yinterp, thetainterp
+
+    @staticmethod
     def gather_times(ped_i, time_delay: float, start_frame: int, fps: float):
-        times = []
-        for i, f in enumerate(ped_i['frame']):
-            relative_time = (f - start_frame) * (1. / fps)
-            if(i > 0):
-                # add the time delay to all the times except for the first
-                relative_time += time_delay
-            times.append(relative_time)
+
+        # for i, f in enumerate(ped_i['frame']):
+        #     relative_time = (f - start_frame) * (1. / fps)
+        #     if i > 0:
+        #         # add the time delay to all the times except for the first
+        #         relative_time += time_delay
+        #     times.append(relative_time)
+        # vecotrize
+        times = (ped_i['frame'] - start_frame) * (1. / fps)
+        times[1:] += time_delay
+        # times += time_delay
+        times = list(times)
         return times
 
     @staticmethod
-    # TODO vectorize
     def gather_posn_data(ped_i, offset, swap_axes=False, scale_x=1, scale_y=1):
         xy_data = []
         xy_order = ('x', 'y')
-        if(swap_axes):
+        if swap_axes:
             xy_order = ('y', 'x')
         # generate a list of lists of positions (only first variable)
         for p in ped_i[xy_order[0]]:
@@ -172,20 +227,20 @@ class PrerecordedHuman(Human):
                 v_data.append(0)  # initial speed is 0
         return v_data
 
-    @staticmethod
-    def gather_vel_data_vec(time_data, posn_data):
-        # return linear speed to the list of variables
-        posn_data
-        for j, pos_2 in enumerate(posn_data):
-            if(j > 0):
-                last_pos_2 = posn_data[j - 1]
-                # calculating euclidean dist / delta_t
-                delta_t = (time_data[j] - time_data[j - 1])
-                speed = euclidean_dist2(pos_2, last_pos_2) / delta_t
-                v_data.append(speed)  # last element gets last angle
-            else:
-                v_data.append(0)  # initial speed is 0
-        return v_data
+    # @staticmethod
+    # def gather_vel_data_vec(time_data, posn_data):
+    #     # return linear speed to the list of variables
+    #     posn_data
+    #     for j, pos_2 in enumerate(posn_data):
+    #         if(j > 0):
+    #             last_pos_2 = posn_data[j - 1]
+    #             # calculating euclidean dist / delta_t
+    #             delta_t = (time_data[j] - time_data[j - 1])
+    #             speed = euclidean_dist2(pos_2, last_pos_2) / delta_t
+    #             v_data.append(speed)  # last element gets last angle
+    #         else:
+    #             v_data.append(0)  # initial speed is 0
+    #     return v_data
 
     @staticmethod
     def to_configs(xytheta_data, v_data):
@@ -246,7 +301,7 @@ class PrerecordedHuman(Human):
                     start_frame = list(ped_i['frame'])[0]
                 t_data = PrerecordedHuman.gather_times(
                     ped_i, init_delay, start_frame, fps)
-                if t_data[0] > max_time:
+                if (ped_i.frame.iloc[0] - start_frame) / fps > max_time:
                     # assuming the data of the agents is sorted relatively based off time
                     break
                 print("Generating prerecorded agents %d to %d \r" %
@@ -255,11 +310,16 @@ class PrerecordedHuman(Human):
                                                                  swap_axes=swapxy,
                                                                  scale_x=scale_x,
                                                                  scale_y=scale_y)
+                interp_fns = PrerecordedHuman.init_interp_fns(
+                    xytheta_data, t_data
+                )
+
                 v_data = PrerecordedHuman.gather_vel_data(t_data, xytheta_data)
                 # combine the xytheta with the velocity
                 config_data = PrerecordedHuman.to_configs(xytheta_data, v_data)
                 new_agent = PrerecordedHuman(t_data=t_data, posn_data=config_data,
-                                             generate_appearance=params.render_3D)
+                                             generate_appearance=params.render_3D,
+                                             interps=interp_fns)
                 simulator.add_agent(new_agent)
             # to not disturb the carriage-return print
             print()
