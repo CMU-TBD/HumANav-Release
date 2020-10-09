@@ -219,7 +219,7 @@ class RobotAgent(Agent):
                 if self.num_executed == len(self.joystick_inputs):
                     if self.joystick_requests_world == 0:
                         self.send_sim_state()
-                time.sleep(0.01)
+                time.sleep(0.001)
             self.block_time_total += time.time() - init_block_t
 
             # execute the next command in the queue
@@ -227,7 +227,8 @@ class RobotAgent(Agent):
                 # execute all the commands on the 'queue'
                 self.execute()
                 # decrement counter
-                self.joystick_requests_world -= 1
+                if(self.joystick_requests_world > 0):
+                    self.joystick_requests_world -= 1
         else:
             self.power_off()
 
