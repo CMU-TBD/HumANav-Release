@@ -6,7 +6,9 @@ from simulators.central_simulator import CentralSimulator
 # meta
 def success(central_sim: CentralSimulator):
     terminate_cause = central_sim.robot.termination_cause
-    if terminate_cause == "Collision":
+    if terminate_cause == "Pedestrian Collision":
+        return False
+    if terminate_cause == "Obstacle Collision":
         return False
     elif terminate_cause == "Timeout":
         return False

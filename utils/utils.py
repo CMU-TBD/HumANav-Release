@@ -281,8 +281,10 @@ def subplot2(plt, Y_X, sz_y_sz_x=(10, 10), space_y_x=(0.1, 0.1), T=False):
 def termination_cause_to_color(cause: str):
     if(cause == "Success"):
         return "green"
-    if(cause == "Collision"):
+    if(cause == "Pedestrian Collision"):
         return "red"
+    if(cause == "Obstacle Collision"):
+        return "orange"
     if(cause == "Timeout"):
         return "blue"
     return None

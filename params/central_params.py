@@ -442,7 +442,10 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
     p.objective_fn_params = DotMap(obj_type=agent_p.get('obj_type'))
     p.goal_margin = p.goal_distance_objective.goal_margin
     p.goal_dist_norm = p.goal_distance_objective.power  # Default is l2 norm
-    p.episode_termination_reasons = ['Timeout', 'Collision', 'Success']
+    p.episode_termination_reasons = ['Timeout',
+                                     'Obstacle Collision',
+                                     'Pedestrian Collision',
+                                     'Success']
     p.episode_termination_colors = ['b', 'r', 'g']
     p.waypt_cmap = 'winter'
     p.num_validation_goals = agent_p.getint('num_validation_goals')

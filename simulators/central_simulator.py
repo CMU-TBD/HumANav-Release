@@ -413,6 +413,7 @@ class CentralSimulator(SimulatorHelper):
     """ END IMAGE UTILS """
 
     """ BEGIN SCORING UTILS """
+
     def generate_episode_score_report(self, filename='episode_score'):
         # should do this in some formal format
         # json? pandas? how to aggregate per episode?
@@ -514,7 +515,7 @@ class CentralSimulator(SimulatorHelper):
         if self.robot:
             data += "****************ROBOT INFO****************\n"
             data += "Robot termination cause: %s\n" % self.robot.termination_cause
-            if(self.robot.termination_cause == "Collision"):
+            if(self.robot.termination_cause == "Agent Collision"):
                 data += "Robot collided with agent: %s\n" % self.robot.collider
             data += "Num commands received from joystick: %d\n" % \
                 len(self.robot.joystick_inputs)

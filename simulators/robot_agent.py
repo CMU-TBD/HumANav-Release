@@ -113,7 +113,8 @@ class RobotAgent(Agent):
             self.end_acting = True
 
         if self.get_collided():
-            assert(self.termination_cause == 'Collision')
+            # either Pedestrian Collision or Obstacle Collision
+            assert("Collision" in self.termination_cause)
             self.power_off()
 
         if self.get_completed():

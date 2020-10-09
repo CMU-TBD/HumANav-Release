@@ -90,7 +90,9 @@ class Agent(AgentHelper):
         return self.vehicle_trajectory
 
     def get_collided(self):
-        return self.end_acting and self.termination_cause == "Collision"
+        return self.end_acting and \
+            (self.termination_cause == "Pedestrian Collision" or
+             self.termination_cause == "Obstacle Collision")
 
     def get_completed(self):
         return self.end_acting and self.termination_cause == "Success"
@@ -192,8 +194,8 @@ class Agent(AgentHelper):
             othr_pos = a.get_current_config().to_3D_numpy()
             is_same_agent: bool = a.get_name() is self.get_name()
             if(not is_same_agent and euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
-                # instantly collide and stop updating
-                self.termination_cause = "Collision"
+                # instantly collide (with agent) and stop updating
+                self.termination_cause = "Pedestrian Collision"
                 self.end_acting = True
                 self.collision_point_k = self.vehicle_trajectory.k  # this instant
                 # name of the first agent that the agent collided with (applicable)

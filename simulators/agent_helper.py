@@ -72,8 +72,11 @@ class AgentHelper(object):
         """
         if condition == 'Timeout':
             time_idx = self._compute_time_idx_for_timeout()
-        elif condition == 'Collision':
+        elif condition == 'Obstacle Collision':
             time_idx = self._compute_time_idx_for_collision()
+        elif condition == 'Pedestrian Collision':
+            # TODO: implement here
+            time_idx = np.inf  # implemented elsewhere in Agent
         elif condition == 'Success':
             time_idx = self._compute_time_idx_for_success()
         else:

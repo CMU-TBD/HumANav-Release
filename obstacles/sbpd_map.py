@@ -14,7 +14,7 @@ class SBPDMap(ObstacleMap):
         self.p = params
         if renderer is None:
             from sbpd.sbpd_renderer import SBPDRenderer
-            self._r = SBPDRenderer.get_renderer(self.p.renderer_params)
+            self._r = SBPDRenderer.get_renderer(self.p.base_params)
         else:
             self._r = renderer
         self._initialize_occupancy_grid_for_map(

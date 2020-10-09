@@ -84,6 +84,49 @@ def generate_auto_humans(num_generated_humans, simulator, environment, p, r):
         simulator.add_agent(new_human_i)
 
 
+def construct_environment(p, test, episode):
+    # update map to match the episode
+    p.building_name = episode.map_name
+    print("%s\n\nStarting episode \"%s\" in building \"%s\"%s\n\n" %
+          (color_yellow, test, p.building_name, color_reset))
+    # get the renderer from the camera p
+    r = SocNavRenderer.get_renderer(p)
+    # obtain "resolution and traversible of building"
+    dx_cm, traversible = r.get_config()
+    # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
+    dx_m = dx_cm / 100.0
+    if p.render_3D:
+        # Get the surreal dataset for human generation
+        surreal_data = r.d
+        # Update the Human's appearance classes to contain the dataset
+        from humans.human_appearance import HumanAppearance
+        HumanAppearance.dataset = surreal_data
+        human_traversible = np.empty(traversible.shape)
+        human_traversible.fill(1)  # initially all good
+
+    # In order to print more readable arrays
+    np.set_printoptions(precision=3)
+
+    # TODO: make this a param element
+    room_center = \
+        np.array([traversible.shape[1] * 0.5,
+                  traversible.shape[0] * 0.5,
+                  0.0]
+                 ) * dx_m
+
+    # Create default environment which is a dictionary
+    # containing ["map_scale", "traversibles"]
+    # which is a constant and list of traversibles respectively
+    environment = {}
+    environment["map_scale"] = float(dx_m)
+    environment["room_center"] = room_center
+    # obstacle traversible / human traversible
+    if p.render_3D:
+        environment["human_traversible"] = np.array(human_traversible)
+    environment["map_traversible"] = 1. * np.array(traversible)
+    return environment, r
+
+
 def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
     """
     Code for loading random humans into the environment
@@ -93,49 +136,10 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
 
     RobotAgent.establish_joystick_handshake(p)
 
-    for i, test in enumerate(list(p.episode_params.tests.keys())):
+    for test in list(p.episode_params.tests.keys()):
         episode = p.episode_params.tests[test]
-        r = None  # free 'old' renderer
-        if i == 0 or (episode.map_name != p.building_name):
-            # update map to match the episode
-            p.building_name = episode.map_name
-            print("%s\n\nStarting episode \"%s\" in building \"%s\"%s\n\n" %
-                  (color_yellow, test, p.building_name, color_reset))
-            # get the renderer from the camera p
-            r = SocNavRenderer.get_renderer(p)
-            # obtain "resolution and traversible of building"
-            dx_cm, traversible = r.get_config()
-            # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-            dx_m = dx_cm / 100.0
-            if p.render_3D:
-                # Get the surreal dataset for human generation
-                surreal_data = r.d
-                # Update the Human's appearance classes to contain the dataset
-                from humans.human_appearance import HumanAppearance
-                HumanAppearance.dataset = surreal_data
-                human_traversible = np.empty(traversible.shape)
-                human_traversible.fill(1)  # initially all good
-
-            # In order to print more readable arrays
-            np.set_printoptions(precision=3)
-
-            # TODO: make this a param element
-            room_center = \
-                np.array([traversible.shape[1] * 0.5,
-                          traversible.shape[0] * 0.5,
-                          0.0]
-                         ) * dx_m
-
-            # Create default environment which is a dictionary
-            # containing ["map_scale", "traversibles"]
-            # which is a constant and list of traversibles respectively
-            environment = {}
-            environment["map_scale"] = float(dx_m)
-            environment["room_center"] = room_center
-            # obstacle traversible / human traversible
-            if p.render_3D:
-                environment["human_traversible"] = np.array(human_traversible)
-            environment["map_traversible"] = 1. * np.array(traversible)
+        """Create the environment and renderer for the episode"""
+        environment, r = construct_environment(p, test, episode)
         """
         Creating planner, simulator, and control pipelines for the framework
         of a human trajectory and pathfinding. 
@@ -146,25 +150,19 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             render_3D=p.render_3D,
             episode_params=episode
         )
-        """
-        Generate the autonomous human agents from the episode
-        """
+        """Generate the autonomous human agents from the episode"""
         generate_auto_humans(num_generated_humans,
                              simulator, environment, p, r)
 
-        """
-        Add the prerecorded humans to the simulator
-        """
+        """Add the prerecorded humans to the simulator"""
         for dataset in episode.pedestrian_datasets:
             PrerecordedHuman.generate_pedestrians(simulator, p,
                                                   max_time=episode.max_time,
                                                   dataset=dataset
                                                   )
 
+        """Generate the robot(s) for the simulator"""
         if not p.episode_params.without_robot:
-            """
-            Generate the robot(s) for the simulator
-            """
             # randomly generate robot
             robot_agent = \
                 RobotAgent.generate_random_robot_from_environment(environment)
@@ -179,10 +177,6 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
             simulator.add_agent(robot_agent)
         # run simulation
         simulator.simulate()
-
-        # Remove all the humans from the renderer
-        if p.render_3D:  # only when rendering with opengl
-            r.remove_all_humans()
 
     if not p.episode_params.without_robot:
         RobotAgent.close_robot_sockets()
