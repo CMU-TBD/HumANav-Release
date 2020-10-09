@@ -38,10 +38,10 @@ def create_params():
     p.episode_params.tests = {}
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
-               map_name='Zara',
+               map_name='DoubleHotel',
                agents_start=[],
                pedestrian_datasets=create_datasets_params(
-                   ["zara01", "zara02"]),
+                   ["hotel-fast-up", "hotel-fast-down"]),
                agents_end=[],
                robot_start_goal=[],
                max_time=20,
