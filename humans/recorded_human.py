@@ -149,7 +149,7 @@ class PrerecordedHuman(Human):
         return xinterp, yinterp, thetainterp
 
     @staticmethod
-    def gather_times(ped_i, time_delay: float, start_frame: int, fps: float):
+    def gather_times(ped_i, time_delay: float, start_t: float, start_frame: int, fps: float):
 
         # for i, f in enumerate(ped_i['frame']):
         #     relative_time = (f - start_frame) * (1. / fps)
@@ -160,7 +160,7 @@ class PrerecordedHuman(Human):
         # vecotrize
         times = (ped_i['frame'] - start_frame) * (1. / fps)
         times[1:] += time_delay
-        # times += time_delay
+        times += start_t
         times = list(times)
         return times
 
@@ -258,8 +258,8 @@ class PrerecordedHuman(Human):
 
     @staticmethod
     def generate_pedestrians(simulator, params,
-                             # default is ~1000 days (ie. no time bound)
                              max_time: int = 10e7,
+                             start_t: float = 0,
                              dataset: DotMap = None
                              ):
         """"world_df" is a set of trajectories organized as a pandas dataframe.
@@ -270,7 +270,6 @@ class PrerecordedHuman(Human):
         csv_file = dataset.file_name
         offset = dataset.offset
         fps = dataset.fps
-        start_t = dataset.start_t
         spawn_delay_s = dataset.spawn_delay_s
         start_idx = dataset.ped_range[0]  # start index
         max_agents = -1 if dataset.ped_range[1] == -1 \
@@ -305,8 +304,8 @@ class PrerecordedHuman(Human):
                 if i == 0:
                     # update start frame to be representative of "first" pedestrian
                     start_frame = list(ped_i['frame'])[0]
-                t_data = PrerecordedHuman.gather_times(
-                    ped_i, spawn_delay_s, start_frame, fps)
+                t_data = PrerecordedHuman.gather_times(ped_i, spawn_delay_s, start_t,
+                                                       start_frame, fps)
                 if (ped_i.frame.iloc[0] - start_frame) / fps > max_time:
                     # assuming the data of the agents is sorted relatively based off time
                     break

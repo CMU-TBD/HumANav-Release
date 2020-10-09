@@ -42,9 +42,10 @@ def create_params():
                agents_start=[],
                pedestrian_datasets=create_datasets_params(
                    ["hotel-fast-up", "hotel-fast-down"]),
+               datasets_start_t=[5, 10],
                agents_end=[],
                robot_start_goal=[],
-               max_time=20,
+               max_time=30,
                write_episode_log=False  # don't write episode log for test_socnav
                )
 
@@ -155,9 +156,11 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
                              simulator, environment, p, r)
 
         """Add the prerecorded humans to the simulator"""
-        for dataset in episode.pedestrian_datasets:
+        for i, dataset in enumerate(episode.pedestrian_datasets):
+            dataset_start_t = episode.datasets_start_t[i]
             PrerecordedHuman.generate_pedestrians(simulator, p,
                                                   max_time=episode.max_time,
+                                                  start_t=dataset_start_t,
                                                   dataset=dataset
                                                   )
 

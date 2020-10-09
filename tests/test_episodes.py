@@ -153,9 +153,11 @@ def test_episodes():
             generate_robot(episode.robot_start_goal, simulator)
 
         """Add the prerecorded humans to the simulator"""
-        for dataset in episode.pedestrian_datasets:
+        for i, dataset in enumerate(episode.pedestrian_datasets):
+            dataset_start_t = episode.datasets_start_t[i]
             PrerecordedHuman.generate_pedestrians(simulator, p,
                                                   max_time=episode.max_time,
+                                                  start_t=dataset_start_t,
                                                   dataset=dataset
                                                   )
 

@@ -167,8 +167,7 @@ def create_dataset(dataset_name: str):
     p.file_name = dataset_p.get('file_name')
     p.fps = dataset_p.getint('fps')
     p.ped_range = eval(dataset_p.get('ped_range'))
-    p.start_t = dataset_p.getfloat('start_t')
-    assert(p.start_t >= 0)
+    # (starts of the datasets are located in episode_params)
     p.spawn_delay_s = dataset_p.getfloat('spawn_delay_s')
     p.offset = eval(dataset_p.get('offset'))
     p.swapxy = dataset_p.getboolean('swapxy')
@@ -193,6 +192,7 @@ def create_test_params(test: str):
         p.map_name = test_p.get('map_name')
         p.pedestrian_datasets = \
             create_datasets_params(eval(test_p.get('pedestrian_datasets')))
+        p.datasets_start_t = eval(test_p.get('datasets_start_t'))
         p.agents_start = eval(test_p.get('agents_start'))
         p.agents_end = eval(test_p.get('agents_end'))
         p.robot_start_goal = eval(test_p.get('robot_start_goal'))
