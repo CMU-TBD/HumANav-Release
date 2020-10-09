@@ -10,8 +10,8 @@ seed = config['base_params'].getint('seed')
 
 # read params file for episodes configs
 episodes_config = configparser.ConfigParser()
-# episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params.ini'))
 episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params.ini'))
+# episodes_config.read(os.path.join(os.getcwd(), 'params/episode_params_val1.ini'))
 
 dataset_config = configparser.ConfigParser()
 dataset_config.read(os.path.join(os.getcwd(), 'params/dataset_params.ini'))

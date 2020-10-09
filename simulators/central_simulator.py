@@ -412,6 +412,7 @@ class CentralSimulator(SimulatorHelper):
 
     """ END IMAGE UTILS """
 
+    """ BEGIN SCORING UTILS """
     def generate_episode_score_report(self, filename='episode_score'):
         # should do this in some formal format
         # json? pandas? how to aggregate per episode?
@@ -421,17 +422,19 @@ class CentralSimulator(SimulatorHelper):
         metrics_list = [
             # meta
             "success",
+            "termination_cause",
             "total_sim_time_taken",
             "sim_time_budget",
             "wall_wait_time",
             # motion
-            "robot_velocity",
+            "robot_speed",
             "robot_motion_energy",
             "robot_acceleration",
             "robot_jerk",
             # path
             "path_length",
             "path_length_ratio",
+            "goal_traversal_ratio",
             "path_irregularity",
             # individual
             "personal_space_cost",
@@ -440,6 +443,10 @@ class CentralSimulator(SimulatorHelper):
             # others
             # Time to collision
             # Planning-based?
+        ]
+
+        fail_metrics = [
+            "goal_traversal_ratio"
         ]
 
         score_df = pd.DataFrame(columns=metrics_list)
@@ -465,16 +472,6 @@ class CentralSimulator(SimulatorHelper):
             len(self.robot.joystick_inputs)
         metrics_out["num_exec_robot"] = \
             self.robot.num_executed
-        # # motion raw stats
-        # data += "Max robot average velocity (m/s): %0.3f\n" % absmax(
-        #     self.robot.vehicle_trajectory.speed_nk1())
-        # data += "Max robot acceleration: %0.3f\n" % absmax(
-        #     self.robot.vehicle_trajectory.acceleration_nk1())
-        # data += "Max robot angular velocity: %0.3f\n" % absmax(
-        #     self.robot.vehicle_trajectory.angular_speed_nk1())
-        # data += "Max robot angular acceleration: %0.3f\n" % absmax(
-        #     self.robot.vehicle_trajectory.angular_acceleration_nk1())
-        #
 
         try:
             with open(abs_filename, 'wb') as f:
@@ -488,15 +485,6 @@ class CentralSimulator(SimulatorHelper):
             print("%sWriting episode metrics failed%s" %
                   (color_red, color_reset))
 
-        return
-
-    def collate_episode_scores(self):
-        """
-        Takes in the outputs of generate_episode_score_report
-        And digests them into overall scores
-
-        :return:
-        """
         return
 
     def generate_sim_log(self, filename='episode_log.txt'):
