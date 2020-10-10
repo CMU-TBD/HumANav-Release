@@ -14,8 +14,10 @@ random.seed(get_seed())
 
 
 class JoystickBase():
-    def __init__(self):
+    def __init__(self, algorithm_name: str):
         self.joystick_params = create_joystick_params()
+        self.algorithm_name = algorithm_name
+        print("Joystick running %s algorithm" % self.algorithm_name)
         if self.joystick_params.use_system_dynamics:
             from params.central_params import create_system_dynamics_params
             self.system_dynamics_params = create_system_dynamics_params()
@@ -217,7 +219,7 @@ class JoystickBase():
                 # used for file IO such as pandas logging
                 # NOTE: this MUST match the directory name in CentralSimulator
                 self.dirname = 'tests/socnav/' + self.current_ep.get_name() + \
-                    '_output/joystick_data'
+                    '_output/' + self.algorithm_name + '_data'
                 # Write the Agent's trajectory data into a pandas file
                 self.update_logs(self.sim_state_now)
                 self.write_pandas()

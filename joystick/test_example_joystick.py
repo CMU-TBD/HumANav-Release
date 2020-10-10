@@ -1,18 +1,22 @@
 from params.central_params import create_joystick_params
+from joystick.example_joystick import JoystickRandom
+from joystick.example_joystick import JoystickWithPlanner
+from joystick.example_joystick import JoystickWithPlannerPosns
 
 
-def test_joystick():
+if __name__ == '__main__':
     joystick_params = create_joystick_params()
-    from joystick.example_joystick import JoystickRandom
-    if joystick_params.use_system_dynamics:
-        # uses the joystick that sends velocity commands instead of positional
-        from joystick.example_joystick import JoystickWithPlanner as Joystick
+    if(joystick_params.use_random_planner):
+        J = JoystickRandom()
     else:
-        # uses the joystick that sends positional commands instead of velocity
-        from joystick.example_joystick import JoystickWithPlannerPosns as Joystick
+        if joystick_params.use_system_dynamics:
+            # uses the joystick that sends velocity commands instead of positional
+            J = JoystickWithPlanner()
+        else:
+            # uses the joystick that sends positional commands instead of velocity
+            J = JoystickWithPlannerPosns()
 
     """start the joystick process"""
-    J = Joystick()
     J.init_send_conn()
     J.init_recv_conn()
     # first listen() for the episode names
@@ -31,8 +35,3 @@ def test_joystick():
         J.init_control_pipeline()
 
         J.update_loop()
-
-
-if __name__ == '__main__':
-    print("Joystick")
-    test_joystick()

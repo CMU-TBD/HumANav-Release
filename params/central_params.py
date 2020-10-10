@@ -152,6 +152,7 @@ def create_joystick_params():
     joystick_p = config['joystick_params']
     p.port = config['robot_params'].getint('port')
     p.use_system_dynamics = joystick_p.getboolean('use_system_dynamics')
+    p.use_random_planner = joystick_p.getboolean('use_random_planner')
     p.track_vel_accel = joystick_p.getboolean('track_vel_accel')
     p.print_data = joystick_p.getboolean('print_data')
     p.track_sim_states = joystick_p.getboolean('track_sim_states')

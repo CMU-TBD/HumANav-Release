@@ -12,7 +12,7 @@ class JoystickRandom(JoystickBase):
         self.commands = []  # the list of commands sent to the robot to execute
         # our 'positions' are modeled as (x, y, theta)
         self.robot_current = None    # current position of the robot
-        super().__init__()
+        super().__init__("RandomPlanner")
 
     def init_control_pipeline(self):
         self.agent_params = create_agent_params(with_obstacle_map=True)
@@ -49,15 +49,14 @@ class JoystickRandom(JoystickBase):
         if(not self.listen_once()):
             # occurs if the robot is unavailable or it finished
             self.joystick_on = False
-        print(self.sim_state_now.get_sim_t())
 
     def joystick_plan(self):
         pass
 
     def joystick_act(self):
         if(self.joystick_on):
-            num_actions_per_dt = int(
-                np.floor(self.sim_delta_t / self.agent_params.dt))
+            num_actions_per_dt = \
+                int(np.floor(self.sim_delta_t / self.agent_params.dt))
             # send a random to the robot
             self.random_inputs(num_actions_per_dt)
 
@@ -96,7 +95,7 @@ class JoystickWithPlanner(JoystickBase):
         self.robot_v = 0     # not tracked in the base simulator
         self.robot_w = 0     # not tracked in the base simulator
         self.sim_times = []
-        super().__init__()
+        super().__init__("SamplingPlanner")
 
     def init_obstacle_map(self, renderer=0):
         """ Initializes the sbpd map."""
