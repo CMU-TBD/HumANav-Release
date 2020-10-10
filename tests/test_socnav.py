@@ -42,7 +42,7 @@ def create_params():
                agents_start=[],
                pedestrian_datasets=create_datasets_params(
                    ["hotel-fast-up", "hotel-fast-down"]),
-               datasets_start_t=[5, 10],
+               datasets_start_t=[0, 0],
                agents_end=[],
                robot_start_goal=[],
                max_time=30,

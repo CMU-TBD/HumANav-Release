@@ -136,13 +136,14 @@ def create_robot_params():
     rob_p = config['robot_params']
     p.port = rob_p.getint('port')
     p.repeat_freq: int = rob_p.getint('repeat_freq')
-    p.physical_params = DotMap(radius=rob_p.getfloat('radius'),
-                               base=rob_p.getfloat('base'),
-                               height=rob_p.getfloat('height'),
-                               sensor_height=rob_p.getfloat('sensor_height'),
-                               camera_elevation_degree=rob_p.getfloat(
-        'camera_elevation_degree'),
-        delta_theta=rob_p.getfloat('delta_theta'))
+    p.physical_params = \
+        DotMap(radius=rob_p.getfloat('radius_cm') / 100.,
+               base=rob_p.getfloat('distance_from_ground_cm'),
+               height=rob_p.getfloat('chassis_height_cm'),
+               sensor_height=rob_p.getfloat('sensor_height_cm'),
+               camera_elevation_degree=rob_p.getfloat(
+                   'camera_elevation_degree'),
+               delta_theta=rob_p.getfloat('delta_theta'))
     p.use_system_dynamics = create_joystick_params().use_system_dynamics
     return p
 

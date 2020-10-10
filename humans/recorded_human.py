@@ -150,18 +150,14 @@ class PrerecordedHuman(Human):
 
     @staticmethod
     def gather_times(ped_i, time_delay: float, start_t: float, start_frame: int, fps: float):
-
-        # for i, f in enumerate(ped_i['frame']):
-        #     relative_time = (f - start_frame) * (1. / fps)
-        #     if i > 0:
-        #         # add the time delay to all the times except for the first
-        #         relative_time += time_delay
-        #     times.append(relative_time)
-        # vecotrize
         times = (ped_i['frame'] - start_frame) * (1. / fps)
-        times[1:] += time_delay
-        times += start_t
+        # account for the time delay (before the rest of the action),
+        # and the start time (when the pedestrian first appears in the simulator)
+        times += time_delay + start_t
+        # convert pd df column to list
         times = list(times)
+        # add the first time step (after spawning, before moving)
+        times = [times[0] - start_t] + times
         return times
 
     @staticmethod
@@ -197,7 +193,7 @@ class PrerecordedHuman(Human):
                 if j == len(posn_data) - 1:
                     # last element gets last angle
                     posn_data[j].append(theta)
-        return posn_data
+        return [posn_data[0]] + posn_data
 
     @staticmethod
     def gather_posn_data_vec(ped_i, offset):
@@ -216,14 +212,15 @@ class PrerecordedHuman(Human):
         thetas = np.hstack((thetas, thetas[-1]))
         xytheta = np.vstack((xy_rot.T, thetas)).T
 
-        return xytheta
+        return [xytheta[0]] + xytheta
 
     @staticmethod
     def gather_vel_data(time_data, posn_data):
         # return linear speed to the list of variables
         v_data = []
+        assert(len(time_data) == len(posn_data))
         for j, pos_2 in enumerate(posn_data):
-            if(j > 0):
+            if(j > 1):
                 last_pos_2 = posn_data[j - 1]
                 # calculating euclidean dist / delta_t
                 delta_t = (time_data[j] - time_data[j - 1])
