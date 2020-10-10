@@ -443,18 +443,22 @@ class Trajectory(object):
                               angular_acceleration_nk1=angular_acceleration_nk1,
                               valid_horizons_n1=valid_horizons_n1, direct_init=True)
 
-    def render(self, axs, batch_idx=0, freq=4, plot_quiver=True, plot_heading=False,
-               plot_velocity=False, color="red", label_start_and_end=False, name='', linewidth=4):
+    def render(self, axs, batch_idx: int = 0, freq=4, plot_quiver=True, plot_heading=False,
+               plot_velocity: bool = False, color: str = "red", alpha: float = 0,
+               label_start_and_end: bool = False, name: str = '', linewidth: float = 4,
+               clip: int = 0):
         ax = axs
-        xs = self._position_nk2[batch_idx, :, 0]
-        ys = self._position_nk2[batch_idx, :, 1]
+        # use clip to only render the *last* "clip" numpoints of the trajectory
+        xs = self._position_nk2[batch_idx, -1:-1 * clip:-1, 0]
+        ys = self._position_nk2[batch_idx, -1:-1 * clip:-1, 1]
         thetas = self._heading_nk1[batch_idx]
 
         if plot_quiver:
-            ax.quiver(xs[::freq], ys[::freq], np.cos(
-                thetas[::freq]), np.sin(thetas[::freq]))
+            ax.quiver(xs[::freq], ys[::freq],
+                      np.cos(thetas[::freq]),
+                      np.sin(thetas[::freq]))
         title_str = '{:s} Trajectory'.format(name)
-        ax.plot(xs, ys, '-', color=color, linewidth=linewidth)
+        ax.plot(xs, ys, '-', color=color, alpha=alpha, linewidth=linewidth)
         if label_start_and_end:
             start_5 = self.position_heading_speed_and_angular_speed_nk5()[
                 batch_idx, 0]

@@ -61,8 +61,8 @@ def gather_colors_and_labels(base_color: str, label: str, has_collided: bool, in
 
 
 def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_color='bo',
-                    collided_color='ro', plot_trajectory=True, plot_quiver=False,
-                    plot_start_goal=False, start_3=None, goal_3=None):
+                    collided_color='ro', plot_trajectory=True, plot_quiver=False, alpha=1,
+                    plot_start_goal=False, start_3=None, goal_3=None, traj_clip=0):
     # plot all the simulated prerecorded gen_agents
     for i, a in enumerate(agents_dict.values()):
         # gather important info regarding the values to plot
@@ -71,7 +71,9 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
 
         # render agent's trajectory
         if(plot_trajectory and a.get_trajectory()):
-            a.get_trajectory().render(ax, freq=1, color=traj_col, plot_quiver=False)
+            a.get_trajectory().render(ax, freq=1, color=traj_col,
+                                      alpha=alpha, plot_quiver=False,
+                                      clip=traj_clip, linewidth=ppm / 8.2)
 
         # gather colors/labels for the agent plot
         color, start_col, goal_col, draw_label, sl, gl = \
@@ -91,7 +93,7 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
         # ax.plot(pos_3[0], pos_3[1], color,alpha=0.2, markersize=2. * ms)
         if(plot_quiver):
             # Agent heading
-            s = 1
+            s = 0.5
             ax.quiver(pos_3[0], pos_3[1], s * np.cos(pos_3[2]), s * np.sin(pos_3[2]),
                       scale=1, scale_units='xy')
             if(plot_start_goal and (start_3 is not None and goal_3 is not None)):
@@ -141,11 +143,13 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
     # TODO: make plot_quiver a simulator-wide param for pedestrians and robot
     # Plot the camera (robots)
     plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="bo",
-                    collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True)
+                    collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True,
+                    alpha=0.8)
 
     # plot all the simulated pedestrian agents
     plot_agent_dict(ax, ppm, pedestrians, label="Pedestrian", normal_color="co",
-                    collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False)
+                    collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=False,
+                    alpha=0.3, traj_clip=50)
 
     if plot_meter_tick:
         # plot other useful informational visuals in the topview
@@ -319,8 +323,9 @@ def save_to_gif(IMAGES_DIR, duration=0.05, gif_filename="movie", clear_old_files
             print("%sUnable to read file:" % color_red, filename,
                   "Try clearing the directory of old files and rerunning%s" % color_reset)
             exit(1)
-        print("Movie progress:", i, "out of", num_images, "%.3f" %
-              (i / num_images), "\r", end="")
+        print("Movie progress: %d out of %d, %.3f%% \r" %
+              (i + 1, num_images, 100. * ((i + 1) / num_images)), end="")
+    print()
     output_location = os.path.join(IMAGES_DIR, gif_filename + ".gif")
     kargs = {'duration': duration}  # 1/fps
     imageio.mimsave(output_location, images, 'GIF', **kargs)
