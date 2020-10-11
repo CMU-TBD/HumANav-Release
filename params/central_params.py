@@ -168,8 +168,9 @@ def create_dataset(dataset_name: str):
     p.name = dataset_name
     p.file_name = dataset_p.get('file_name')
     p.fps = dataset_p.getint('fps')
-    p.ped_range = eval(dataset_p.get('ped_range'))
+    # p.ped_range = eval(dataset_p.get('ped_range'))
     # (starts of the datasets are located in episode_params)
+    # p.start_t = eval(dataset_p.get('start_t'))
     p.spawn_delay_s = dataset_p.getfloat('spawn_delay_s')
     p.offset = eval(dataset_p.get('offset'))
     p.swapxy = dataset_p.getboolean('swapxy')
@@ -190,19 +191,19 @@ def create_test_params(test: str):
     p = DotMap()
     test_p = episodes_config[test]
     p.name = test
-    try:
-        p.map_name = test_p.get('map_name')
-        p.pedestrian_datasets = \
-            create_datasets_params(eval(test_p.get('pedestrian_datasets')))
-        p.datasets_start_t = eval(test_p.get('datasets_start_t'))
-        p.agents_start = eval(test_p.get('agents_start'))
-        p.agents_end = eval(test_p.get('agents_end'))
-        p.robot_start_goal = eval(test_p.get('robot_start_goal'))
-        p.max_time = test_p.getfloat('max_time')
-        p.write_episode_log = test_p.getboolean('write_episode_log')
-    except TypeError:
-        print("Check that the episode_params file has all required fields")
-        exit(1)
+    p.map_name = test_p.get('map_name')
+    p.pedestrian_datasets = \
+        create_datasets_params(eval(test_p.get('pedestrian_datasets')))
+    p.datasets_start_t = eval(test_p.get('datasets_start_t'))
+    p.ped_ranges = eval(test_p.get('ped_ranges'))
+    p.agents_start = eval(test_p.get('agents_start'))
+    p.agents_end = eval(test_p.get('agents_end'))
+    p.robot_start_goal = eval(test_p.get('robot_start_goal'))
+    p.max_time = test_p.getfloat('max_time')
+    p.write_episode_log = test_p.getboolean('write_episode_log')
+    # except TypeError:
+    #     print("Check that the episode_params file has all required fields")
+    #     exit(1)
     return p
 
 
@@ -213,6 +214,8 @@ def create_episodes_params():
     p.without_robot = epi_p.getboolean('without_robot')
     # NOTE: uses a dictionary of DotMaps to use string notation
     tests = eval(epi_p.get('tests'))
+    if len(tests)==0:
+        tests = episodes_config.sections()[1:]
     test_dict = {}
     for t in tests:
         test_dict[t] = create_test_params(test=t)

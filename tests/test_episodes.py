@@ -155,9 +155,11 @@ def test_episodes():
         """Add the prerecorded humans to the simulator"""
         for i, dataset in enumerate(episode.pedestrian_datasets):
             dataset_start_t = episode.datasets_start_t[i]
+            dataset_ped_range = episode.ped_ranges[i]
             PrerecordedHuman.generate_pedestrians(simulator, p,
                                                   max_time=episode.max_time,
                                                   start_t=dataset_start_t,
+                                                  ped_range=dataset_ped_range,
                                                   dataset=dataset
                                                   )
 

@@ -207,6 +207,7 @@ class CentralSimulator(SimulatorHelper):
         self.sim_wall_clock = time.time() - start_time
         print("\nSimulation completed in",
               self.sim_wall_clock, "real world seconds")
+        print("Robot termination cause:", self.robot.termination_cause)
 
         if self.robot and self.episode_params.write_episode_log:
             self.generate_sim_log()
@@ -214,7 +215,6 @@ class CentralSimulator(SimulatorHelper):
             from simulators.simulator_helper import sim_states_to_dataframe
             self.sim_df, self.agent_info = sim_states_to_dataframe(self.states)
             self.generate_episode_score_report()
-            # what info do you need?
 
         # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames(filename=self.episode_params.name + "_obs")
@@ -377,7 +377,7 @@ class CentralSimulator(SimulatorHelper):
             camera_pos_13 = robot.get_current_config().to_3D_numpy()
         else:
             robot = None
-            if(self.camera_pose is not None):
+            if self.camera_pose is not None:
                 camera_pos_13 = self.camera_pose
             else:
                 camera_pos_13 = state.get_environment()["room_center"]
@@ -424,6 +424,7 @@ class CentralSimulator(SimulatorHelper):
             # meta
             "success",
             "termination_cause",
+            "map",
             "total_sim_time_taken",
             "sim_time_budget",
             "wall_wait_time",
@@ -439,7 +440,7 @@ class CentralSimulator(SimulatorHelper):
             "path_irregularity",
             # individual
             "personal_space_cost",
-            "closest_pedestrian_distance"
+            "closest_pedestrian_distance",
             "time_to_collision",
             # others
             # Time to collision

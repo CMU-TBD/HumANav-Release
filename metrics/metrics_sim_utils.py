@@ -1,6 +1,7 @@
 import numpy as np
 from metrics import cost_functions
 from simulators.central_simulator import CentralSimulator
+import pandas as pd
 
 
 # meta
@@ -35,6 +36,10 @@ def termination_cause(central_sim: CentralSimulator):
 
 def wall_wait_time(central_sim: CentralSimulator):
     return central_sim.robot.get_block_t_total()
+
+
+def map(central_sim: CentralSimulator):
+    return central_sim.episode_params.map_name
 
 
 # motion
@@ -175,45 +180,56 @@ def goal_traversal_ratio(central_sim: CentralSimulator, percentile=False):
 
 
 # pedestrian related
+# TODO incorporate radii
 def time_to_collision(central_sim: CentralSimulator, percentile=False):
     sim_df = central_sim.sim_df
     robot_indcs = (sim_df.agent_name == 'robot_agent')
     ped_df = central_sim.sim_df[~robot_indcs]
     bot_df = central_sim.sim_df[robot_indcs]
     robot_trajectory = np.vstack([bot_df.x, bot_df.y, bot_df.theta]).T
-
+    ped_name_df = ped_df.set_index('agent_name')
     delta_t = central_sim.delta_t
     robot_displacement = np.diff(robot_trajectory, axis=0)
-    robot_inst_vel = robot_displacement / delta_t
+    robot_inst_vels = robot_displacement[:, :-1] / delta_t
     robot_df = ped_df[ped_df.agent_name == 'robot_agent']
 
+    # calculate velocities for pedestrians
+    vel_df = ped_df.groupby(['agent_name'])[['x', 'y']].diff().fillna(0) / delta_t
+    vel_df.columns = ['vx', 'vy']
+    ped_df = pd.concat([ped_df, vel_df], axis=1)
+
     # for each time instance in which robot_trajectory exists
-    ttc = np.zeros((len(robot_inst_vel)))
-    for sim_step in range(len(robot_inst_vel)):
+    ttc = np.zeros((len(robot_inst_vels)))
+    for sim_step in range(len(robot_inst_vels)):
+        robot_inst_vel = robot_inst_vels[sim_step-1]
         sim_step += 1  # velocity is valid only after 2 steps
         # for each bot-ped pair
         # compute the robot-pedestrian relative velocity at each instant
-        ped_inst = ped_df[ped_df.sim_step == sim_step]
-        ped_prev = ped_df[ped_df.sim_step == sim_step-1]
-        ped_inst_posns = np.vstack([ped_inst.x, ped_inst.y])
-        ped_prev_posns = np.vstack([ped_prev.x, ped_prev.y])
-        ped_inst_vels = (ped_inst_posns - ped_prev_posns)/central_sim.delta_t
+        ped_inst = vel_df[ped_df.sim_step == sim_step]
+        if len(ped_inst) == 0:
+            ttc[sim_step-1] = ttc[sim_step-2]
+            continue
 
+        ped_inst_vels = np.array(ped_df[ped_df.sim_step == sim_step].loc[:, ('vx', 'vy')])
         botped_relative_vels = ped_inst_vels - robot_inst_vel
 
         # compute the robot-pedestrian joining unit vector
-        botped_vectors = robot_trajectory[sim_step, :] - ped_inst_posns
+        ped_inst_posns = np.array(ped_df[ped_df.sim_step == sim_step].loc[:, ('x', 'y')])
+        botped_vectors = robot_trajectory[sim_step, :2] - ped_inst_posns
         botped_distances = np.linalg.norm(botped_vectors, axis=1)
         # needs the extra axis to divide correctly
-        botped_uvectors = botped_vectors / np.linalg.norm(botped_vectors)[:, None]
+        botped_uvectors = botped_vectors / np.linalg.norm(botped_vectors, axis=1)[:, None]
 
         # take relative velocity component along the joining vector
         botped_component = np.sum(botped_relative_vels * botped_uvectors, axis=1)
 
         # see how long it would take to cover that distance w relative velocity
         ttc_all = botped_distances / botped_component
-        ttc_pos = ttc_all[ttc_all > 0]  # discard negative times
-        ttc[sim_step-1] = np.min(ttc_pos)
+        ttc_pos = ttc_all[ttc_all > 0]  # discard negative times since there is no collision
+        if len(ttc_pos) == 0:  # no collisions
+            ttc[sim_step-1] = -1
+        else:
+            ttc[sim_step-1] = np.min(ttc_pos)
 
     return ttc
 
@@ -230,6 +246,9 @@ def closest_pedestrian_distance(central_sim: CentralSimulator, percentile=False)
     cpd = np.zeros((len(robot_trajectory)))
     for sim_step in range(len(robot_trajectory)):
         ped_inst = ped_df[ped_df.sim_step == sim_step]
+        if len(ped_inst) == 0:
+            cpd[sim_step] = cpd[sim_step-1]
+            continue
         # compute the robot-pedestrian joining unit vector
         ped_inst_posns = np.vstack([ped_inst.x, ped_inst.y]).T
         botped_vectors = robot_trajectory[sim_step] - ped_inst_posns

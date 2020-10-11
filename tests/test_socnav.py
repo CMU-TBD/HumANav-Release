@@ -36,18 +36,31 @@ def create_params():
     p.episode_params.without_robot = True
     # overwrite tests with custom basic test
     p.episode_params.tests = {}
+    # p.episode_params.tests['test_socnav'] = \
+    #     DotMap(name='test_socnav',
+    #            map_name='DoubleHotel',
+    #            agents_start=[],
+    #            pedestrian_datasets=create_datasets_params(
+    #                ["dhotel-top-mirror", "dhotel-bot"]),
+    #            datasets_start_t=[0, 0],
+    #            ped_ranges=[(96, -1), (360, -1)],
+    #            agents_end=[],
+    #            robot_start_goal=[],
+    #            max_time=30,
+    #            write_episode_log=False  # don't write episode log for test_socnav
+    #            )
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
-               map_name='DoubleHotel',
+               map_name='Zara',
+               pedestrian_datasets=create_datasets_params(["zara02"]),
+               datasets_start_t=[0],
+               ped_ranges=[(44, -1)],
                agents_start=[],
-               pedestrian_datasets=create_datasets_params(
-                   ["hotel-fast-up", "hotel-fast-down"]),
-               datasets_start_t=[0, 0],
                agents_end=[],
-               robot_start_goal=[],
+               robot_start_goal=[[22, 10, 0.2], [2, 2, 1.5]],
                max_time=30,
-               write_episode_log=False  # don't write episode log for test_socnav
-               )
+               write_episode_log=False
+    )
 
     # Tilt the camera 10 degree down from the horizontal axis
     p.robot_params.physical_params.camera_elevation_degree = -10
@@ -158,9 +171,11 @@ def test_socnav(num_generated_humans, num_prerecorded, starting_prerec=0):
         """Add the prerecorded humans to the simulator"""
         for i, dataset in enumerate(episode.pedestrian_datasets):
             dataset_start_t = episode.datasets_start_t[i]
+            dataset_ped_range = episode.ped_ranges[i]
             PrerecordedHuman.generate_pedestrians(simulator, p,
                                                   max_time=episode.max_time,
                                                   start_t=dataset_start_t,
+                                                  ped_range=dataset_ped_range,
                                                   dataset=dataset
                                                   )
 

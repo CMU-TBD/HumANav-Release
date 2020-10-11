@@ -14,7 +14,7 @@ random.seed(get_seed())
 
 
 class JoystickBase():
-    def __init__(self, algorithm_name: str):
+    def __init__(self, algorithm_name: str = "socnav"):
         self.joystick_params = create_joystick_params()
         self.algorithm_name = algorithm_name
         print("Joystick running %s algorithm" % self.algorithm_name)

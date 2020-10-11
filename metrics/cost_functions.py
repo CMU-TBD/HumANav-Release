@@ -104,7 +104,7 @@ def path_irregularity(trajectory, goal_config=None):
     # cos inv of dot product of vectors
     cos_theta = np.sum(point_to_goal_traj * traj_xy, axis=1) \
              / (np.linalg.norm(point_to_goal_traj, axis=1) *
-                np.linalg.norm(traj_xy, axis=1))
+                np.linalg.norm(traj_xy, axis=1) + (1/1E10))
     theta_to_goal_traj = np.arccos(cos_theta)
     path_irr = np.sum(np.abs(theta_to_goal_traj)) / len(theta_to_goal_traj)
 

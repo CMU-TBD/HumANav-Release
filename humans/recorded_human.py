@@ -257,6 +257,7 @@ class PrerecordedHuman(Human):
     def generate_pedestrians(simulator, params,
                              max_time: int = 10e7,
                              start_t: float = 0,
+                             ped_range: tuple = (0, -1),
                              dataset: DotMap = None
                              ):
         """"world_df" is a set of trajectories organized as a pandas dataframe.
@@ -268,15 +269,15 @@ class PrerecordedHuman(Human):
         offset = dataset.offset
         fps = dataset.fps
         spawn_delay_s = dataset.spawn_delay_s
-        start_idx = dataset.ped_range[0]  # start index
-        max_agents = -1 if dataset.ped_range[1] == -1 \
-            else dataset.ped_range[1] - start_idx
+        start_idx = ped_range[0]  # start index
+        max_agents = -1 if ped_range[1] == -1 \
+            else ped_range[1] - start_idx
         assert(fps > 0)
         swapxy = dataset.swapxy
         scale_x = -1 if dataset.flipxn else 1
         scale_y = -1 if dataset.flipyn else 1
         # run through the amount of agents
-        if dataset.ped_range[0] != dataset.ped_range[1]:  # have a non-empty range
+        if ped_range[0] != ped_range[1]:  # have a non-empty range
             datafile = \
                 os.path.join(params.socnav_dir, "tests/datasets/", csv_file)
             world_df = pd.read_csv(datafile, header=None).T
@@ -307,7 +308,7 @@ class PrerecordedHuman(Human):
                     # assuming the data of the agents is sorted relatively based off time
                     break
                 print("Generating pedestrians from \"%s\" in range [%d, %d]: %d\r" %
-                      (dataset.name, dataset.ped_range[0], dataset.ped_range[1], ped_id), end="")
+                      (dataset.name, ped_range[0], ped_range[1], ped_id), end="")
                 xytheta_data = PrerecordedHuman.gather_posn_data(ped_i, offset,
                                                                  swap_axes=swapxy,
                                                                  scale_x=scale_x,
