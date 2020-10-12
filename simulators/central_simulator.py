@@ -207,14 +207,16 @@ class CentralSimulator(SimulatorHelper):
         self.sim_wall_clock = time.time() - start_time
         print("\nSimulation completed in",
               self.sim_wall_clock, "real world seconds")
-        print("Robot termination cause:", self.robot.termination_cause)
 
-        if self.robot and self.episode_params.write_episode_log:
-            self.generate_sim_log()
-            # TODO generate + write the score report
-            from simulators.simulator_helper import sim_states_to_dataframe
-            self.sim_df, self.agent_info = sim_states_to_dataframe(self.states)
-            self.generate_episode_score_report()
+        if self.robot:
+            print("Robot termination cause:", self.robot.termination_cause)
+            if self.episode_params.write_episode_log:
+                self.generate_sim_log()
+                # TODO generate + write the score report
+                from simulators.simulator_helper import sim_states_to_dataframe
+                self.sim_df, self.agent_info = \
+                    sim_states_to_dataframe(self.states)
+                self.generate_episode_score_report()
 
         # convert the saved states to rendered png's to be rendered into a movie
         self.generate_frames(filename=self.episode_params.name + "_obs")
@@ -341,12 +343,13 @@ class CentralSimulator(SimulatorHelper):
                 if skip == 0:
                     self.render_sim_state(s, filename + str(frame) + ".png")
                     frame += 1
-                    print("Generated Frames:", frame, "out of", num_frames,
-                          "%.3f" % (frame / num_frames), "\r", end="")
+                    print("Generated Frames: %d out of %d, %.3f%% \r" %
+                          (frame, num_frames, 100.0 * (frame / num_frames)), end="")
                     del s  # free the state from memory
                     skip = int(1.0 / self.params.fps_scale_down) - 1
                 else:
                     skip -= 1.0
+            print()
 
     def save_frames_to_gif(self, clear_old_files=True):
         """Convert a directory full of png's to a gif movie

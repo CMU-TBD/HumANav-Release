@@ -21,11 +21,13 @@ def plot_image_observation(ax, img_mkd, size=None):
         raise NotImplementedError
 
 
-def gather_metadata(ppm, a, plot_start_goal, start, goal):
+def gather_metadata(ppm: float, a, plot_start_goal: bool, start: list,
+                    goal: list, traj_col: str = ''):
     collided = a.get_collided()
     markersize = a.get_radius() * ppm
     pos_3 = a.get_current_config().to_3D_numpy()
-    traj_col = a.get_color()
+    if(traj_col == ""):
+        traj_col = a.get_color()
     start_3 = None
     goal_3 = None
     if(plot_start_goal):
@@ -62,12 +64,13 @@ def gather_colors_and_labels(base_color: str, label: str, has_collided: bool, in
 
 def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_color='bo',
                     collided_color='ro', plot_trajectory=True, plot_quiver=False, alpha=1,
-                    plot_start_goal=False, start_3=None, goal_3=None, traj_clip=0):
+                    traj_color='', plot_start_goal=False, start_3=None, goal_3=None, traj_clip=0):
     # plot all the simulated prerecorded gen_agents
     for i, a in enumerate(agents_dict.values()):
         # gather important info regarding the values to plot
         collided, ms, pos_3, traj_col, start_3, goal_3 = \
-            gather_metadata(ppm, a, plot_start_goal, start_3, goal_3)
+            gather_metadata(ppm, a, plot_start_goal,
+                            start_3, goal_3, traj_color)
 
         # render agent's trajectory
         if(plot_trajectory and a.get_trajectory()):
@@ -142,9 +145,9 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
 
     # TODO: make plot_quiver a simulator-wide param for pedestrians and robot
     # Plot the camera (robots)
-    plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="bo",
+    plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="ro",
                     collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True,
-                    alpha=0.8)
+                    alpha=0.8, traj_color="w")
 
     # plot all the simulated pedestrian agents
     plot_agent_dict(ax, ppm, pedestrians, label="Pedestrian", normal_color="co",
