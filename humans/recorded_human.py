@@ -3,7 +3,7 @@ from humans.human import Human
 from humans.human_configs import HumanConfigs
 from humans.human_appearance import HumanAppearance
 from trajectory.trajectory import SystemConfig, Trajectory
-from params.central_params import create_agent_params
+from params.central_params import create_agent_params, create_system_dynamics_params
 from simulators.agent import Agent
 import numpy as np
 import scipy
@@ -19,6 +19,7 @@ class PrerecordedHuman(Human):
         self.t_data = t_data
         # useful to know the ground truth pedestrian data rate
         self.del_t = t_data[2] - t_data[1]
+        self.sim_dt = create_system_dynamics_params().dt
         self.posn_data = posn_data
         self.sim_t = 0
         self.current_step = 0
@@ -41,16 +42,13 @@ class PrerecordedHuman(Human):
     def get_end_time(self):
         return self.t_data[-1]
 
-    # def get_current_config(self, deepcpy=False):
-    #     return super().get_config(self.current_config, deepcpy=deepcpy)
-
     def get_current_time(self):
         return self.t_data[self.current_precalc_step]
 
     def get_completed(self):
         return self.end_acting and self.end_episode
 
-    def simulation_init(self, sim_map, with_planner=True, keep_episode_running=False):
+    def simulation_init(self, sim_map, with_planner=False, keep_episode_running=False):
         """ Initializes important fields for the CentralSimulator"""
         self.params = create_agent_params(with_planner=with_planner)
         self.obstacle_map = sim_map
@@ -74,7 +72,11 @@ class PrerecordedHuman(Human):
                 y,
                 theta
             ]
-            posn_interp_conf = generate_config_from_pos_3(posn_interp, v=0)
+            last_t = int(np.floor((self.sim_t - self.t_data[0]) / self.sim_dt))
+            last_non_interp_v = \
+                self.posn_data[last_t].speed_nk1()[0][0][0]
+            posn_interp_conf = generate_config_from_pos_3(posn_interp,
+                                                          v=last_non_interp_v)
         return posn_interp_conf
 
     def execute(self):
