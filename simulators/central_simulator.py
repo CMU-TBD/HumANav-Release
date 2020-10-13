@@ -64,19 +64,22 @@ class CentralSimulator(SimulatorHelper):
         if isinstance(a, RobotAgent):
             # initialize the robot and add to simulator's known "robot" field
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
-                              with_planner=False)
+                              with_planner=False,
+                              keep_episode_running=self.params.keep_episode_running)
             self.robots[name] = a
             self.robot = a
         elif isinstance(a, PrerecordedHuman):
             # generic agent initializer but without a planner (already have trajectories)
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
-                              with_planner=False)
+                              with_planner=False,
+                              keep_episode_running=self.params.keep_episode_running)
             # added to backstage prerecs which will add to self.prerecs when the time is right
             self.backstage_prerecs[name] = a
         else:
             # initialize agent and add to simulator
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
-                              with_planner=True)
+                              with_planner=True,
+                              keep_episode_running=self.params.keep_episode_running)
             self.agents[name] = a
 
     def init_sim_data(self):
@@ -261,6 +264,9 @@ class CentralSimulator(SimulatorHelper):
             collider = self.sim_states[i].get_collider()
             if(collider != ""):
                 agent_collisions.append(collider)
+        last_collider = self.robot.latest_collider
+        if(last_collider != ""):
+            agent_collisions.append(last_collider)
         return agent_collisions
 
     def save_state(self, sim_t: float, delta_t: float, wall_t: float):

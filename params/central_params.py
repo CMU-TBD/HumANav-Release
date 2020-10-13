@@ -363,7 +363,7 @@ def create_simulator_params(render_3D=False):
     p = DotMap()
 
     sim_p = config['simulator_params']
-    p.keep_episodes_running = sim_p.getboolean('keep_episodes_running')
+    p.keep_episode_running = sim_p.getboolean('keep_episode_running')
     p.block_joystick = sim_p.getboolean('block_joystick')
     p.delta_t_scale = sim_p.getfloat('delta_t_scale')
     p.socnav_params = create_base_params()

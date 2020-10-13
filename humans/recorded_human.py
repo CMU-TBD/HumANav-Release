@@ -50,13 +50,14 @@ class PrerecordedHuman(Human):
     def get_completed(self):
         return self.end_acting and self.end_episode
 
-    def simulation_init(self, sim_map, with_planner=True):
+    def simulation_init(self, sim_map, with_planner=True, keep_episode_running=False):
         """ Initializes important fields for the CentralSimulator"""
         self.params = create_agent_params(with_planner=with_planner)
         self.obstacle_map = sim_map
         # Initialize system dynamics and planner fields
         self.system_dynamics = Agent._init_system_dynamics(self)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        self.keep_episode_running = keep_episode_running
 
     def get_interp_posns(self):
         if self.sim_t < self.t_data[1]:

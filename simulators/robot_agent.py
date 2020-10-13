@@ -42,8 +42,10 @@ class RobotAgent(Agent):
         # amount of time the robot is blocking on the joystick
         self.block_time_total = 0
 
-    def simulation_init(self, sim_map, with_planner=False):
-        super().simulation_init(sim_map, with_planner=with_planner)
+    def simulation_init(self, sim_map, with_planner=False, keep_episode_running=False):
+        super().simulation_init(sim_map,
+                                with_planner=with_planner,
+                                keep_episode_running=keep_episode_running)
         self.params.robot_params = create_robot_params()
         # velocity bounds when teleporting to positions (if not using sys dynamics)
         self.v_bounds = self.params.system_dynamics_params.v_bounds
@@ -113,7 +115,8 @@ class RobotAgent(Agent):
 
         if self.get_collided():
             # either Pedestrian Collision or Obstacle Collision
-            assert(self.termination_cause == "Obstacle Collision")
+            assert((not self.keep_episode_running and self.termination_cause == "Pedestrian Collision") or
+                   self.termination_cause == "Obstacle Collision")
             self.power_off()
 
         if self.get_completed():

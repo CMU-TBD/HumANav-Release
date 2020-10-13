@@ -209,7 +209,7 @@ class Agent(AgentHelper):
                 self.termination_cause = "Pedestrian Collision"
                 # name of the latest agent that the agent collided with (applicable)
                 self.latest_collider = a.get_name()
-                if(self.keep_episode_running):
+                if(not self.keep_episode_running):
                     self.end_acting = True
                     self.collision_point_k = self.vehicle_trajectory.k  # this instant
                 return True
