@@ -93,7 +93,7 @@ class RobotAgent(Agent):
         return RobotAgent(robot_name, configs)
 
     @staticmethod
-    def generate_random_robot_from_environment(environment):
+    def random_from_environment(environment):
         """
         Sample a new robot without knowing any configs or appearance fields
         NOTE: needs environment to produce valid configs

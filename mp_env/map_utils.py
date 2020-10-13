@@ -177,7 +177,7 @@ def compute_traversibility(map, robot_base, robot_height, robot_radius,
     map_out = copy.deepcopy(map)
     map_out.num_obstcale_points = num_obstcale_points
     map_out.num_points = num_points
-    map_out.traversible = traversible
+    map_out.traversible = traversible * 1.
     map_out._traversible = traversible * 1.
     map_out._human_traversible = np.ones_like(traversible * 1.)
     map_out.obstacle_free = obstacle_free

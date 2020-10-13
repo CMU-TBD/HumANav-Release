@@ -40,7 +40,7 @@ class ControlPipelineV0(ControlPipelineBase):
         else:
             return copy.deepcopy(cls.pipeline)
 
-    def plan(self, start_config, goal_config=None):
+    def plan(self, start_config, goal_config=None, greedy=False):
         """Computes which velocity bin start_config belongs to and returns the corresponding waypoints, horizons,
         lqr_trajectories, and LQR controllers. If goal_config is none, returns data for all the precomputed waypoints.
         Else returns data only for the closest waypoint to goal_config"""
@@ -49,12 +49,16 @@ class ControlPipelineV0(ControlPipelineBase):
         idx = self._compute_bin_idx_for_start_velocities(
             start_config.speed_nk1()[:, :, 0])[0]
         # Convert waypoints for this velocity bin into world coordinates
-        self.waypt_configs_world[idx] = self.system_dynamics.to_world_coordinates(
-            start_config, self.waypt_configs[idx], self.waypt_configs_world[idx], mode='assign')
+        self.waypt_configs_world[idx] = \
+            self.system_dynamics.to_world_coordinates(start_config, self.waypt_configs[idx],
+                                                      self.waypt_configs_world[idx],
+                                                      mode='assign')
         # Setup world coordinate tensors if needed
         self._ensure_world_coordinate_tensors_exist(goal_config)
-
-        if goal_config is None:
+        # Generate the sub-trajectories from the initial (start) config to either the closest
+        # waypoint to the goal (which could get into greedy problems) or simply ALL of the
+        # waypoints which can then be ranked by the evaluation function and optimized well.
+        if not greedy or goal_config is None:
             waypt_configs, horizons, trajectories_lqr, trajectories_spline, controllers = \
                 self._plan_to_all_waypoints(idx, start_config)
         else:
@@ -62,7 +66,6 @@ class ControlPipelineV0(ControlPipelineBase):
                 self._plan_to_a_waypoint(idx, start_config, goal_config)
 
         trajectories_lqr.update_valid_mask_nk()
-        # print(waypt_configs.n)
         return waypt_configs, horizons, trajectories_lqr, trajectories_spline, controllers
 
     def _plan_to_all_waypoints(self, idx, start_config):
@@ -70,10 +73,10 @@ class ControlPipelineV0(ControlPipelineBase):
         Return all the waypoints, corresponding spline horizons, LQR trajectories and controllers corresponding to the
         velocity_bin idx. This function is typically used during the expert planning.
         """
-        self.trajectories_world[idx] = \
+        self.trajectories_world[0] = \
             self.system_dynamics.to_world_coordinates(start_config,
                                                       self.lqr_trajectories[idx],
-                                                      self.trajectories_world[idx],
+                                                      self.trajectories_world[0],
                                                       mode='assign')
         controllers = {'K_nkfd': self.K_nkfd[idx], 'k_nkf1': self.k_nkf1[idx]}
         if self.params.convert_K_to_world_coordinates:
@@ -84,17 +87,16 @@ class ControlPipelineV0(ControlPipelineBase):
                                                                     mode='assign')
         waypt_configs = self.waypt_configs_world[idx]
         horizons = self.horizons[idx]
-        trajectories_lqr = self.trajectories_world[idx]
-        trajectories_spline = self.spline_trajectories_world[idx]
+        trajectories_lqr = self.trajectories_world[0]
+        trajectories_spline = self.spline_trajectories_world[0]
         return waypt_configs, horizons, trajectories_lqr, trajectories_spline, controllers
 
     def _plan_to_a_waypoint(self, idx, start_config, goal_config):
         """
         Find the closest waypoint to the goal_config and return the associated waypoint, spline horizon, trajectory, and lqr controllers.
         """
-        # idx = idx[0] already taken care of in 'plan'
-        waypt_idx = self.helper.compute_closest_waypt_idx(
-            goal_config, self.waypt_configs_world[idx])
+        waypt_idx = self.helper.compute_closest_waypt_idx(goal_config,
+                                                          self.waypt_configs_world[idx])
         waypt_configs = self.waypt_configs_world[idx][waypt_idx]
         horizons = self.horizons[idx][waypt_idx:waypt_idx + 1]
 
@@ -120,14 +122,13 @@ class ControlPipelineV0(ControlPipelineBase):
         return waypt_configs, horizons, self.trajectories_world[0], self.spline_trajectories_world[0], controllers
 
     def generate_control_pipeline(self, params=None):
-        print("Generating pipeline, this may take some time...")
+        print("Generating control pipeline, this may take some time...")
         p = self.params
         # Initialize spline, cost function, lqr solver
         waypoints_egocentric = self._sample_egocentric_waypoints(vf=0.)
         self._init_pipeline()
         pipeline_data = self.helper.empty_data_dictionary()
 
-        # with tf.name_scope('generate_control_pipeline'):
         if not self._incorrectly_binned_data_exists():
             for v0 in self.start_velocities:
                 if p.verbose:

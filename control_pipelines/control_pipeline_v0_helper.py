@@ -14,15 +14,17 @@ class ControlPipelineV0Helper:
         """" Given desired_waypoint_config and a list of precomputed waypoints in waypt_configs returns the index of
         the closest (in wrapped l2 distance) precomputed waypoint."""
         # TODO: Potentially add linear and angular velocity here
-        broadcasted_goal = np.ones(shape=waypt_configs.position_nk2(
-        ).shape, dtype=np.float32) * desired_waypt_config.position_nk2()[0]
+        broadcasted_goal = np.ones(shape=waypt_configs.position_nk2().shape,
+                                   dtype=np.float32) * desired_waypt_config.position_nk2()[0]
         diff_pos_nk2 = broadcasted_goal - waypt_configs.position_nk2()
-        broadcasted_goal_angle = np.ones(shape=waypt_configs.heading_nk1(
-        ).shape, dtype=np.float32) * desired_waypt_config.heading_nk1()[0]
-        diff_heading_nk1 = angle_normalize(
-            broadcasted_goal_angle - waypt_configs.heading_nk1())
+        broadcasted_goal_angle = np.ones(shape=waypt_configs.heading_nk1().shape,
+                                         dtype=np.float32) * desired_waypt_config.heading_nk1()[0]
+        diff_heading_nk1 = angle_normalize(broadcasted_goal_angle -
+                                           waypt_configs.heading_nk1())
         # if(obstacle_map is not None):
-        #     dist_nearest_obst = tf.map_fn(lambda x: obstacle_map.dist_to_nearest_obs([x]), waypt_configs.position_nk2())
+        #     def vfunc(x):
+        #         return obstacle_map.dist_to_nearest_obs([x])
+        #     dist_nearest_obst = np.array([vfunc(x) for x in waypt_configs.position_nk2()])
         # else:
         #     dist_nearest_obst = np.zeros(shape=waypt_configs.position_nk2().shape, dtype=np.float32)
         diff = np.concatenate([diff_pos_nk2, diff_heading_nk1], axis=2)
@@ -98,22 +100,19 @@ class ControlPipelineV0Helper:
             K_nkfd = np.zeros((2, 1, 1, 1), dtype=np.float32)
             k_nkf1 = np.zeros((2, 1, 1, 1), dtype=np.float32)
         else:
-            spline_trajectories = create_traj_if_not_already(
-                data['spline_trajectories'], track_trajectory_acceleration)
-                
+            spline_trajectories = create_traj_if_not_already(data['spline_trajectories'],
+                                                             track_trajectory_acceleration)
             K_nkfd = np.array(data['K_nkfd'])
             k_nkf1 = np.array(data['k_nkf1'])
 
         # Load remaining variables
         start_speeds = np.array(data['start_speeds'])
-        start_configs = create_traj_if_not_already(
-                data['start_configs'], 
-                track_trajectory_acceleration, 
-                t=SystemConfig) 
-        waypt_configs = create_traj_if_not_already(
-                data['waypt_configs'], 
-                track_trajectory_acceleration, 
-                t=SystemConfig) 
+        start_configs = create_traj_if_not_already(data['start_configs'],
+                                                   track_trajectory_acceleration,
+                                                   t=SystemConfig)
+        waypt_configs = create_traj_if_not_already(data['waypt_configs'],
+                                                   track_trajectory_acceleration,
+                                                   t=SystemConfig)
         horizons = np.array(data['horizons'])
 
         data_processed = {'start_speeds': start_speeds,
@@ -148,15 +147,15 @@ class ControlPipelineV0Helper:
         list of tensors, Trajectory, or System Config objects. The concatenated results are stored in lists of length 1
         for each key (i.e. only one bin)."""
         data['start_speeds'] = [np.concatenate(data['start_speeds'], axis=0)]
-        data['start_configs'] = [
-            SystemConfig.concat_across_batch_dim(data['start_configs'])]
-        data['waypt_configs'] = [
-            SystemConfig.concat_across_batch_dim(data['waypt_configs'])]
-        data['spline_trajectories'] = [
-            Trajectory.concat_across_batch_dim(data['spline_trajectories'])]
+        data['start_configs'] = \
+            [SystemConfig.concat_across_batch_dim(data['start_configs'])]
+        data['waypt_configs'] = \
+            [SystemConfig.concat_across_batch_dim(data['waypt_configs'])]
+        data['spline_trajectories'] = \
+            [Trajectory.concat_across_batch_dim(data['spline_trajectories'])]
         data['horizons'] = [np.concatenate(data['horizons'], axis=0)]
-        data['lqr_trajectories'] = [
-            Trajectory.concat_across_batch_dim(data['lqr_trajectories'])]
+        data['lqr_trajectories'] = \
+            [Trajectory.concat_across_batch_dim(data['lqr_trajectories'])]
         data['K_nkfd'] = [np.concatenate(data['K_nkfd'], axis=0)]
         data['k_nkf1'] = [np.concatenate(data['k_nkf1'], axis=0)]
         return data

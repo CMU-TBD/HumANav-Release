@@ -41,12 +41,13 @@ class Planner(object):
         if self.control_pipeline.params.only_one_system:
             with lock:
                 # NOTE: these functions are not reentrant
-                waypts, horizons, trajectories_lqr, trajectories_spline, controllers = self.control_pipeline.plan(
-                    start_config, goal_config)
-                obj_val = self.obj_fn.evaluate_function(trajectories_lqr, sim_state_hist)
+                waypts, horizons, trajectories_lqr, trajectories_spline, controllers = \
+                    self.control_pipeline.plan(start_config, goal_config)
+                obj_val = self.obj_fn.evaluate_function(
+                    trajectories_lqr, sim_state_hist)
         else:
-            waypts, horizons, trajectories_lqr, trajectories_spline, controllers = self.control_pipeline.plan(
-                start_config, goal_config)
+            waypts, horizons, trajectories_lqr, trajectories_spline, controllers = \
+                self.control_pipeline.plan(start_config, goal_config)
             obj_val = self.obj_fn.evaluate_function(trajectories_lqr)
         return obj_val, [
             waypts, horizons, trajectories_lqr, trajectories_spline,
