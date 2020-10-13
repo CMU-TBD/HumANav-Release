@@ -143,10 +143,7 @@ class Trajectory(object):
         self.n = idxs.size
 
         def gather(arr, idxs):  # used for when arr is multidim and dont want slicing
-            a = []
-            for i in idxs:
-                a.append(arr[i])
-            return np.array(a)
+            return arr[idxs]
         self._position_nk2 = gather(self._position_nk2, idxs)
         self._speed_nk1 = gather(self._speed_nk1, idxs)
         self._acceleration_nk1 = gather(self._acceleration_nk1, idxs)
@@ -212,10 +209,7 @@ class Trajectory(object):
         k = traj.k
 
         def gather(arr, idxs):  # used for when arr is multidim and dont want slicing
-            a = []
-            for i in idxs:
-                a.append(arr[i])
-            return np.array(a)
+            return arr[idxs]
 
         position_nk2 = gather(traj.position_nk2(), idxs)
         speed_nk1 = gather(traj.speed_nk1(), idxs)

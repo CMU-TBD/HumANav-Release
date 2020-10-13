@@ -51,13 +51,8 @@ class VoxelMap(object):
         voxel_indices_int64_nk4 = voxel_indices_nk4.astype(np.int32)
 
         def gather_nd(data, indices):
-            params = []
-            for j in range(indices.shape[0]):
-                params_i = []
-                for i in range(indices[j].shape[0]):
-                    params_i.append(data[indices[j][i][0], indices[j][i][1]])
-                params.append(params_i)
-            return np.array(params)
+            # very similar to tf.gather_nd but with numpy slicing
+            return data[indices[:, :, 0], indices[:, :, 1]]
         # Voxel function values at corner points
         data = self.voxel_function_mn
         indices_1 = voxel_indices_int64_nk4[:, :, [1, 0]]
@@ -73,14 +68,14 @@ class VoxelMap(object):
         # Define gammas for x interpolation
         gamma1 = upper_voxel_float_nk2[:, :, 0] - \
             voxel_space_position_nk2[:, :, 0]
-        gamma2 = voxel_space_position_nk2[:, :,
-                                          0] - lower_voxel_float_nk2[:, :, 0]
+        gamma2 = voxel_space_position_nk2[:, :, 0] - \
+            lower_voxel_float_nk2[:, :, 0]
 
         # Define betas for y interpolation
         beta1 = upper_voxel_float_nk2[:, :, 1] - \
             voxel_space_position_nk2[:, :, 1]
-        beta2 = voxel_space_position_nk2[:, :,
-                                         1] - lower_voxel_float_nk2[:, :, 1]
+        beta2 = voxel_space_position_nk2[:, :, 1] - \
+            lower_voxel_float_nk2[:, :, 1]
 
         # Interpolation in the x-direction
         fx1_nk = gamma1 * data11_nk + gamma2 * data21_nk
