@@ -87,7 +87,6 @@ class RobotAgent(Agent):
         np.set_printoptions(precision=2)
         pos_2 = configs.get_start_config().to_3D_numpy()
         goal_2 = configs.get_goal_config().to_3D_numpy()
-
         if verbose:
             print("Robot", robot_name, "at", pos_2, "with goal", goal_2)
         return RobotAgent(robot_name, configs)
@@ -114,7 +113,7 @@ class RobotAgent(Agent):
 
         if self.get_collided():
             # either Pedestrian Collision or Obstacle Collision
-            assert("Collision" in self.termination_cause)
+            assert(self.termination_cause == "Obstacle Collision")
             self.power_off()
 
         if self.get_completed():
@@ -194,8 +193,8 @@ class RobotAgent(Agent):
             # move to the new position and update trajectory
             new_config = generate_config_from_pos_3(new_pos3, v=new_v)
             self.set_current_config(new_config)
-            self.vehicle_trajectory.append_along_time_axis(
-                new_config, track_trajectory_acceleration=True)
+            self.vehicle_trajectory.append_along_time_axis(new_config,
+                                                           track_trajectory_acceleration=True)
             self.num_executed += 1
             if (self.params.verbose):
                 print(self.get_current_config().to_3D_numpy())
@@ -328,10 +327,10 @@ class RobotAgent(Agent):
     @ staticmethod
     def establish_joystick_receiver_connection():
         """This is akin to a server connection (robot is server)"""
-        RobotAgent.joystick_receiver_socket = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM)
-        RobotAgent.joystick_receiver_socket.bind(
-            (RobotAgent.host, RobotAgent.port_recv))
+        RobotAgent.joystick_receiver_socket = \
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        RobotAgent.joystick_receiver_socket.bind((RobotAgent.host,
+                                                  RobotAgent.port_recv))
         # wait for a connection
         RobotAgent.joystick_receiver_socket.listen(1)
         print("Waiting for Joystick connection...")

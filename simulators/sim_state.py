@@ -22,6 +22,7 @@ class AgentState():
             self.vehicle_trajectory = a.get_trajectory(deepcpy=deepcpy)
             self.collided = a.get_collided()
             self.end_acting = a.end_acting
+            self.collision_cooldown = a.get_collision_cooldown()
             self.radius = a.get_radius()
             self.color = a.get_color()
 
@@ -48,6 +49,9 @@ class AgentState():
 
     def get_color(self):
         return self.color
+
+    def get_collision_cooldown(self):
+        return self.collision_cooldown
 
     def get_pos3(self):
         return self.get_current_config().to_3D_numpy()
@@ -112,7 +116,8 @@ class SimState():
 
     def __init__(self, environment: dict = None, pedestrians: dict = None,
                  robots: dict = None, sim_t: float = None, wall_t: float = None,
-                 delta_t: float = None, episode_name: str = None, max_time: float = None):
+                 delta_t: float = None, episode_name: str = None, max_time: float = None,
+                 ped_collider: str = ""):
         self.environment = environment
         # no distinction between prerecorded and auto agents
         self.pedestrians = pedestrians  # new dict that the joystick will be sent
@@ -123,6 +128,7 @@ class SimState():
         self.robot_on = True  # TODO: why keep this if not using explicitly?
         self.episode_name = episode_name
         self.episode_max_time = max_time
+        self.ped_collider = ped_collider
 
     def get_environment(self):
         return self.environment
@@ -153,6 +159,9 @@ class SimState():
 
     def get_episode_max_time(self):
         return self.episode_max_time
+
+    def get_collider(self):
+        return self.ped_collider
 
     def get_all_agents(self, include_robot=False):
         all_agents = {}
@@ -216,6 +225,7 @@ class SimState():
         new_state.episode_name: str = json_str['episode_name']
         new_state.episode_max_time: str = json_str['episode_max_time']
         new_state.wall_t = None
+        new_state.ped_collider = ""
         return new_state
 
     @ staticmethod

@@ -44,7 +44,7 @@ class CentralSimulator(SimulatorHelper):
         self.prerecs = {}
         # keep a single (important) robot as a value
         self.robot = None
-        self.states = {}
+        self.sim_states = {}
         self.wall_clock_time: float = 0
         self.t: float = 0
         self.delta_t: float = 0  # will be updated in simulator based off dt
@@ -192,7 +192,7 @@ class CentralSimulator(SimulatorHelper):
 
         if self.robot:
             self.robot.power_off()
-
+            self.robot_collisions = self.gather_robot_collisions(iteration)
         # free all the gen_agents
         for a in self.agents.values():
             a = None
@@ -209,13 +209,16 @@ class CentralSimulator(SimulatorHelper):
               self.sim_wall_clock, "real world seconds")
 
         if self.robot:
-            print("Robot termination cause:", self.robot.termination_cause)
+            term_color = color_print(termination_cause_to_color(
+                self.robot.termination_cause))
+            print("Robot termination cause: %s%s%s" %
+                  (term_color, self.robot.termination_cause, color_reset))
+            self.generate_sim_log()
             if self.episode_params.write_episode_log:
-                self.generate_sim_log()
                 # TODO generate + write the score report
                 from simulators.simulator_helper import sim_states_to_dataframe
                 self.sim_df, self.agent_info = \
-                    sim_states_to_dataframe(self.states)
+                    sim_states_to_dataframe(self.sim_states)
                 self.generate_episode_score_report()
 
         # convert the saved states to rendered png's to be rendered into a movie
@@ -252,8 +255,16 @@ class CentralSimulator(SimulatorHelper):
               "T = %.3f" % (self.t),
               "\r", end="")
 
+    def gather_robot_collisions(self, max_iter: int):
+        agent_collisions = []
+        for i in range(max_iter):
+            collider = self.sim_states[i].get_collider()
+            if(collider != ""):
+                agent_collisions.append(collider)
+        return agent_collisions
+
     def save_state(self, sim_t: float, delta_t: float, wall_t: float):
-        """Captures the current state of the world to be saved to self.states
+        """Captures the current state of the world to be saved to self.sim_states
 
         Args:
             sim_t (float): the current time in the simulator in seconds
@@ -273,22 +284,21 @@ class CentralSimulator(SimulatorHelper):
             pedestrians[a.get_name()] = HumanState(a, deepcpy=True)
         # Save all the robots
         saved_robots = {}
-        for r in self.robots.values():
-            saved_robots[r.get_name()] = AgentState(r, deepcpy=True)
+        saved_robots[self.robot.get_name()] = \
+            AgentState(self.robot, deepcpy=True)
         current_state = SimState(saved_env, pedestrians, saved_robots,
                                  sim_t, wall_t, delta_t, self.episode_params.name,
-                                 self.episode_params.max_time)
+                                 self.episode_params.max_time, self.robot.latest_collider)
         # Save current state to a class dictionary indexed by simulator time
         sim_t_step = round(sim_t / delta_t)
-        self.states[sim_t_step] = current_state
+        self.sim_states[sim_t_step] = current_state
         # debug prints
-        # print(sim_t_step, r.get_current_config().to_3D_numpy())
         return current_state
 
     """ BEGIN IMAGE UTILS """
 
     def generate_frames(self, filename: str = "obs"):
-        """Generates a png frame for each world state saved in self.states. Note, based off the
+        """Generates a png frame for each world state saved in self.sim_states. Note, based off the
         render_3D options, the function will generate the frames in multiple separate processes to
         optimize performance on multicore machines, else it can also be done sequentially.
         NOTE: the 3D renderer can currently only be run sequentially
@@ -304,7 +314,7 @@ class CentralSimulator(SimulatorHelper):
         print("%sRendering movie with fps=%d%s" %
               (color_orange, fps, color_reset))
         num_frames = \
-            int(np.ceil(len(self.states) * self.params.fps_scale_down))
+            int(np.ceil(len(self.sim_states) * self.params.fps_scale_down))
         np.set_printoptions(precision=3)
 
         if not self.params.render_3D:
@@ -313,7 +323,7 @@ class CentralSimulator(SimulatorHelper):
             gif_processes = []
             skip = 0
             frame = 0
-            for p, s in enumerate(self.states.values()):
+            for p, s in enumerate(self.sim_states.values()):
                 if skip == 0:
                     # pool.apply_async(self.render_sim_state, args=(s, filename + str(p) + ".png"))
                     frame += 1
@@ -339,7 +349,7 @@ class CentralSimulator(SimulatorHelper):
             # generate frames sequentially (non multiproceses)
             skip = 0
             frame = 0
-            for s in self.states.values():
+            for s in self.sim_states.values():
                 if skip == 0:
                     self.render_sim_state(s, filename + str(frame) + ".png")
                     frame += 1
@@ -489,7 +499,6 @@ class CentralSimulator(SimulatorHelper):
         except:
             print("%sWriting episode metrics failed%s" %
                   (color_red, color_reset))
-
         return
 
     def generate_sim_log(self, filename='episode_log.txt'):
@@ -519,8 +528,11 @@ class CentralSimulator(SimulatorHelper):
         if self.robot:
             data += "****************ROBOT INFO****************\n"
             data += "Robot termination cause: %s\n" % self.robot.termination_cause
-            if(self.robot.termination_cause == "Agent Collision"):
-                data += "Robot collided with agent: %s\n" % self.robot.collider
+            data += "Robot collided with %d agent(s)\n" % \
+                len(self.robot_collisions)
+            if(len(self.robot_collisions) != 0):
+                data += "Collided with: %s\n" % \
+                    iter_print(self.robot_collisions)
             data += "Num commands received from joystick: %d\n" % \
                 len(self.robot.joystick_inputs)
             data += "Total time blocking for joystick input (s): %0.3f\n" % \

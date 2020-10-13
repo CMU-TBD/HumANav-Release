@@ -76,9 +76,9 @@ class PrerecordedHuman(Human):
             posn_interp_conf = generate_config_from_pos_3(posn_interp, v=0)
         return posn_interp_conf
 
-    def execute(self, check_collisions_with_agents=False):
-        if check_collisions_with_agents:
-            self.check_collisions(self.world_state, include_prerecs=False)
+    def execute(self):
+        if self.check_collisions(self.world_state, include_agents=False):
+            self.collision_cooldown = self.params.collision_cooldown_amnt
 
         self.current_step += 1
         self.current_config = self.get_interp_posns()
@@ -104,9 +104,9 @@ class PrerecordedHuman(Human):
             self.current_precalc_step = \
                 int((self.sim_t - self.t_data[1] + self.del_t) /
                     self.del_t) if self.sim_t > self.t_data[1] else 0
-            # if self.current_precalc_step == len(self.t_data):
-            #     self.current_precalc_step = len(self.t_data) - 1
-
+            # update collision cooldown
+            if(self.collision_cooldown > 0):
+                self.collision_cooldown -= 1
         else:
             # tell the simulator this agent is done
             self.end_episode = True

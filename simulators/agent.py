@@ -43,9 +43,13 @@ class Agent(AgentHelper):
         else:
             Agent.color_indx = 0
         self.color = Agent.possible_colors[Agent.color_indx]
-        self.termination_cause = "Timeout"
+        self.termination_cause = "Timeout"  # default by timeout
         # name of the agent that the agent collided with (if applicable)
-        self.collider = "None"
+        self.latest_collider = ""
+        # cooldown (in terms of updates) before colliding with another agent
+        self.collision_cooldown = 0
+        # Whether to continue the episode even if the robot collides with a pedestrian
+        self.keep_episode_running = False
 
     def init(self):
         self.planned_next_config = copy.deepcopy(self.current_config)
@@ -91,11 +95,15 @@ class Agent(AgentHelper):
 
     def get_collided(self):
         return self.end_acting and \
-            (self.termination_cause == "Pedestrian Collision" or
+            ((not self.keep_episode_running and
+              self.termination_cause == "Pedestrian Collision") or
              self.termination_cause == "Obstacle Collision")
 
     def get_completed(self):
         return self.end_acting and self.termination_cause == "Success"
+
+    def get_collision_cooldown(self):
+        return self.collision_cooldown
 
     def get_radius(self):
         return self.params.radius
@@ -103,7 +111,7 @@ class Agent(AgentHelper):
     def get_color(self):
         return self.color
 
-    def simulation_init(self, sim_map, with_planner=True):
+    def simulation_init(self, sim_map, with_planner=True, keep_episode_running=False):
         """ Initializes important fields for the CentralSimulator"""
         if(not hasattr(self, 'params')):
             self.params = create_agent_params(with_planner=with_planner)
@@ -119,6 +127,7 @@ class Agent(AgentHelper):
         else:
             self.planner = None
             self.vehicle_data = None
+        self.keep_episode_running = keep_episode_running
         self.system_dynamics = Agent._init_system_dynamics(self)
         self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         # the point in the trajectory where the agent collided
@@ -143,9 +152,10 @@ class Agent(AgentHelper):
 
         # Generate the next trajectory segment, update next config, update actions/data
         self.plan()
-
         action_dt = int(np.floor(sim_dt / self.params.dt))
         self.act(action_dt, world_state=sim_state)
+        if(self.collision_cooldown > 0):
+            self.collision_cooldown -= 1
 
     def plan(self):
         """
@@ -193,21 +203,26 @@ class Agent(AgentHelper):
         for a in group:
             othr_pos = a.get_current_config().to_3D_numpy()
             is_same_agent: bool = a.get_name() is self.get_name()
-            if(not is_same_agent and euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
+            if(not is_same_agent and a.get_collision_cooldown() == 0 and
+               euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
                 # instantly collide (with agent) and stop updating
                 self.termination_cause = "Pedestrian Collision"
-                self.end_acting = True
-                self.collision_point_k = self.vehicle_trajectory.k  # this instant
-                # name of the first agent that the agent collided with (applicable)
-                self.collider = a.get_name()
-                break
+                # name of the latest agent that the agent collided with (applicable)
+                self.latest_collider = a.get_name()
+                if(self.keep_episode_running):
+                    self.end_acting = True
+                    self.collision_point_k = self.vehicle_trajectory.k  # this instant
+                return True
+        # reached here means no collisions have occured, therefore there is no latest_collider
+        self.latest_collider = ""
+        return False
 
     def check_collisions(self, world_state, include_agents=True, include_robots=True):
         if world_state is not None:
             own_pos = self.get_current_config().to_3D_numpy()
-            if include_agents and self._collision_in_group(own_pos, world_state.get_pedestrians().values()):
-                return True
             if include_robots and self._collision_in_group(own_pos, world_state.get_robots().values()):
+                return True
+            if include_agents and self._collision_in_group(own_pos, world_state.get_pedestrians().values()):
                 return True
         return False
 

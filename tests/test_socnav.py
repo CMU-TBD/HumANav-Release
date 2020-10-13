@@ -50,12 +50,12 @@ def create_params():
     # )
     p.episode_params.tests['test_socnav'] = \
         DotMap(name='test_socnav',
-               map_name='Zara',
-               pedestrian_datasets=create_datasets_params(["zara01"]),
+               map_name='Univ',
+               pedestrian_datasets=create_datasets_params(["univ"]),
                datasets_start_t=[0.],
-               ped_ranges=[(50, -1)],
+               ped_ranges=[(0, -1)],
                agents_start=[],  # [[8, 8, 0]], agents_end=[[17.5, 13, 0.]],
-               robot_start_goal=[[5, 8, 0], [17.5, 13, 0.]],
+               robot_start_goal=[[10, 3, 0], [15.5, 8, 0.7]],
                max_time=30,
                write_episode_log=False
                )

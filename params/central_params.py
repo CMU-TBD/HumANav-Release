@@ -214,7 +214,7 @@ def create_episodes_params():
     p.without_robot = epi_p.getboolean('without_robot')
     # NOTE: uses a dictionary of DotMaps to use string notation
     tests = eval(epi_p.get('tests'))
-    if len(tests)==0:
+    if len(tests) == 0:
         tests = episodes_config.sections()[1:]
     test_dict = {}
     for t in tests:
@@ -363,8 +363,7 @@ def create_simulator_params(render_3D=False):
     p = DotMap()
 
     sim_p = config['simulator_params']
-
-    # whether or not to wait for joystick inputs or set a repeat frame count
+    p.keep_episodes_running = sim_p.getboolean('keep_episodes_running')
     p.block_joystick = sim_p.getboolean('block_joystick')
     p.delta_t_scale = sim_p.getfloat('delta_t_scale')
     p.socnav_params = create_base_params()
@@ -400,6 +399,8 @@ def create_agent_params(with_planner=True, with_obstacle_map=False):
     p.record_video = agent_p.getboolean('record_video')
     p.save_trajectory_data = agent_p.getboolean('save_trajectory_data')
 
+    p.collision_cooldown_amnt = agent_p.getint('collision_cooldown_amnt')
+    assert(p.collision_cooldown_amnt > 0)
     # Load system dynamics params
     p.system_dynamics_params = create_system_dynamics_params()
     if with_planner:

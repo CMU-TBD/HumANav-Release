@@ -23,7 +23,9 @@ def plot_image_observation(ax, img_mkd, size=None):
 
 def gather_metadata(ppm: float, a, plot_start_goal: bool, start: list,
                     goal: list, traj_col: str = ''):
-    collided = a.get_collided()
+    # collision means either the agent collided with an obstacle (get_collided) or
+    # the agent has recently been collided with and is on a "collision cooldown"
+    collided = a.get_collided() or (a.get_collision_cooldown() > 0)
     markersize = a.get_radius() * ppm
     pos_3 = a.get_current_config().to_3D_numpy()
     if(traj_col == ""):
