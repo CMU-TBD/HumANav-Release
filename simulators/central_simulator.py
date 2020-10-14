@@ -30,7 +30,12 @@ class CentralSimulator(SimulatorHelper):
         self.params = create_simulator_params(render_3D=render_3D)
         self.episode_params = episode_params
         self.camera_pose = camera_pose
-        self.algo_name = ""
+        self.algo_name = "lite"  # by default there is no robot (or algorithm)
+        # output directory is updated again if there is a robot (and algorithm) in the simulator
+        self.params.output_directory = \
+            os.path.join(self.params.socnav_params.socnav_dir,
+                         "tests/socnav/", "test_" + self.algo_name,
+                         self.episode_params.name)
         CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
