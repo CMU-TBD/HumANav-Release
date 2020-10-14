@@ -285,7 +285,7 @@ class RobotAgent(Agent):
         """
         RobotAgent.joystick_receiver_socket.listen(1)
         while(self.simulator_running):
-            connection, client = RobotAgent.joystick_receiver_socket.accept()
+            connection, _ = RobotAgent.joystick_receiver_socket.accept()
             data_b, response_len = conn_recv(connection, buffr_amnt=128)
             # close connection to be reaccepted when the joystick sends data
             connection.close()
@@ -304,6 +304,9 @@ class RobotAgent(Agent):
             return True
         elif(data_str == "ready"):
             self.joystick_ready = True
+            return True
+        elif("algo: " in data_str):
+            self.algo_name = data_str[len("algo: "):]
             return True
         elif(data_str == "abandon"):
             self.power_off()

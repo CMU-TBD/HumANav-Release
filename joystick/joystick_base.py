@@ -184,6 +184,8 @@ class JoystickBase():
         # not empty dictionary
         assert(not (not current_world.get_environment()))
         self.update_knowledge_from_episode(current_world, init_ep=True)
+        # send the algorithm name to the robot/simulator
+        self.send_to_robot("algo: " + self.algorithm_name)
         # ping the robot that the joystick received the episode (keyword)
         self.send_to_robot("ready")
         return True
@@ -218,8 +220,8 @@ class JoystickBase():
             if self.joystick_params.write_pandas_log:
                 # used for file IO such as pandas logging
                 # NOTE: this MUST match the directory name in CentralSimulator
-                self.dirname = 'tests/socnav/' + self.current_ep.get_name() + \
-                    '_output/' + self.algorithm_name + '_data'
+                self.dirname = 'tests/socnav/' + "test_" + self.algorithm_name + "/" +\
+                    self.current_ep.get_name() + "/joystick_data"
                 # Write the Agent's trajectory data into a pandas file
                 self.update_logs(self.sim_state_now)
                 self.write_pandas()

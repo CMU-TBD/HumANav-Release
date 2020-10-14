@@ -30,10 +30,7 @@ class CentralSimulator(SimulatorHelper):
         self.params = create_simulator_params(render_3D=render_3D)
         self.episode_params = episode_params
         self.camera_pose = camera_pose
-        # name of the directory to output everything
-        self.params.output_directory = \
-            os.path.join(self.params.socnav_params.socnav_dir,
-                         "tests/socnav/" + episode_params.name + "_output")
+        self.algo_name = ""
         CentralSimulator.obstacle_map = self._init_obstacle_map(renderer)
         # keep track of all agents in dictionary with names as the key
         self.agents = {}
@@ -290,11 +287,14 @@ class CentralSimulator(SimulatorHelper):
             pedestrians[a.get_name()] = HumanState(a, deepcpy=True)
         # Save all the robots
         saved_robots = {}
-        saved_robots[self.robot.get_name()] = \
-            AgentState(self.robot, deepcpy=True)
+        last_robot_collision = ""
+        if(self.robot):
+            saved_robots[self.robot.get_name()] = \
+                AgentState(self.robot, deepcpy=True)
+            last_robot_collision = self.robot.latest_collider
         current_state = SimState(saved_env, pedestrians, saved_robots,
                                  sim_t, wall_t, delta_t, self.episode_params.name,
-                                 self.episode_params.max_time, self.robot.latest_collider)
+                                 self.episode_params.max_time, last_robot_collision)
         # Save current state to a class dictionary indexed by simulator time
         sim_t_step = round(sim_t / delta_t)
         self.sim_states[sim_t_step] = current_state
@@ -376,7 +376,6 @@ class CentralSimulator(SimulatorHelper):
         """
         if self.params.fps_scale_down == 0:
             return
-        # fps = 1 / duration # where the duration is the simulation capture rate
         duration = self.delta_t * (1.0 / self.params.fps_scale_down)
         # sequentially
         gif_filename = "movie_%s" % self.episode_params.name
@@ -408,6 +407,8 @@ class CentralSimulator(SimulatorHelper):
             # TODO: Fix multiprocessing for properly deepcopied renderers
             # only when rendering with opengl
             assert("human_traversible" in state.get_environment().keys())
+            # remove the "old" humans
+            self.r.remove_all_humans()
             # update pedestrians humans
             for a in state.get_pedestrians().values():
                 self.r.update_human(a)
@@ -592,6 +593,15 @@ class CentralSimulator(SimulatorHelper):
             while(not r.joystick_ready):
                 # wait until joystick receives the environment (once)
                 time.sleep(0.01)
+            if(r.algo_name == ""):
+                # if the robot didn't receive a planner name
+                r.algo_name = "unknown"
+            self.algo_name = r.algo_name
+            # name of the directory to output everything
+            self.params.output_directory = \
+                os.path.join(self.params.socnav_params.socnav_dir,
+                             "tests/socnav/", "test_" + self.algo_name,
+                             self.episode_params.name)
             print("Robot powering on")
             return r_listener_thread
         print("%sNo robot in simulator%s" % (color_red, color_reset))

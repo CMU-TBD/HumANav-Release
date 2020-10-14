@@ -380,9 +380,9 @@ def create_simulator_params(render_3D=False):
     p.obstacle_map_params = create_obstacle_map_params()
     # much faster to only render the topview rather than use the 3D renderer
     if not p.render_3D:
-        print("Rendering topview only")
+        print("Schematic view: TOPVIEW only")
     else:
-        print("Rendering depth and rgb images with 3D renderer")
+        print("Full Render: TOPVIEW, RGB, and DEPTH")
     p.verbose_printing = sim_p.getboolean('verbose_printing')
     p.clear_files = sim_p.getboolean('clear_files')
     # simulation tick rate
