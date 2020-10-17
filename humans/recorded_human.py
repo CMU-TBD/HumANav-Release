@@ -79,10 +79,14 @@ class PrerecordedHuman(Human):
                                                           v=last_non_interp_v)
         return posn_interp_conf
 
-    def execute(self):
+    def sense(self):
         if self.check_collisions(self.world_state, include_agents=False):
             self.collision_cooldown = self.params.collision_cooldown_amnt
 
+    def plan(self):
+        pass
+
+    def act(self):
         self.current_step += 1
         self.current_config = self.get_interp_posns()
         # dummy "command" since these agents "teleport" from one step to another
@@ -100,7 +104,9 @@ class PrerecordedHuman(Human):
         # if self.current_step < len(self.t_data):
         if self.sim_t < self.t_data[-1]:
             # continue jumping through states until time limit is reached
-            self.execute()
+            self.sense()
+            self.plan()
+            self.act()
             # TODO now this step is performed in one go - what does this mean for collisions?
             # while not self.has_collided and self.sim_t > self.get_current_time():
             # this is to account for the delay_time / init_delay
