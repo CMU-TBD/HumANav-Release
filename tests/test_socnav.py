@@ -48,8 +48,9 @@ def create_params():
     #            max_time=30,
     #            write_episode_log=False
     # )
-    p.episode_params.tests['test_socnav'] = \
-        DotMap(name='test_socnav',
+    default_name = "test_socnav_univ"
+    p.episode_params.tests[default_name] = \
+        DotMap(name=default_name,
                map_name='Univ',
                pedestrian_datasets=create_datasets_params(["univ"]),
                datasets_start_t=[0.],
