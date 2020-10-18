@@ -40,14 +40,15 @@ class Agent(AgentBase):
         """ Initializes important fields for the CentralSimulator"""
         self.params = create_agent_params(with_planner=with_planner)
         self.obstacle_map = sim_map
+        if(with_objectives):
+            # Initialize Fast-Marching-Method map for agent's pathfinding
+            self.obj_fn = Agent._init_obj_fn(self)
+            Agent._init_fmm_map(self)
         if(with_planner):
+            # Initialize planner and vehicle data
             self.planned_next_config = copy.deepcopy(self.current_config)
             self.planner = Agent._init_planner(self)
             self.vehicle_data = self.planner.empty_data_dict()
-        if(with_objectives):
-            self.obj_fn = Agent._init_obj_fn(self)
-            # Initialize Fast-Marching-Method map for agent's pathfinding
-            Agent._init_fmm_map(self)
         if(with_system_dynamics):
             # Initialize system dynamics and planner fields
             self.system_dynamics = Agent._init_system_dynamics(self)
@@ -88,14 +89,14 @@ class Agent(AgentBase):
         assert(hasattr(self, 'planner'))
         assert(self.sim_dt is not None)
         # Generate the next trajectory segment, update next config, update actions/data
-        if self.end_episode or self.end_acting:
+        if self.end_acting:
             return
         if self.params.verbose_printing:
             print("planned next:",
                   self.planned_next_config.position_nk2())
 
-        self.planner_data = self.planner.optimize(
-            self.planned_next_config, self.goal_config)
+        self.planner_data = self.planner.optimize(self.planned_next_config,
+                                                  self.goal_config)
         traj_segment, trajectory_data = self.process_planner_data()
 
         self.planned_next_config = \
@@ -108,9 +109,9 @@ class Agent(AgentBase):
         tr_acc = self.params.planner_params.track_accel
         self.trajectory.append_along_time_axis(traj_segment,
                                                track_trajectory_acceleration=tr_acc)
-        self._enforce_episode_termination_conditions()
+        self.enforce_termination_conditions()
 
-        if self.end_episode or self.end_acting:
+        if self.end_acting:
             if self.params.verbose:
                 print("terminated plan for agent", self.get_name(),
                       "k=", self.trajectory.k,
@@ -135,11 +136,9 @@ class Agent(AgentBase):
 
         # updating "next step" for agent path after traversing it
         self.path_step += step
-        if self.path_step >= self.trajectory.k:
-            self.end_acting = True
 
         # considers a full on collision once the agent has passed its "collision point"
-        if self.path_step >= self.collision_point_k:
+        if self.path_step >= self.trajectory.k or self.path_step >= self.collision_point_k:
             self.end_acting = True
 
         if self.end_acting:
@@ -249,8 +248,7 @@ class Agent(AgentBase):
     def _init_planner(self, params=None):
         if(params is None):
             params = self.params
-        obj_fn = self.obj_fn
-        return params.planner_params.planner(obj_fn=obj_fn,
+        return params.planner_params.planner(obj_fn=self.obj_fn,
                                              params=params.planner_params)
 
     @staticmethod

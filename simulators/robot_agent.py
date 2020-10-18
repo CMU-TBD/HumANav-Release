@@ -96,7 +96,7 @@ class RobotAgent(Agent):
         self.check_collisions(self.world_state)
 
         # enforce planning termination upon condition
-        self._enforce_episode_termination_conditions()
+        self.enforce_termination_conditions()
 
         if self.trajectory.k >= self.collision_point_k:
             self.end_acting = True

@@ -21,7 +21,6 @@ class AgentBase(object):
         # upon initialization, the current config of the agent is start
         self.current_config = copy.deepcopy(start)
         # path planning and acting fields
-        self.end_episode = False
         self.end_acting = False
         # default termination cause is timeout
         self.termination_cause = "Timeout"
@@ -132,7 +131,9 @@ class AgentBase(object):
                 return True
         return False
 
-    def _enforce_episode_termination_conditions(self):
+    def enforce_termination_conditions(self):
+        assert(self.obj_fn is not None)        # to calculate objective values
+        assert(self.obstacle_map is not None)  # to check obstacle collisions
         p = self.params
         time_idxs = []
         for condition in p.episode_termination_reasons:
@@ -162,9 +163,6 @@ class AgentBase(object):
                         self.planner_data,
                         k=termination_time
                     )
-                commanded_actions_1kf = np.concatenate(self.commanded_actions_nkf,
-                                                       axis=1)[:, :termination_time]
-
                 # If all of the data was masked then
                 # the episode simulated is not valid
                 valid_episode = True
@@ -176,15 +174,13 @@ class AgentBase(object):
                     'vehicle_data_last_step': planner_data_last_step,
                     'last_step_data_valid': last_step_data_valid,
                     'episode_type': idx,
-                    'valid_episode': valid_episode,
-                    'commanded_actions_1kf': commanded_actions_1kf
+                    'valid_episode': valid_episode
                 }
             else:
                 episode_data = {}
         else:
             end_episode = False
             episode_data = {}
-        self.end_episode = end_episode
         self.episode_data = episode_data
         return end_episode
 

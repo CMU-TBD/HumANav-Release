@@ -78,12 +78,7 @@ class PrerecordedHuman(Human):
     def act(self):
         self.current_step += 1
         self.current_config = self.get_interp_posns()
-        # dummy "command" since these agents "teleport" from one step to another
-        # below code is just to keep track of the agent's trajectories as they move
-        # null_command = np.array([[[0, 0]]], dtype=np.float32)
-        # t_seg, _ = Agent.apply_control_open_loop(self, self.current_config,
-        #                                          null_command, 1, sim_mode='ideal'
-        #                                          )
+        # append current config to trajectory
         self.trajectory.append_along_time_axis(self.current_config)
 
     def update(self, world_state):
