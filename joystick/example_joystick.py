@@ -112,15 +112,15 @@ class JoystickWithPlanner(JoystickBase):
         self.start_config = generate_config_from_pos_3(self.get_robot_start())
         self.goal_config = generate_config_from_pos_3(self.get_robot_goal())
         # rest of the 'Agent' params used for the joystick planner
-        self.agent_params = create_agent_params(with_obstacle_map=True)
+        self.agent_params = create_agent_params(with_planner=True,
+                                                with_obstacle_map=True)
         self.obstacle_map = self.init_obstacle_map()
         self.obj_fn = Agent._init_obj_fn(self, params=self.agent_params)
-        self.obj_fn.add_objective(
-            Agent._init_psc_objective(params=self.agent_params))
+        psc_obj = Agent._init_psc_objective(params=self.agent_params)
+        self.obj_fn.add_objective(psc_obj)
 
         # Initialize Fast-Marching-Method map for agent's pathfinding
-        self.fmm_map = Agent._init_fmm_map(self, params=self.agent_params)
-        Agent._update_fmm_map(self)
+        Agent._init_fmm_map(self, params=self.agent_params)
 
         # Initialize system dynamics and planner fields
         self.planner = Agent._init_planner(self, params=self.agent_params)
@@ -151,10 +151,10 @@ class JoystickWithPlanner(JoystickBase):
         self.robot_current = robot.get_current_config().to_3D_numpy()
 
         # Updating robot speeds (linear and angular) based off simulator data
-        self.robot_v = euclidean_dist2(
-            self.robot_current, robot_prev) / self.sim_delta_t
-        self.robot_w = (
-            self.robot_current[2] - robot_prev[2]) / self.sim_delta_t
+        self.robot_v = \
+            euclidean_dist2(self.robot_current, robot_prev) / self.sim_delta_t
+        self.robot_w = \
+            (self.robot_current[2] - robot_prev[2]) / self.sim_delta_t
 
         self.sim_times += [round(self.sim_state_now.get_sim_t()
                                  / self.sim_state_now.get_delta_t())]

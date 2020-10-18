@@ -137,7 +137,7 @@ def create_robot_params():
     p.port = rob_p.getint('port')
     p.repeat_freq: int = rob_p.getint('repeat_freq')
     p.physical_params = \
-        DotMap(radius=rob_p.getfloat('radius_cm') / 100.,
+        DotMap(radius=rob_p.getfloat('radius_cm') / 100.0,
                base=rob_p.getfloat('distance_from_ground_cm'),
                height=rob_p.getfloat('chassis_height_cm'),
                sensor_height=rob_p.getfloat('sensor_height_cm'),
@@ -390,7 +390,7 @@ def create_simulator_params(render_3D=False):
     return p
 
 
-def create_agent_params(with_planner=True, with_obstacle_map=False):
+def create_agent_params(with_planner=False, with_obstacle_map=False):
     p = DotMap()
     agent_p = config["agent_params"]
 

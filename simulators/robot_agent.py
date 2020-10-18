@@ -25,10 +25,8 @@ class RobotAgent(Agent):
         self.name = name
         super().__init__(start_configs.get_start_config(),
                          start_configs.get_goal_config(),
-                         name=name, with_init=False)
+                         name)
         self.joystick_inputs = []
-        # robot's knowledge of the current state of the world
-        self.world_state = None
         # josystick is ready once it has been sent an environment
         self.joystick_ready = False
         # To send the world state on the next joystick ping
@@ -37,47 +35,37 @@ class RobotAgent(Agent):
         self.repeat_joystick = False
         # told the joystick that the robot is powered off
         self.notified_joystick = False
-        # used to keep the listener thread alive even if the robot isnt
-        self.simulator_running = False
         # amount of time the robot is blocking on the joystick
         self.block_time_total = 0
 
     def simulation_init(self, sim_map, with_planner=False, keep_episode_running=False):
-        super().simulation_init(sim_map,
-                                with_planner=with_planner,
-                                keep_episode_running=keep_episode_running)
+        # this robot agent does not have a "planner" since that is done through the joystick
         self.params.robot_params = create_robot_params()
+        # NOTE: robot radius is not the same as regular Agents
+        self.radius = self.params.robot_params.physical_params.radius
         # velocity bounds when teleporting to positions (if not using sys dynamics)
         self.v_bounds = self.params.system_dynamics_params.v_bounds
         self.w_bounds = self.params.system_dynamics_params.w_bounds
-        self.repeat_freq = self.params.repeat_freq
         # simulation update init
         self.running = True
         self.num_executed = 0  # keeps track of the latest command that is to be executed
         self.num_cmds_per_batch = 1
-        # default simulator delta_t, to be updated via set_sim_delta_t() later
-        self.sim_delta_t = 0.05
-
-    # Getters for the robot class
-
-    def get_name(self):
-        return self.name
-
-    def get_radius(self):
-        return self.params.robot_params.physical_params.radius
-
-    # Setters for the robot class
-    def update_world(self, state):
-        self.world_state = state
+        super().simulation_init(sim_map,
+                                with_planner=with_planner,
+                                with_system_dynamics=True,
+                                with_objectives=True,
+                                keep_episode_running=keep_episode_running)
 
     def get_num_executed(self):
         return int(np.floor(len(self.joystick_inputs) / self.num_cmds_per_batch))
 
-    def set_sim_delta_t(self, sim_delta_t):
-        self.sim_delta_t = sim_delta_t
-
     def get_block_t_total(self):
         return self.block_time_total
+
+    def calc_repeat_freq(self):
+        # calculates the number of commands the robot repeats if in repeat-mode
+        rf = self.params.robot_params.physical_params.repeat_freq
+        return int(np.floor(rf / self.num_cmds_per_batch))
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
@@ -110,7 +98,7 @@ class RobotAgent(Agent):
         # enforce planning termination upon condition
         self._enforce_episode_termination_conditions()
 
-        if self.vehicle_trajectory.k >= self.collision_point_k:
+        if self.trajectory.k >= self.collision_point_k:
             self.end_acting = True
 
         if self.get_collided():
@@ -135,15 +123,15 @@ class RobotAgent(Agent):
 
     def _clip_posn(self, old_pos3, new_pos3, epsilon: float = 0.01):
         # margin of error for the velocity bounds
-        assert(self.sim_delta_t > 0)
+        assert(Agent.sim_dt > 0)
         dist_to_new = euclidean_dist2(old_pos3, new_pos3)
-        if(abs(dist_to_new / self.sim_delta_t) <= self.v_bounds[1] + epsilon):
+        if(abs(dist_to_new / Agent.sim_dt) <= self.v_bounds[1] + epsilon):
             return new_pos3
         # calculate theta of vector
         valid_theta = \
             np.arctan2(new_pos3[1] - old_pos3[1], new_pos3[0] - old_pos3[0])
         # create new position scaled off the invalid one
-        max_vel = self.sim_delta_t * self.v_bounds[1]
+        max_vel = Agent.sim_dt * self.v_bounds[1]
         valid_x = max_vel * np.cos(valid_theta) + old_pos3[0]
         valid_y = max_vel * np.sin(valid_theta) + old_pos3[1]
         reachable_pos3 = [valid_x, valid_y, valid_theta]
@@ -170,7 +158,7 @@ class RobotAgent(Agent):
                                                      sim_mode='ideal'
                                                      )
             self.num_executed += 1
-            self.vehicle_trajectory.append_along_time_axis(
+            self.trajectory.append_along_time_axis(
                 t_seg, track_trajectory_acceleration=True)
             # act trajectory segment
             self.current_config = \
@@ -196,8 +184,8 @@ class RobotAgent(Agent):
             # move to the new position and update trajectory
             new_config = generate_config_from_pos_3(new_pos3, v=new_v)
             self.set_current_config(new_config)
-            self.vehicle_trajectory.append_along_time_axis(new_config,
-                                                           track_trajectory_acceleration=True)
+            self.trajectory.append_along_time_axis(new_config,
+                                                   track_trajectory_acceleration=True)
             self.num_executed += 1
             if (self.params.verbose):
                 print(self.get_current_config().to_3D_numpy())
@@ -284,7 +272,7 @@ class RobotAgent(Agent):
         joystick about the input commands as well as the world requests
         """
         RobotAgent.joystick_receiver_socket.listen(1)
-        while(self.simulator_running):
+        while(self.running):
             connection, _ = RobotAgent.joystick_receiver_socket.accept()
             data_b, response_len = conn_recv(connection, buffr_amnt=128)
             # close connection to be reaccepted when the joystick sends data
@@ -321,14 +309,15 @@ class RobotAgent(Agent):
             # add input commands to queue to keep track of
             for i in range(self.num_cmds_per_batch):
                 np_data = np.array(joystick_input[i], dtype=np.float32)
-                self.joystick_inputs.append(np_data)
-                # duplicate commands if "repeating" instead of blocking
+                # duplicate commands if *repeating* instead of blocking
                 if self.repeat_joystick:  # if need be, repeat n-1 times
-                    repeat_amnt = int(np.floor(
-                        (self.params.robot_params.physical_params.repeat_freq / self.num_cmds_per_batch) - 1))
+                    repeat_amnt = self.calc_repeat_freq()
                     for i in range(repeat_amnt):
                         # adds command to local list of individual commands
                         self.joystick_inputs.append(np_data)
+                else:
+                    # else no repeat, only account for the command once
+                    self.joystick_inputs.append(np_data)
 
     @ staticmethod
     def establish_joystick_receiver_connection():
