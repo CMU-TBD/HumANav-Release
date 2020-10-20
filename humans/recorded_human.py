@@ -265,6 +265,8 @@ class PrerecordedHuman(Human):
             if max_agents == -1:
                 # set to all pedestrians
                 max_agents = max_peds - 1
+            # ensure that max_agents never goes out of bounds
+            max_agents = min(max_agents, max_peds)
             for i in range(max_agents):
                 ped_id = i + start_idx + 1
                 if ped_id not in all_peds:
