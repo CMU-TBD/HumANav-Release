@@ -19,7 +19,7 @@ class AgentState():
             self.start_config = a.get_start_config(deepcpy=deepcpy)
             self.goal_config = a.get_goal_config(deepcpy=deepcpy)
             self.current_config = a.get_current_config(deepcpy=deepcpy)
-            self.vehicle_trajectory = a.get_trajectory(deepcpy=deepcpy)
+            self.trajectory = a.get_trajectory(deepcpy=deepcpy)
             self.collided = a.get_collided()
             self.end_acting = a.end_acting
             self.collision_cooldown = a.get_collision_cooldown()
@@ -39,7 +39,7 @@ class AgentState():
         return self.goal_config
 
     def get_trajectory(self):
-        return self.vehicle_trajectory
+        return self.trajectory
 
     def get_collided(self):
         return self.collided

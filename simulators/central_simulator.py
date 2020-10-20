@@ -4,6 +4,7 @@ import time
 import threading
 import multiprocessing
 from simulators.simulator_helper import SimulatorHelper
+from simulators.agent import Agent
 from simulators.sim_state import SimState, HumanState, AgentState
 from params.central_params import create_simulator_params, get_seed
 from utils.utils import *
@@ -48,7 +49,7 @@ class CentralSimulator(SimulatorHelper):
         self.robot = None
         self.sim_states = {}
         self.wall_clock_time: float = 0
-        self.t: float = 0
+        self.t: float = 0.0
         self.delta_t: float = 0  # will be updated in simulator based off dt
 
     def add_agent(self, a):
@@ -74,6 +75,8 @@ class CentralSimulator(SimulatorHelper):
             # generic agent initializer but without a planner (already have trajectories)
             a.simulation_init(sim_map=CentralSimulator.obstacle_map,
                               with_planner=False,
+                              with_system_dynamics=False,
+                              with_objectives=False,
                               keep_episode_running=self.params.keep_episode_running)
             # added to backstage prerecs which will add to self.prerecs when the time is right
             self.backstage_prerecs[name] = a
@@ -94,8 +97,9 @@ class CentralSimulator(SimulatorHelper):
         self.num_completed_prerecs = 0
         # scale the simulator time
         self.delta_t = self.params.delta_t_scale * self.params.dt
-        if self.robot:
-            self.robot.set_sim_delta_t(self.delta_t)
+        # update the baseline agents' simulation refresh rate
+        Agent.set_sim_dt(self.delta_t)
+        Agent.set_sim_t(self.t)
 
     def exists_running_agent(self):
         """Checks whether or not a generated agent is still running (acting)
@@ -133,7 +137,7 @@ class CentralSimulator(SimulatorHelper):
         self.init_sim_data()
 
         # add the first (when t=0) agents to the self.prerecs dict
-        self.init_prerec_threads(sim_t=0, current_state=None)
+        self.init_prerec_threads(current_state=None)
 
         # get initial state
         current_state = self.save_state(0, self.delta_t, 0)
@@ -162,36 +166,29 @@ class CentralSimulator(SimulatorHelper):
 
         while self.t <= self.episode_params.max_time and self.loop_condition():
             wall_t = time.time() - start_time
-
+            # update the time for all agents
+            Agent.set_sim_t(self.t)
             # initiate thread operations
-            agent_threads = \
-                self.init_agent_threads(self.t, self.delta_t, current_state)
-            prerec_threads = self.init_prerec_threads(self.t, current_state)
-
+            agent_threads = self.init_agent_threads(current_state)
+            prerec_threads = self.init_prerec_threads(current_state)
             # start all thread groups
             self.start_threads(agent_threads)
             self.start_threads(prerec_threads)
-
             if self.robot:
                 # calls a single iteration of the robot update
                 self.robot.update(iteration)
-
             # join all thread groups
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
-
             # update simulator time
             self.t += self.delta_t
-
             # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
             current_state = self.save_state(self.t, self.delta_t, wall_t)
             if self.robot:
                 self.robot.update_world(current_state)
-
             # update iteration count
             iteration += 1
-
             # print simulation progress
             self.print_sim_progress(iteration)
 
@@ -214,8 +211,8 @@ class CentralSimulator(SimulatorHelper):
               self.sim_wall_clock, "real world seconds")
 
         if self.robot:
-            term_color = color_print(termination_cause_to_color(
-                self.robot.termination_cause))
+            c = termination_cause_to_color(self.robot.termination_cause)
+            term_color = color_print(c)
             print("Robot termination cause: %s%s%s" %
                   (term_color, self.robot.termination_cause, color_reset))
             self.generate_sim_log()
@@ -554,13 +551,13 @@ class CentralSimulator(SimulatorHelper):
                                                self.robot.get_current_config().to_3D_numpy())
             data += "Robot displacement (m): %0.3f\n" % rob_displacement
             data += "Max robot velocity (m/s): %0.3f\n" % \
-                absmax(self.robot.vehicle_trajectory.speed_nk1())
+                absmax(self.robot.get_trajectory().speed_nk1())
             data += "Max robot acceleration: %0.3f\n" % \
-                absmax(self.robot.vehicle_trajectory.acceleration_nk1())
+                absmax(self.robot.get_trajectory().acceleration_nk1())
             data += "Max robot angular velocity: %0.3f\n" % \
-                absmax(self.robot.vehicle_trajectory.angular_speed_nk1())
+                absmax(self.robot.get_trajectory().angular_speed_nk1())
             data += "Max robot angular acceleration: %0.3f\n" % \
-                absmax(self.robot.vehicle_trajectory.angular_acceleration_nk1())
+                absmax(self.robot.get_trajectory().angular_acceleration_nk1())
         try:
             with open(abs_filename, 'w') as f:
                 f.write(data)
@@ -589,7 +586,6 @@ class CentralSimulator(SimulatorHelper):
             assert(r.world_state is not None)
             # send first transaction to the joystick
             print("sending episode data to joystick")
-            r.simulator_running = True
             r.send_to_joystick(r.world_state.to_json(send_metadata=True))
             r_listener_thread = threading.Thread(target=r.listen_to_joystick)
             if(power_on):
@@ -622,7 +618,6 @@ class CentralSimulator(SimulatorHelper):
             if r_listener_thread:
                 # turn off the robot
                 self.robot.power_off()
-                self.robot.simulator_running = False
                 # close robot listener threads
                 if r_listener_thread.is_alive() and self.params.join_threads:
                     # TODO: connect to the socket and close it
@@ -634,8 +629,7 @@ class CentralSimulator(SimulatorHelper):
 
                 del r_listener_thread
 
-    def init_agent_threads(self, sim_t: float,
-                           t_step: float, current_state: SimState):
+    def init_agent_threads(self, current_state: SimState):
         """Spawns a new agent thread for each agent (running or finished)
 
         Args:
@@ -650,8 +644,8 @@ class CentralSimulator(SimulatorHelper):
         all_agents = list(self.agents.values())
         for a in all_agents:
             if(not a.end_acting):
-                agent_threads.append(threading.Thread(
-                    target=a.update, args=(sim_t, t_step, current_state,)))
+                agent_threads.append(threading.Thread(target=a.update,
+                                                      args=(current_state,)))
             else:
                 if(a.termination_cause == "Success"):
                     self.num_completed_agents += 1
@@ -661,7 +655,7 @@ class CentralSimulator(SimulatorHelper):
                 del(a)
         return agent_threads
 
-    def init_prerec_threads(self, sim_t: float, current_state: SimState = None):
+    def init_prerec_threads(self, current_state: SimState = None):
         """Spawns a new prerec thread for each running prerecorded agent
 
         Args:
@@ -674,12 +668,12 @@ class CentralSimulator(SimulatorHelper):
         prerec_threads = []
         all_prerec_agents = list(self.backstage_prerecs.values())
         for a in all_prerec_agents:
-            if(not a.end_acting and a.get_start_time() <= sim_t < a.get_end_time()):
+            if(not a.end_acting and a.get_start_time() <= Agent.sim_t < a.get_end_time()):
                 # only add (or keep) agents in the time frame
                 self.prerecs[a.get_name()] = a
                 if(current_state):  # not None
-                    prerec_threads.append(threading.Thread(
-                        target=a.update, args=(sim_t, current_state,)))
+                    prerec_threads.append(threading.Thread(target=a.update,
+                                                           args=(current_state,)))
             else:
                 # remove agent since its not within the time frame or finished
                 if(a.get_name() in self.prerecs.keys()):

@@ -5,10 +5,135 @@ import copy
 import time
 from utils.utils import *
 from objectives.goal_distance import GoalDistance
+from params.central_params import create_agent_params
+from trajectory.trajectory import SystemConfig, Trajectory
 
 
-class AgentHelper(object):
-    def _enforce_episode_termination_conditions(self):
+class AgentBase(object):
+    color_indx = 0
+    possible_colors = ['b', 'g', 'r', 'c', 'm', 'y']
+
+    def __init__(self, start, goal, name=None):
+        self.name = name if name else generate_name(20)
+        self.params = create_agent_params()
+        self.start_config = start
+        self.goal_config = goal
+        # upon initialization, the current config of the agent is start
+        self.current_config = copy.deepcopy(start)
+        # path planning and acting fields
+        self.end_acting = False
+        # default termination cause is timeout
+        self.termination_cause = "Timeout"
+        # name of the agent that the agent collided with (if applicable)
+        self.latest_collider = ""
+        # cooldown (in terms of simulation updates) before colliding with another agent
+        self.collision_cooldown = 0
+        # Whether to continue the episode even if the robot collides with a pedestrian
+        self.keep_episode_running = True
+        # cosmetic items (for drawing the trajectories)
+        self.trajectory_color = AgentBase.init_colors()
+        # default trajectory
+        self.trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
+        # default planner fields, not implemented
+        self.init_planner_fields()
+
+    def init_planner_fields(self):
+        self.obj_fn = None
+        self.obstacle_map = None
+        self.fmm_map = None
+        self.system_dynamics = None
+        self.planner = None
+        self.vehicle_data = None
+
+    # Getters for the Agent class
+    def get_name(self):
+        return self.name
+
+    def get_config(self, config, deepcpy):
+        if(deepcpy):
+            return SystemConfig.copy(config)
+        return config
+
+    def get_start_config(self, deepcpy=False):
+        return self.get_config(self.start_config, deepcpy)
+
+    def set_start_config(self, start):
+        self.start_config = start
+
+    def get_goal_config(self, deepcpy=False):
+        return self.get_config(self.goal_config, deepcpy)
+
+    def set_goal_config(self, goal):
+        self.goal_config = goal
+
+    def get_current_config(self, deepcpy=False):
+        return self.get_config(self.current_config, deepcpy)
+
+    def set_current_config(self, current):
+        self.current_config = current
+
+    def get_trajectory(self, deepcpy=False):
+        if(deepcpy):
+            return Trajectory.copy(self.trajectory, check_dimens=False)
+        return self.trajectory
+
+    def get_collided(self):
+        return self.end_acting and \
+            ((not self.keep_episode_running and
+              self.termination_cause == "Pedestrian Collision") or
+             self.termination_cause == "Obstacle Collision")
+
+    def get_completed(self):
+        return self.end_acting and self.termination_cause == "Success"
+
+    def get_collision_cooldown(self):
+        return self.collision_cooldown
+
+    def get_radius(self):
+        return self.params.radius
+
+    def get_color(self):
+        return self.trajectory_color
+
+    @staticmethod
+    def init_colors():
+        # cosmetic items (for drawing the trajectories)
+        if AgentBase.color_indx < len(AgentBase.possible_colors) - 1:
+            AgentBase.color_indx = AgentBase.color_indx + 1
+        else:
+            AgentBase.color_indx = 0
+        return AgentBase.possible_colors[AgentBase.color_indx]
+
+    def _collision_in_group(self, own_pos: np.array, group: list):
+        for a in group:
+            othr_pos = a.get_current_config().to_3D_numpy()
+            is_same_agent: bool = a.get_name() is self.get_name()
+            if(not is_same_agent and a.get_collision_cooldown() == 0 and
+               euclidean_dist2(own_pos, othr_pos) < self.get_radius() + a.get_radius()):
+                # instantly collide (with agent) and stop updating
+                self.termination_cause = "Pedestrian Collision"
+                # name of the latest agent that the agent collided with (applicable)
+                self.latest_collider = a.get_name()
+                if(not self.keep_episode_running):
+                    self.end_acting = True
+                    self.collision_point_k = self.trajectory.k  # this instant
+                return True
+        # reached here means no collisions have occured, therefore there is no latest_collider
+        self.latest_collider = ""
+        return False
+
+    def check_collisions(self, world_state, include_agents=True, include_robots=True):
+        if world_state is not None:
+            own_pos = self.get_current_config().to_3D_numpy()
+            if include_robots and self._collision_in_group(own_pos, world_state.get_robots().values()):
+                return True
+            if include_agents and self._collision_in_group(own_pos, world_state.get_pedestrians().values()):
+                return True
+        return False
+
+    def enforce_termination_conditions(self):
+        assert(self.obj_fn is not None)        # to calculate objective values
+        assert(self.obstacle_map is not None)  # to check obstacle collisions
         p = self.params
         time_idxs = []
         for condition in p.episode_termination_reasons:
@@ -31,36 +156,31 @@ class AgentHelper(object):
                     self.termination_cause = condition
                     self.collision_point_k = termination_time
                     color = termination_cause_to_color(condition)
-            self.vehicle_trajectory.clip_along_time_axis(termination_time)
+            self.trajectory.clip_along_time_axis(termination_time)
             if self.planner is not None and self.planner_data is not None:
                 self.planner_data, planner_data_last_step, last_step_data_valid = \
                     self.planner.mask_and_concat_data_along_batch_dim(
                         self.planner_data,
                         k=termination_time
                     )
-                commanded_actions_1kf = np.concatenate(self.commanded_actions_nkf,
-                                                       axis=1)[:, :termination_time]
-
                 # If all of the data was masked then
                 # the episode simulated is not valid
                 valid_episode = True
                 if self.planner_data['system_config'] is None:
                     valid_episode = False
                 episode_data = {
-                    'vehicle_trajectory': self.vehicle_trajectory,
+                    'vehicle_trajectory': self.trajectory,
                     'vehicle_data': self.planner_data,
                     'vehicle_data_last_step': planner_data_last_step,
                     'last_step_data_valid': last_step_data_valid,
                     'episode_type': idx,
-                    'valid_episode': valid_episode,
-                    'commanded_actions_1kf': commanded_actions_1kf
+                    'valid_episode': valid_episode
                 }
             else:
                 episode_data = {}
         else:
             end_episode = False
             episode_data = {}
-        self.end_episode = end_episode
         self.episode_data = episode_data
         return end_episode
 
@@ -90,7 +210,7 @@ class AgentHelper(object):
         return episode_horizon, else return infinity.
         """
         if(self.planner is not None):
-            if self.vehicle_trajectory.k >= self.params.episode_horizon:
+            if self.trajectory.k >= self.params.episode_horizon:
                 time_idx = np.array(self.params.episode_horizon)
             else:
                 time_idx = np.array(np.inf)
@@ -104,7 +224,7 @@ class AgentHelper(object):
         trajectory. If there is no collision return infinity.
         """
         if(use_current_config is None):
-            pos_1k2 = self.vehicle_trajectory.position_nk2()
+            pos_1k2 = self.trajectory.position_nk2()
         else:
             pos_1k2 = self.get_current_config().position_nk2()
         obstacle_dists_1k = self.obstacle_map.dist_to_nearest_obs(pos_1k2)
@@ -112,7 +232,7 @@ class AgentHelper(object):
         collision_idxs = collisions[1]
         if np.size(collision_idxs) != 0:
             time_idx = collision_idxs[0]
-            self.collision_point_k = self.vehicle_trajectory.k
+            self.collision_point_k = self.trajectory.k
         else:
             time_idx = np.array(np.inf)
         return time_idx
@@ -125,13 +245,13 @@ class AgentHelper(object):
                 euclidean = 0
                 # also compute euclidean distance as a heuristic
                 if use_euclidean:
-                    diff_x = self.vehicle_trajectory.position_nk2()[0][-1][0]
+                    diff_x = self.trajectory.position_nk2()[0][-1][0]
                     - self.goal_config.position_nk2()[0][0][0]
-                    diff_y = self.vehicle_trajectory.position_nk2()[0][-1][1]
+                    diff_y = self.trajectory.position_nk2()[0][-1][1]
                     - self.goal_config.position_nk2()[0][0][1]
                     euclidean = np.sqrt(diff_x**2 + diff_y**2)
                 dist_to_goal_nk = objective.compute_dist_to_goal_nk(
-                    self.vehicle_trajectory) + euclidean
+                    self.trajectory) + euclidean
         return dist_to_goal_nk
 
     def _compute_time_idx_for_success(self):
@@ -162,8 +282,8 @@ class AgentHelper(object):
         x_next_n1d = x0_n1d * 1.
         for t in range(T):
             u_n1f = control_nk2[:, t:t + 1]
-            x_next_n1d = self.system_dynamics.simulate(
-                x_next_n1d, u_n1f, mode=sim_mode)
+            x_next_n1d = self.system_dynamics.simulate(x_next_n1d,
+                                                       u_n1f, mode=sim_mode)
 
             # Append the applied action to the action list
             if sim_mode == 'ideal':
@@ -189,6 +309,7 @@ class AgentHelper(object):
                                                               pad_mode='repeat')
         return trajectory, commanded_actions_nkf
 
+    @staticmethod
     def apply_control_closed_loop(self, start_config, trajectory_ref,
                                   k_array_nTf1, K_array_nTfd, T,
                                   sim_mode='ideal'):

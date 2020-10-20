@@ -33,7 +33,7 @@ def create_params():
     from params.central_params import create_episodes_params, create_datasets_params
     p.episode_params = create_episodes_params()
     # not testing robot, only simulator + agents
-    p.episode_params.without_robot = False
+    p.episode_params.without_robot = True
     # overwrite tests with custom basic test
     p.episode_params.tests = {}
     # p.episode_params.tests['test_socnav'] = \
@@ -54,8 +54,9 @@ def create_params():
                map_name='Univ',
                pedestrian_datasets=create_datasets_params(["univ"]),
                datasets_start_t=[0.],
-               ped_ranges=[(0, -1)],
-               agents_start=[],  # [[8, 8, 0]], agents_end=[[17.5, 13, 0.]],
+               ped_ranges=[(0, 100)],
+               # agents_start=[[8, 8, 0]], agents_end=[[17.5, 13, 0.]],
+               agents_start=[], agents_end=[],
                robot_start_goal=[[10, 3, 0], [15.5, 8, 0.7]],
                max_time=30,
                write_episode_log=False
@@ -156,7 +157,7 @@ def test_socnav():
         environment, r = construct_environment(p, test, episode)
         """
         Creating planner, simulator, and control pipelines for the framework
-        of a human trajectory and pathfinding. 
+        of a human trajectory and pathfinding.
         """
         simulator = CentralSimulator(
             environment,

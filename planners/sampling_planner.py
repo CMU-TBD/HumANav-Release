@@ -36,8 +36,8 @@ class SamplingPlanner(Planner):
         # TODO:
         #   changing the code so that sim_state is all history
 
-        obj_vals, data = self.eval_objective(
-            start_config, goal_config, sim_state_hist=sim_state_hist)
+        obj_vals, data = self.eval_objective(start_config, goal_config,
+                                             sim_state_hist=sim_state_hist)
         min_idx = np.argmin(obj_vals)
         min_cost = obj_vals[min_idx]
         waypts, horizons_s, trajectories_lqr, trajectories_spline, controllers = data

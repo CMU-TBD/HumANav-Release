@@ -14,14 +14,11 @@ import threading
 
 class PrerecordedHuman(Human):
     def __init__(self, t_data, posn_data, interps, generate_appearance=True, name=None):
-        self.name = generate_name(20) if not name else name
         assert(len(t_data) == len(posn_data))
         self.t_data = t_data
         # useful to know the ground truth pedestrian data rate
         self.del_t = t_data[2] - t_data[1]
-        self.sim_dt = create_system_dynamics_params().dt
         self.posn_data = posn_data
-        self.sim_t = 0
         self.current_step = 0
         self.current_precalc_step = 0
         self.current_config = self.posn_data[0]
@@ -48,22 +45,13 @@ class PrerecordedHuman(Human):
     def get_completed(self):
         return self.end_acting and self.end_episode
 
-    def simulation_init(self, sim_map, with_planner=False, keep_episode_running=False):
-        """ Initializes important fields for the CentralSimulator"""
-        self.params = create_agent_params(with_planner=with_planner)
-        self.obstacle_map = sim_map
-        # Initialize system dynamics and planner fields
-        self.system_dynamics = Agent._init_system_dynamics(self)
-        self.vehicle_trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
-        self.keep_episode_running = keep_episode_running
-
     def get_interp_posns(self):
-        if self.sim_t < self.t_data[1]:
+        if Agent.sim_t < self.t_data[1]:
             # TODO x, y would work with interp here, need a good solution for theta wrapping
             posn_interp_conf = self.posn_data[0]
         else:
-            x = self.xinterp(self.sim_t)
-            y = self.yinterp(self.sim_t)
+            x = self.xinterp(Agent.sim_t)
+            y = self.yinterp(Agent.sim_t)
             prev_x, prev_y, _ = np.squeeze(
                 self.posn_data[self.current_precalc_step].position_and_heading_nk3())
             theta = np.arctan2((y - prev_y), (x - prev_x))
@@ -72,41 +60,41 @@ class PrerecordedHuman(Human):
                 y,
                 theta
             ]
-            last_t = int(np.floor((self.sim_t - self.t_data[0]) / self.sim_dt))
+            last_t = \
+                int(np.floor((Agent.sim_t - self.t_data[0]) / Agent.sim_dt))
             last_non_interp_v = \
                 self.posn_data[last_t].speed_nk1()[0][0][0]
             posn_interp_conf = generate_config_from_pos_3(posn_interp,
                                                           v=last_non_interp_v)
         return posn_interp_conf
 
-    def execute(self):
+    def sense(self):
         if self.check_collisions(self.world_state, include_agents=False):
             self.collision_cooldown = self.params.collision_cooldown_amnt
 
+    def plan(self):
+        pass
+
+    def act(self):
         self.current_step += 1
         self.current_config = self.get_interp_posns()
-        # dummy "command" since these agents "teleport" from one step to another
-        # below code is just to keep track of the agent's trajectories as they move
-        null_command = np.array([[[0, 0]]], dtype=np.float32)
-        t_seg, _ = Agent.apply_control_open_loop(self, self.current_config,
-                                                 null_command, 1, sim_mode='ideal'
-                                                 )
-        self.vehicle_trajectory.append_along_time_axis(t_seg)
+        # append current config to trajectory
+        self.trajectory.append_along_time_axis(self.current_config)
 
-    def update(self, sim_t, world_state):
-        self.sim_t = sim_t
+    def update(self, world_state):
         self.world_state = world_state
-        self.has_collided = False  # do we need this in the while then?
-        # if self.current_step < len(self.t_data):
-        if self.sim_t < self.t_data[-1]:
+        if Agent.sim_t < self.t_data[-1]:
             # continue jumping through states until time limit is reached
-            self.execute()
+            self.sense()
+            self.plan()
+            self.act()
             # TODO now this step is performed in one go - what does this mean for collisions?
-            # while not self.has_collided and self.sim_t > self.get_current_time():
+            # while not self.has_collided and Agent.sim_t > self.get_current_time():
             # this is to account for the delay_time / init_delay
             self.current_precalc_step = \
-                int((self.sim_t - self.t_data[1] + self.del_t) /
-                    self.del_t) if self.sim_t > self.t_data[1] else 0
+                int((Agent.sim_t - self.t_data[1] + self.del_t) /
+                    self.del_t) if Agent.sim_t > self.t_data[1] else 0
+            # print(self.current_precalc_step)
             # update collision cooldown
             if(self.collision_cooldown > 0):
                 self.collision_cooldown -= 1
@@ -127,19 +115,18 @@ class PrerecordedHuman(Human):
         posn_data = np.array(posn_data)
         times = np.array(times)
         # correct for the fact that times of 0 is weird
-        # TODO make times 0 not be weird
         times[0] = times[1] - (times[2] - times[1])
 
         x = posn_data[:, 0]
         y = posn_data[:, 1]
         th = posn_data[:, 2]
 
-        xinterp = scipy.interpolate.interp1d(
-            times, x, bounds_error=False, fill_value=(x[0], x[-1]))
-        yinterp = scipy.interpolate.interp1d(
-            times, y, bounds_error=False, fill_value=(y[0], y[-1]))
-        thetainterp = scipy.interpolate.interp1d(
-            times, th, bounds_error=False, fill_value=(th[0], th[-1]))
+        xinterp = scipy.interpolate.interp1d(times, x, bounds_error=False,
+                                             fill_value=(x[0], x[-1]))
+        yinterp = scipy.interpolate.interp1d(times, y, bounds_error=False,
+                                             fill_value=(y[0], y[-1]))
+        thetainterp = scipy.interpolate.interp1d(times, th, bounds_error=False,
+                                                 fill_value=(th[0], th[-1]))
         #
         # prev_posn = np.array(self.posn_data[self.current_step])
         # next_posn = np.array(self.posn_data[self.current_step + 1])
@@ -233,21 +220,6 @@ class PrerecordedHuman(Human):
                 v_data.append(0)  # initial speed is 0
         return v_data
 
-    # @staticmethod
-    # def gather_vel_data_vec(time_data, posn_data):
-    #     # return linear speed to the list of variables
-    #     posn_data
-    #     for j, pos_2 in enumerate(posn_data):
-    #         if(j > 0):
-    #             last_pos_2 = posn_data[j - 1]
-    #             # calculating euclidean dist / delta_t
-    #             delta_t = (time_data[j] - time_data[j - 1])
-    #             speed = euclidean_dist2(pos_2, last_pos_2) / delta_t
-    #             v_data.append(speed)  # last element gets last angle
-    #         else:
-    #             v_data.append(0)  # initial speed is 0
-    #     return v_data
-
     @staticmethod
     def to_configs(xytheta_data, v_data):
         assert(len(xytheta_data) == len(v_data))
@@ -293,6 +265,8 @@ class PrerecordedHuman(Human):
             if max_agents == -1:
                 # set to all pedestrians
                 max_agents = max_peds - 1
+            # ensure that max_agents never goes out of bounds
+            max_agents = min(max_agents, max_peds)
             for i in range(max_agents):
                 ped_id = i + start_idx + 1
                 if ped_id not in all_peds:
@@ -316,9 +290,8 @@ class PrerecordedHuman(Human):
                                                                  swap_axes=swapxy,
                                                                  scale_x=scale_x,
                                                                  scale_y=scale_y)
-                interp_fns = PrerecordedHuman.init_interp_fns(
-                    xytheta_data, t_data
-                )
+                interp_fns = PrerecordedHuman.init_interp_fns(xytheta_data,
+                                                              t_data)
 
                 v_data = PrerecordedHuman.gather_vel_data(t_data, xytheta_data)
                 # combine the xytheta with the velocity

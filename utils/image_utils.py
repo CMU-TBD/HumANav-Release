@@ -47,12 +47,9 @@ def gather_metadata(ppm: float, a, plot_start_goal: bool, start: list,
     return collided, markersize, pos_3, traj_col, start_3, goal_3
 
 
-def gather_colors_and_labels(base_color: str, label: str, has_collided: bool, indx: int):
-    color = base_color  # gen_agents are green and solid unless collided
+def gather_colors_and_labels(label: str, indx: int):
     start_col = 'yo'  # yellow circle
     goal_col = 'g'   # yellow (star)
-    if(has_collided):
-        color = 'ro'  # collided agents are drawn red
     draw_label = None
     sl = None
     gl = None
@@ -61,7 +58,7 @@ def gather_colors_and_labels(base_color: str, label: str, has_collided: bool, in
         draw_label = label
         sl = label + " start"
         gl = label + " goal"
-    return color, start_col, goal_col, draw_label, sl, gl
+    return start_col, goal_col, draw_label, sl, gl
 
 
 def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_color='bo',
@@ -81,12 +78,20 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
                                       clip=traj_clip, linewidth=ppm / 8.2)
 
         # gather colors/labels for the agent plot
-        color, start_col, goal_col, draw_label, sl, gl = \
-            gather_colors_and_labels(normal_color, label, collided, i)
+        start_col, goal_col, draw_label, sl, gl = \
+            gather_colors_and_labels(label, i)
 
-        # plot agent
-        ax.plot(pos_3[0], pos_3[1], color, markersize=ms, label=draw_label)
+        # draw little dot in the middle of the collided agents if collision occurs
+        if(collided):
+            ax.plot(pos_3[0], pos_3[1], collided_color, markersize=ms,
+                    label=draw_label)
+            ax.plot(pos_3[0], pos_3[1], normal_color, markersize=ms * 0.4,
+                    label=None)
+        else:
+            ax.plot(pos_3[0], pos_3[1], normal_color, markersize=ms,
+                    label=draw_label)
 
+        # plot collision indicator
         # plot start + goal
         if(plot_start_goal):
             ax.plot(start_3[0], start_3[1], start_col,
@@ -95,7 +100,6 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
                     markersize=2 * ms, marker="*", label=gl, alpha=0.8)
 
         # plot a surrounding "force field" around the agent
-        # ax.plot(pos_3[0], pos_3[1], color,alpha=0.2, markersize=2. * ms)
         if(plot_quiver):
             # Agent heading
             s = 0.5
@@ -148,7 +152,7 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
     # TODO: make plot_quiver a simulator-wide param for pedestrians and robot
     # Plot the camera (robots)
     plot_agent_dict(ax, ppm, robots, label="Robot", normal_color="ro",
-                    collided_color="ko", plot_quiver=plot_quiver, plot_start_goal=True,
+                    collided_color="ro", plot_quiver=plot_quiver, plot_start_goal=True,
                     alpha=0.8, traj_color="w")
 
     # plot all the simulated pedestrian agents

@@ -17,8 +17,6 @@ class Human(Agent):
 
     # Getters for the Human class
     # NOTE: most of the dynamics/configs implementation is in Agent.py
-    def get_name(self):
-        return self.name
 
     def get_appearance(self):
         return self.appearance
