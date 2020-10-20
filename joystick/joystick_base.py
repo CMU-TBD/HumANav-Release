@@ -320,9 +320,6 @@ class JoystickBase():
         try:
             self.robot_sender_socket.connect(robot_addr)
         except:  # used to turn off the joystick
-            self.joystick_on = False
-            print("%sRobot socket disconnected%s" % (color_red, color_reset))
-            os._exit(1)
             return
         # Send data
         self.robot_sender_socket.sendall(bytes(message, "utf-8"))
