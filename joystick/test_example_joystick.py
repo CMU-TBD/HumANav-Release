@@ -1,7 +1,7 @@
 from params.central_params import create_joystick_params
 from joystick.example_joystick import JoystickRandom
-from joystick.example_joystick import JoystickWithPlanner
-from joystick.example_joystick import JoystickWithPlannerPosns
+from joystick.joystick_planner import JoystickWithPlanner
+from joystick.joystick_planner import JoystickWithPlannerPosns
 
 
 if __name__ == '__main__':

@@ -142,6 +142,9 @@ class SimState():
     def get_robots(self):
         return self.robots
 
+    def get_robot(self):
+        return list(self.robots.values())[0]
+
     def get_sim_t(self):
         return self.sim_t
 

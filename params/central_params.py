@@ -159,6 +159,7 @@ def create_joystick_params():
     p.track_sim_states = joystick_p.getboolean('track_sim_states')
     p.write_pandas_log = joystick_p.getboolean('write_pandas_log')
     p.generate_movie = joystick_p.getboolean('generate_movie')
+    p.dt = joystick_p.getfloat('dt')
     return p
 
 
