@@ -51,6 +51,8 @@ class CentralSimulator(SimulatorHelper):
         self.wall_clock_time: float = 0
         self.t: float = 0.0
         self.delta_t: float = 0  # will be updated in simulator based off dt
+        # restart agent coloring on every instance of the simulator to be consistent across episodes
+        Agent.restart_coloring()
 
     def add_agent(self, a):
         """Adds an agent member to the central simulator's pool of gen_agents

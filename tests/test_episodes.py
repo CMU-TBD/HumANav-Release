@@ -62,7 +62,7 @@ def generate_auto_humans(starts, goals, simulator, environment, p, r):
     Generate and add num_humans number of randomly generated humans to the simulator
     """
     num_gen_humans = min(len(starts), len(goals))
-    print("Generated Auto Humans:", num_gen_humans)
+    print("Generating Auto Humans:", num_gen_humans)
     for i in range(num_gen_humans):
         start_config = generate_config_from_pos_3(starts[i])
         goal_config = generate_config_from_pos_3(goals[i])
@@ -148,6 +148,10 @@ def test_episodes():
             episode_params=episode
         )
 
+        """Generate the autonomous human agents from the episode"""
+        generate_auto_humans(episode.agents_start, episode.agents_end,
+                             simulator, environment, p, r)
+
         """Generate the robot in the simulator"""
         if not p.episode_params.without_robot:
             generate_robot(episode.robot_start_goal, simulator)
@@ -162,11 +166,6 @@ def test_episodes():
                                                   ped_range=dataset_ped_range,
                                                   dataset=dataset
                                                   )
-
-        """Generate the autonomous human agents from the episode"""
-        if episode.use_gen_agents:
-            generate_auto_humans(episode.agents_start, episode.agents_end,
-                                 simulator, environment, p, r)
 
         # run simulation
         simulator.simulate()

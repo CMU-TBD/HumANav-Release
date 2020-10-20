@@ -69,6 +69,10 @@ class Agent(AgentBase):
     def set_sim_t(t):
         Agent.sim_t = t
 
+    @staticmethod
+    def restart_coloring():
+        AgentBase.color_indx = 0
+
     def update(self, sim_state=None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """
         self.sense(sim_state)
