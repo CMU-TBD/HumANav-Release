@@ -22,7 +22,7 @@ def success(central_sim: CentralSimulator):
 
 
 def total_sim_time_taken(central_sim: CentralSimulator):
-    last_step_num = max(list(central_sim.states.keys()))
+    last_step_num = max(list(central_sim.sim_states.keys()))
     return last_step_num * central_sim.delta_t
 
 
@@ -45,7 +45,7 @@ def map(central_sim: CentralSimulator):
 # motion
 def robot_speed(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and drop the heading
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())[:, :-1]
     delta_t = central_sim.delta_t
     robot_displacement = np.diff(robot_trajectory, axis=0)
     robot_speed = np.sqrt((robot_displacement[:, 0]/delta_t)**2 + (robot_displacement[:, 1]/delta_t)**2)
@@ -59,7 +59,7 @@ def robot_speed(central_sim: CentralSimulator, percentile=False):
 
 def robot_velocity(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and drop the heading
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())[:, :-1]
     delta_t = central_sim.delta_t
     robot_displacement = np.diff(robot_trajectory, axis=0)
     robot_vel = robot_displacement/delta_t
@@ -73,7 +73,7 @@ def robot_velocity(central_sim: CentralSimulator, percentile=False):
 
 def robot_acceleration(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and drop the heading
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())[:, :-1]
     delta_t = central_sim.delta_t
     robot_displacement = np.diff(robot_trajectory, axis=0)
     robot_vel = robot_displacement/delta_t
@@ -88,7 +88,7 @@ def robot_acceleration(central_sim: CentralSimulator, percentile=False):
 
 def robot_jerk(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and drop the heading
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())[:, :-1]
     delta_t = central_sim.delta_t
     robot_vel = np.diff(robot_trajectory, axis=0) / delta_t
     robot_acc = np.diff(robot_vel, axis=0) / delta_t
@@ -103,7 +103,7 @@ def robot_jerk(central_sim: CentralSimulator, percentile=False):
 
 def robot_motion_energy(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and drop the heading
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())[:, :-1]
     delta_t = central_sim.delta_t
     robot_displacement = np.diff(robot_trajectory, axis=0)
     robot_motion_energy = np.sum((robot_displacement[:, 0]/delta_t)**2 + (robot_displacement[:, 1]/delta_t)**2)
@@ -118,7 +118,7 @@ def robot_motion_energy(central_sim: CentralSimulator, percentile=False):
 # path
 def path_length(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and drop the heading
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())[:, :-1]
     robot_goal = np.squeeze(central_sim.robot.goal_config.position_and_heading_nk3())[:-1]
     robot_path_ln = cost_functions.path_length(robot_trajectory)
     if percentile:
@@ -130,7 +130,7 @@ def path_length(central_sim: CentralSimulator, percentile=False):
 
 def path_length_ratio(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and drop the heading
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())[:, :-1]
     robot_goal = np.squeeze(central_sim.robot.goal_config.position_and_heading_nk3())[:-1]
     robot_path_ln_ratio = cost_functions.path_length_ratio(robot_trajectory, goal_config=robot_goal)
     if percentile:
@@ -142,7 +142,7 @@ def path_length_ratio(central_sim: CentralSimulator, percentile=False):
 
 def path_irregularity(central_sim: CentralSimulator, percentile=False):
 
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())
+    robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())
     # check if goal was reached
     if central_sim.robot.termination_cause == "Success":
         path_irr = cost_functions.path_irregularity(
@@ -164,7 +164,7 @@ def path_irregularity(central_sim: CentralSimulator, percentile=False):
 
 def goal_traversal_ratio(central_sim: CentralSimulator, percentile=False):
     # extract the bot traj and the goal and drop the heading
-    robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())[:, :-1]
     robot_end = robot_trajectory[-1, :]
     robot_start = robot_trajectory[0, :]
     robot_goal = np.squeeze(central_sim.robot.goal_config.position_and_heading_nk3())[:-1]
@@ -240,7 +240,7 @@ def closest_pedestrian_distance(central_sim: CentralSimulator, percentile=False)
     ped_df = central_sim.sim_df[~robot_indcs]
     bot_df = central_sim.sim_df[robot_indcs]
     robot_trajectory = np.vstack([bot_df.x, bot_df.y]).T
-    # robot_trajectory = np.squeeze(central_sim.robot.vehicle_trajectory.position_and_heading_nk3())[:, :-1]
+    # robot_trajectory = np.squeeze(central_sim.robot.get_trajectory().position_and_heading_nk3())[:, :-1]
     delta_t = central_sim.delta_t
 
     cpd = np.zeros((len(robot_trajectory)))

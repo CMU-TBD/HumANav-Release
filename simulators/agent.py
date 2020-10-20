@@ -38,7 +38,8 @@ class Agent(AgentBase):
                         with_objectives: bool = True,
                         keep_episode_running: bool = False):
         """ Initializes important fields for the CentralSimulator"""
-        self.params = create_agent_params(with_planner=with_planner)
+        if(not hasattr(self, "params")):
+            self.params = create_agent_params(with_planner=with_planner)
         self.obstacle_map = sim_map
         if(with_objectives):
             # Initialize Fast-Marching-Method map for agent's pathfinding
@@ -68,6 +69,10 @@ class Agent(AgentBase):
     @staticmethod
     def set_sim_t(t):
         Agent.sim_t = t
+
+    @staticmethod
+    def restart_coloring():
+        AgentBase.color_indx = 0
 
     def update(self, sim_state=None):
         """ Run the agent.plan() and agent.act() functions to generate a path and follow it """

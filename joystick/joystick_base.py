@@ -18,9 +18,10 @@ class JoystickBase():
         self.joystick_params = create_joystick_params()
         self.algorithm_name = algorithm_name
         print("Joystick running %s algorithm" % self.algorithm_name)
+        # include the system dynamics for both posn & velocity commands
+        from params.central_params import create_system_dynamics_params
+        self.system_dynamics_params = create_system_dynamics_params()
         if self.joystick_params.use_system_dynamics:
-            from params.central_params import create_system_dynamics_params
-            self.system_dynamics_params = create_system_dynamics_params()
             print("Joystick using system dynamics")
         else:
             print("Joystick NOT using system dynamics")
@@ -81,7 +82,7 @@ class JoystickBase():
         raise NotImplementedError
 
     def init_control_pipeline(self):
-        raise NotImplementedError
+        pass
 
     def send_cmds(self, cmds, send_vel_cmds: bool = True):
         assert(send_vel_cmds == self.joystick_params.use_system_dynamics)
@@ -359,5 +360,3 @@ class JoystickBase():
         return connection, client
 
     """ END SOCKET UTILS """
-
-    # TODO: add graphics utils
