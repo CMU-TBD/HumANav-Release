@@ -2,14 +2,9 @@ from utils.utils import *
 from humans.human import Human
 from humans.human_configs import HumanConfigs
 from humans.human_appearance import HumanAppearance
-from trajectory.trajectory import SystemConfig, Trajectory
-from params.central_params import create_agent_params, create_system_dynamics_params
 from simulators.agent import Agent
 import numpy as np
 import scipy
-import socket
-import time
-import threading
 
 
 class PrerecordedHuman(Human):
@@ -31,6 +26,7 @@ class PrerecordedHuman(Human):
                 HumanAppearance)
         else:
             appearance = None
+        self.relative_diff = 0  # how much time the agent will spend stopped
         super().__init__(name, appearance, init_configs)
 
     def get_start_time(self):
@@ -42,73 +38,71 @@ class PrerecordedHuman(Human):
     def get_current_time(self):
         return self.t_data[self.current_precalc_step]
 
+    def get_rel_t(self):
+        # agent might've spent some time still (after a collision)
+        # and must account for that given the world clock (Agent.sim_t)
+        return Agent.sim_t - self.relative_diff * Agent.sim_dt
+
     def get_completed(self):
-        return self.end_acting and self.end_episode
+        # dont have special termination conditions
+        # only care about the time not surpassing max t_data
+        return self.get_rel_t() < self.t_data[-1]
 
     def get_interp_posns(self):
-        if Agent.sim_t < self.t_data[1]:
+        if self.get_rel_t() < self.t_data[1]:
             # TODO x, y would work with interp here, need a good solution for theta wrapping
             posn_interp_conf = self.posn_data[0]
         else:
-            x = self.xinterp(Agent.sim_t)
-            y = self.yinterp(Agent.sim_t)
+            x = self.xinterp(self.get_rel_t())
+            y = self.yinterp(self.get_rel_t())
             prev_x, prev_y, _ = np.squeeze(
                 self.posn_data[self.current_precalc_step].position_and_heading_nk3())
             theta = np.arctan2((y - prev_y), (x - prev_x))
-            posn_interp = [
-                x,
-                y,
-                theta
-            ]
-            last_t = \
-                int(np.floor((Agent.sim_t - self.t_data[0]) / Agent.sim_dt))
-            last_non_interp_v = \
-                self.posn_data[last_t].speed_nk1()[0][0][0]
+            posn_interp = [x, y, theta]
+            last_t = int(
+                np.floor((self.get_rel_t() - self.t_data[0]) / Agent.sim_dt))
+            last_non_interp_v = self.posn_data[last_t].speed_nk1()[0][0][0]
             posn_interp_conf = generate_config_from_pos_3(posn_interp,
                                                           v=last_non_interp_v)
         return posn_interp_conf
 
-    def sense(self):
+    def sense(self, sim_state):
+        self.update_world(sim_state)
         if self.check_collisions(self.world_state, include_agents=False):
             self.collision_cooldown = self.params.collision_cooldown_amnt
+            # update relative time differences
+            self.relative_diff += self.collision_cooldown
+        # update collision cooldown
+        if(self.collision_cooldown > 0):
+            self.collision_cooldown -= 1
 
     def plan(self):
-        pass
+        # TODO now this step is performed in one go - what does this mean for collisions?
+        # while not self.has_collided and self.get_rel_t() > self.get_current_time():
+        # this is to account for the delay_time / init_delay
+        if self.collision_cooldown > 0:
+            return
+        self.current_precalc_step = \
+            int((self.get_rel_t() - self.t_data[1] + self.del_t) / self.del_t)
 
     def act(self):
+        if self.collision_cooldown > 0:
+            return
         self.current_step += 1
         self.current_config = self.get_interp_posns()
         # append current config to trajectory
         self.trajectory.append_along_time_axis(self.current_config)
 
-    def update(self, world_state):
-        self.world_state = world_state
-        if Agent.sim_t < self.t_data[-1]:
-            # continue jumping through states until time limit is reached
-            self.sense()
-            self.plan()
-            self.act()
-            # TODO now this step is performed in one go - what does this mean for collisions?
-            # while not self.has_collided and Agent.sim_t > self.get_current_time():
-            # this is to account for the delay_time / init_delay
-            self.current_precalc_step = \
-                int((Agent.sim_t - self.t_data[1] + self.del_t) /
-                    self.del_t) if Agent.sim_t > self.t_data[1] else 0
-            # print(self.current_precalc_step)
-            # update collision cooldown
-            if(self.collision_cooldown > 0):
-                self.collision_cooldown -= 1
-        else:
-            # tell the simulator this agent is done
-            self.end_episode = True
-            self.end_acting = True
+    def update(self, sim_state=None):
+        self.sense(sim_state)
+        self.plan()
+        self.act()
 
     def end(self):
-        """Instantly teleport the agents to the last position in their trejectory
-        """
+        """Teleport the agents to the last step in their trajectory"""
         self.set_current_config(self.goal_config)
 
-    """ BEGIN GENERATION UTILS """
+    """ BEGIN INITIALIZATION UTILS """
 
     @staticmethod
     def init_interp_fns(posn_data, times):
@@ -127,15 +121,6 @@ class PrerecordedHuman(Human):
                                              fill_value=(y[0], y[-1]))
         thetainterp = scipy.interpolate.interp1d(times, th, bounds_error=False,
                                                  fill_value=(th[0], th[-1]))
-        #
-        # prev_posn = np.array(self.posn_data[self.current_step])
-        # next_posn = np.array(self.posn_data[self.current_step + 1])
-        # interp_posn = np.zeros(3)
-        #
-        # supports = [self.t_data[self.current_step], self.t_data[self.current_step + 1]]
-        # for i in range(3):
-        #     vals = [prev_posn[i], next_posn[i]]
-        #     f = interpolate.interp1d(x, y)
         return xinterp, yinterp, thetainterp
 
     @staticmethod

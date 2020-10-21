@@ -135,6 +135,9 @@ class AgentBase(object):
         return False
 
     def check_collisions(self, world_state, include_agents=True, include_robots=True):
+        if self.collision_cooldown > 0:
+            # no double collisions
+            return False
         if world_state is not None:
             own_pos = self.get_current_config().to_3D_numpy()
             if include_robots and self._collision_in_group(own_pos, world_state.get_robots().values()):
