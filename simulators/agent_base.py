@@ -74,19 +74,23 @@ class AgentBase(object):
             return Trajectory.copy(self.trajectory, check_dimens=False)
         return self.trajectory
 
+    def get_end_acting(self):
+        return self.end_acting
+
     def get_collided(self):
-        return self.end_acting and \
+        return self.get_end_acting() and \
             ((not self.keep_episode_running and
               self.termination_cause == "Pedestrian Collision") or
              self.termination_cause == "Obstacle Collision")
 
     def get_completed(self):
-        return self.end_acting and self.termination_cause == "Success"
+        return self.get_end_acting() and self.termination_cause == "Success"
 
     def get_collision_cooldown(self):
         return self.collision_cooldown
 
     def get_radius(self):
+        assert(hasattr(self, "params"))
         return self.params.radius
 
     def get_color(self):

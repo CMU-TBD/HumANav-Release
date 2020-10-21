@@ -50,7 +50,7 @@ def send_sim_state(robot):
     # send the (JSON serialized) world state per joystick's request
     if robot.joystick_requests_world == 0:
         world_state = robot.world_state.to_json(
-            robot_on=robot.running
+            robot_on=not robot.get_end_acting()
         )
         send_to_joystick(world_state)
         # immediately note that the world has been sent:
@@ -87,7 +87,7 @@ def listen_once(robot):
     connection.close()
     if(data_b is not b'' and response_len > 0):
         data_str = data_b.decode("utf-8")  # bytes to str
-        if(not robot.running):
+        if(robot.get_end_acting()):
             robot.joystick_requests_world = 0
         else:
             manage_data(robot, data_str)
@@ -169,6 +169,14 @@ def close_sockets():
     global joystick_receiver_socket
     joystick_sender_socket.close()
     joystick_receiver_socket.close()
+
+
+def force_connect():
+    global host
+    global port_recv
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # connect to the socket to break the accept() wait
+    s.connect((host, port_recv))
 
 
 def establish_handshake(p: DotMap):

@@ -40,7 +40,6 @@ class RobotAgent(Agent):
         self.v_bounds = self.params.system_dynamics_params.v_bounds
         self.w_bounds = self.params.system_dynamics_params.w_bounds
         # simulation update init
-        self.running = True
         self.num_executed = 0  # keeps track of the latest command that is to be executed
         self.num_cmds_per_batch = 1
 
@@ -80,7 +79,8 @@ class RobotAgent(Agent):
         return RobotAgent.generate_robot(configs)
 
     def check_termination_conditions(self):
-        """use this to take in a world state and compute obstacles (gen_agents/walls) to affect the robot"""
+        """use this to take in a world state and compute obstacles 
+        (gen_agents/walls) to affect the robot"""
         # check for collisions with other gen_agents
         self.check_collisions(self.world_state)
 
@@ -90,14 +90,7 @@ class RobotAgent(Agent):
         if self.get_trajectory().k >= self.collision_point_k:
             self.end_acting = True
 
-        if self.get_collided():
-            # either Pedestrian Collision or Obstacle Collision
-            assert((not self.keep_episode_running and self.termination_cause == "Pedestrian Collision") or
-                   self.termination_cause == "Obstacle Collision")
-            self.power_off()
-
-        if self.get_completed():
-            assert(self.termination_cause == "Success")
+        if self.get_end_acting():
             self.power_off()
 
     def execute(self):
@@ -109,7 +102,7 @@ class RobotAgent(Agent):
 
     def execute_velocity_cmds(self):
         for _ in range(self.num_cmds_per_batch):
-            if(not self.running):
+            if(self.get_completed()):
                 break
             current_config = self.get_current_config()
             # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
@@ -136,7 +129,7 @@ class RobotAgent(Agent):
 
     def execute_position_cmds(self):
         for _ in range(self.num_cmds_per_batch):
-            if(not self.running):
+            if(self.get_end_acting()):
                 break
             joystick_input = self.joystick_inputs[self.num_executed]
             assert(len(joystick_input) == 4)  # has x,y,theta,velocity
@@ -164,7 +157,7 @@ class RobotAgent(Agent):
             send_sim_state(self)
         # block simulation (world) progression on the act() commands sent from the joystick
         init_block_t = time.time()
-        while self.running and self.num_executed >= len(self.joystick_inputs):
+        while not self.get_end_acting() and self.num_executed >= len(self.joystick_inputs):
             if self.num_executed == len(self.joystick_inputs):
                 if self.joystick_requests_world == 0:
                     send_sim_state(self)
@@ -187,33 +180,34 @@ class RobotAgent(Agent):
                 self.joystick_requests_world -= 1
 
     def update(self):
-        if self.running:
-            self.sense()
-            self.plan()
-            self.act()
-        else:
-            self.power_off()
+        if(self.get_end_acting()):
+            return
+        self.sense()
+        self.plan()
+        self.act()
 
     def power_off(self):
         # if the robot is already "off" do nothing
-        if self.running:
-            print("\nRobot powering off, received",
-                  len(self.joystick_inputs), "commands")
-            self.running = False
-            try:
-                quit_message = self.world_state.to_json(
-                    robot_on=False,
-                    termination_cause=self.termination_cause
-                )
-                send_to_joystick(quit_message)
-            except:
-                return
+        print("\nRobot powering off, received",
+              len(self.joystick_inputs), "commands")
+        self.end_acting = True
+        try:
+            quit_message = self.world_state.to_json(
+                robot_on=False,
+                termination_cause=self.termination_cause
+            )
+            send_to_joystick(quit_message)
+        except:
+            return
 
     def listen_to_joystick(self):
         # send initial world state (specific episode metadata)
         send_to_joystick(self.world_state.to_json(send_metadata=True))
-        while self.running:
+        while not self.get_end_acting():
             listen_once(self)
+
+    def force_connect_self(self):
+        force_connect()
 
     @staticmethod
     def establish_joystick_handshake(p):
