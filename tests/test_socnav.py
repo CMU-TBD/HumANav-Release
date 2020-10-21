@@ -55,8 +55,8 @@ def create_params():
                pedestrian_datasets=create_datasets_params(["univ"]),
                datasets_start_t=[0.],
                ped_ranges=[(0, 100)],
-               # agents_start=[[8, 8, 0]], agents_end=[[17.5, 13, 0.]],
-               agents_start=[], agents_end=[],
+               agents_start=[[8, 8, 0]], agents_end=[[17.5, 13, 0.]],
+               #    agents_start=[], agents_end=[],
                robot_start_goal=[[10, 3, 0], [15.5, 8, 0.7]],
                max_time=30,
                write_episode_log=False

@@ -178,7 +178,7 @@ class CentralSimulator(SimulatorHelper):
             self.start_threads(prerec_threads)
             if self.robot:
                 # calls a single iteration of the robot update
-                self.robot.update(iteration)
+                self.robot.update()
             # join all thread groups
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
@@ -588,7 +588,6 @@ class CentralSimulator(SimulatorHelper):
             assert(r.world_state is not None)
             # send first transaction to the joystick
             print("sending episode data to joystick")
-            r.send_to_joystick(r.world_state.to_json(send_metadata=True))
             r_listener_thread = threading.Thread(target=r.listen_to_joystick)
             if(power_on):
                 r_listener_thread.start()

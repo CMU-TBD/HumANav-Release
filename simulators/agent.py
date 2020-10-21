@@ -57,17 +57,22 @@ class Agent(AgentBase):
         self.collision_point_k = np.inf
         # whether or not to end the episode upon robot collision or continue
         self.keep_episode_running = keep_episode_running
+        # default trajectory
+        self.trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
 
     # Setters for the Agent class
+
     def update_world(self, state):
         self.world_state = state
 
     @staticmethod
     def set_sim_dt(sim_dt):
+        # all the agents know the same simulator refresh rate
         Agent.sim_dt = sim_dt
 
     @staticmethod
     def set_sim_t(t):
+        # all agents know the same world time
         Agent.sim_t = t
 
     @staticmethod
@@ -96,31 +101,21 @@ class Agent(AgentBase):
         # Generate the next trajectory segment, update next config, update actions/data
         if self.end_acting:
             return
-        if self.params.verbose_printing:
-            print("planned next:",
-                  self.planned_next_config.position_nk2())
 
         self.planner_data = self.planner.optimize(self.planned_next_config,
                                                   self.goal_config)
-        traj_segment, trajectory_data = self.process_planner_data()
-
+        traj_segment = \
+            Trajectory.new_traj_clip_along_time_axis(self.planner_data['trajectory'],
+                                                     self.params.control_horizon,
+                                                     repeat_second_to_last_speed=True)
         self.planned_next_config = \
             SystemConfig.init_config_from_trajectory_time_index(
                 traj_segment, t=-1)
 
-        # Append to Vehicle Data
-        for key in self.vehicle_data.keys():
-            self.vehicle_data[key].append(trajectory_data[key])
         tr_acc = self.params.planner_params.track_accel
         self.trajectory.append_along_time_axis(traj_segment,
                                                track_trajectory_acceleration=tr_acc)
         self.enforce_termination_conditions()
-
-        if self.end_acting:
-            if self.params.verbose:
-                print("terminated plan for agent", self.get_name(),
-                      "k=", self.trajectory.k,
-                      "total time=", self.trajectory.k * self.trajectory.dt)
 
     def act(self):
         """ A utility method to initialize a config object
@@ -135,9 +130,9 @@ class Agent(AgentBase):
         self.check_collisions(self.world_state)
 
         # then update the current config incrementally (can teleport to end if t=-1)
-        self.current_config = \
-            SystemConfig.init_config_from_trajectory_time_index(
-                self.trajectory, t=self.path_step)
+        new_config = SystemConfig.init_config_from_trajectory_time_index(self.trajectory,
+                                                                         t=self.path_step)
+        self.set_current_config(new_config)
 
         # updating "next step" for agent path after traversing it
         self.path_step += step
@@ -195,15 +190,7 @@ class Agent(AgentBase):
                                                self.params.control_horizon)
         return trajectory, self.planner_data
 
-    # def _compute_objective_value(self):
-    #     p = self.params.objective_fn_params
-    #     if p.obj_type == 'valid_mean':
-    #         self.trajectory.update_valid_mask_nk()
-    #     else:
-    #         assert (p.obj_type in ['valid_mean', 'mean'])
-    #     obj_val = np.squeeze(
-    #         self.obj_fn.evaluate_function(self.trajectory))
-    #     return obj_val
+    """BEGIN STATIC HELPER FUNCTIONS"""
 
     @staticmethod
     def _init_obj_fn(self, params=None):
@@ -262,15 +249,15 @@ class Agent(AgentBase):
             params = self.params
         obstacle_map = self.obstacle_map
         obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()
-
         if goal_pos_n2 is None:
             goal_pos_n2 = self.goal_config.position_nk2()[0]
-        self.fmm_map = FmmMap.create_fmm_map_based_on_goal_position(goal_positions_n2=goal_pos_n2,
-                                                                    map_size_2=np.array(
-                                                                        self.obstacle_map.get_map_size_2()),
-                                                                    dx=self.obstacle_map.get_dx(),
-                                                                    map_origin_2=self.obstacle_map.get_map_origin_2(),
-                                                                    mask_grid_mn=obstacle_occupancy_grid)
+        self.fmm_map = \
+            FmmMap.create_fmm_map_based_on_goal_position(goal_positions_n2=goal_pos_n2,
+                                                         map_size_2=np.array(
+                                                             self.obstacle_map.get_map_size_2()),
+                                                         dx=self.obstacle_map.get_dx(),
+                                                         map_origin_2=self.obstacle_map.get_map_origin_2(),
+                                                         mask_grid_mn=obstacle_occupancy_grid)
         Agent._update_fmm_map(self)
 
     @staticmethod
