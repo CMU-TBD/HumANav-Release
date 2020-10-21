@@ -141,13 +141,11 @@ class JoystickBase():
     def listen_once(self, data_type: int = 2):
         """Runs a single instance of listening to the receiver socket
         to obtain information about the world and episode metadata
-
         Args:
-            data_type (int, optional): 0 if obtaining all episode names,
-                                       1 if obtaining specific episode metadata,
-                                       2 if obtaining simulator info from a sim_state.
-                                       Defaults to 2.
-
+            data_type (int): 0 if obtaining all episode names,
+                             1 if obtaining specific episode metadata,
+                             2 if obtaining simulator info from a sim_state.
+                             Defaults to 2.
         Returns:
             [bool]: True if the listening was successful, False otherwise
         """
@@ -167,10 +165,9 @@ class JoystickBase():
                 return self.manage_episode_data(data_json)
             else:
                 return self.manage_sim_state_data(data_json)
-        else:
-            self.joystick_on = False
-            return False
-        return True
+        # received no information from joystick
+        self.joystick_on = False
+        return False
 
     def manage_episodes_name_data(self, episode_names_json: dict):
         # case where there is no simulator yet, just episodes
@@ -196,7 +193,6 @@ class JoystickBase():
         if not sim_state_json['robot_on']:
             term_status = sim_state_json['termination_cause']
             term_color = color_print(termination_cause_to_color(term_status))
-            # TODO: print the "updated state of the world..." for this sim_t, more exact
             print("\npowering off joystick, robot terminated with: %s%s%s" %
                   (term_color, term_status, color_reset))
             self.joystick_on = False
@@ -263,9 +259,9 @@ class JoystickBase():
         # TODO: ensure the sim_states are sorted by their time, so that traversing
         # the hash map maintains relative order of when they entered
         sim_state_list = list(self.sim_states.values())
-        self.velocities[current_world.get_sim_t()] = velocities(sim_state_list)
-        self.accelerations[current_world.get_sim_t()] = \
-            accelerations(sim_state_list)
+        sim_t = current_world.get_sim_t()
+        self.velocities[sim_t] = velocities(sim_state_list)
+        self.accelerations[sim_t] = accelerations(sim_state_list)
 
     """ BEGIN PANDAS UTILS """
 
@@ -320,9 +316,6 @@ class JoystickBase():
         try:
             self.robot_sender_socket.connect(robot_addr)
         except:  # used to turn off the joystick
-            self.joystick_on = False
-            print("%sRobot socket disconnected%s" % (color_red, color_reset))
-            os._exit(1)
             return
         # Send data
         self.robot_sender_socket.sendall(bytes(message, "utf-8"))

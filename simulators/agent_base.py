@@ -15,7 +15,6 @@ class AgentBase(object):
 
     def __init__(self, start, goal, name=None):
         self.name = name if name else generate_name(20)
-        self.params = create_agent_params()
         self.start_config = start
         self.goal_config = goal
         # upon initialization, the current config of the agent is start
@@ -32,8 +31,6 @@ class AgentBase(object):
         self.keep_episode_running = True
         # cosmetic items (for drawing the trajectories)
         self.trajectory_color = AgentBase.init_colors()
-        # default trajectory
-        self.trajectory = Trajectory(dt=self.params.dt, n=1, k=0)
         # default planner fields, not implemented
         self.init_planner_fields()
 
@@ -77,19 +74,23 @@ class AgentBase(object):
             return Trajectory.copy(self.trajectory, check_dimens=False)
         return self.trajectory
 
+    def get_end_acting(self):
+        return self.end_acting
+
     def get_collided(self):
-        return self.end_acting and \
+        return self.get_end_acting() and \
             ((not self.keep_episode_running and
               self.termination_cause == "Pedestrian Collision") or
              self.termination_cause == "Obstacle Collision")
 
     def get_completed(self):
-        return self.end_acting and self.termination_cause == "Success"
+        return self.get_end_acting() and self.termination_cause == "Success"
 
     def get_collision_cooldown(self):
         return self.collision_cooldown
 
     def get_radius(self):
+        assert(hasattr(self, "params"))
         return self.params.radius
 
     def get_color(self):
@@ -103,6 +104,17 @@ class AgentBase(object):
         else:
             AgentBase.color_indx = 0
         return AgentBase.possible_colors[AgentBase.color_indx]
+
+    def sense(self):
+        raise NotImplementedError
+
+    def plan(self):
+        raise NotImplementedError
+
+    def act(self):
+        raise NotImplementedError
+
+    """AGENT UTILS"""
 
     def _collision_in_group(self, own_pos: np.array, group: list):
         for a in group:
@@ -123,6 +135,9 @@ class AgentBase(object):
         return False
 
     def check_collisions(self, world_state, include_agents=True, include_robots=True):
+        if self.collision_cooldown > 0:
+            # no double collisions
+            return False
         if world_state is not None:
             own_pos = self.get_current_config().to_3D_numpy()
             if include_robots and self._collision_in_group(own_pos, world_state.get_robots().values()):
@@ -237,21 +252,13 @@ class AgentBase(object):
             time_idx = np.array(np.inf)
         return time_idx
 
-    def _dist_to_goal(self, use_euclidean=False):
+    def _dist_to_goal(self):
         """Calculate the FMM distance between
         each state in trajectory and the goal."""
         for objective in self.obj_fn.objectives:
             if isinstance(objective, GoalDistance):
-                euclidean = 0
-                # also compute euclidean distance as a heuristic
-                if use_euclidean:
-                    diff_x = self.trajectory.position_nk2()[0][-1][0]
-                    - self.goal_config.position_nk2()[0][0][0]
-                    diff_y = self.trajectory.position_nk2()[0][-1][1]
-                    - self.goal_config.position_nk2()[0][0][1]
-                    euclidean = np.sqrt(diff_x**2 + diff_y**2)
-                dist_to_goal_nk = objective.compute_dist_to_goal_nk(
-                    self.trajectory) + euclidean
+                dist_to_goal_nk = \
+                    objective.compute_dist_to_goal_nk(self.trajectory)
         return dist_to_goal_nk
 
     def _compute_time_idx_for_success(self):
@@ -259,7 +266,7 @@ class AgentBase(object):
         Compute and return the earliest time index of success (reaching the goal region)
         in vehicle trajectory. If there is no collision return infinity.
         """
-        dist_to_goal_1k = self._dist_to_goal(use_euclidean=False)
+        dist_to_goal_1k = self._dist_to_goal()
         successes = np.where(
             np.less(dist_to_goal_1k, self.params.goal_margin))
         success_idxs = successes[1]

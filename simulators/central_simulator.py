@@ -178,7 +178,7 @@ class CentralSimulator(SimulatorHelper):
             self.start_threads(prerec_threads)
             if self.robot:
                 # calls a single iteration of the robot update
-                self.robot.update(iteration)
+                self.robot.update()
             # join all thread groups
             self.join_threads(agent_threads)
             self.join_threads(prerec_threads)
@@ -194,9 +194,6 @@ class CentralSimulator(SimulatorHelper):
             # print simulation progress
             self.print_sim_progress(iteration)
 
-        if self.robot:
-            self.robot.power_off()
-            self.robot_collisions = self.gather_robot_collisions(iteration)
         # free all the gen_agents
         for a in self.agents.values():
             a = None
@@ -212,7 +209,8 @@ class CentralSimulator(SimulatorHelper):
         print("\nSimulation completed in",
               self.sim_wall_clock, "real world seconds")
 
-        if self.robot:
+        if self.robot is not None:
+            self.robot_collisions = self.gather_robot_collisions(iteration)
             c = termination_cause_to_color(self.robot.termination_cause)
             term_color = color_print(c)
             print("Robot termination cause: %s%s%s" %
@@ -588,7 +586,6 @@ class CentralSimulator(SimulatorHelper):
             assert(r.world_state is not None)
             # send first transaction to the joystick
             print("sending episode data to joystick")
-            r.send_to_joystick(r.world_state.to_json(send_metadata=True))
             r_listener_thread = threading.Thread(target=r.listen_to_joystick)
             if(power_on):
                 r_listener_thread.start()
@@ -616,20 +613,13 @@ class CentralSimulator(SimulatorHelper):
         Args:
             r_listener_thread (Thread): the robot update thread to join
         """
-        if self.robot:
-            if r_listener_thread:
-                # turn off the robot
-                self.robot.power_off()
-                # close robot listener threads
-                if r_listener_thread.is_alive() and self.params.join_threads:
-                    # TODO: connect to the socket and close it
-                    import socket
-                    from simulators.robot_agent import RobotAgent
-                    socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(
-                        (RobotAgent.host, RobotAgent.port_recv))
-                    r_listener_thread.join()
-
-                del r_listener_thread
+        if r_listener_thread is not None:
+            # close robot listener threads
+            if r_listener_thread.is_alive() and self.params.join_threads:
+                # connect to its own socket to break the accept() loop
+                self.robot.force_connect_self()
+                r_listener_thread.join()
+            del r_listener_thread
 
     def init_agent_threads(self, current_state: SimState):
         """Spawns a new agent thread for each agent (running or finished)
