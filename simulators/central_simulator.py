@@ -17,8 +17,7 @@ class CentralSimulator(SimulatorHelper):
     obstacle_map = None
 
     def __init__(self, environment: dict, renderer=None,
-                 render_3D: bool = None, camera_pose=None,
-                 episode_params=None):
+                 camera_pose=None, episode_params=None):
         """ Initializer for the central simulator
 
         Args:
@@ -28,7 +27,7 @@ class CentralSimulator(SimulatorHelper):
         """
         self.r = renderer
         self.environment = environment
-        self.params = create_simulator_params(render_3D=render_3D)
+        self.params = create_simulator_params()
         self.episode_params = episode_params
         self.camera_pose = camera_pose
         self.algo_name = "lite"  # by default there is no robot (or algorithm)
