@@ -12,7 +12,7 @@ from utils.image_utils import *
 
 
 class CentralSimulator(SimulatorHelper):
-    """The centralized simulator of TBD_SocNavBench """
+    """The centralized simulator of SocNavBench """
 
     obstacle_map = None
 
@@ -58,7 +58,6 @@ class CentralSimulator(SimulatorHelper):
         """Adds an agent member to the central simulator's pool of gen_agents
         NOTE: this function works for robots (RobotAgent), prerecorded gen_agents (PrerecordedHuman),
               and general gen_agents (Agent)
-
         Args:
             a (Agent/PrerecordedAgent/RobotAgent): The agent to be added to the simulator
         """
@@ -105,7 +104,6 @@ class CentralSimulator(SimulatorHelper):
 
     def exists_running_agent(self):
         """Checks whether or not a generated agent is still running (acting)
-
         Returns:
             bool: True if there is at least one running agent, False otherwise
         """
@@ -116,7 +114,6 @@ class CentralSimulator(SimulatorHelper):
 
     def exists_running_prerec(self):
         """Checks whether or not a prerecorded agent is still running (acting)
-
         Returns:
             bool: True if there is at least one running prerec, False otherwise
         """
@@ -310,7 +307,6 @@ class CentralSimulator(SimulatorHelper):
         render_3D options, the function will generate the frames in multiple separate processes to
         optimize performance on multicore machines, else it can also be done sequentially.
         NOTE: the 3D renderer can currently only be run sequentially
-
         Args:
             filename (str, optional): name of each png frame (unindexed). Defaults to "obs".
         """
@@ -387,7 +383,6 @@ class CentralSimulator(SimulatorHelper):
 
     def render_sim_state(self, state: SimState, filename: str):
         """Converts a state into an image to be later converted to a gif movie
-
         Args:
             state (SimState): the state of the world to convert to an image
             filename (str): the name of the resulting image (unindexed)
@@ -573,7 +568,6 @@ class CentralSimulator(SimulatorHelper):
         """Initializes the robot listener by establishing socket connections to
         the joystick, transmitting the (constant) obstacle map (environment),
         and starting the robot thread.
-
         Args:
             power_on (bool, optional): Whether or not the robot should start on. Defaults to True.
 
@@ -609,7 +603,6 @@ class CentralSimulator(SimulatorHelper):
 
     def decommission_robot(self, r_listener_thread):
         """Turns off the robot and joins the robot's update thread
-
         Args:
             r_listener_thread (Thread): the robot update thread to join
         """
@@ -623,12 +616,10 @@ class CentralSimulator(SimulatorHelper):
 
     def init_agent_threads(self, current_state: SimState):
         """Spawns a new agent thread for each agent (running or finished)
-
         Args:
             sim_t (float): the simulator time in seconds
             t_step (float): the time step (update frequency) of the simulator
             current_state (SimState): the most recent state of the world
-
         Returns:
             agent_threads (list): list of all spawned (not started) agent threads
         """
@@ -649,11 +640,9 @@ class CentralSimulator(SimulatorHelper):
 
     def init_prerec_threads(self, current_state: SimState = None):
         """Spawns a new prerec thread for each running prerecorded agent
-
         Args:
             sim_t (float): the simulator time in seconds
             current_state (SimState): the current state of the world
-
         Returns:
             prerec_threads (list): list of all spawned (not started) prerecorded agent threads
         """
@@ -681,7 +670,6 @@ class CentralSimulator(SimulatorHelper):
 
     def start_threads(self, thread_group):
         """Starts a group of threads at once
-
         Args:
             thread_group (list): a group of threads to be started
         """
@@ -690,7 +678,6 @@ class CentralSimulator(SimulatorHelper):
 
     def join_threads(self, thread_group):
         """Joins a group of threads at once
-
         Args:
             thread_group (list): a group of threads to be joined
         """

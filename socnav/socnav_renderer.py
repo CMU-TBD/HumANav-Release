@@ -135,6 +135,7 @@ class SocNavRenderer():
         Updates an existing human within a building 
         """
         if self.p.load_meshes:
+            self.humans[human.get_name()] = human
             self.building.update_human(human)
             self.human_traversible = self.building.human_traversible
 

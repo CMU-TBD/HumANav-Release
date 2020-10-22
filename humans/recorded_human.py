@@ -49,21 +49,17 @@ class PrerecordedHuman(Human):
         return self.get_rel_t() < self.t_data[-1]
 
     def get_interp_posns(self):
-        if self.get_rel_t() < self.t_data[1]:
-            # TODO x, y would work with interp here, need a good solution for theta wrapping
-            posn_interp_conf = self.posn_data[0]
-        else:
-            x = self.xinterp(self.get_rel_t())
-            y = self.yinterp(self.get_rel_t())
-            prev_x, prev_y, _ = np.squeeze(
-                self.posn_data[self.current_precalc_step].position_and_heading_nk3())
-            theta = np.arctan2((y - prev_y), (x - prev_x))
-            posn_interp = [x, y, theta]
-            last_t = int(
-                np.floor((self.get_rel_t() - self.t_data[0]) / Agent.sim_dt))
-            last_non_interp_v = self.posn_data[last_t].speed_nk1()[0][0][0]
-            posn_interp_conf = generate_config_from_pos_3(posn_interp,
-                                                          v=last_non_interp_v)
+        x = self.xinterp(self.get_rel_t())
+        y = self.yinterp(self.get_rel_t())
+        prev_x, prev_y, _ = np.squeeze(
+            self.posn_data[self.current_precalc_step].position_and_heading_nk3())
+        theta = np.arctan2((y - prev_y), (x - prev_x))
+        posn_interp = [x, y, theta]
+        last_t = int(
+            np.floor((self.get_rel_t() - self.t_data[0]) / Agent.sim_dt))
+        last_non_interp_v = self.posn_data[last_t].speed_nk1()[0][0][0]
+        posn_interp_conf = generate_config_from_pos_3(posn_interp,
+                                                      v=last_non_interp_v)
         return posn_interp_conf
 
     def sense(self, sim_state):
@@ -285,5 +281,11 @@ class PrerecordedHuman(Human):
                                              generate_appearance=params.render_3D,
                                              interps=interp_fns)
                 simulator.add_agent(new_agent)
+
+                # add human to renderer
+                # if params.render_3D:
+                #     renderer.add_human(new_agent)
+                #     environment["human_traversible"] = \
+                #         np.array(renderer.get_human_traversible())
             # to not disturb the carriage-return print
             print()
