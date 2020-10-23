@@ -18,8 +18,6 @@ test on.
 """
 import os
 import glob
-import logging
-import sys
 import pickle
 import numpy as np
 

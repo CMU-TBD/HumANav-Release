@@ -1,6 +1,5 @@
 import numpy as np
-import os
-from random import seed, random, randint
+from random import random
 # Humanav
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
@@ -8,7 +7,7 @@ from simulators.robot_agent import RobotAgent
 from socnav.socnav_renderer import SocNavRenderer
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
-from params.central_params import get_seed, create_base_params
+from params.central_params import get_seed, create_socnav_params
 from utils.utils import *
 
 # seed the random number generator
@@ -16,7 +15,7 @@ random.seed(get_seed())
 
 
 def create_params():
-    p = create_base_params()
+    p = create_socnav_params()
 
     # The camera is assumed to be mounted on a robot at fixed height
     # and fixed pitch. See params/central_params.py for more information
@@ -162,7 +161,6 @@ def test_socnav():
         simulator = CentralSimulator(
             environment,
             renderer=r,
-            render_3D=p.render_3D,
             episode_params=episode
         )
         """Generate the autonomous human agents from the episode"""
@@ -197,6 +195,8 @@ def test_socnav():
             simulator.add_agent(robot_agent)
         # run simulation
         simulator.simulate()
+        # render the simulation result
+        simulator.render(r, None, filename=episode.name + "_obs")
 
     if not p.episode_params.without_robot:
         RobotAgent.close_robot_sockets()

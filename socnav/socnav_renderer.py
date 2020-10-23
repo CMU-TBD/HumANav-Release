@@ -1,4 +1,3 @@
-from humans.human import Human
 from mp_env import map_utils as mu
 from utils import depth_utils as du
 from sbpd import sbpd
@@ -26,11 +25,11 @@ class SocNavRenderer():
         self.humans = {}  # to keep track of the Humans
         self.human_traversible = []
 
-        if self.p.load_meshes:
+        if self.p.building_params.load_meshes:
             self.d = sbpd.get_dataset(
-                self.p.dataset_name, 'all', data_dir=self.p.sbpd_data_dir, surreal_params=self.p.surreal)
+                self.p.building_params.dataset_name, 'all', data_dir=self.p.sbpd_data_dir, surreal_params=self.p.surreal)
             self.building = self.d.load_data(
-                self.p.building_name, self.p.robot_params.physical_params, self.p.flip)
+                self.p.building_params.building_name, self.p.robot_params.physical_params, self.p.flip)
             self.humans_loaded = False
             # Instantiating a camera/ shader object is only needed
             # for rgb and depth images
@@ -135,6 +134,7 @@ class SocNavRenderer():
         Updates an existing human within a building 
         """
         if self.p.load_meshes:
+            self.humans[human.get_name()] = human
             self.building.update_human(human)
             self.human_traversible = self.building.human_traversible
 
