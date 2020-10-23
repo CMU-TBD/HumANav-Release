@@ -108,16 +108,9 @@ class CentralSimulator(SimulatorHelper):
         for p in self.prerecs.values():
             del p
         # capture final wall clock (completion) time
-        sim_wall_clock = time.time() - start_time
-        print("\nSimulation completed in", sim_wall_clock,
+        self.sim_wall_clock = time.time() - start_time
+        print("\nSimulation completed in", self.sim_wall_clock,
               "real world seconds")
-        if(self.episode_params.write_episode_log):
-            self.generate_sim_log()
-            # TODO generate + write the score report
-            from simulators.simulator_helper import sim_states_to_dataframe
-            self.sim_df, self.agent_info = \
-                sim_states_to_dataframe(self.sim_states)
-            self.generate_episode_score_report()
         # decommission_robot
         if self.robot is not None:
             self.robot_collisions = self.gather_robot_collisions(iteration)
@@ -127,6 +120,13 @@ class CentralSimulator(SimulatorHelper):
                   (term_color, self.robot.termination_cause, color_reset))
             # finally close the robot listener thread
             self.decommission_robot(r_t)
+        if(self.episode_params.write_episode_log):
+            self.generate_sim_log()
+            # TODO generate + write the score report
+            from simulators.simulator_helper import sim_states_to_dataframe
+            self.sim_df, self.agent_info = \
+                sim_states_to_dataframe(self.sim_states)
+            self.generate_episode_score_report()
 
     def save_state(self, wall_t: float = 0.0):
         """Captures the current state of the world to be saved to self.sim_states

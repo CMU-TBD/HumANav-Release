@@ -9,7 +9,7 @@ from simulators.robot_agent import RobotAgent
 from socnav.socnav_renderer import SocNavRenderer
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
-from params.central_params import get_seed, create_base_params
+from params.central_params import get_seed, create_socnav_params
 from utils.utils import *
 
 # seed the random number generator
@@ -17,7 +17,7 @@ random.seed(get_seed())
 
 
 def create_params():
-    p = create_base_params()
+    p = create_socnav_params()
 
     # The camera is assumed to be mounted on a robot at fixed height
     # and fixed pitch. See params/central_params.py for more information
@@ -144,7 +144,6 @@ def test_episodes():
         simulator = CentralSimulator(
             environment=environment,
             renderer=r,
-            render_3D=p.render_3D,
             episode_params=episode
         )
 
@@ -160,7 +159,7 @@ def test_episodes():
         for i, dataset in enumerate(episode.pedestrian_datasets):
             dataset_start_t = episode.datasets_start_t[i]
             dataset_ped_range = episode.ped_ranges[i]
-            PrerecordedHuman.generate_pedestrians(simulator, p, r, environment,
+            PrerecordedHuman.generate_pedestrians(simulator, p,
                                                   max_time=episode.max_time,
                                                   start_t=dataset_start_t,
                                                   ped_range=dataset_ped_range,
