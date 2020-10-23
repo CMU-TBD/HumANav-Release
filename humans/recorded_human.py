@@ -46,7 +46,8 @@ class PrerecordedHuman(Human):
     def get_completed(self):
         # dont have special termination conditions
         # only care about the time not surpassing max t_data
-        return self.get_rel_t() < self.t_data[-1]
+        self.end_acting = (self.get_rel_t() < self.get_end_time())
+        return self.get_rel_t() < self.get_end_time()
 
     def get_interp_posns(self):
         x = self.xinterp(self.get_rel_t())

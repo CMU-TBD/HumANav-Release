@@ -300,9 +300,6 @@ def create_simulator_params():
     p.max_frames = sim_p.getint('max_frames')
     # bound by 0 <= X <= 1
     p.fps_scale_down = max(0.0, min(1.0, sim_p.getfloat('fps_scale_down')))
-    p.print_data = sim_p.getboolean('print_data')
-    p.verbose = sim_p.getboolean('verbose')
-    p.join_threads = sim_p.getboolean('join_threads')
     # sbpd simulator params:
     p.render_3D = p.socnav_params.render_3D
     # Load obstacle map params
@@ -314,6 +311,7 @@ def create_simulator_params():
         print("Schematic view: TOPVIEW only")
     p.verbose_printing = sim_p.getboolean('verbose_printing')
     p.clear_files = sim_p.getboolean('clear_files')
+    p.record_video = sim_p.getboolean('record_video')
     return p
 
 

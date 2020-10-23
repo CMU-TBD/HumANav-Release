@@ -1,4 +1,3 @@
-from humans.human import Human
 from mp_env import map_utils as mu
 from utils import depth_utils as du
 from sbpd import sbpd

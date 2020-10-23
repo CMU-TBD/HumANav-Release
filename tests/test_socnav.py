@@ -1,6 +1,5 @@
 import numpy as np
-import os
-from random import seed, random, randint
+from random import random
 # Humanav
 from humans.human import Human
 from humans.recorded_human import PrerecordedHuman
@@ -33,7 +32,7 @@ def create_params():
     from params.central_params import create_episodes_params, create_datasets_params
     p.episode_params = create_episodes_params()
     # not testing robot, only simulator + agents
-    p.episode_params.without_robot = True
+    p.episode_params.without_robot = False
     # overwrite tests with custom basic test
     p.episode_params.tests = {}
     # p.episode_params.tests['test_socnav'] = \
@@ -196,6 +195,8 @@ def test_socnav():
             simulator.add_agent(robot_agent)
         # run simulation
         simulator.simulate()
+        # render the simulation result
+        simulator.render(r, None, filename=episode.name + "_obs")
 
     if not p.episode_params.without_robot:
         RobotAgent.close_robot_sockets()

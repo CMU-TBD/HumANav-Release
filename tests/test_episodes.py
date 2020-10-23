@@ -169,6 +169,8 @@ def test_episodes():
 
         # run simulation
         simulator.simulate()
+        # render the simulation result
+        simulator.render(r, None, filename=episode.name + "_obs")
 
     if not p.episode_params.without_robot:
         RobotAgent.close_robot_sockets()
