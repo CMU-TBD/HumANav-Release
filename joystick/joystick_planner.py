@@ -1,15 +1,9 @@
 import numpy as np
-import os
-from time import sleep
-from random import randint
 from joystick.joystick_base import JoystickBase
 from params.central_params import create_agent_params
-
-
-""" BEGIN PLANNED JOYSTICK """
-from trajectory.trajectory import Trajectory, SystemConfig
+from trajectory.trajectory import Trajectory
 from utils.utils import generate_config_from_pos_3, euclidean_dist2
-from simulators.agent import Agent
+from agents.agent import Agent
 
 
 class JoystickWithPlanner(JoystickBase):

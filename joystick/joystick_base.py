@@ -1,7 +1,6 @@
 import socket
 import json
 import os
-import numpy as np
 import random
 from utils.utils import *
 from params.central_params import create_joystick_params, get_path_to_socnav, get_seed
@@ -24,7 +23,7 @@ class JoystickBase():
         if self.joystick_params.use_system_dynamics:
             print("Joystick using system dynamics")
         else:
-            print("Joystick NOT using system dynamics")
+            print("Joystick using positional dynamics")
         # episode fields
         self.episode_names = []
         self.current_ep = None
@@ -44,8 +43,8 @@ class JoystickBase():
     def param_based_init(self):
         # data tracking with pandas
         if self.joystick_params.write_pandas_log:
-            global pd
             import pandas as pd
+            global pd
             self.pd_df = None    # pandas dataframe for writing to a csv
             self.agent_log = {}  # log of all the agents as updated by sensing
 

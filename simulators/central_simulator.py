@@ -3,9 +3,8 @@ import os
 import time
 import threading
 from simulators.simulator_helper import SimulatorHelper
-from simulators.agent import Agent
+from agents.agent import Agent
 from simulators.sim_state import SimState, HumanState, AgentState
-from params.central_params import create_simulator_params
 from utils.utils import *
 from utils.image_utils import *
 

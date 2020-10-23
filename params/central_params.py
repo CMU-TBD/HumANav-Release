@@ -30,6 +30,7 @@ def create_socnav_params():
     socnav_p = user_config['socnav_params']
     p.seed = seed
     p.render_3D = (socnav_p.get('render_mode') == 'full-render')
+    p.dataset_dir = socnav_p.get('dataset_dir')
     p.socnav_dir = get_path_to_socnav()
     p.traversible_dir = get_traversible_dir()
     p.sbpd_data_dir = get_sbpd_data_dir()
@@ -490,9 +491,9 @@ def get_path_to_socnav():
 
 
 def base_data_dir():
-    PATH_TO_BASE_DIR = os.path.join(get_path_to_socnav(), 'LB_WayPtNav_Data')
+    PATH_TO_BASE_DIR = os.path.join(get_path_to_socnav(), 'wayptnav_data')
     if(not os.path.exists(PATH_TO_BASE_DIR)):
-        print('\033[31m', "ERROR: Failed to find the LB_WayPtNav_Data dir at",
+        print('\033[31m', "ERROR: Failed to find the wayptnav_data dir at",
               PATH_TO_BASE_DIR, '\033[0m')
         os._exit(1)  # Failure condition
     return PATH_TO_BASE_DIR

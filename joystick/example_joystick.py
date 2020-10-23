@@ -1,6 +1,4 @@
 import numpy as np
-import os
-from time import sleep
 from random import randint
 from joystick.joystick_base import JoystickBase
 

@@ -1,11 +1,11 @@
 import numpy as np
-import os
-from random import seed, random, randint
+from dotmap import DotMap
+from random import random
 # Humanav
-from humans.human import Human
-from humans.recorded_human import PrerecordedHuman
-from humans.human_configs import HumanConfigs
-from simulators.robot_agent import RobotAgent
+from agents.humans.human import Human
+from agents.humans.recorded_human import PrerecordedHuman
+from agents.humans.human_configs import HumanConfigs
+from agents.robot_agent import RobotAgent
 from socnav.socnav_renderer import SocNavRenderer
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
@@ -98,7 +98,7 @@ def construct_environment(p: DotMap, episode_name: str, episode: DotMap):
         # Get the surreal dataset for human generation
         surreal_data = r.d
         # Update the Human's appearance classes to contain the dataset
-        from humans.human_appearance import HumanAppearance
+        from agents.humans.human_appearance import HumanAppearance
         HumanAppearance.dataset = surreal_data
         human_traversible = np.empty(traversible.shape)
         human_traversible.fill(1)  # initially all good

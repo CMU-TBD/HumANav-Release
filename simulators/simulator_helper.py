@@ -3,7 +3,7 @@ import multiprocessing
 import threading
 from utils.utils import *
 from utils.image_utils import *
-from simulators.agent import Agent
+from agents.agent import Agent
 from simulators.sim_state import SimState
 from socnav.socnav_renderer import SocNavRenderer
 from params.central_params import create_simulator_params
@@ -52,8 +52,8 @@ class SimulatorHelper(object):
         """
         assert(self.obstacle_map is not None)
         name = a.get_name()
-        from simulators.robot_agent import RobotAgent
-        from humans.recorded_human import PrerecordedHuman
+        from agents.robot_agent import RobotAgent
+        from agents.humans.recorded_human import PrerecordedHuman
         if isinstance(a, RobotAgent):
             # initialize the robot and add to simulator's known "robot" field
             a.simulation_init(sim_map=self.obstacle_map,

@@ -4,14 +4,11 @@ import copy
 import numpy as np
 import shutil
 from dotmap import DotMap
-from random import seed, random, randint
+from random import random
 import string
 import random
-import glob
 import time
 import logging
-import imageio
-import socket
 from trajectory.trajectory import SystemConfig
 from contextlib import contextmanager
 

@@ -1,8 +1,7 @@
 from __future__ import print_function
-import logging
 import numpy as np
 import sys
-from humans.human_appearance import HumanAppearance
+from agents.humans.human_appearance import HumanAppearance
 if sys.version_info[0] == 2:
     from . import map_utils as mu
 else:
@@ -206,7 +205,8 @@ class Building():
         for ID, _ in list(self.people.items()):
             if(ID in self.ind_human_traversibles):
                 new_human_traversible = \
-                    np.stack([new_human_traversible, self.ind_human_traversibles[ID]], axis=2)
+                    np.stack([new_human_traversible,
+                              self.ind_human_traversibles[ID]], axis=2)
                 new_human_traversible = np.all(new_human_traversible, axis=2)
         return new_human_traversible
 

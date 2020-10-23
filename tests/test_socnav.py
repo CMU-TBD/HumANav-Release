@@ -1,9 +1,10 @@
 import numpy as np
 from random import random
+from dotmap import DotMap
 # Humanav
-from humans.human import Human
-from humans.recorded_human import PrerecordedHuman
-from simulators.robot_agent import RobotAgent
+from agents.humans.human import Human
+from agents.humans.recorded_human import PrerecordedHuman
+from agents.robot_agent import RobotAgent
 from socnav.socnav_renderer import SocNavRenderer
 # Planner + Simulator:
 from simulators.central_simulator import CentralSimulator
@@ -58,7 +59,7 @@ def create_params():
                agents_start=[], agents_end=[],
                robot_start_goal=[[10, 3, 0], [15.5, 8, 0.7]],
                max_time=30,
-               write_episode_log=False
+               write_episode_log=True
                )
 
     # Tilt the camera 10 degree down from the horizontal axis
@@ -78,7 +79,7 @@ def generate_auto_humans(starts, goals, simulator, environment, p, r):
     """
     num_gen_humans = min(len(starts), len(goals))
     print("Generated Auto Humans:", num_gen_humans)
-    from humans.human_configs import HumanConfigs
+    from agents.humans.human_configs import HumanConfigs
     for i in range(num_gen_humans):
         start_config = generate_config_from_pos_3(starts[i])
         goal_config = generate_config_from_pos_3(goals[i])
@@ -113,7 +114,7 @@ def construct_environment(p, test, episode):
         # Get the surreal dataset for human generation
         surreal_data = r.d
         # Update the Human's appearance classes to contain the dataset
-        from humans.human_appearance import HumanAppearance
+        from agents.humans.human_appearance import HumanAppearance
         HumanAppearance.dataset = surreal_data
         human_traversible = np.empty(traversible.shape)
         human_traversible.fill(1)  # initially all good
@@ -187,7 +188,7 @@ def test_socnav():
                 # create constant start/goal for testing purposes
                 r_start = episode.robot_start_goal[0]
                 r_goal = episode.robot_start_goal[1]
-                from humans.human_configs import HumanConfigs
+                from agents.humans.human_configs import HumanConfigs
                 start_conf = generate_config_from_pos_3(r_start)
                 goal_conf = generate_config_from_pos_3(r_goal)
                 configs = HumanConfigs(start_conf, goal_conf)
