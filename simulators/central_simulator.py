@@ -77,14 +77,10 @@ class CentralSimulator(SimulatorHelper):
             # update the time for all agents
             Agent.set_sim_t(self.sim_t)
             # initiate thread operations
-            pedestrian_threads = self.init_pedestrian_threads(current_state)
-            # start agent threads
-            self.start_threads(pedestrian_threads)
+            self.pedestrians_update(current_state)
             if self.robot:
                 # calls a single iteration of the robot update
                 self.robot.update()
-            # join all thread groups
-            self.join_threads(pedestrian_threads)
             # update simulator time
             self.sim_t += self.dt
             # capture time after all the gen_agents have updated
@@ -117,15 +113,16 @@ class CentralSimulator(SimulatorHelper):
             term_color = color_print(c)
             print("Robot termination cause: %s%s%s" %
                   (term_color, self.robot.termination_cause, color_reset))
-            # finally close the robot listener thread
-            self.decommission_robot(r_t)
         if(self.episode_params.write_episode_log):
             self.generate_sim_log()
+        if self.robot is not None:
             # TODO generate + write the score report
             from simulators.simulator_helper import sim_states_to_dataframe
             self.sim_df, self.agent_info = \
                 sim_states_to_dataframe(self.sim_states)
             self.generate_episode_score_report()
+            # finally close the robot listener thread
+            self.decommission_robot(r_t)
 
     def save_state(self, wall_t: float = 0.0):
         """Captures the current state of the world to be saved to self.sim_states
@@ -348,7 +345,11 @@ class CentralSimulator(SimulatorHelper):
                 r_listener_thread.join()
             del r_listener_thread
 
-    def init_pedestrian_threads(self, current_state: SimState):
+    def pedestrians_update(self, current_state: SimState):
         agent_threads = self.init_auto_agent_threads(current_state)
         prerec_threads = self.init_prerec_agent_threads(current_state)
-        return agent_threads + prerec_threads
+        pedestrian_threads = agent_threads + prerec_threads
+        # start agent threads
+        self.start_threads(pedestrian_threads)
+        # join all thread groups
+        self.join_threads(pedestrian_threads)

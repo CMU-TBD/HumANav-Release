@@ -26,10 +26,11 @@ class SocNavRenderer():
         self.human_traversible = []
 
         if self.p.building_params.load_meshes:
-            self.d = sbpd.get_dataset(
-                self.p.building_params.dataset_name, 'all', data_dir=self.p.sbpd_data_dir, surreal_params=self.p.surreal)
-            self.building = self.d.load_data(
-                self.p.building_params.building_name, self.p.robot_params.physical_params, self.p.flip)
+            self.d = sbpd.get_dataset(self.p.building_params.dataset_name, 'all',
+                                      data_dir=self.p.sbpd_data_dir,
+                                      surreal_params=self.p.surreal)
+            self.building = self.d.load_data(self.p.building_params.building_name,
+                                             self.p.robot_params.physical_params, self.p.flip)
             self.humans_loaded = False
             # Instantiating a camera/ shader object is only needed
             # for rgb and depth images
@@ -257,9 +258,9 @@ class SocNavRenderer():
         """
 
         traversible_dir = self.p.traversible_dir
-        traversible_dir = os.path.join(traversible_dir, self.p.building_name)
+        traversible_dir = os.path.join(traversible_dir, self.p.building_params.building_name)
 
-        if self.p.load_traversible_from_pickle_file or not self.p.load_meshes:
+        if self.p.building_params.load_traversible_from_pickle_file or not self.p.building_params.load_meshes:
             filename = os.path.join(traversible_dir, 'data.pkl')
             with open(filename, 'rb') as f:
                 data = pickle.load(f)

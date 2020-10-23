@@ -51,7 +51,7 @@ def create_socnav_params():
                        'render_humans_in_gray_only')
                    )
     p.camera_params = create_camera_params()
-    p.building_params = create_building_params()
+    p.building_params = create_building_params(p.render_3D)
     return p
 
 
@@ -306,10 +306,13 @@ def create_simulator_params():
     # Load obstacle map params
     p.obstacle_map_params = create_obstacle_map_params()
     # much faster to only render the topview rather than use the 3D renderer
+    from utils.utils import color_blue, color_reset
     if p.render_3D:
-        print("Full Render: TOPVIEW, RGB, and DEPTH")
+        print("%sRender mode: Full Render (TOPVIEW, RGB, and DEPTH)%s" %
+              (color_blue, color_reset))
     else:
-        print("Schematic view: TOPVIEW only")
+        print("%sRender mode: Schematic view (TOPVIEW only)%s" %
+              (color_blue, color_reset))
     p.verbose_printing = sim_p.getboolean('verbose_printing')
     p.clear_files = sim_p.getboolean('clear_files')
     p.record_video = sim_p.getboolean('record_video')
@@ -442,7 +445,7 @@ def create_map_params():
     return p
 
 
-def create_building_params():
+def create_building_params(full_render: bool = False):
     p = DotMap()
     # Load the dependencies
     build_p = user_config['building_params']
@@ -450,8 +453,13 @@ def create_building_params():
     p.building_name = build_p.get('building_name')
     p.building_thresh = build_p.getint('building_thresh')
     p.dataset_name = build_p2.get('dataset_name')
-    p.load_meshes = build_p2.getboolean('load_meshes')
-    p.load_traversible = build_p2.getboolean('load_traversible')
+    if full_render:
+        # always load meshes if running a full-render
+        p.load_meshes = True
+    else:
+        p.load_meshes = build_p2.getboolean('load_meshes')
+    p.load_traversible_from_pickle_file = \
+        build_p2.getboolean('load_traversible')
     return p
 
 

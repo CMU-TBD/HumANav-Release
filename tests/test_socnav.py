@@ -33,21 +33,9 @@ def create_params():
     from params.central_params import create_episodes_params, create_datasets_params
     p.episode_params = create_episodes_params()
     # not testing robot, only simulator + agents
-    p.episode_params.without_robot = False
+    p.episode_params.without_robot = True
     # overwrite tests with custom basic test
     p.episode_params.tests = {}
-    # p.episode_params.tests['test_socnav'] = \
-    #     DotMap(name='test_socnav',
-    #            map_name='Zara',
-    #            pedestrian_datasets=create_datasets_params(["zara02"]),
-    #            datasets_start_t=[0],
-    #            ped_ranges=[(44, -1)],
-    #            agents_start=[],
-    #            agents_end=[],
-    #            robot_start_goal=[[22, 10, 0.2], [2, 2, 1.5]],
-    #            max_time=30,
-    #            write_episode_log=False
-    # )
     default_name = "test_socnav_univ"
     p.episode_params.tests[default_name] = \
         DotMap(name=default_name,
@@ -59,7 +47,7 @@ def create_params():
                agents_start=[], agents_end=[],
                robot_start_goal=[[10, 3, 0], [15.5, 8, 0.7]],
                max_time=30,
-               write_episode_log=True
+               write_episode_log=False
                )
 
     # Tilt the camera 10 degree down from the horizontal axis
@@ -99,15 +87,31 @@ def generate_auto_humans(starts, goals, simulator, environment, p, r):
         simulator.add_agent(new_human_i)
 
 
+def load_building(p):
+    try:
+        # get the renderer from the camera p
+        r = SocNavRenderer.get_renderer(p)
+        # obtain "resolution and traversible of building"
+        dx_cm, traversible = r.get_config()
+    except FileNotFoundError:  # did not find traversible.pkl for this map
+        print("%sUnable to find traversible, reloading building%s" %
+              (color_red, color_reset))
+        # it *should* have been the case that the user did not load the meshes
+        assert(p.building_params.load_meshes == False)
+        p2 = copy.deepcopy(p)
+        p2.building_params.load_meshes = True
+        r = SocNavRenderer.get_renderer(p2)
+        # obtain "resolution and traversible of building"
+        dx_cm, traversible = r.get_config()
+    return r, dx_cm, traversible
+
+
 def construct_environment(p, test, episode):
-    # update map to match the episode
-    p.building_name = episode.map_name
+    # update map to match the episode params
+    p.building_params.building_name = episode.map_name
     print("%s\n\nStarting episode \"%s\" in building \"%s\"%s\n\n" %
-          (color_yellow, test, p.building_name, color_reset))
-    # get the renderer from the camera p
-    r = SocNavRenderer.get_renderer(p)
-    # obtain "resolution and traversible of building"
-    dx_cm, traversible = r.get_config()
+          (color_yellow, test, p.building_params.building_name, color_reset))
+    r, dx_cm, traversible = load_building(p)
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm / 100.0
     if p.render_3D:

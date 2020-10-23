@@ -83,15 +83,31 @@ def generate_auto_humans(starts, goals, simulator, environment, p, r):
         simulator.add_agent(new_human_i)
 
 
-def construct_environment(p: DotMap, episode_name: str, episode: DotMap):
-    # update map to match the episode
-    p.building_name = episode.map_name
+def load_building(p):
+    try:
+        # get the renderer from the camera p
+        r = SocNavRenderer.get_renderer(p)
+        # obtain "resolution and traversible of building"
+        dx_cm, traversible = r.get_config()
+    except FileNotFoundError:  # did not find traversible.pkl for this map
+        print("%sUnable to find traversible, reloading building%s" %
+              (color_red, color_reset))
+        # it *should* have been the case that the user did not load the meshes
+        assert(p.building_params.load_meshes == False)
+        p2 = copy.deepcopy(p)
+        p2.building_params.load_meshes = True
+        r = SocNavRenderer.get_renderer(p2)
+        # obtain "resolution and traversible of building"
+        dx_cm, traversible = r.get_config()
+    return r, dx_cm, traversible
+
+
+def construct_environment(p, test, episode):
+    # update map to match the episode params
+    p.building_params.building_name = episode.map_name
     print("%s\n\nStarting episode \"%s\" in building \"%s\"%s\n\n" %
-          (color_yellow, episode_name, p.building_name, color_reset))
-    # get the renderer from the camera p
-    r = SocNavRenderer.get_renderer(p)
-    # obtain "resolution and traversible of building"
-    dx_cm, traversible = r.get_config()
+          (color_yellow, test, p.building_params.building_name, color_reset))
+    r, dx_cm, traversible = load_building(p)
     # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
     dx_m = dx_cm / 100.0
     if p.render_3D:
@@ -103,17 +119,21 @@ def construct_environment(p: DotMap, episode_name: str, episode: DotMap):
         human_traversible = np.empty(traversible.shape)
         human_traversible.fill(1)  # initially all good
 
+    # In order to print more readable arrays
+    np.set_printoptions(precision=3)
+
+    # TODO: make this a param element
     room_center = \
         np.array([traversible.shape[1] * 0.5,
                   traversible.shape[0] * 0.5,
                   0.0]
                  ) * dx_m
+
     # Create default environment which is a dictionary
     # containing ["map_scale", "traversibles"]
     # which is a constant and list of traversibles respectively
-
     environment = {}
-    environment["map_scale"] = dx_m
+    environment["map_scale"] = float(dx_m)
     environment["room_center"] = room_center
     # obstacle traversible / human traversible
     if p.render_3D:
