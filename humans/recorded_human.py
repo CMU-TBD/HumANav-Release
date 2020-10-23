@@ -26,7 +26,7 @@ class PrerecordedHuman(Human):
                 HumanAppearance)
         else:
             appearance = None
-        self.relative_diff = 0  # how much time the agent will spend stopped
+        self.relative_diff: float = 0.0  # how much time the agent will spend stopped
         super().__init__(name, appearance, init_configs)
 
     def get_start_time(self):
@@ -67,8 +67,10 @@ class PrerecordedHuman(Human):
         self.update_world(sim_state)
         if self.check_collisions(self.world_state, include_agents=False):
             self.collision_cooldown = self.params.collision_cooldown_amnt
-            # update relative time differences
-            self.relative_diff += self.collision_cooldown
+            # only pause the agents if flag is set
+            if self.params.pause_on_collide:
+                # update relative time differences
+                self.relative_diff += self.collision_cooldown
         # update collision cooldown
         if(self.collision_cooldown > 0):
             self.collision_cooldown -= 1
@@ -77,13 +79,13 @@ class PrerecordedHuman(Human):
         # TODO now this step is performed in one go - what does this mean for collisions?
         # while not self.has_collided and self.get_rel_t() > self.get_current_time():
         # this is to account for the delay_time / init_delay
-        if self.collision_cooldown > 0:
+        if self.params.pause_on_collide and self.collision_cooldown > 0:
             return
         self.current_precalc_step = \
             int((self.get_rel_t() - self.t_data[1] + self.del_t) / self.del_t)
 
     def act(self):
-        if self.collision_cooldown > 0:
+        if self.params.pause_on_collide and self.collision_cooldown > 0:
             return
         self.current_step += 1
         self.current_config = self.get_interp_posns()
