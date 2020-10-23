@@ -13,10 +13,7 @@ surreal/download/SURREAL/
 surreal/code/get-pip.py
 surreal/code/config
 .vscode/
-LB_WayPtNav_Data/
-surreal/code/config
-tests/humanav/
-tests/visual-nav/
+wayptnav_data/
 tests/socnav/
 .idea*
 build/
