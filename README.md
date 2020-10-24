@@ -10,11 +10,11 @@ We provide scenarios curated from real world data for social navigation algorith
 ![maps](https://drive.google.com/uc?export=download&id=1fxTV0dXyrAmDRT5M_QcDMkBxvF9REQPV)
 
 
-## How Tos
+## How To's
 ### Install
-Guide for installation at [`INSTALLATION.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/tree/master/INSTALLATION.md)
+Guide for installation at [`INSTALLATION.md`](INSTALLATION.md)
 ### Use
-Guide for usage at [`USAGE.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/tree/master/USAGE.md)
+Guide for usage at [`USAGE.md`](USAGE.md)
 
 ## Acknowledgements
 This work was funded under grants from the National Science Foundation (NSF IIS-1734361) and the National Institute on Disability, Independent Living, and Rehabilitation Research (NIDILRR 90DPGE0003).

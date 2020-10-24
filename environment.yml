@@ -1,4 +1,4 @@
-name: tbd_socnavbench
+name: socnavbench
 channels:
   - defaults
 dependencies:

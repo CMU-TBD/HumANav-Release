@@ -1,7 +1,7 @@
 from setuptools import setup
 from setuptools import find_packages
 
-setup(name='tbd_socnavbench',
+setup(name='socnavbench',
       version='1.0',
       author='Gustavo Silvera, Abhijat Biswas',
       author_email='',
