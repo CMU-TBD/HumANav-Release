@@ -2,7 +2,7 @@
 ## Overall Structure of the Simulator
 The primary `tbd_SocNavBench` program runs through the various episodes provided (see `episode_params.ini`) and spawns a `CentralSimulator` for each test, the initial states of those simulators are based off the running test. However, in order to start an episode there must also be an external `Joystick` process that is used to send commands, requests, and signals to the robot through a socket communication protocol. The `Joystick` is what users will primarily be interacting with, as it provides the interface for any planning algorithm. 
 
-![Structure Graphic](https://raw.githubusercontent.com/GustavoSilvera/GustavoSilvera.github.io/master/Images/proj/sim_structure.png)
+![Structure Graphic](https://drive.google.com/uc?export=download&id=1FUtc420QOcYp57q-9XqSktABfcfYbiBJ)
 
 
 ## Running `tbd_SocNavBench`
@@ -26,21 +26,21 @@ The joystick can:
 - `act()` by sending specific velocity commands to the robot to execute in the simulator, which the `CentralSimulator` blocks until the commands are sent. 
  To start a joystick executable you can simply run the `test_example_joystick.py` which will work independently of the type of `Joystick` class that is being used. 
 
-As a head start, we've provided two sample classes in `joystick/example_joystick.py`:
+As a starting-off point, we've provided two sample classes in `joystick/example_joystick.py`:
 - `JoystickRandom` uses a generic random planner that showcases one of the lightest uses of the Joystick interface.
 - `JoystikWithPlanner` uses a basic sampling planner that showcases how a typical planner implementation might be integrated with the interface. 
 
 
-The joystick can be made to run synchronously with the simulator or asynchronously by repeating the last command sent for a number of simulator frames. This can be toggled in [`params/params_example.ini`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/params/params_example.ini) by editing the `block_joystick` param in `[simulator_params]`
+The joystick can be made to run synchronously with the simulator or asynchronously by repeating the last command sent for a number of simulator frames. This can be toggled in [`params/params_example.ini`](params/params_example.ini) by editing the `block_joystick` param in `[simulator_params]`
 
-The communication port is defaulted to 6000, this can be changed by editing `port` in [`params/params_example.ini`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/params/params_example.ini) under `[robot_params]`
+The communication port is defaulted to 6000, this can be changed by editing `port` in [`params/params_example.ini`](params/params_example.ini) under `[robot_params]`
   - Note that the program actually uses two sockets to ensure bidirectional communications for asynchronous data transmission. We have designited the successor of `port` to be set as the robot receiver port. Therefore in our default case, we are actually using ports 6000 and 6001.
 
 The joystick must be run in an external process (but within the same `conda env`)
     - Therefore, make sure before running `test_joystick.py` that the conda environment is `tbd_socnavbench` (same as for `test_socnav.py` and `test_episodes.py`)
 
 ## More about the `Robot`
-As depicted in the `params_example.ini` param file, the default robot is modeled after an [IEEE pr2 robot](https://robots.ieee.org/robots/pr2/). Since the simulation primaily focuses on the base of the robot, those are the dimensions we use. 
+As depicted in the `params_example.ini` param file, the default robot is modeled after a [Pioneer P3DX robot](https://www.generationrobots.com/media/Pioneer3DX-P3DX-RevA.pdf). Since the simulation primaily focuses on the base of the robot, those are the dimensions we use. 
 
 Also note that we are making the assumption that both the system dynamics of the robot and the environment are the same. But more information about the system dynamics can be found in the `Joystick` instances, since they are given the main params of the system dynamics as seen in the `params_example.ini`.
 
@@ -78,4 +78,4 @@ More information about the `sim_states` can be found in `simulators/sim_state.py
 
 
 ## Visualization
-Currently the mode is set to "topview only" which uses just matplotlib to render a top-down "bird's-eye-view" perspective without needing the intensive OpenGL renderer. However, to visualize the Depth/RGB modes change the `render_3D` parameter in [`params/params_example.ini`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/blob/master/params/params_example.ini) to `True`. Note that currently the program does not support parallel image rendering when using the 3D renderer, making it very time consuming.
+Currently the mode is set to "topview only" which uses just matplotlib to render a top-down "bird's-eye-view" perspective without needing the intensive OpenGL renderer. However, to visualize the Depth/RGB modes change the `render_3D` parameter in [`params/params_example.ini`](params/params_example.ini) to `True`. Note that currently the program does not support parallel image rendering when using the 3D renderer, making it very time consuming.
