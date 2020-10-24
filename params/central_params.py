@@ -460,6 +460,7 @@ def create_building_params(full_render: bool = False):
         p.load_meshes = build_p2.getboolean('load_meshes')
     p.load_traversible_from_pickle_file = \
         build_p2.getboolean('load_traversible')
+    p.flip = False
     return p
 
 

@@ -302,8 +302,8 @@ class SimulatorHelper(object):
             # Update human traversible
             # NOTE: this is technically not R-O since it modifies the human trav
             # TODO: use a separate variable to keep SimStates as R-O
-            state.get_environment()["human_traversible"] = \
-                renderer.get_human_traversible()
+            # state.get_environment()["human_traversible"] = \
+            #     renderer.get_human_traversible()
             # compute the rgb and depth images
             rgb_image_1mk3, depth_image_1mk1 = \
                 render_rgb_and_depth(renderer, np.array([camera_pos_13]),

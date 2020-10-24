@@ -23,14 +23,15 @@ class SocNavRenderer():
 
         # Making use of a dictionary mapping Human's names to humans
         self.humans = {}  # to keep track of the Humans
-        self.human_traversible = []
+        self.human_traversible = None
 
         if self.p.building_params.load_meshes:
             self.d = sbpd.get_dataset(self.p.building_params.dataset_name, 'all',
                                       data_dir=self.p.sbpd_data_dir,
                                       surreal_params=self.p.surreal)
             self.building = self.d.load_data(self.p.building_params.building_name,
-                                             self.p.robot_params.physical_params, self.p.flip)
+                                             self.p.robot_params.physical_params,
+                                             self.p.building_params.flip)
             self.humans_loaded = False
             # Instantiating a camera/ shader object is only needed
             # for rgb and depth images
@@ -97,7 +98,7 @@ class SocNavRenderer():
         Inserts a human mesh where their positional
         arguments specify
         """
-        if self.p.load_meshes:
+        if self.p.building_params.load_meshes:
             if not only_sample_human_identity:
                 # Load the human mesh into the scene
                 self.building.load_human_into_scene(human)
@@ -119,7 +120,7 @@ class SocNavRenderer():
         Remove the human with identity ID
         - Must be done from self.building and self.humans
         """
-        if self.p.load_meshes:
+        if self.p.building_params.load_meshes:
             self.building.remove_human(name)
             self.humans.pop(name)
 
@@ -134,7 +135,7 @@ class SocNavRenderer():
         """
         Updates an existing human within a building 
         """
-        if self.p.load_meshes:
+        if self.p.building_params.load_meshes:
             self.humans[human.get_name()] = human
             self.building.update_human(human)
             self.human_traversible = self.building.human_traversible
@@ -144,7 +145,7 @@ class SocNavRenderer():
         Render rgb image(s) from the x, y, theta
         location in starts and thetas.
         """
-        if self.p.load_meshes:
+        if self.p.building_params.load_meshes:
             # Scale thetas by 1/delta_theta as the building object
             # internally scales theta by delta_theta
             nodes_n3 = np.concatenate([starts_n2 * 1.,
@@ -258,7 +259,8 @@ class SocNavRenderer():
         """
 
         traversible_dir = self.p.traversible_dir
-        traversible_dir = os.path.join(traversible_dir, self.p.building_params.building_name)
+        traversible_dir = os.path.join(
+            traversible_dir, self.p.building_params.building_name)
 
         if self.p.building_params.load_traversible_from_pickle_file or not self.p.building_params.load_meshes:
             filename = os.path.join(traversible_dir, 'data.pkl')
