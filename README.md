@@ -1,7 +1,7 @@
 # SocNavBench
 Welcome to the Social Navigation Benchmark utility (SocNavBench), a codebase for benchmarking robot planning algorithms against various episodes of containing multi-agent environments, accompanying out paper ["SocNavBench: A Grounded Simulation Testing Framework for Evaluating Social Navigation"](http://www.cs.cmu.edu/~abhijatb/assets/THRI_SocNav_Benchmark.pdf).
 
-![Fig1](https://drive.google.com/uc?export=download&id=1iDyBGvmUjC_X65_PTsBX0KnQpsQsQ8BA"/>)
+![Fig1](https://drive.google.com/uc?export=download&id=1iDyBGvmUjC_X65_PTsBX0KnQpsQsQ8BA)
 
 
 We provide scenarios curated from real world data for social navigation algorithms to be tested and evaluated on.
