@@ -1,6 +1,6 @@
 ## Generate Human Walking Meshes From SURREAL
 
-The tbd_SocNavBenchmark 3D renderer uses photorealistic textured meshes from the [SURREAL](https://www.di.ens.fr/willow/research/surreal/) dataset. Please follow the following setup instructions; #1 and #2 are modified from the [SURREAL GitHub page](https://github.com/gulvarol/surreal).
+The SocNavBench 3D renderer uses photorealistic textured meshes from the [SURREAL](https://www.di.ens.fr/willow/research/surreal/) dataset. Please follow the following setup instructions; #1 and #2 are modified from the [SURREAL GitHub page](https://github.com/gulvarol/surreal).
 
 ## 1. Accept the SURREAL dataset license
 
@@ -13,10 +13,10 @@ Once you receive the credentials to download the dataset, you will have a person
 ## 2. Create your own synthetic data
 ### 2.1. Preparation
 #### 2.1.1. SMPL data (~2.6 GB)
-a) With the same credentials as with the SURREAL dataset, you can download the necessary SMPL data and place it in `/PATH/TO/tbd_SocNavBenchmark/surreal/download/SURREAL/smpl_data`.
+a) With the same credentials as with the SURREAL dataset, you can download the necessary SMPL data and place it in `/PATH/TO/SocNavBench/surreal/download/SURREAL/smpl_data`.
 
 ``` 
-./download_smpl_data.sh /PATH/TO/tbd_SocNavBenchmark/surreal/download yourusername yourpassword
+./download_smpl_data.sh /PATH/TO/SocNavBench/surreal/download yourusername yourpassword
 ```
 
 b) You need to download SMPL for MAYA from http://smpl.is.tue.mpg.de in order to run the synthetic data generation code. Once you agree on SMPL license terms and have access to downloads, you will have the following two files (~ 40 MB).
@@ -26,11 +26,11 @@ basicModel_f_lbs_10_207_0_v1.0.2.fbx
 basicModel_m_lbs_10_207_0_v1.0.2.fbx
 ```
 
-Place these two files under `/PATH/TO/tbd_SocNavBenchmark/surreal/download/SURREAL/smpl_data` folder.
+Place these two files under `/PATH/TO/SocNavBench/surreal/download/SURREAL/smpl_data` folder.
 
-The folder `/PATH/TO/tbd_SocNavBenchmark/surreal/download/SURREAL/smpl_data` should contain the folling files and folders:
+The folder `/PATH/TO/SocNavBench/surreal/download/SURREAL/smpl_data` should contain the folling files and folders:
 ```
-/PATH/TO/tbd_SocNavBenchmark/surreal/download/SURREAL/smpl_data/
+/PATH/TO/SocNavBench/surreal/download/SURREAL/smpl_data/
     - basicModel_f_lbs_10_207_0_v1.0.2.fbx
     - basicModel_m_lbs_10_207_0_v1.0.2.fbx
     - female_beta_stds.npy
@@ -98,14 +98,14 @@ $BLENDER_PATH/2.78/python/bin/python3.5m -m pip install scipy
 ### Make sure your data is organized correctly
 
 ### Edit the config file
-In the directory `/PATH/TO/tbd_SocNavBenchmark/surreal/code` update the following line in the file called `"config"`
+In the directory `/PATH/TO/SocNavBench/surreal/code` update the following line in the file called `"config"`
 ```
-smpl_data_folder   = '/PATH/TO/tbd_SocNavBenchmark/surreal/download/SURREAL/smpl_data'
+smpl_data_folder   = '/PATH/TO/SocNavBench/surreal/download/SURREAL/smpl_data'
 ```
 
 ### Test the installation
 ```
-cd /PATH/TO/tbd_SocNavBenchmark/surreal/code
+cd /PATH/TO/SocNavBench/surreal/code
 $BLENDER_PATH/blender -b -t 1 -P export_human_meshes.py -- --idx 2 --ishape 0 --stride 59 --gender female --body_shape 1000 --outdir test_human_mesh_generation
 ```
 The test should create the following directory structure:
@@ -133,12 +133,12 @@ The human_mesh_i.obj (mesh of the corresponding human body), and human_centering
 ### Generate the Human Mesh Models for SocNavBench
 Note: Full data generation takes around ~4 hours & 5 GB of space.
 ```
-cd /PATH/TO/tbd_SocNavBenchmark/surreal/code
+cd /PATH/TO/SocNavBench/surreal/code
 sh generate_meshes.sh
 ```
 
-Human meshes will be saved in `/PATH/TO/tbd_SocNavBenchmark/surreal/code/human_meshes`.
-Human textures will be saved in `/PATH/TO/tbd_SocNavBenchmark/surreal/code/human_textures`
+Human meshes will be saved in `/PATH/TO/SocNavBench/surreal/code/human_meshes`.
+Human textures will be saved in `/PATH/TO/SocNavBench/surreal/code/human_textures`
 
 ## Foundations
 This page is built upon the [`surreal/README.md`](https://github.com/vtolani95/HumANav-Release/blob/master/surreal/README.md) in the *Human Active Navigation* ([HumANav](https://github.com/vtolani95/HumANav-Release)) codebase.

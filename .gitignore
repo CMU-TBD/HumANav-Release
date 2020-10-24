@@ -1,4 +1,4 @@
-tbd_socnavbench.egg-info/
+socnavbench.egg-info/
 *.pyc
 server/outdir
 tmp/

@@ -10,7 +10,7 @@
 #include <cstring>
 #include <string>
 
-#define PORT_SEND 6000 // default for tbd_socnavbench
+#define PORT_SEND 6000 // default for SocNavBench
 #define PORT_RECV (PORT_SEND + 1)
 #define LOCALHOST "127.0.0.1" // local host
 
