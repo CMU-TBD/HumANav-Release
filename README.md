@@ -1,23 +1,23 @@
-# tbd_SocNavBenchmark
-Welcome to the Social Navigation Benchmark utility (SocNavBenchmark), a codebase for benchmarking robot planning algorithms against various episodes of containing multi-agent environments. We are a team of researches from Carnegie Mellon University's Robotics Institute at TBD Lab and HARP Lab. 
+# SocNavBench
+Welcome to the Social Navigation Benchmark utility (SocNavBench), a codebase for benchmarking robot planning algorithms against various episodes of containing multi-agent environments, accompanying out paper ["SocNavBench: A Grounded Simulation Testing Framework for Evaluating Social Navigation"](http://www.cs.cmu.edu/~abhijatb/assets/THRI_SocNav_Benchmark.pdf).
 
-![Expected Movie without OpenGL](https://raw.githubusercontent.com/GustavoSilvera/GustavoSilvera.github.io/master/Images/proj/sim_without_humans.gif)
+![Fig1](https://drive.google.com/uc?export=download&id=1iDyBGvmUjC_X65_PTsBX0KnQpsQsQ8BA"/>)
 
-![Expected Movie with OpenGL](https://raw.githubusercontent.com/GustavoSilvera/GustavoSilvera.github.io/master/Images/proj/sim_with_humans.gif)
 
-## External README's
-### Installation
+We provide scenarios curated from real world data for social navigation algorithms to be tested and evaluated on.
+![sim2real](https://drive.google.com/uc?export=download&id=11eB-_FWnURZWzc4xu__yv98puC4VstQO)
+
+![maps](https://drive.google.com/uc?export=download&id=1fxTV0dXyrAmDRT5M_QcDMkBxvF9REQPV)
+
+
+## How Tos
+### Install
 Guide for installation at [`INSTALLATION.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/tree/master/INSTALLATION.md)
-### Usage
+### Use
 Guide for usage at [`USAGE.md`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/tree/master/USAGE.md)
 
-## Rendering Utility
-For rendering purposes, we use the [Swiftshader](https://github.com/google/swiftshader) rendering engine, a CPU based rendering engine for photorealistic visuals (rgb, disparity, surface normal, etc.) from textured meshes used in. 
-![Render Graphic](https://smlbansal.github.io/LB-WayPtNav-DH/resources/images/dataset.jpg)
-### Building(map) Rendering
-We use mesh scans of office buildings from the [Stanford Large Scale 3d Indoor Spaces Dataset (SD3DIS)](http://buildingparser.stanford.edu/dataset.html) , however the rendering engine is independent of the meshes used. In principle, textured meshes from scans of any 3D model (see [`sd3dis`](https://github.com/CMU-TBD/tbd_SocNavBenchmark/tree/master/sd3dis)). 
-### Human Rendering
-For human meshes we turn to the [SURREAL Dataset](https://www.di.ens.fr/willow/research/surreal/data/) which renders images of synthetic humans in a variety of poses, genders, body shapes, and lighting conditions. Though the meshes themselves are synthetic, the human poses in the SURREAL dataset come from real human motion capture data and contain a variety of actions including running, jumping, dancing, acrobatics, and walking. We focus on the subset of poses in which the human is in a walking state.
+## Acknowledgements
+This work was funded under grants from the National Science Foundation (NSF IIS-1734361) and the National Institute on Disability, Independent Living, and Rehabilitation Research (NIDILRR 90DPGE0003).
 
-## Foundations
-This project is built upon the *Human Active Navigation* ([HumANav](https://github.com/vtolani95/HumANav-Release)) and *Learning-Based Waypoint Navigation* ([Visual-Navigation](https://github.com/smlbansal/Visual-Navigation-Release)) codebases. Special thanks to [Varun Tolani](https://github.com/vtolani95) for helping us with his projects.
+This project is also built upon the *Human Active Navigation* ([HumANav](https://github.com/vtolani95/HumANav-Release)) and *Learning-Based Waypoint Navigation* ([Visual-Navigation](https://github.com/smlbansal/Visual-Navigation-Release)) codebases. Special thanks to [Varun Tolani](https://github.com/vtolani95) for helping us with his projects.
+
