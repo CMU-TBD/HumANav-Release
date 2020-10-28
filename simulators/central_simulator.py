@@ -103,14 +103,14 @@ class CentralSimulator(SimulatorHelper):
         for p in self.prerecs.values():
             del p
         # turn off the robot if it is still on
-        if(not self.robot.get_end_acting()):
-            self.robot.power_off()
         # capture final wall clock (completion) time
         self.sim_wall_clock = time.time() - start_time
         print("\nSimulation completed in", self.sim_wall_clock,
               "real world seconds")
         # decommission_robot
         if self.robot is not None:
+            if(not self.robot.get_end_acting()):
+                self.robot.power_off()
             self.robot_collisions = self.gather_robot_collisions(iteration)
             c = termination_cause_to_color(self.robot.termination_cause)
             term_color = color_print(c)
