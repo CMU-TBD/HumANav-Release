@@ -19,7 +19,7 @@ class RobotAgent(Agent):
         # To send the world state on the next joystick ping
         self.joystick_requests_world = -1
         # whether or not to repeat the last joystick input
-        self.repeat_joystick = False
+        self.block_joystick = False  # gets updated in CentralSimulator
         # told the joystick that the robot is powered off
         self.notified_joystick = False
         # amount of time the robot is blocking on the joystick
@@ -51,7 +51,7 @@ class RobotAgent(Agent):
 
     def calc_repeat_freq(self):
         # calculates the number of commands the robot repeats if in repeat-mode
-        rf = self.params.robot_params.physical_params.repeat_freq
+        rf = self.params.robot_params.repeat_freq
         return int(np.floor(rf / self.num_cmds_per_batch))
 
     @staticmethod
@@ -155,15 +155,16 @@ class RobotAgent(Agent):
         if self.joystick_requests_world == 0:
             # has processed all prior commands
             send_sim_state(self)
-        # block simulation (world) progression on the act() commands sent from the joystick
-        init_block_t = time.time()
-        while not self.get_end_acting() and self.num_executed >= len(self.joystick_inputs):
-            if self.num_executed == len(self.joystick_inputs):
-                if self.joystick_requests_world == 0:
-                    send_sim_state(self)
-            time.sleep(0.001)
-        # capture how much time was spent blocking on joystick inputs
-        self.block_time_total += time.time() - init_block_t
+        if(self.block_joystick):
+            # block simulation (world) progression on the act() commands sent from the joystick
+            init_block_t = time.time()
+            while not self.get_end_acting() and self.num_executed >= len(self.joystick_inputs):
+                if self.num_executed == len(self.joystick_inputs):
+                    if self.joystick_requests_world == 0:
+                        send_sim_state(self)
+                time.sleep(0.001)
+            # capture how much time was spent blocking on joystick inputs
+            self.block_time_total += time.time() - init_block_t
 
     def plan(self):
         # recall the planning is being done with YOUR social nagivation algorithm

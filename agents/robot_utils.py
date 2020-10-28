@@ -119,15 +119,13 @@ def manage_data(robot, data_str: str):
         # add input commands to queue to keep track of
         for i in range(robot.num_cmds_per_batch):
             np_data = np.array(joystick_input[i], dtype=np.float32)
-            # duplicate commands if *repeating* instead of blocking
-            if robot.repeat_joystick:  # if need be, repeat n-1 times
-                repeat_amnt = robot.calc_repeat_freq()
-                for i in range(repeat_amnt):
-                    # adds command to local list of individual commands
-                    robot.joystick_inputs.append(np_data)
-            else:
+            if robot.block_joystick:  # if blocking on joystick don't duplicate
                 # else no repeat, only account for the command once
                 robot.joystick_inputs.append(np_data)
+            else:
+                for i in range(robot.calc_repeat_freq()):
+                    # adds command to local list of individual commands
+                    robot.joystick_inputs.append(np_data)
 
 
 def establish_joystick_receiver_connection():

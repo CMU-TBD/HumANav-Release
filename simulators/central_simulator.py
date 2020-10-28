@@ -78,7 +78,7 @@ class CentralSimulator(SimulatorHelper):
             Agent.set_sim_t(self.sim_t)
             # initiate thread operations
             self.pedestrians_update(current_state)
-            if self.robot:
+            if self.robot is not None:
                 # calls a single iteration of the robot update
                 self.robot.update()
             # update simulator time
@@ -102,6 +102,9 @@ class CentralSimulator(SimulatorHelper):
         # free all the prerecs
         for p in self.prerecs.values():
             del p
+        # turn off the robot if it is still on
+        if(not self.robot.get_end_acting()):
+            self.robot.power_off()
         # capture final wall clock (completion) time
         self.sim_wall_clock = time.time() - start_time
         print("\nSimulation completed in", self.sim_wall_clock,
@@ -306,7 +309,7 @@ class CentralSimulator(SimulatorHelper):
             print("%sNo robot in simulator%s" % (color_red, color_reset))
             return None
         # give the robot knowledge of the initial world
-        self.robot.repeat_joystick = not self.params.block_joystick
+        self.robot.block_joystick = self.params.block_joystick
         self.robot.update_world(current_state)
         # initialize the robot to establish joystick connection
         assert(self.robot.world_state is not None)
