@@ -1,6 +1,6 @@
 # Usage and Information
 ## Overall Structure of the Simulator
-The primary `SocNavBench` program runs through the various episodes provided (see [`episode_params_val.ini`](params/episode_params_val.ini)) and spawns a `CentralSimulator` for each test, the initial states of those simulators are based off the running test. However, in order to start an episode there must also be an external `Joystick` process that is used to send commands, requests, and signals to the robot through a socket communication protocol. The `Joystick` is what users will primarily be interacting with, as it provides the interface for any planning algorithm. 
+The `Simulator` used in `SocNavBench` runs through a single episode to execute and measure the `RobotAgent`'s planning algorithm for a particular episode. An episode consists of the parameters for a particular simulation, such as the pedestrians, environment, and robot's start/goal positions. In order to measure arbitrary planning algorithms we provide a `Joystick` API that translates data to and from the simulator to control the robot. 
 
 ![Structure Graphic](https://drive.google.com/uc?export=download&id=1FUtc420QOcYp57q-9XqSktABfcfYbiBJ)
 
@@ -23,7 +23,7 @@ The main program relies on (and will block on) an inter-process communication ch
 The joystick can:
 - `sense()` by requesting a json-serialized `sim_state` which holds all the information about that state.
 - `plan()` by using the updated information about the current state, such as the current simulator time, agent positions, and environment.
-- `act()` by sending specific velocity commands to the robot to execute in the simulator, which the `CentralSimulator` blocks until the commands are sent. 
+- `act()` by sending specific velocity commands to the robot to execute in the simulator, which the `Simulator` blocks until the commands are sent. 
 - To start a joystick executable you can simply run the `test_example_joystick.py` which will work independently of the type of `Joystick` class that is being used. 
 
 As a starting-off point, we've provided two sample classes in `joystick/`:
@@ -66,10 +66,10 @@ Our episodes consists of all the fields seen for each test in [`episode_params_v
 
 To choose which tests to run, edit the `tests` under `[episode_params_val]` in `episode_params_val.ini` which holds the names of the tests to run.
 
-## More about the `CentralSimulator`
-The `CentralSimulator` progresses the state of the world in the main `simulate()` loop, which spawns update threads for all the agents in the scene, updates the robot (which blocks on the joystick input) and captures a "snapshot" of the current simulator status in the form of a `sim_state` that is stored for later use. 
+## More about the `Simulator`
+The `Simulator` progresses the state of the world in the main `simulate()` loop, which spawns update threads for all the agents in the scene, updates the robot (which blocks on the joystick input) and captures a "snapshot" of the current simulator status in the form of a `sim_state` that is stored for later use. 
 
-Once the episode simulation has completed, the `CentralSimulator` will convert all its stored `sim_state` instances into image frames (`.png`'s) of the state of the world at that particular time. For non-3D-generated images these conversions can be done in parallel and merged afterwards to generate a `.gif` movie of the entire episode with the simulator time correlating to real-world viewing time.
+Once the episode simulation has completed, the `Simulator` will convert all its stored `sim_state` instances into image frames (`.png`'s) of the state of the world at that particular time. For non-3D-generated images these conversions can be done in parallel and merged afterwards to generate a `.gif` movie of the entire episode with the simulator time correlating to real-world viewing time.
 
 ## More about `sim_states`
 Sim-states are what we use to keep track of the simulator without going deep into the internals of the moving parts. For example, a `sim_state` instance might contain information similar to what a robot would sense using a lidar sensor, that being the environment and the current pos3's (x, y, theta) of the agents (no velocity, acceleration, trajectory, starts/goals, etc.).

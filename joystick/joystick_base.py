@@ -215,7 +215,7 @@ class JoystickBase():
 
             if self.joystick_params.write_pandas_log:
                 # used for file IO such as pandas logging
-                # NOTE: this MUST match the directory name in CentralSimulator
+                # NOTE: this MUST match the directory name in Simulator
                 self.dirname = 'tests/socnav/' + "test_" + self.algorithm_name + "/" +\
                     self.current_ep.get_name() + "/joystick_data"
                 # Write the Agent's trajectory data into a pandas file

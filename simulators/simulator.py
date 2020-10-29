@@ -9,7 +9,7 @@ from utils.utils import *
 from utils.image_utils import *
 
 
-class CentralSimulator(SimulatorHelper):
+class Simulator(SimulatorHelper):
     """The centralized simulator of SocNavBench """
 
     def __init__(self, environment: dict, renderer=None, episode_params=None):
@@ -21,7 +21,7 @@ class CentralSimulator(SimulatorHelper):
         """
         # init SimulatorHelper base class
         super().__init__(environment)
-        # init CentralSimulator implementation
+        # init Simulator implementation
         self.episode_params = episode_params
         # output directory is updated again if there is a robot (and algorithm) in the simulator
         self.params.output_directory = \

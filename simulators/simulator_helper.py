@@ -343,9 +343,8 @@ def sim_states_to_dataframe(sim):
     :param sim:
     :return:
     """
-    from simulators.central_simulator import CentralSimulator
-
-    if isinstance(sim, CentralSimulator):
+    from simulators.simulator import Simulator
+    if isinstance(sim, Simulator):
         all_states = sim.states
     elif isinstance(sim, dict):
         all_states = sim

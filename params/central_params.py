@@ -96,9 +96,7 @@ def create_dataset(dataset_name: str):
     p.name = dataset_name
     p.file_name = dataset_p.get('file_name')
     p.fps = dataset_p.getint('fps')
-    # p.ped_range = eval(dataset_p.get('ped_range'))
-    # (starts of the datasets are located in episode_params)
-    # p.start_t = eval(dataset_p.get('start_t'))
+    # (starts and range of the dataset are located in episode_params)
     p.spawn_delay_s = dataset_p.getfloat('spawn_delay_s')
     p.offset = eval(dataset_p.get('offset'))
     p.swapxy = dataset_p.getboolean('swapxy')

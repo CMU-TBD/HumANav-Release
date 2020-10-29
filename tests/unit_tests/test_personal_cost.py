@@ -13,7 +13,7 @@ from utils.utils import *
 from params.simulator.sbpd_simulator_params import create_params as create_sim_params
 from params.renderer_params import get_seed
 from params.renderer_params import create_params as create_base_params
-from simulators.central_simulator import CentralSimulator
+from simulators.central_simulator import Simulator
 
 from humans.human import Human
 from humanav.humanav_renderer_multi import HumANavRendererMulti
@@ -230,7 +230,7 @@ def main_test():
 
     # construct simulator
     sim_params = create_sim_params(render_3D=False)
-    simulator = CentralSimulator(sim_params, environment)
+    simulator = Simulator(sim_params, environment)
 
     # generate and add random humans
     human_list = []

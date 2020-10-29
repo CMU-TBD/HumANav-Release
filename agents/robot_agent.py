@@ -19,7 +19,7 @@ class RobotAgent(Agent):
         # To send the world state on the next joystick ping
         self.joystick_requests_world = -1
         # whether or not to repeat the last joystick input
-        self.block_joystick = False  # gets updated in CentralSimulator
+        self.block_joystick = False  # gets updated in Simulator
         # told the joystick that the robot is powered off
         self.notified_joystick = False
         # amount of time the robot is blocking on the joystick

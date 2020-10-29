@@ -7,7 +7,7 @@ from agents.humans.recorded_human import PrerecordedHuman
 from agents.robot_agent import RobotAgent
 from socnav.socnav_renderer import SocNavRenderer
 # Planner + Simulator:
-from simulators.central_simulator import CentralSimulator
+from simulators.simulator import Simulator
 from params.central_params import get_seed, create_socnav_params
 from utils.utils import *
 
@@ -165,11 +165,7 @@ def test_socnav():
         Creating planner, simulator, and control pipelines for the framework
         of a human trajectory and pathfinding.
         """
-        simulator = CentralSimulator(
-            environment,
-            renderer=r,
-            episode_params=episode
-        )
+        simulator = Simulator(environment, renderer=r, episode_params=episode)
         """Generate the autonomous human agents from the episode"""
         generate_auto_humans(episode.agents_start, episode.agents_end,
                              simulator, environment, p, r)
