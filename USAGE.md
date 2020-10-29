@@ -2,11 +2,17 @@
 ## Overall Structure of the Simulator
 The `Simulator` used in `SocNavBench` runs through a single episode to execute and measure the `RobotAgent`'s planning algorithm for a particular episode. An episode consists of the parameters for a particular simulation, such as the pedestrians, environment, and robot's start/goal positions. In order to measure arbitrary planning algorithms we provide a `Joystick` API that translates data to and from the simulator to control the robot. 
 
-![Structure Graphic](https://drive.google.com/uc?export=download&id=1FUtc420QOcYp57q-9XqSktABfcfYbiBJ)
+All our agents undergo a `sense()->plan()->act()` cycle to perceive and interact with the world. 
 
+The simulator can be run in synchronous and asynchronous modes. When synchronous the joystick will block on the arrival of data from its `sense()` call, and the `RobotAgent` will equivalently block on the actions/commands sent from the joystick, making their communication transaction 1:1 with the simulator time. 
+
+## Top Level Overview
+![Structure Graphic](https://docs.google.com/drawings/d/e/2PACX-1vSKzu4L14_2Y6XrHz5HTfNXPPkpJShYqjE_G3wN8tBz4a7bBrhjSYl1HHVASgzX8L0-wV9V7PT2g55j/pub?w=1107&h=614)
+## More Detailed Overview
+![Detailed Structure](https://docs.google.com/drawings/d/e/2PACX-1vRlskIHFdvq8ZDlo0tUN5Z_BPCA87UldJgg6dgsbaMBOmkXgVecxNijFm9fxjgJSO-yj16HcGUaaK0G/pub?w=1075&h=798)
 
 ## Running `SocNavBench`
-To start the main process for `SocNavBench` enter the main directory and run the first command below (1) to see `Waiting for joystick connection...` Now run the second command (2) as a separate executable (ie. in another shell instance) to start the `Joystick` process.
+To start the main process for `SocNavBench` enter the main directory and run the first command below (1) to see `Waiting for joystick connection...` Then run the second command (2) as a separate executable (ie. in another shell instance) to start the `Joystick` process.
 ```
 # The command to start the simulator (1)
 PYOPENGL_PLATFORM=egl PYTHONPATH='.' python3 tests/test_episodes.py
@@ -14,11 +20,12 @@ PYOPENGL_PLATFORM=egl PYTHONPATH='.' python3 tests/test_episodes.py
 # The command to start the joystick executable (2)
 PYTHONPATH='.' python3 joystick/test_example_joystick.py
 
-# now the two executables will complete the connection handshake and run synchronously
+# now the two executables will complete the connection handshake and run side-by-side
 ```
+Note that the first time `SocNavBench` is run on a specific map it will generate a `traversible` (bitmap of non-obstructed areas in the map) that will be used for the simulation's environment. This traversible is then serialized under `SocNavBenchmark/sd3dis/stanford_building_parser_dataset/traversibles/` so it does not get regenerated upon repeated runs on the same map.
 
-## More about the `Joystick`
-The main program relies on (and will block on) an inter-process communication channel such as the socket connection between the it and the external "Joystick process". This process will be the "brain" of the robot that plans a route and sends commands based off the information it is given.
+## More about the `Joystick` API
+In order to communicate arbitrarily with the robot in the simulator we provide this interface (see both `example_joystick.py` and `joystick_client.cpp` ) The main program relies on (and will block on) an inter-process communication channel such as the socket connection between the it and the external "Joystick process". This process will be the "brain" of the robot that plans a route and sends commands based off the information it is given.
 
 The joystick can:
 - `sense()` by requesting a json-serialized `sim_state` which holds all the information about that state.
@@ -45,10 +52,10 @@ As depicted in the [`user_params.ini`](params/user_params.ini) param file, the d
 Also note that we are making the assumption that both the system dynamics of the robot and the environment are the same. But more information about the system dynamics can be found in the `Joystick` instances, since they are given the main params of the system dynamics as seen in the [`user_params.ini`](params/user_params.ini).
 
 Other functionality of the robot includes:
-  - Listening for joystick keywords such as `"sense"`, `"ready"`, or `"abandon"` to specify what action to take given the request. 
+  - Listening for joystick keywords such as `"sense"`, `"ready"`, `"algo: XYZ"`, or `"abandon"` to specify what action to take given the request. 
     - `"sense"` will send a `sim_state` (see below) to the running `Joystick`.
     - `"ready"` notifies the robot that the `"Joystick"` has fully received the episode metadata and is ready to begin the simulation.
-    - `"algo: XYZ"` where `XYZ` is the name of an algorithm, will tell the robot (and thus `SocNavBench`) what planning algorithm is being used
+    - `"algo: XYZ"` where `XYZ` is the name of an algorithm (such as `"Random", "Sampling"`), will tell the robot what planning algorithm is being used
     - `"abandon"` to instantly power off the robot and end its acting.
   - If the message sent to the robot is not a keyword then it is assumed to be commands (or multiple commands) from the `act()` phase.
 
@@ -81,3 +88,6 @@ More information about the `sim_states` can be found in [`simulators/sim_state.p
 
 ## Visualization
 The default rendering mode is `Schematic`, which renders only the topview of the episode. The topdown view only uses matplotlib to render a "bird's-eye-view" perspective without needing the intensive OpenGL Swiftshader renderer. However, to visualize the Depth/RGB modes change the `render_mode` parameter in [`params/user_params.ini`](params/user_params.ini) to `full-render`. Note that currently the program does not support parallel image rendering when using the 3D renderer, making it very time consuming.
+
+### Rendering Modes:
+![render-modes](https://docs.google.com/drawings/d/e/2PACX-1vTyCc098f0Rk__i8p4xwcMIELorIsQ3BSvN2k-ntomr8olhWEaIWs4EJGJ8MdGTLkvaygODNIuOvHed/pub?w=841&h=277)

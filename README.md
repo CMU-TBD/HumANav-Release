@@ -1,13 +1,14 @@
 # SocNavBench
 Welcome to the Social Navigation Benchmark utility (SocNavBench), a codebase for benchmarking robot planning algorithms against various episodes of containing multi-agent environments, accompanying out paper ["SocNavBench: A Grounded Simulation Testing Framework for Evaluating Social Navigation"](http://www.cs.cmu.edu/~abhijatb/assets/THRI_SocNav_Benchmark.pdf).
 
-![Fig1](https://drive.google.com/uc?export=download&id=1iDyBGvmUjC_X65_PTsBX0KnQpsQsQ8BA)
+![Fig1](https://docs.google.com/drawings/d/e/2PACX-1vRPmGkMcxBi5wiz_hLwWtsUPldot33-jR5lX6e_6EmsEAGa7nj-Yqpo5QWXWc7ldv-LbboF3HYHRQXp/pub?w=1074&h=563)
 
 
 We provide scenarios curated from real world data for social navigation algorithms to be tested and evaluated on.
 ![sim2real](https://drive.google.com/uc?export=download&id=11eB-_FWnURZWzc4xu__yv98puC4VstQO)
-
-![maps](https://drive.google.com/uc?export=download&id=1fxTV0dXyrAmDRT5M_QcDMkBxvF9REQPV)
+![sim2realUniv](https://docs.google.com/drawings/d/e/2PACX-1vSOWwj_Yv6rtlSJwhyZRhgrGut9VfvnsReWrCASUWpvh3OpHvskig9VYgN5EZt6SHZzgG0g5xcejUw2/pub?w=929&h=387)
+We also provide multiple curated maps that closely resemble the environments for the pedestrian datasets. 
+![thri-maps](https://docs.google.com/drawings/d/e/2PACX-1vR4KzFmSbqlOCwd1dK6e9mc9ua4II2UFlvTv6rO8Bjg4C-ClFnu3J9HdpUmtP9Gb5PzcCEsWstYMxN0/pub?w=945&h=461)
 
 
 ## How To's
