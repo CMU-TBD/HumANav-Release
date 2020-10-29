@@ -116,6 +116,11 @@ class JoystickBase():
     def update_loop(self):
         raise NotImplementedError
 
+    def pre_update(self):
+        assert(self.sim_delta_t is not None)
+        self.robot_receiver_socket.listen(1)  # init robot listener socket
+        self.joystick_on = True
+
     def finish_episode(self):
         # finished this episode
         print("%sFinished episode:" % color_green,

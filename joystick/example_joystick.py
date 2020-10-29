@@ -41,9 +41,7 @@ class JoystickRandom(JoystickBase):
                        send_vel_cmds=self.joystick_params.use_system_dynamics)
 
     def update_loop(self):
-        assert(self.sim_delta_t)
-        self.robot_receiver_socket.listen(1)  # init robot listener socket
-        self.joystick_on = True
+        super().pre_update()  # pre-update initialization
         while(self.joystick_on):
             # gather information about the world state based off the simulator
             self.joystick_sense()

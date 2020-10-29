@@ -35,6 +35,10 @@ class JoystickWithPlanner(JoystickBase):
         # rest of the 'Agent' params used for the joystick planner
         self.agent_params = create_agent_params(with_planner=True,
                                                 with_obstacle_map=True)
+        # update generic 'Agent params' with joystick-specific params
+        self.agent_params.episode_horizon_s = self.joystick_params.episode_horizon_s
+        self.agent_params.control_horizon_s = self.joystick_params.control_horizon_s
+        # init obstacle map
         self.obstacle_map = self.init_obstacle_map()
         self.obj_fn = Agent._init_obj_fn(self, params=self.agent_params)
         psc_obj = Agent._init_psc_objective(params=self.agent_params)
@@ -127,9 +131,7 @@ class JoystickWithPlanner(JoystickBase):
                     break
 
     def update_loop(self):
-        assert self.sim_delta_t
-        self.joystick_on = True
-        self.robot_receiver_socket.listen(1)  # init robot listener socket
+        super().pre_update()  # pre-update initialization
         self.simulator_joystick_update_ratio = \
             int(np.floor(self.sim_delta_t / self.agent_params.dt))
         while self.joystick_on:

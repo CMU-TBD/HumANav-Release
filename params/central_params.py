@@ -82,6 +82,8 @@ def create_joystick_params():
     p.dt = joystick_p.getfloat('dt')
     p.use_system_dynamics = joystick_p.getboolean('use_system_dynamics')
     p.use_random_planner = joystick_p.getboolean('use_random_planner')
+    p.episode_horizon_s = joystick_p.getint('episode_horizon')
+    p.control_horizon_s = joystick_p.getfloat('control_horizon_s')
     p.track_vel_accel = joystick_p.getboolean('track_vel_accel')
     p.print_data = joystick_p.getboolean('print_data')
     p.track_sim_states = joystick_p.getboolean('track_sim_states')
@@ -332,7 +334,7 @@ def create_agent_params(with_planner=False, with_obstacle_map=False):
     # Load system dynamics params
     p.system_dynamics_params = create_system_dynamics_params()
     if with_planner:
-        p.episode_horizon_s = agent_p.getfloat('episode_horizon_s')
+        p.episode_horizon_s = agent_p.getfloat('episode_horizon')
         p.control_horizon_s = agent_p.getfloat('control_horizon_s')
 
         # Load the dependencies
