@@ -1,4 +1,3 @@
-import numpy as np
 import os
 import time
 import threading
@@ -12,7 +11,7 @@ from utils.image_utils import *
 class Simulator(SimulatorHelper):
     """The centralized simulator of SocNavBench """
 
-    def __init__(self, environment: dict, renderer=None, episode_params=None):
+    def __init__(self, environment: dict, renderer=None, episode_params=None, verbose=True):
         """ Initializer for the central simulator
         Args:
             environment (dict): dictionary housing the obj map (bitmap) and more
@@ -20,7 +19,7 @@ class Simulator(SimulatorHelper):
             episode_params (str, optional): Name of the episode test that the simulator runs
         """
         # init SimulatorHelper base class
-        super().__init__(environment)
+        super().__init__(environment, verbose)
         # init Simulator implementation
         self.episode_params = episode_params
         # output directory is updated again if there is a robot (and algorithm) in the simulator
@@ -30,10 +29,11 @@ class Simulator(SimulatorHelper):
                          self.episode_params.name)
         self.obstacle_map = self.init_obstacle_map(renderer)
 
-    def init_sim_data(self):
+    def init_sim_data(self, verbose: bool = True):
         self.total_agents = len(self.agents) + len(self.backstage_prerecs)
         # Create pre-simulation metadata
-        print("Running simulation on", self.total_agents, "agents")
+        if verbose:
+            print("Running simulation on", self.total_agents, "agents")
         # scale the simulator time
         self.dt = self.params.delta_t_scale * self.params.dt
         # update the baseline agents' simulation refresh rate

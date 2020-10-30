@@ -289,7 +289,7 @@ def create_control_pipeline_params():
     return p
 
 
-def create_simulator_params():
+def create_simulator_params(verbose=True):
     p = DotMap()
     sim_p = user_config['simulator_params']
     p.dt = sim_p.getfloat('dt')
@@ -307,12 +307,13 @@ def create_simulator_params():
     p.obstacle_map_params = create_obstacle_map_params()
     # much faster to only render the topview rather than use the 3D renderer
     from utils.utils import color_blue, color_reset
-    if p.render_3D:
-        print("%sRender mode: Full Render (TOPVIEW, RGB, and DEPTH)%s" %
-              (color_blue, color_reset))
-    else:
-        print("%sRender mode: Schematic view (TOPVIEW only)%s" %
-              (color_blue, color_reset))
+    if verbose:
+        if p.render_3D:
+            print("%sRender mode: Full Render (TOPVIEW, RGB, and DEPTH)%s" %
+                  (color_blue, color_reset))
+        else:
+            print("%sRender mode: Schematic view (TOPVIEW only)%s" %
+                  (color_blue, color_reset))
     p.verbose_printing = sim_p.getboolean('verbose_printing')
     p.clear_files = sim_p.getboolean('clear_files')
     p.record_video = sim_p.getboolean('record_video')
@@ -419,8 +420,9 @@ def create_obstacle_map_params():
     return p
 
 
-def create_map_params():
-    p = DotMap()
+def create_test_map_params(p=None):
+    if(p is None):
+        p = DotMap()
     # NOTE: this is very much subject to change with diff maps
 
     # goal_pos_n2 = np.array([[9., 15.]])
@@ -428,19 +430,19 @@ def create_map_params():
 
     # pos_nk2 = np.array([[[8., 16.], [8., 12.5], [18., 16.5]]], dtype=np.float32)
     p.pos_nk2 = np.array(
-        [[[8., 9.], [8., 12.5], [18., 12.5]]], dtype=np.float32)
+        [[[8., 8.], [8., 11.5], [18., 11.5]]], dtype=np.float32)
 
     # p.test_goal_ang_obj_ans = [19.634956, 29.616005, 74.31618]
-    p.test_goal_ang_obj_ans = [5.0869893, 18.3243617, 60.214370]
+    p.test_goal_ang_obj_ans = [0., 18.15444529, 78.53981415]
 
     # p.test_goal_dist_ans = [49.088074, 179.12201, 2071.5808]
-    p.test_goal_dist_ans = [644.88555, 1126.650778, 1126.65109]
+    p.test_goal_dist_ans = [6.17855224e+02, 9.27975445e+02, 2.50000000e+07]
 
     # p.test_obst_map_ans = [1.252921, 1.5730935, 1.7213388]
-    p.test_obst_map_ans = [100.0, 0.5900573134422302, 100.0]
+    p.test_obst_map_ans = [3.33432937, 0.07499108, -0.025]
 
     # p.test_obst = [0., 0., 0.]
-    p.test_obs_obj_ans = [0., 0., 10.345789710051179]
+    p.test_obs_obj_ans = [0., 112.8953653, 172.26562524]
 
     return p
 

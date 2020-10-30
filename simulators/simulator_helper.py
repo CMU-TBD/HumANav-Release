@@ -12,7 +12,7 @@ import pandas as pd
 
 class SimulatorHelper(object):
 
-    def __init__(self, environment: dict):
+    def __init__(self, environment: dict, verbose: bool):
         """ Initializer for the central simulator
         Args:
             environment (dict): dictionary housing the obj map (bitmap) and more
@@ -20,7 +20,7 @@ class SimulatorHelper(object):
             episode_params (str, optional): Name of the episode test that the simulator runs
         """
         self.environment = environment
-        self.params = create_simulator_params()
+        self.params = create_simulator_params(verbose)
         self.algo_name = "lite"  # by default there is no robot (or algorithm)
         self.obstacle_map = None
         # keep track of all agents in dictionary with names as the key
