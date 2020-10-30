@@ -112,5 +112,5 @@ More information about the `sim_states` can be found in [`simulators/sim_state.p
 ## Visualization
 The default rendering mode is `Schematic`, which renders only the topview of the episode. The topdown view only uses matplotlib to render a "bird's-eye-view" perspective without needing the intensive OpenGL Swiftshader renderer. However, to visualize the Depth/RGB modes change the `render_mode` parameter in [`params/user_params.ini`](params/user_params.ini) to `full-render`. Note that currently the program does not support parallel image rendering when using the 3D renderer, making it very time consuming.
 
-### Rendering Modes:
-![render-modes](https://docs.google.com/drawings/d/e/2PACX-1vTyCc098f0Rk__i8p4xwcMIELorIsQ3BSvN2k-ntomr8olhWEaIWs4EJGJ8MdGTLkvaygODNIuOvHed/pub?w=841&h=277)
+## Rendering Modes:
+<img src="https://docs.google.com/drawings/d/e/2PACX-1vTyCc098f0Rk__i8p4xwcMIELorIsQ3BSvN2k-ntomr8olhWEaIWs4EJGJ8MdGTLkvaygODNIuOvHed/pub?w=841&h=277" alt="drawing" width="100%"/>
