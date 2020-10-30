@@ -6,8 +6,8 @@ from joystick_py.joystick_base import JoystickBase
 class JoystickRandom(JoystickBase):
     def __init__(self):
         # our 'positions' are modeled as (x, y, theta)
-        self.robot_posn = None    # current position of the robot
-        super().__init__("RandomPlanner")
+        self.robot_posn = None             # current position of the robot
+        super().__init__("RandomPlanner")  # parent class needs to know the algorithm
 
     def joystick_sense(self):
         # ping's the robot to request a sim state
@@ -24,7 +24,7 @@ class JoystickRandom(JoystickBase):
 
         # frequency of actions per joystick refresh
         num_actions_per_dt = \
-            int(np.floor(self.sim_delta_t / self.joystick_params.dt))
+            int(np.floor(self.sim_dt / self.joystick_params.dt))
 
         # send either posntional or velocity commands depending on param status
         if(self.joystick_params.use_system_dynamics):
