@@ -1,5 +1,5 @@
 import numpy as np
-from joystick.joystick_base import JoystickBase
+from joystick_py.joystick_base import JoystickBase
 from params.central_params import create_agent_params
 from trajectory.trajectory import Trajectory
 from utils.utils import generate_config_from_pos_3, euclidean_dist2

@@ -1,6 +1,6 @@
 import numpy as np
 from random import randint
-from joystick.joystick_base import JoystickBase
+from joystick_py.joystick_base import JoystickBase
 
 
 class JoystickRandom(JoystickBase):
