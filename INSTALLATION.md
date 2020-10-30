@@ -70,5 +70,5 @@ python3 tests/all_unit_tests.py
 PYOPENGL_PLATFORM=egl PYTHONPATH='.' python3 tests/test_socnav.py
 ...
 # In a seperate shell (as a separate executable):
-PYTHONPATH='.' python3 joystick/test_example_joystick.py 
+python3 joystick/joystick_client.py
 ```
