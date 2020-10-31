@@ -4,7 +4,7 @@ from objectives.goal_distance import GoalDistance
 from trajectory.trajectory import Trajectory
 from utils.fmm_map import FmmMap
 from dotmap import DotMap
-from utils.utils import *
+from utils.utils import load_building, color_green, color_reset
 from params.central_params import create_socnav_params, create_test_map_params
 
 
@@ -21,26 +21,6 @@ def create_params():
     return create_test_map_params(p)
 
 
-def load_building(p):
-    from socnav.socnav_renderer import SocNavRenderer
-    try:
-        # get the renderer from the camera p
-        r = SocNavRenderer.get_renderer(p)
-        # obtain "resolution and traversible of building"
-        dx_cm, traversible = r.get_config()
-    except FileNotFoundError:  # did not find traversible.pkl for this map
-        print("%sUnable to find traversible, reloading building%s" %
-              (color_red, color_reset))
-        # it *should* have been the case that the user did not load the meshes
-        assert(p.building_params.load_meshes == False)
-        p2 = copy.deepcopy(p)
-        p2.building_params.load_meshes = True
-        r = SocNavRenderer.get_renderer(p2)
-        # obtain "resolution and traversible of building"
-        dx_cm, traversible = r.get_config()
-    return r, dx_cm, traversible
-
-
 def test_goal_distance():
     # Create parameters
     p = create_params()
@@ -48,7 +28,7 @@ def test_goal_distance():
     r, dx_cm, traversible = load_building(p)
 
     obstacle_map = SBPDMap(p.obstacle_map_params,
-                           renderer=0, res=dx_cm, 
+                           renderer=0, res=dx_cm,
                            map_trav=traversible)
     # obstacle_map = SBPDMap(p.obstacle_map_params)
     obstacle_occupancy_grid = obstacle_map.create_occupancy_grid_for_map()

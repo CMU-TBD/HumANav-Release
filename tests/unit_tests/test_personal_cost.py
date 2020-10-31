@@ -89,26 +89,6 @@ def create_params():
     return create_test_map_params(p)
 
 
-def load_building(p):
-    from socnav.socnav_renderer import SocNavRenderer
-    try:
-        # get the renderer from the camera p
-        r = SocNavRenderer.get_renderer(p)
-        # obtain "resolution and traversible of building"
-        dx_cm, traversible = r.get_config()
-    except FileNotFoundError:  # did not find traversible.pkl for this map
-        print("%sUnable to find traversible, reloading building%s" %
-              (color_red, color_reset))
-        # it *should* have been the case that the user did not load the meshes
-        assert(p.building_params.load_meshes == False)
-        p2 = copy.deepcopy(p)
-        p2.building_params.load_meshes = True
-        r = SocNavRenderer.get_renderer(p2)
-        # obtain "resolution and traversible of building"
-        dx_cm, traversible = r.get_config()
-    return r, dx_cm, traversible
-
-
 def test_personal_cost_function(sim_state: SimState, plot=False, verbose=False):
     """
     Creating objective points maually, plotting them in the ObjectiveFunction
@@ -212,44 +192,12 @@ def test_personal_cost_function(sim_state: SimState, plot=False, verbose=False):
                     bbox_inches='tight', pad_inches=0)
 
 
-def construct_environment(p, test, episode):
-    # update map to match the episode params
-    p.building_params.building_name = episode.map_name
-    r, dx_cm, traversible = load_building(p)
-    # Convert the grid spacing to units of meters. Should be 5cm for the S3DIS data
-    dx_m = dx_cm / 100.0
-    if p.render_3D:
-        # Get the surreal dataset for human generation
-        surreal_data = r.d
-        # Update the Human's appearance classes to contain the dataset
-        from agents.humans.human_appearance import HumanAppearance
-        HumanAppearance.dataset = surreal_data
-        human_traversible = np.empty(traversible.shape)
-        human_traversible.fill(1)  # initially all good
-
-    room_center = \
-        np.array([traversible.shape[1] * 0.5,
-                  traversible.shape[0] * 0.5,
-                  0.0]
-                 ) * dx_m
-
-    # Create default environment which is a dictionary
-    # containing ["map_scale", "traversibles"]
-    # which is a constant and list of traversibles respectively
-    environment = {}
-    environment["map_scale"] = float(dx_m)
-    environment["room_center"] = room_center
-    # obstacle traversible / human traversible
-    environment["map_traversible"] = 1. * np.array(traversible)
-    return environment, r
-
-
 def main_test():
     p = create_params()  # used to instantiate the camera and its parameters
     test = "test_psc"
     episode = p.episode_params.tests[test]
 
-    environment, r = construct_environment(p, test, episode)
+    environment, r = construct_environment(p, test, episode, verbose=False)
 
     # construct simulator
     simulator = Simulator(environment, renderer=r,
