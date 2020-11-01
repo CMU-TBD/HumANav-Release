@@ -33,7 +33,7 @@ def create_params():
     p.episode_params = create_episodes_params()
 
     # not testing robot, only simulator + agents
-    p.episode_params.without_robot = True
+    p.episode_params.without_robot = False
 
     # overwrite tests with custom basic test
     p.episode_params.tests = {}

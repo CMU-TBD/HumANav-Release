@@ -59,7 +59,8 @@ def create_robot_params():
     p = DotMap()
     # Load the dependencies
     rob_p = user_config['robot_params']
-    p.port = rob_p.getint('port')
+    p.send_ID = rob_p.get('send_ID')
+    p.recv_ID = rob_p.get('recv_ID')
     p.repeat_freq = rob_p.getint('repeat_freq')
     p.physical_params = \
         DotMap(radius=rob_p.getfloat('radius_cm') / 100.0,
