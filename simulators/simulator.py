@@ -73,7 +73,7 @@ class Simulator(SimulatorHelper):
         self.print_sim_progress(iteration)
         # run simulation
         while self.sim_t <= self.episode_params.max_time and self.loop_condition():
-            wall_t = time.time() - start_time
+            wall_t = time.time()
             # update the time for all agents
             Agent.set_sim_t(self.sim_t)
             # initiate thread operations
@@ -85,15 +85,26 @@ class Simulator(SimulatorHelper):
             self.sim_t += self.dt
             # capture time after all the gen_agents have updated
             # Takes screenshot of the new simulation state
-            current_state = self.save_state(wall_t)
+            current_state = self.save_state(wall_t - start_time)
             if self.robot:
                 self.robot.update_world(current_state)
             # update iteration count
             iteration += 1
             # print simulation progress
             self.print_sim_progress(iteration)
+            # synchronize time with real-world if running in asynchronous mode
+            self.synchronize(wall_t)
         # finish the simulate
         self.conclude_simulation(start_time, iteration, r_t)
+
+    def synchronize(self, wall_t: float):
+        # get time difference between NOW and when the wall_t was last updated
+        # (occurs at the start of every simulate() cycle )
+        w_dt = time.time() - wall_t
+        # TODO: note there is danger if w_dt takes longer than self.dt
+        if(not self.params.block_joystick and w_dt < self.dt):
+            # sleep to run in as-close-as-possible to real-time
+            time.sleep(self.dt - w_dt)
 
     def conclude_simulation(self, start_time, iteration, r_t):
         # free all the gen_agents

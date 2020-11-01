@@ -296,7 +296,7 @@ def create_simulator_params(verbose=True):
     p.dt = sim_p.getfloat('dt')
     p.keep_episode_running = sim_p.getboolean('keep_episode_running')
     p.use_multithreading = sim_p.getboolean('use_multithreading')
-    p.block_joystick = sim_p.getboolean('block_joystick')
+    p.block_joystick = (sim_p.get('synchronous_mode') == "synchronous")
     p.delta_t_scale = sim_p.getfloat('delta_t_scale')
     p.socnav_params = create_socnav_params()
     p.img_scale = sim_p.getfloat('img_scale')
@@ -308,8 +308,10 @@ def create_simulator_params(verbose=True):
     # Load obstacle map params
     p.obstacle_map_params = create_obstacle_map_params()
     # much faster to only render the topview rather than use the 3D renderer
-    from utils.utils import color_blue, color_reset
+    from utils.utils import color_orange, color_blue, color_reset
     if verbose:
+        print("%sSimulator running in %s mode, dt=%.3fs%s" %
+              (color_orange, sim_p.get('synchronous_mode'), p.dt, color_reset))
         if p.render_3D:
             print("%sRender mode: Full Render (TOPVIEW, RGB, and DEPTH)%s" %
                   (color_blue, color_reset))

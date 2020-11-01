@@ -4,7 +4,7 @@ The `Simulator` used in `SocNavBench` runs through a single episode to execute a
 
 All our agents undergo a `sense()->plan()->act()` cycle to perceive and interact with the world. 
 
-The simulator can be run in synchronous and asynchronous modes. When synchronous the joystick will block on the arrival of data from its `sense()` call, and the `RobotAgent` will equivalently block on the actions/commands sent from the joystick, making their communication transaction 1:1 with the simulator time. 
+The simulator can be run in synchronous and asynchronous modes. In synchronous-mode the joystick will block on the arrival of data from its `sense()` call, and the `RobotAgent` will equivalently block on the actions/commands sent from the joystick, making their communication transaction 1:1 with the simulator time. In asynchronous-mode the simulator will run in real time and the joystick's planning algorithm will have to keep up. 
 
 ## Top Level Overview
 ![Structure Graphic](https://docs.google.com/drawings/d/e/2PACX-1vSKzu4L14_2Y6XrHz5HTfNXPPkpJShYqjE_G3wN8tBz4a7bBrhjSYl1HHVASgzX8L0-wV9V7PT2g55j/pub?w=1107&h=614)
@@ -98,7 +98,7 @@ The pedestrian datasets are also a component of the user-editable params under [
 ## More about the `Simulator`
 The `Simulator` progresses the state of the world in the main `simulate()` loop, which spawns update threads for all the agents in the scene, updates the robot and captures a "snapshot" of the current simulator status in the form of a `sim_state` that is stored for later use.
 
-The simulator can be made to run synchronously with the simulator or asynchronously by repeating the last command sent for a number of simulator frames. This can be toggled in [`params/user_params.ini`](params/user_params.ini) by editing the `block_joystick` param in `[simulator_params]`.
+The simulator can be made to run synchronously with the simulator (allowing for free "thinking time" as time freezes) or asynchronously by running in real-world time and repeating the last command sent if no new commands have arrived. This can be toggled in [`params/user_params.ini`](params/user_params.ini) by editing the `synchronous_mode` param in `[simulator_params]`.
 
 
 ## More about `sim_states`
