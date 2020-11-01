@@ -40,8 +40,8 @@ Users will be responsible for implementing their own:
 - `plan()` which uses the new information from the sense to determine next steps/actions to take.
 - `act()` which sends commands to the robot to execute in the simulator.
 
-The communication port is defaulted to 6000, this can be changed by editing `port` in [`params/user_params.ini`](params/user_params.ini) under `[robot_params]`
-  - Note that the program actually uses two sockets to ensure bidirectional communications for synchronous data transmission. We have designated the successor of `port` to be used as the robot receiver port. Therefore by default we are actually using ports 6000 and 6001.
+For communications we use the `AF_UNIX` protocol for the fastest communications within a local host machine. The default socket identifiers are `/tmp/socnavbench_joystick_recv` and `/tmp/socnavbench_joystick_send` which may be modified in [`params/user_params.ini`](params/user_params.ini) under `[robot_params]`. 
+  
 ### A starting off point
 For joystick implementations we have provided two sample joystick instances in `python` and one in `c++` under [`SocNavBench/joystick/`](joystick/):
 - `joystick_random.py` which uses a generic random planner, showcasing one of the simplest uses of the Joystick interface.
