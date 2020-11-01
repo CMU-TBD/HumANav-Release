@@ -140,16 +140,15 @@ class Simulator(SimulatorHelper):
         saved_env = self.environment
         pedestrians = {}
         for a in self.agents.values():
-            pedestrians[a.get_name()] = HumanState(a, deepcpy=True)
+            pedestrians[a.get_name()] = HumanState(a)
         # deepcopy all prerecorded gen_agents
         for a in self.prerecs.values():
-            pedestrians[a.get_name()] = HumanState(a, deepcpy=True)
+            pedestrians[a.get_name()] = HumanState(a)
         # Save all the robots
         saved_robots = {}
         last_robot_collision = ""
         if(self.robot):
-            saved_robots[self.robot.get_name()] = AgentState(self.robot,
-                                                             deepcpy=True)
+            saved_robots[self.robot.get_name()] = AgentState(self.robot)
             last_robot_collision = self.robot.latest_collider
         current_state = SimState(saved_env, pedestrians, saved_robots,
                                  self.sim_t, wall_t, self.dt, self.episode_params.name,
@@ -349,10 +348,13 @@ class Simulator(SimulatorHelper):
             del r_listener_thread
 
     def pedestrians_update(self, current_state: SimState):
-        agent_threads = self.init_auto_agent_threads(current_state)
-        prerec_threads = self.init_prerec_agent_threads(current_state)
-        pedestrian_threads = agent_threads + prerec_threads
-        # start agent threads
-        self.start_threads(pedestrian_threads)
-        # join all thread groups
-        self.join_threads(pedestrian_threads)
+        if(self.params.use_multithreading):
+            agent_threads = self.init_auto_agent_threads(current_state)
+            prerec_threads = self.init_prerec_agent_threads(current_state)
+            pedestrian_threads = agent_threads + prerec_threads
+            # start agent threads
+            self.start_threads(pedestrian_threads)
+            # join all thread groups
+            self.join_threads(pedestrian_threads)
+        else:
+            self.loop_through_pedestrians(current_state)

@@ -294,6 +294,7 @@ def create_simulator_params(verbose=True):
     sim_p = user_config['simulator_params']
     p.dt = sim_p.getfloat('dt')
     p.keep_episode_running = sim_p.getboolean('keep_episode_running')
+    p.use_multithreading = sim_p.getboolean('use_multithreading')
     p.block_joystick = sim_p.getboolean('block_joystick')
     p.delta_t_scale = sim_p.getfloat('delta_t_scale')
     p.socnav_params = create_socnav_params()

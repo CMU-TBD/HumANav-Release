@@ -135,6 +135,35 @@ class SimulatorHelper(object):
             agent_collisions.append(last_collider)
         return agent_collisions
 
+    def loop_through_pedestrians(self, current_state: SimState):
+        for a in list(self.agents.values()):
+            if(not a.end_acting):
+                a.update(current_state)
+            else:
+                if(a.get_collided()):
+                    self.num_collided_agents += 1
+                else:
+                    self.num_completed_agents += 1
+                del(self.agents[a.get_name()])
+                del(a)
+
+        for a in list(self.backstage_prerecs.values()):
+            if(not a.end_acting and a.get_start_time() <= Agent.sim_t < a.get_end_time()):
+                # only add (or keep) agents in the time frame
+                self.prerecs[a.get_name()] = a
+                a.update(current_state)
+            else:
+                # remove agent since its not within the time frame or finished
+                if(a.get_name() in self.prerecs.keys()):
+                    if(a.get_collided()):
+                        self.num_collided_agents += 1
+                    else:
+                        self.num_completed_agents += 1
+                    self.prerecs.pop(a.get_name())
+                    # also remove from back stage since they will no longer be used
+                    del(self.backstage_prerecs[a.get_name()])
+                    del(a)
+
     def init_auto_agent_threads(self, current_state: SimState):
         """Spawns a new agent thread for each agent (running or finished)
         Args:
