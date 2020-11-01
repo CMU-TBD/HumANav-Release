@@ -23,7 +23,8 @@ def clip_posn(sim_dt: float, old_pos3: list, new_pos3: list, v_bounds: list, eps
     # margin of error for the velocity bounds
     assert(sim_dt > 0)
     dist_to_new = euclidean_dist2(old_pos3, new_pos3)
-    if(abs(dist_to_new / sim_dt) <= v_bounds[1] + epsilon):
+    req_vel = abs(dist_to_new / sim_dt)
+    if(req_vel <= v_bounds[1] + epsilon):
         return new_pos3
     # calculate theta of vector
     valid_theta = \
@@ -33,8 +34,8 @@ def clip_posn(sim_dt: float, old_pos3: list, new_pos3: list, v_bounds: list, eps
     valid_x = max_vel * np.cos(valid_theta) + old_pos3[0]
     valid_y = max_vel * np.sin(valid_theta) + old_pos3[1]
     reachable_pos3 = [valid_x, valid_y, valid_theta]
-    print("%sposition [%s] is unreachable with v bounds, clipped to [%s]%s" %
-          (color_red, iter_print(new_pos3), iter_print(reachable_pos3), color_reset))
+    print("%sposn [%s] is unreachable, clipped to [%s] (%.3fm/s > %.3fm/s)%s" %
+          (color_red, iter_print(new_pos3), iter_print(reachable_pos3), req_vel, v_bounds[1], color_reset))
     return reachable_pos3
 
 
@@ -124,13 +125,7 @@ def manage_data(robot, data_str: str):
         # add input commands to queue to keep track of
         for i in range(robot.num_cmds_per_batch):
             np_data = np.array(joystick_input[i], dtype=np.float32)
-            if robot.block_joystick:  # if blocking on joystick don't duplicate
-                # else no repeat, only account for the command once
-                robot.joystick_inputs.append(np_data)
-            else:
-                for i in range(robot.calc_repeat_freq()):
-                    # adds command to local list of individual commands
-                    robot.joystick_inputs.append(np_data)
+            robot.joystick_inputs.append(np_data)
 
 
 def establish_joystick_receiver_connection():

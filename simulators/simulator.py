@@ -102,7 +102,11 @@ class Simulator(SimulatorHelper):
         # (occurs at the start of every simulate() cycle )
         w_dt = time.time() - wall_t
         # TODO: note there is danger if w_dt takes longer than self.dt
-        if(not self.params.block_joystick and w_dt < self.dt):
+        if(not self.params.block_joystick):
+            if(w_dt > self.dt):
+                print("%sSim-cycle took %.3fs > %.3fs%s" %
+                      (color_red, w_dt, self.dt, color_reset))
+                return
             # sleep to run in as-close-as-possible to real-time
             time.sleep(self.dt - w_dt)
 

@@ -48,7 +48,7 @@ def create_params():
                agents_start=[], agents_end=[],
                robot_start_goal=[[10, 3, 0], [15.5, 8, 0.7]],
                max_time=30,
-               write_episode_log=False
+               write_episode_log=True
                )
 
     # Tilt the camera 10 degree down from the horizontal axis
