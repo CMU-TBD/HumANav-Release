@@ -322,9 +322,8 @@ class Simulator(SimulatorHelper):
         while(not self.robot.joystick_ready):
             # wait until joystick receives the environment (once)
             time.sleep(0.01)
-        if(self.robot.algo_name == ""):
-            # if the robot didn't receive a planner name
-            self.robot.algo_name = "unknown"
+        # either "Unknown" if the robot did not receive an algorithm title
+        # or the name of the planning algorithm used by the joystick
         self.algo_name = self.robot.algo_name
         # name of the directory to output everything
         self.params.output_directory = \

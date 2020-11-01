@@ -24,6 +24,9 @@ class RobotAgent(Agent):
         self.notified_joystick = False
         # amount of time the robot is blocking on the joystick
         self.block_time_total = 0
+        # robot initially has no knowledge of the planning algorithm
+        # this is (optionally) sent by the joystick
+        self.algo_name = "UnknownAlgo"
 
     def simulation_init(self, sim_map, with_planner=False, keep_episode_running=False):
         # first initialize all the agent fields such as basic self.params
