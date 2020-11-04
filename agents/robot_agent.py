@@ -46,17 +46,14 @@ class RobotAgent(Agent):
         self.num_executed = 0  # keeps track of the latest command that is to be executed
         # number of commands the joystick sends at once
         self.num_cmds_per_batch = 1
+        # maximum number of times that the robot will repeat the last command if in asynch-mode
+        self.remaining_repeats = self.params.robot_params.max_repeats
 
     def get_num_executed(self):
         return int(np.floor(len(self.joystick_inputs) / self.num_cmds_per_batch))
 
     def get_block_t_total(self):
         return self.block_time_total
-
-    def calc_repeat_freq(self):
-        # calculates the number of commands the robot repeats if in repeat-mode
-        rf = self.params.robot_params.repeat_freq
-        return int(np.floor(rf / self.num_cmds_per_batch))
 
     @staticmethod
     def generate_robot(configs, name=None, verbose=False):
@@ -182,17 +179,19 @@ class RobotAgent(Agent):
             # decrement counter
             if(self.joystick_requests_world > 0):
                 self.joystick_requests_world -= 1
-        elif not self.block_joystick:
-            n = self.calc_repeat_freq()
+        elif not self.block_joystick and self.remaining_repeats > 0:
             # repeat the last n commands in the queue if running asynchronously
-            if(num_cmds < n or n == 0):  # only if there is at least n>0 available commands to repeat
+            # only if there is at least n>0 available commands to repeat
+            if(num_cmds < 1):
                 return
-            repeats = self.joystick_inputs[-n:]
+            repeats = self.joystick_inputs[-1:]
             self.joystick_inputs.extend(repeats)
             self.execute()
             # decrement counter
             if(self.joystick_requests_world > 0):
                 self.joystick_requests_world -= 1
+            # just executed one command, decrease from the counter
+            self.remaining_repeats -= 1
 
     def update(self):
         if(self.get_end_acting()):

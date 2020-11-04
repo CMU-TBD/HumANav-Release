@@ -61,7 +61,7 @@ def create_robot_params():
     rob_p = user_config['robot_params']
     p.send_ID = rob_p.get('send_ID')
     p.recv_ID = rob_p.get('recv_ID')
-    p.repeat_freq = rob_p.getint('repeat_freq')
+    p.max_repeats = max(0, rob_p.getint('max_repeats'))
     p.physical_params = \
         DotMap(radius=rob_p.getfloat('radius_cm') / 100.0,
                base=rob_p.getfloat('distance_from_ground_cm'),

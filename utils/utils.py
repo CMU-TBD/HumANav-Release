@@ -359,7 +359,10 @@ def color_print(color: str):
 
 
 def iter_print(l):
-    return ','.join(["{0: 0.2f}".format(i) for i in l])
+    if(isinstance(l[0], float)):
+        return ','.join(["{0: 0.2f}".format(i) for i in l])
+    # return string
+    return ','.join([str(i) for i in l])
 
 
 """ BEGIN configs functions """
