@@ -98,7 +98,7 @@ The pedestrian datasets are also a component of the user-editable params under [
 ## More about the `Simulator`
 The `Simulator` progresses the state of the world in the main `simulate()` loop, which spawns update threads for all the agents in the scene, updates the robot and captures a "snapshot" of the current simulator status in the form of a `sim_state` that is stored for later use.
 
-The simulator can be made to run synchronously with the simulator (allowing for free "thinking time" as time freezes) or asynchronously by running in real-world time and repeating the last command sent if no new commands have arrived. This can be toggled in [`params/user_params.ini`](params/user_params.ini) by editing the `synchronous_mode` param in `[simulator_params]`.
+By default the simulator runs in "synchronous mode", meaning that it will freeze time until the robot (joystick API) responds. In synchronous mode the robot's "thinking time" is free as the simulator blocks until its reception. In asynchronous mode the simulator runs alongside real-world time and does not wait on the robot's input at all. This means the robot could take too long to think and miss the simulator's cue, in this case the robot may repeat the last command sent by the joystick API or do nothing at all. The maximum number of times the robot can repeat commands is set as `max_repeats` under `[robot_params]` in [`params/user_params.ini`](params/user_params.ini). In order to toggle the simulator's synchronicity mode edit the `synchronous_mode` param in `[simulator_params]` in [`params/user_params.ini`](params/user_params.ini).
 
 
 ## More about `sim_states`
