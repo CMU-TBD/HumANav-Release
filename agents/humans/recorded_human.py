@@ -52,13 +52,21 @@ class PrerecordedHuman(Human):
     def get_interp_posns(self):
         x = self.xinterp(self.get_rel_t())
         y = self.yinterp(self.get_rel_t())
-        prev_x, prev_y, _ = np.squeeze(
-            self.posn_data[self.current_precalc_step].position_and_heading_nk3())
+        t = self.current_precalc_step
+        prev_x, prev_y, prev_theta = \
+            np.squeeze(self.posn_data[t].position_and_heading_nk3())
+        next_x, next_y, next_theta = \
+            np.squeeze(self.posn_data[t + 1].position_and_heading_nk3())
+        # TODO: fix bug where interpolated points VERY close to the previous points
+        # result in numerical errors that result in incorrect theta calculations
         theta = np.arctan2((y - prev_y), (x - prev_x))
+        avg_theta = np.mean([prev_theta, next_theta])
+        if np.abs(theta - avg_theta) > 0.5:  # TODO: Magic number! ... bad!
+            theta = avg_theta
+        # construct interpolated position
         posn_interp = [x, y, theta]
-        last_t = int(
-            np.floor((self.get_rel_t() - self.t_data[0]) / Agent.sim_dt))
-        last_non_interp_v = self.posn_data[last_t].speed_nk1()[0][0][0]
+        last_t = np.floor((self.get_rel_t() - self.t_data[0]) / Agent.sim_dt)
+        last_non_interp_v = np.squeeze(self.posn_data[int(last_t)].speed_nk1())
         posn_interp_conf = generate_config_from_pos_3(posn_interp,
                                                       v=last_non_interp_v)
         return posn_interp_conf
