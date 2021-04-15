@@ -114,21 +114,18 @@ class PrerecordedHuman(Human):
     @staticmethod
     def init_interp_fns(posn_data, times):
         posn_data = np.array(posn_data)
-        times = np.array(times)
+        ts = np.array(times)
         # correct for the fact that times of 0 is weird
-        times[0] = times[1] - (times[2] - times[1])
+        ts[0] = ts[1] - (ts[2] - ts[1])
 
         x = posn_data[:, 0]
         y = posn_data[:, 1]
         th = posn_data[:, 2]
-
-        xinterp = scipy.interpolate.interp1d(times, x, bounds_error=False,
-                                             fill_value=(x[0], x[-1]))
-        yinterp = scipy.interpolate.interp1d(times, y, bounds_error=False,
-                                             fill_value=(y[0], y[-1]))
-        thetainterp = scipy.interpolate.interp1d(times, th, bounds_error=False,
-                                                 fill_value=(th[0], th[-1]))
-        return xinterp, yinterp, thetainterp
+        interp = scipy.interpolate.interp1d
+        xfunc = interp(ts, x, bounds_error=False, fill_value=(x[0], x[-1]))
+        yfunc = interp(ts, y, bounds_error=False, fill_value=(y[0], y[-1]))
+        thfunc = interp(ts, th, bounds_error=False, fill_value=(th[0], th[-1]))
+        return xfunc, yfunc, thfunc
 
     @staticmethod
     def gather_times(ped_i, time_delay: float, start_t: float, start_frame: int, fps: float):
@@ -146,39 +143,34 @@ class PrerecordedHuman(Human):
     def gather_posn_data(ped_i, offset, swap_axes=False, scale_x=1, scale_y=1):
         xy_data = []
         xy_order = ('x', 'y')
+        scale = (scale_x, scale_y)
         if swap_axes:
             xy_order = ('y', 'x')
-        # generate a list of lists of positions (only first variable)
-        for p in ped_i[xy_order[0]]:
-            scale = scale_y if xy_order[0] == 'y' else scale_x
-            xy_data.append([scale * p])
-        # append second variable to the list of positions
-        for j, p in enumerate(ped_i[xy_order[1]]):
-            scale = scale_x if xy_order[1] == 'x' else scale_y
-            xy_data[j].append(scale * p)
+            scale = (scale_y, scale_x)
+        # gather the data from df
+        xy_data = np.array([scale[0] * ped_i[xy_order[0]],
+                            scale[1] * ped_i[xy_order[1]]])
         # apply the rotations to the x, y positions
         s = np.sin(offset[2])
         c = np.cos(offset[2])
-        posn_data = []
-        for (x, y) in xy_data:
-            x_rot = x * c - y * s
-            y_rot = x * s + y * c
-            posn_data.append([x_rot + offset[0], y_rot + offset[1]])
+        # construct xy data
+        posn_data = np.array([xy_data[0] * c - xy_data[1] * s + offset[0],
+                              xy_data[0] * s + xy_data[1] * c + offset[1]])
         # append vector angles for all the agents
-        for j, pos_2 in enumerate(posn_data):
-            if j > 0:
-                last_pos_2 = posn_data[j - 1]
-                theta = np.arctan2(pos_2[1] - last_pos_2[1],
-                                   pos_2[0] - last_pos_2[0])
-                posn_data[j - 1].append(theta)
-                # append same theta to the last position
-                if j == len(posn_data) - 1:
-                    # last element gets last angle
-                    posn_data[j].append(theta)
-        return [posn_data[0]] + posn_data
+        now = posn_data[:, 1:]  # skip first
+        last = posn_data[:, :-1]  # skip last
+        thetas = np.arctan2(now[1] - last[1], now[0] - last[0])
+        thetas = np.append(thetas, thetas[-1])  # last element gets last angle
+        assert(len(thetas) == len(posn_data.T))
+        # append thetas to posn data
+        posn_data = np.vstack([posn_data, thetas.T]).T
+        # add the first position to the start of the data for the initial delay
+        posn_data = np.insert(posn_data, [0], posn_data[0], axis=0)
+        return posn_data
 
     @staticmethod
     def gather_posn_data_vec(ped_i, offset):
+        # old vectorized function for experimentation
         xy_data = np.vstack([ped_i.x, ped_i.y]).T
         s = np.sin(offset[2])
         c = np.cos(offset[2])
