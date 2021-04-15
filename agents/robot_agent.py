@@ -1,6 +1,7 @@
-from utils.utils import *
+from utils.utils import generate_config_from_pos_3
 from agents.agent import Agent
-from agents.robot_utils import *
+from agents.robot_utils import clip_vel, clip_posn, send_sim_state, send_to_joystick, force_connect
+from agents.robot_utils import establish_handshake, listen_once, close_sockets
 from trajectory.trajectory import SystemConfig
 from params.central_params import create_robot_params
 import numpy as np
@@ -8,10 +9,9 @@ import time
 
 
 class RobotAgent(Agent):
-    def __init__(self, name, start_configs):
-        self.name = name
-        super().__init__(start_configs.get_start_config(),
-                         start_configs.get_goal_config(),
+    def __init__(self, name, start_config, goal_config):
+        super().__init__(start_config,
+                         goal_config,
                          name)
         self.joystick_inputs = []
         # josystick is ready once it has been sent an environment
@@ -56,18 +56,34 @@ class RobotAgent(Agent):
         return self.block_time_total
 
     @staticmethod
-    def generate_robot(configs, name=None, verbose=False):
+    def generate(simulator, params, robot_start_goal):
+        assert(len(robot_start_goal) == 2)
+        rob_start = generate_config_from_pos_3(robot_start_goal[0])
+        rob_goal = generate_config_from_pos_3(robot_start_goal[1])
+        robot_agent = RobotAgent.generate_robot_with_start_goal(rob_start,
+                                                                rob_goal)
+        simulator.add_agent(robot_agent)
+
+    @staticmethod
+    def generate_robot(configs, verbose=False):
+        """
+        Sample a new random robot agent from all required features
+        """
+        start = configs.get_start_config().to_3D_numpy()
+        goal = configs.get_goal_config().to_3D_numpy()
+        return RobotAgent.generate_robot_with_start_goal(start, goal, verbose=verbose)
+
+    @staticmethod
+    def generate_robot_with_start_goal(start, goal, verbose=False):
         """
         Sample a new random robot agent from all required features
         """
         robot_name = "robot_agent"  # constant name for the robot since there will only ever be one
         # In order to print more readable arrays
         np.set_printoptions(precision=2)
-        pos_2 = configs.get_start_config().to_3D_numpy()
-        goal_2 = configs.get_goal_config().to_3D_numpy()
         if verbose:
-            print("Robot", robot_name, "at", pos_2, "with goal", goal_2)
-        return RobotAgent(robot_name, configs)
+            print("Robot", robot_name, "at", start, "with goal", goal)
+        return RobotAgent(robot_name, start, goal)
 
     @staticmethod
     def random_from_environment(environment):

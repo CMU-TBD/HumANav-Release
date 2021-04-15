@@ -1,4 +1,6 @@
-from utils.utils import *
+from utils.utils import generate_config_from_pos_3, euclidean_dist2
+from utils.utils import color_red, color_reset
+import os
 from agents.humans.human import Human
 from agents.humans.human_configs import HumanConfigs
 from agents.humans.human_appearance import HumanAppearance
@@ -55,7 +57,7 @@ class PrerecordedHuman(Human):
         t = self.current_precalc_step
         prev_x, prev_y, prev_theta = \
             np.squeeze(self.posn_data[t].position_and_heading_nk3())
-        next_x, next_y, next_theta = \
+        _, _, next_theta = \
             np.squeeze(self.posn_data[t + 1].position_and_heading_nk3())
         # TODO: fix bug where interpolated points VERY close to the previous points
         # result in numerical errors that result in incorrect theta calculations
@@ -213,12 +215,8 @@ class PrerecordedHuman(Human):
         return config_data
 
     @staticmethod
-    def generate_pedestrians(simulator, params,
-                             max_time: int = 10e7,
-                             start_t: float = 0,
-                             ped_range: tuple = (0, -1),
-                             dataset: DotMap = None
-                             ):
+    def generate(simulator, params, environment, renderer, max_time=10e7,
+                 start_t=0, ped_range=(0, -1), dataset=None):
         """"world_df" is a set of trajectories organized as a pandas dataframe.
             Each row is a pedestrian at a given frame (aka time point).
             The data was taken at 25 fps so between frames is 1/25th of a second. """
@@ -236,59 +234,64 @@ class PrerecordedHuman(Human):
         scale_x = -1 if dataset.flipxn else 1
         scale_y = -1 if dataset.flipyn else 1
         # run through the amount of agents
-        if ped_range[0] != ped_range[1]:  # have a non-empty range
-            datafile = \
-                os.path.join(params.socnav_dir, params.dataset_dir, csv_file)
-            world_df = pd.read_csv(datafile, header=None).T
-            world_df.columns = ['frame', 'ped', 'y', 'x']
-            world_df[['frame', 'ped']] = \
-                world_df[['frame', 'ped']].astype('int')
-            start_frame = world_df['frame'][0]  # default start (of data)
-            all_peds = np.unique(world_df.ped)
-            max_peds = max(all_peds)
-            if max_agents == -1:
-                # set to all pedestrians
-                max_agents = max_peds - 1
-            # ensure that max_agents never goes out of bounds
-            max_agents = min(max_agents, max_peds)
-            for i in range(max_agents):
-                ped_id = i + start_idx + 1
-                if ped_id not in all_peds:
-                    print("%sRequested agent %d not found in dataset: %s%s" %
-                          (color_red, ped_id, csv_file, color_reset))
-                    # this can happen based off the dataset
-                    continue
-                ped_i = world_df[world_df.ped == ped_id]
-                # gather data
-                if i == 0:
-                    # update start frame to be representative of "first" pedestrian
-                    start_frame = list(ped_i['frame'])[0]
-                t_data = PrerecordedHuman.gather_times(ped_i, spawn_delay_s, start_t,
-                                                       start_frame, fps)
-                if (ped_i.frame.iloc[0] - start_frame) / fps > max_time:
-                    # assuming the data of the agents is sorted relatively based off time
-                    break
-                print("Generating pedestrians from \"%s\" in range [%d, %d]: %d\r" %
-                      (dataset.name, ped_range[0], ped_range[1], ped_id), end="")
-                xytheta_data = PrerecordedHuman.gather_posn_data(ped_i, offset,
-                                                                 swap_axes=swapxy,
-                                                                 scale_x=scale_x,
-                                                                 scale_y=scale_y)
-                interp_fns = PrerecordedHuman.init_interp_fns(xytheta_data,
-                                                              t_data)
+        if ped_range[0] == ped_range[1]:  # have an empty range
+            return
+        datafile = \
+            os.path.join(params.socnav_dir, params.dataset_dir, csv_file)
+        print("Generating pedestrians from \"%s\" in range [%d, %d]\r" %
+              (dataset.name, ped_range[0], ped_range[1]), end="")
+        world_df = pd.read_csv(datafile, header=None).T
+        world_df.columns = ['frame', 'ped', 'y', 'x']
+        world_df[['frame', 'ped']] = \
+            world_df[['frame', 'ped']].astype('int')
+        start_frame = world_df['frame'][0]  # default start (of data)
+        all_peds = np.unique(world_df.ped)
+        max_peds = max(all_peds)
+        if max_agents == -1:
+            # set to all pedestrians
+            max_agents = max_peds - 1
+        # ensure that max_agents never goes out of bounds
+        max_agents = min(max_agents, max_peds)
+        for i in range(max_agents):
+            ped_id = i + start_idx + 1
+            if ped_id not in all_peds:
+                print("%sRequested agent %d not found in dataset: %s%s" %
+                      (color_red, ped_id, csv_file, color_reset))
+                # this can happen based off the dataset
+                continue
+            ped_i = world_df[world_df.ped == ped_id]
+            # gather data
+            if i == 0:
+                # update start frame to be representative of "first" pedestrian
+                start_frame = list(ped_i['frame'])[0]
+            t_data = PrerecordedHuman.gather_times(ped_i, spawn_delay_s, start_t,
+                                                   start_frame, fps)
+            if (ped_i.frame.iloc[0] - start_frame) / fps > max_time:
+                # assuming the data of the agents is sorted relatively based off time
+                break
+            print("Generating pedestrians from \"%s\" in range [%d, %d]: %d\r" %
+                  (dataset.name, ped_range[0], ped_range[1], ped_id), end="")
+            xytheta_data = PrerecordedHuman.gather_posn_data(ped_i, offset,
+                                                             swap_axes=swapxy,
+                                                             scale_x=scale_x,
+                                                             scale_y=scale_y)
+            interp_fns = PrerecordedHuman.init_interp_fns(xytheta_data,
+                                                          t_data)
 
-                v_data = PrerecordedHuman.gather_vel_data(t_data, xytheta_data)
-                # combine the xytheta with the velocity
-                config_data = PrerecordedHuman.to_configs(xytheta_data, v_data)
-                new_agent = PrerecordedHuman(t_data=t_data, posn_data=config_data,
-                                             generate_appearance=params.render_3D,
-                                             interps=interp_fns)
-                simulator.add_agent(new_agent)
+            v_data = PrerecordedHuman.gather_vel_data(t_data, xytheta_data)
+            # combine the xytheta with the velocity
+            config_data = PrerecordedHuman.to_configs(xytheta_data, v_data)
+            name = "prerec_%04d" % (i)
+            new_agent = PrerecordedHuman(t_data=t_data, posn_data=config_data,
+                                         generate_appearance=params.render_3D,
+                                         interps=interp_fns, name=name)
+            simulator.add_agent(new_agent)
 
-                # add human to renderer
-                # if params.render_3D:
-                #     renderer.add_human(new_agent)
-                #     environment["human_traversible"] = \
-                #         np.array(renderer.get_human_traversible())
-            # to not disturb the carriage-return print
-            print()
+            # add human to renderer
+            # TODO: make sure this works
+            if params.render_3D:
+                renderer.add_human(new_agent)
+                environment["human_traversible"] = \
+                    np.array(renderer.get_human_traversible())
+        # to not disturb the carriage-return print
+        print()

@@ -1,6 +1,6 @@
 from agents.humans.human_appearance import HumanAppearance
 from agents.humans.human_configs import HumanConfigs
-from utils.utils import *
+from utils.utils import generate_name, generate_config_from_pos_3
 from agents.agent import Agent
 import numpy as np
 
@@ -23,11 +23,7 @@ class Human(Agent):
         """
         Sample a new random human from all required features
         """
-        human_name = None
-        if(name is None):
-            human_name = generate_name(max_chars)
-        else:
-            human_name = name
+        human_name = name if name is not None else generate_name(max_chars)
         if(verbose):
             # In order to print more readable arrays
             np.set_printoptions(precision=2)
@@ -72,3 +68,31 @@ class Human(Agent):
                 HumanAppearance)
         configs = HumanConfigs.generate_random_human_config(environment)
         return Human.generate_human(appearance, configs)
+
+    @staticmethod
+    def generate(simulator, p, starts, goals, environment, r):
+        """
+        Generate and add num_humans number of randomly generated humans to the simulator
+        """
+        num_gen_humans = min(len(starts), len(goals))
+        print("Generated Auto Humans:", num_gen_humans)
+        from agents.humans.human_configs import HumanConfigs
+        for i in range(num_gen_humans):
+            start_config = generate_config_from_pos_3(starts[i])
+            goal_config = generate_config_from_pos_3(goals[i])
+            start_goal_configs = HumanConfigs(start_config, goal_config)
+            human_i_name = "auto_%04d" % i
+            # Generates a random human from the environment
+            new_human_i = Human.generate_human_with_configs(
+                start_goal_configs,
+                generate_appearance=p.render_3D,
+                name=human_i_name
+            )
+            # update renderer and get human traversible if it exists
+            if p.render_3D:
+                r.add_human(new_human_i)
+                environment["human_traversible"] = \
+                    np.array(r.get_human_traversible())
+
+            # Input human fields into simulator
+            simulator.add_agent(new_human_i)

@@ -2,7 +2,9 @@ import numpy as np
 import json
 import socket
 import threading
-from utils.utils import *
+import os
+from utils.utils import euclidean_dist2, iter_print, conn_recv
+from utils.utils import color_red, color_reset, color_green
 from params.central_params import create_robot_params
 
 lock = threading.Lock()  # for asynchronous data sending
@@ -173,7 +175,7 @@ def force_connect():
     s.connect(recv_ID)
 
 
-def establish_handshake(p: DotMap):
+def establish_handshake(p):  # NOTE: p is a DotMap
     if(p.episode_params.without_robot):
         # lite-mode episode does not include a robot or joystick
         return

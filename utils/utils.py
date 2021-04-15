@@ -84,7 +84,6 @@ class Timer():
         else:
             if self.start_time == 0:
                 logging.error('Timer not started by calling tic().')
-            t = time.time()
             diff = time.time() - self.start_time
             self.total_time += diff
             self.calls += 1.
