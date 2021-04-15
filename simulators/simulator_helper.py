@@ -40,6 +40,7 @@ class SimulatorHelper(object):
         self.total_agents: int = 0
         self.num_collided_agents: int = 0
         self.num_completed_agents: int = 0
+        self.num_timeout_agents: int = 0  # updated with (non-robot) add_agent
         # restart agent coloring on every instance of the simulator to be consistent across episodes
         Agent.restart_coloring()
 
@@ -70,12 +71,14 @@ class SimulatorHelper(object):
                               keep_episode_running=self.params.keep_episode_running)
             # added to backstage prerecs which will add to self.prerecs when the time is right
             self.backstage_prerecs[name] = a
+            self.num_timeout_agents += 1  # added one more non-robot agent
         else:
             # initialize agent and add to simulator
             a.simulation_init(sim_map=self.obstacle_map,
                               with_planner=True,
                               keep_episode_running=self.params.keep_episode_running)
             self.agents[name] = a
+            self.num_timeout_agents += 1  # added one more non-robot agent
 
     def exists_running_agent(self):
         """Checks whether or not a generated agent is still running (acting)
@@ -109,17 +112,15 @@ class SimulatorHelper(object):
         raise NotImplementedError
 
     def print_sim_progress(self, rendered_frames: int):
-        """prints an inline simulation progress message based off agent planning termination
+        """prints an inline simulation progress message based off the current agent termination statuses
             TODO: account for agent<->agent collisions
         Args:
             rendered_frames (int): how many frames have been generated so far
         """
-        num_timeout = self.total_agents - \
-            self.num_completed_agents - self.num_collided_agents
         print("A:", self.total_agents,
               "%sSuccess:" % (color_green), self.num_completed_agents,
               "%sCollide:" % (color_red), self.num_collided_agents,
-              "%sTime:" % (color_blue), num_timeout,
+              "%sTime:" % (color_blue), self.num_timeout_agents,
               "%sFrames:" % (color_reset), rendered_frames,
               "T = %.3f" % (self.sim_t),
               "\r", end="")
@@ -137,28 +138,32 @@ class SimulatorHelper(object):
 
     def loop_through_pedestrians(self, current_state: SimState):
         for a in list(self.agents.values()):
-            if(not a.end_acting):
-                a.update(current_state)
-            else:
+            if a.get_end_acting():
                 if(a.get_collided()):
                     self.num_collided_agents += 1
                 else:
                     self.num_completed_agents += 1
+                self.num_timeout_agents -= 1  # decrement the timeout_agents counter
                 del(self.agents[a.get_name()])
                 del(a)
+            else:
+                a.update(current_state)
 
         for a in list(self.backstage_prerecs.values()):
-            if(not a.end_acting and a.get_start_time() <= Agent.sim_t < a.get_end_time()):
+            if (not a.get_end_acting()) and (a.get_start_time() <= Agent.sim_t < a.get_end_time()):
                 # only add (or keep) agents in the time frame
                 self.prerecs[a.get_name()] = a
                 a.update(current_state)
+                if a.just_collided_with_robot(self.robot):
+                    self.num_collided_agents += 1  # add collisions with robot
             else:
                 # remove agent since its not within the time frame or finished
-                if(a.get_name() in self.prerecs.keys()):
-                    if(a.get_collided()):
+                if a.get_name() in self.prerecs.keys():
+                    if a.get_end_acting() and a.get_collided():
                         self.num_collided_agents += 1
                     else:
                         self.num_completed_agents += 1
+                    self.num_timeout_agents -= 1  # decrement the timeout_agents counter
                     self.prerecs.pop(a.get_name())
                     # also remove from back stage since they will no longer be used
                     del(self.backstage_prerecs[a.get_name()])

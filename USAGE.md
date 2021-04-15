@@ -84,7 +84,7 @@ To choose which tests to run, edit the `tests` list under `[episode_params]` in 
 ## More about the `Agents`
 Pedestrians used in the simulator can be either autonomous agents or prerecorded agents. The autonomous agents follow the same `SamplingPlanner` planner to reach their goal. However we also include the option to use prerecorded agents which are from an open-source dataset that recorded real human trajectories in various environments. 
 - Since the prerecorded agents have a set trajectory as they are spawned, they cannot interact with the environment or change course to avoid obstacles
-- We do provide the option under `[agent_params]` in [`user_params.ini`](params/user_params.ini) to toggle `pause_on_collide` which will pause the pedestrians' motion for `collision_cooldown_amnt` simulator timesteps after a collision with the robot. This feature applies to both Auto-agents as well as Prerecorded-agents. 
+- We do provide the option under `[agent_params]` in [`user_params.ini`](params/user_params.ini) to toggle `pause_on_collide` which will pause the pedestrians' motion for `collision_cooldown_amnt` seconds (simulator time) after a collision with the robot. This feature applies to both Auto-agents as well as Prerecorded-agents. 
 
 The pedestrian datasets are also a component of the user-editable params under [`dataset_params.ini`](params/dataset_params.ini) which define the following params:
 - `file_name` which holds the relative file location of the `.csv` file for the dataset.

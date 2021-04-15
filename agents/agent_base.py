@@ -79,10 +79,7 @@ class AgentBase(object):
         return self.end_acting
 
     def get_collided(self):
-        return self.get_end_acting() and \
-            ((not self.keep_episode_running and
-              self.termination_cause == "Pedestrian Collision") or
-             self.termination_cause == "Obstacle Collision")
+        return "Collision" in self.termination_cause
 
     def get_completed(self):
         return self.get_end_acting() and self.termination_cause == "Success"
@@ -133,6 +130,7 @@ class AgentBase(object):
                 return True
         # reached here means no collisions have occured, therefore there is no latest_collider
         self.latest_collider = ""
+        self.termination_cause = "Timeout"  # no more collisions with these group members
         return False
 
     def check_collisions(self, world_state, include_agents=True, include_robots=True):

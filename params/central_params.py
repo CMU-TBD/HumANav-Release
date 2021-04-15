@@ -335,7 +335,8 @@ def create_agent_params(with_planner=False, with_obstacle_map=False):
 
     p.record_video = agent_p2.getboolean('record_video')
     p.save_trajectory_data = agent_p2.getboolean('save_trajectory_data')
-    p.collision_cooldown_amnt = agent_p.getint('collision_cooldown_amnt')
+    dt = user_config["simulator_params"].getfloat("dt")
+    p.collision_cooldown_amnt = int(agent_p.getfloat('collision_cooldown_amnt') / dt)
     p.pause_on_collide = agent_p.getboolean('pause_on_collide')
     assert(p.collision_cooldown_amnt > 0)
     # Load system dynamics params

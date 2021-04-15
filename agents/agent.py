@@ -61,6 +61,12 @@ class Agent(AgentBase):
     def update_world(self, state):
         self.world_state = state
 
+    def just_collided_with_robot(self, robot):
+        collision = self.get_collided()
+        with_robot = (self.latest_collider == robot.get_name())
+        just_now = self.get_collision_cooldown() == self.params.collision_cooldown_amnt - 1
+        return collision and with_robot and just_now
+
     @staticmethod
     def set_sim_dt(sim_dt):
         # all the agents know the same simulator refresh rate
