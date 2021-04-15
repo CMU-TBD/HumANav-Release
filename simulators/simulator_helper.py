@@ -239,65 +239,76 @@ class SimulatorHelper(object):
         Args:
             filename (str, optional): name of each png frame (unindexed). Defaults to "obs".
         """
-        if self.params.fps_scale_down == 0 or not self.params.record_video:
+        fps_scale = self.params.fps_scale_down
+        if fps_scale == 0 or not self.params.record_video:
             print("%sNot rendering movie%s" % (color_orange, color_reset))
             return
 
         # Rendering movie
-        fps = (1.0 / self.dt) * self.params.fps_scale_down
+        fps = (1.0 / self.dt) * fps_scale
         print("%sRendering movie with fps=%d%s" %
               (color_orange, fps, color_reset))
-        num_frames = \
-            int(np.ceil(len(self.sim_states) * self.params.fps_scale_down))
-        np.set_printoptions(precision=3)
+        num_states = len(self.sim_states)
+        num_frames = int(np.ceil(num_states * fps_scale))
 
-        if not self.params.render_3D:
-            # optimized to use multiple processes
-            # TODO: put a limit on the maximum number of processes that can be run at once
-            gif_processes = []
+        sim_state_bank = list(self.sim_states.values())
+
+        # generate associative flags
+        # figure out which frames (sim_states) to skip
+        def generate_skip_flags(num_s, framerate_scale):
             skip = 0
-            frame = 0
-            for p, s in enumerate(self.sim_states.values()):
+            sim_state_skip = []
+            for _ in range(num_s):
                 if skip == 0:
-                    # pool.apply_async(self.render_sim_state, args=(s, filename + str(p) + ".png"))
-                    frame += 1
-                    gif_processes.append(multiprocessing.Process(
-                        target=self.render_sim_state,
-                        args=(renderer, camera_pose, s, filename + str(p) + ".png"))
-                    )
-                    gif_processes[-1].start()
-                    print("Started processes: %d out of %d, %.3f%% \r" %
-                          (frame, num_frames, 100.0 * (frame / num_frames)), end="")
+                    sim_state_skip.append(1)
                     # reset skip counter for frames
-                    skip = int(1.0 / self.params.fps_scale_down) - 1
+                    skip = int(1.0 / framerate_scale) - 1
                 else:
+                    sim_state_skip.append(0)
                     # skip certain other frames as directed by the fps_scale_down
                     skip -= 1
-            print()  # not overwrite next line
-            for frame, p in enumerate(gif_processes):
-                p.join()
-                print("Finished processes: %d out of %d, %.3f%% \r" %
-                      (frame + 1, num_frames, 100.0 * ((frame + 1) / num_frames)), end="")
-            print()  # not overwrite next line
-        else:
-            # generate frames sequentially (non multiproceses)
-            skip = 0
-            frame = 0
-            for s in self.sim_states.values():
-                if skip == 0:
-                    self.render_sim_state(renderer, camera_pose, s,
-                                          filename + str(frame) + ".png")
-                    frame += 1
-                    print("Generated Frames: %d out of %d, %.3f%% \r" %
-                          (frame, num_frames, 100.0 * (frame / num_frames)), end="")
-                    del s  # free the state from memory
-                    skip = int(1.0 / self.params.fps_scale_down) - 1
-                else:
-                    skip -= 1.0
-            print()
+            assert(len(sim_state_skip) == num_s)
+            return np.array(sim_state_skip).astype(np.int16)
+        sim_state_skip = generate_skip_flags(num_states, fps_scale)
+
+        import time
+        start_time = float(time.time())
+
+        def worker_render_sim_states(procID):
+            # runs an interleaved loop across sim_states in the bank
+            for i in range(int(np.ceil(len(sim_state_bank) / self.params.num_render_cores))):
+                sim_idx = procID + i * self.params.num_render_cores
+                if sim_idx < len(sim_state_bank) and sim_state_skip[sim_idx] == 1:
+                    sim_state_idx = sim_state_bank[sim_idx]
+                    self.render_sim_state(renderer, camera_pose,
+                                          sim_state_idx, filename + str(sim_idx) + ".png")
+                    sim_label = sim_idx * fps_scale
+                    print("Rendered frames: %d out of %d, %.3f%% \r" %
+                          (sim_label, num_frames, 100.0 * min(1, (sim_label + 1.) / num_frames)), sep=' ', end="", flush=True)
+
+        gif_processes = []
+        if not self.params.render_3D and self.params.num_render_cores > 1:
+            # optimized to use multiple processes
+            for p in range(self.params.num_render_cores - 1):
+                gif_processes.append(multiprocessing.Process(target=worker_render_sim_states,
+                                                             args=(p + 1,)))
+            for proc in gif_processes:
+                proc.start()
+
+        # run the renderer on the root processor
+        worker_render_sim_states(0)
+
+        # finish all the other processors if there are any
+        for proc in gif_processes:
+            proc.join()
+        print("Rendered frames: %d out of %d, %.3f%%\nFinished rendering all frames" %
+              (num_frames, num_frames, 100.0))
+        time_end = float(time.time())
+        print("rendering took %.5fs" % ((time_end - start_time)))
 
         # convert all the generated frames into a gif file
         self.save_frames_to_gif(filename=self.episode_params.name)
+        return
 
     def render_sim_state(self, renderer: SocNavRenderer, camera_pose: list,
                          state: SimState, filename: str):

@@ -120,8 +120,8 @@ class Simulator(SimulatorHelper):
         # turn off the robot if it is still on
         # capture final wall clock (completion) time
         self.sim_wall_clock = time.time() - start_time
-        print("\nSimulation completed in", self.sim_wall_clock,
-              "real world seconds")
+        print("\nSimulation completed in %.4f real world seconds" %
+              self.sim_wall_clock)
         # decommission_robot
         if self.robot is not None:
             if(not self.robot.get_end_acting()):
@@ -227,7 +227,8 @@ class Simulator(SimulatorHelper):
                 metric_fn = eval("metrics_sim_utils." + metric)
             except (AttributeError, NameError):
                 import logging
-                logging.info("The metric %s is not implemented yet" % metric)  # will not print anything
+                logging.info("The metric %s is not implemented yet" %
+                             metric)  # will not print anything
                 continue
             metrics_out[metric] = metric_fn(self)
 

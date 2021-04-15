@@ -303,6 +303,8 @@ def create_simulator_params(verbose=True):
     p.max_frames = sim_p.getint('max_frames')
     # bound by 0 <= X <= 1
     p.fps_scale_down = max(0.0, min(1.0, sim_p.getfloat('fps_scale_down')))
+    # bound by 0 <= X
+    p.num_render_cores = max(0, sim_p.getint('num_render_cores'))
     # sbpd simulator params:
     p.render_3D = p.socnav_params.render_3D
     # Load obstacle map params
