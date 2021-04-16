@@ -64,7 +64,7 @@ class PrerecordedHuman(Human):
         theta = np.arctan2((y - prev_y), (x - prev_x))
         avg_theta = np.mean([prev_theta, next_theta])
         if np.abs(theta - avg_theta) > 0.5:  # TODO: Magic number! ... bad!
-            theta = avg_theta
+            theta = avg_theta  # fix this with Scipy Slerp
         # construct interpolated position
         posn_interp = [x, y, theta]
         last_t = np.floor((self.get_rel_t() - self.t_data[0]) / Agent.sim_dt)
