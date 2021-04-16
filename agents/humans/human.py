@@ -24,7 +24,7 @@ class Human(Agent):
         Sample a new random human from all required features
         """
         human_name = name if name is not None else generate_name(max_chars)
-        if(verbose):
+        if verbose:
             # In order to print more readable arrays
             np.set_printoptions(precision=2)
             pos_2 = (configs.get_start_config().position_nk2())[0][0]
@@ -48,9 +48,9 @@ class Human(Agent):
         Sample a new random from known configs and a randomized
         appearance, if any of the configs are None they will be generated
         """
-        if(generate_appearance):
-            appearance = HumanAppearance.generate_random_human_appearance(
-                HumanAppearance)
+        if generate_appearance:
+            appearance = \
+                HumanAppearance.generate_rand_human_appearance(HumanAppearance)
         else:
             appearance = None
         return Human.generate_human(appearance, configs, verbose=verbose, name=name)
@@ -64,8 +64,8 @@ class Human(Agent):
         """
         appearance = None
         if generate_appearance:
-            appearance = HumanAppearance.generate_random_human_appearance(
-                HumanAppearance)
+            appearance = \
+                HumanAppearance.generate_rand_human_appearance(HumanAppearance)
         configs = HumanConfigs.generate_random_human_config(environment)
         return Human.generate_human(appearance, configs)
 
@@ -75,7 +75,7 @@ class Human(Agent):
         Generate and add num_humans number of randomly generated humans to the simulator
         """
         num_gen_humans = min(len(starts), len(goals))
-        print("Generated Auto Humans:", num_gen_humans)
+        print("Generating auto humans:", num_gen_humans)
         from agents.humans.human_configs import HumanConfigs
         for i in range(num_gen_humans):
             start_config = generate_config_from_pos_3(starts[i])

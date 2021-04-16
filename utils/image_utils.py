@@ -1,6 +1,7 @@
 import os
 import numpy as np
-from utils.utils import *
+from utils.utils import touch, natural_sort
+from utils.utils import color_red, color_green, color_reset
 import glob
 import imageio
 import matplotlib as mpl
@@ -30,11 +31,11 @@ def gather_metadata(ppm: float, a, plot_start_goal: bool, start: list,
     collided = a.get_collided() or (a.get_collision_cooldown() > 0)
     markersize = a.get_radius() * ppm
     pos_3 = a.get_current_config().to_3D_numpy()
-    if(traj_col == ""):
+    if traj_col == "":
         traj_col = a.get_color()
     start_3 = None
     goal_3 = None
-    if(plot_start_goal):
+    if plot_start_goal:
         try:
             # set the start and goal if it exists in the agent, else use the provided
             start_3 = a.get_start_config().to_3D_numpy()
@@ -55,7 +56,7 @@ def gather_colors_and_labels(label: str, indx: int):
     draw_label = None
     sl = None
     gl = None
-    if(indx == 0):
+    if indx == 0:
         # Only add label on the first humans
         draw_label = label
         sl = label + " start"
@@ -74,7 +75,7 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
                             start_3, goal_3, traj_color)
 
         # render agent's trajectory
-        if(plot_trajectory and a.get_trajectory()):
+        if plot_trajectory and a.get_trajectory():
             a.get_trajectory().render(ax, freq=1, color=traj_col,
                                       alpha=alpha, plot_quiver=False,
                                       clip=traj_clip, linewidth=ppm / 8.2)
@@ -84,7 +85,7 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
             gather_colors_and_labels(label, i)
 
         # draw little dot in the middle of the collided agents if collision occurs
-        if(collided):
+        if collided:
             ax.plot(pos_3[0], pos_3[1], collided_color, markersize=ms,
                     label=draw_label)
             ax.plot(pos_3[0], pos_3[1], normal_color, markersize=ms * 0.4,
@@ -95,14 +96,14 @@ def plot_agent_dict(ax, ppm: float, agents_dict: dict, label='Agent', normal_col
 
         # plot collision indicator
         # plot start + goal
-        if(plot_start_goal):
+        if plot_start_goal:
             ax.plot(start_3[0], start_3[1], start_col,
                     markersize=ms, label=sl, alpha=0.5)
             ax.plot(goal_3[0], goal_3[1], goal_col,
                     markersize=2 * ms, marker="*", label=gl, alpha=0.8)
 
         # plot a surrounding "force field" around the agent
-        if(plot_quiver):
+        if plot_quiver:
             # Agent heading
             s = 0.5
             ax.quiver(pos_3[0], pos_3[1], s * np.cos(pos_3[2]), s * np.sin(pos_3[2]),

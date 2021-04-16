@@ -24,8 +24,8 @@ class PrerecordedHuman(Human):
         self.xinterp, self.yinterp, self.thinterp = interps
         init_configs = HumanConfigs(posn_data[0], posn_data[-1])
         if generate_appearance:
-            appearance = HumanAppearance.generate_random_human_appearance(
-                HumanAppearance)
+            appearance = \
+                HumanAppearance.generate_rand_human_appearance(HumanAppearance)
         else:
             appearance = None
         self.relative_diff: float = 0.0  # how much time the agent will spend stopped
@@ -238,7 +238,7 @@ class PrerecordedHuman(Human):
             return
         datafile = \
             os.path.join(params.socnav_dir, params.dataset_dir, csv_file)
-        print("Generating pedestrians from \"%s\" in range [%d, %d]\r" %
+        print("Generating recorded humans from \"%s\" in range [%d, %d]\r" %
               (dataset.name, ped_range[0], ped_range[1]), end="")
         world_df = pd.read_csv(datafile, header=None).T
         world_df.columns = ['frame', 'ped', 'y', 'x']
@@ -269,7 +269,7 @@ class PrerecordedHuman(Human):
             if (ped_i.frame.iloc[0] - start_frame) / fps > max_time:
                 # assuming the data of the agents is sorted relatively based off time
                 break
-            print("Generating pedestrians from \"%s\" in range [%d, %d]: %d\r" %
+            print("Generating recorded humans from \"%s\" in range [%d, %d]: %d\r" %
                   (dataset.name, ped_range[0], ped_range[1], ped_id), end="")
             xytheta_data = PrerecordedHuman.gather_posn_data(ped_i, offset,
                                                              swap_axes=swapxy,

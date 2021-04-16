@@ -2,12 +2,12 @@ import numpy as np
 import random
 # Humanav
 from agents.humans.human import Human
-from agents.humans.recorded_human import PrerecordedHuman
 from agents.robot_agent import RobotAgent
+from agents.humans.recorded_human import PrerecordedHuman
 # Planner + Simulator:
 from simulators.simulator import Simulator
 from params.central_params import get_seed, create_socnav_params
-from utils.utils import construct_environment, generate_config_from_pos_3
+from utils.utils import construct_environment
 
 # seed the random number generator
 random.seed(get_seed())
@@ -70,7 +70,7 @@ def test_episodes():
 
         """Generate the robot in the simulator"""
         if not p.episode_params.without_robot:
-            generate_robot(simulator, p, episode.robot_start_goal)
+            RobotAgent.generate(simulator, p, episode.robot_start_goal)
 
         """Add the prerecorded humans to the simulator"""
         for i, dataset in enumerate(episode.pedestrian_datasets):

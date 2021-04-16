@@ -96,7 +96,7 @@ def test_socnav():
 
         """Generate the robot(s) for the simulator"""
         if not p.episode_params.without_robot:
-            if(len(episode.robot_start_goal) == 0):
+            if len(episode.robot_start_goal) == 0:
                 # randomly generate robot
                 robot_agent = RobotAgent.random_from_environment(environment)
                 simulator.add_agent(robot_agent)

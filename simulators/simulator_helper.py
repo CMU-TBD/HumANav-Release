@@ -1,26 +1,26 @@
 import numpy as np
 import multiprocessing
 import threading
-from utils.utils import *
-from utils.image_utils import *
 from agents.agent import Agent
 from simulators.sim_state import SimState
 from socnav.socnav_renderer import SocNavRenderer
 from params.central_params import create_simulator_params
+from utils.utils import color_red, color_green, color_blue, color_orange, color_reset
+from utils.image_utils import render_rgb_and_depth, render_scene, save_to_gif
 import pandas as pd
 
 
 class SimulatorHelper(object):
 
-    def __init__(self, environment: dict, verbose: bool):
-        """ Initializer for the central simulator
+    def __init__(self, environment: dict, verbose=False):
+        """ Initializer for the simulator helper
         Args:
             environment (dict): dictionary housing the obj map (bitmap) and more
-            renderer (optional): OpenGL renderer for 3D models. Defaults to None
-            episode_params (str, optional): Name of the episode test that the simulator runs
+            verbose (bool): flag to print debug prints
         """
         self.environment = environment
         self.params = create_simulator_params(verbose)
+        self.episode_params = None
         self.algo_name = "lite"  # by default there is no robot (or algorithm)
         self.obstacle_map = None
         # keep track of all agents in dictionary with names as the key
@@ -129,17 +129,17 @@ class SimulatorHelper(object):
         agent_collisions = []
         for i in range(max_iter):
             collider = self.sim_states[i].get_collider()
-            if(collider != ""):
+            if collider != "":
                 agent_collisions.append(collider)
         last_collider = self.robot.latest_collider
-        if(last_collider != ""):
+        if last_collider != "":
             agent_collisions.append(last_collider)
         return agent_collisions
 
     def loop_through_pedestrians(self, current_state: SimState):
         for a in list(self.agents.values()):
             if a.get_end_acting():
-                if(a.get_collided()):
+                if a.get_collided():
                     self.num_collided_agents += 1
                 else:
                     self.num_completed_agents += 1
@@ -179,11 +179,11 @@ class SimulatorHelper(object):
         agent_threads = []
         all_agents = list(self.agents.values())
         for a in all_agents:
-            if(not a.end_acting):
+            if not a.end_acting:
                 agent_threads.append(threading.Thread(target=a.update,
                                                       args=(current_state,)))
             else:
-                if(a.get_collided()):
+                if a.get_collided():
                     self.num_collided_agents += 1
                 else:
                     self.num_completed_agents += 1
@@ -208,8 +208,8 @@ class SimulatorHelper(object):
                                                        args=(current_state,)))
             else:
                 # remove agent since its not within the time frame or finished
-                if(a.get_name() in self.prerecs.keys()):
-                    if(a.get_collided()):
+                if a.get_name() in self.prerecs.keys():
+                    if a.get_collided():
                         self.num_collided_agents += 1
                     else:
                         self.num_completed_agents += 1

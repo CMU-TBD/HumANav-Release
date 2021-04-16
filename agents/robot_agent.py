@@ -112,18 +112,18 @@ class RobotAgent(Agent):
 
     def execute(self):
         self.check_termination_conditions()
-        if(self.params.robot_params.use_system_dynamics):
+        if self.params.robot_params.use_system_dynamics:
             self.execute_velocity_cmds()
         else:
             self.execute_position_cmds()
-        if (self.params.verbose):
+        if self.params.verbose:
             print(self.get_current_config().to_3D_numpy())
         # knowing that both executions took self.num_cmds_per_batch commands
         self.num_executed += self.num_cmds_per_batch
 
     def execute_velocity_cmds(self):
         for _ in range(self.num_cmds_per_batch):
-            if(self.get_end_acting()):
+            if self.get_end_acting():
                 break
             current_config = self.get_current_config()
             # the command is indexed by self.num_executed and is safe due to the size constraints in the update()
@@ -147,7 +147,7 @@ class RobotAgent(Agent):
 
     def execute_position_cmds(self):
         for _ in range(self.num_cmds_per_batch):
-            if(self.get_end_acting()):
+            if self.get_end_acting():
                 break
             joystick_input = self.joystick_inputs[self.num_executed]
             assert(len(joystick_input) == 4)  # has x,y,theta,velocity
@@ -193,24 +193,24 @@ class RobotAgent(Agent):
             # execute all the commands on the queue
             self.execute()
             # decrement counter
-            if(self.joystick_requests_world > 0):
+            if self.joystick_requests_world > 0:
                 self.joystick_requests_world -= 1
         elif not self.block_joystick and self.remaining_repeats > 0:
             # repeat the last n commands in the queue if running asynchronously
             # only if there is at least n>0 available commands to repeat
-            if(num_cmds < 1):
+            if num_cmds < 1:
                 return
             repeats = self.joystick_inputs[-1:]
             self.joystick_inputs.extend(repeats)
             self.execute()
             # decrement counter
-            if(self.joystick_requests_world > 0):
+            if self.joystick_requests_world > 0:
                 self.joystick_requests_world -= 1
             # just executed one command, decrease from the counter
             self.remaining_repeats -= 1
 
     def update(self):
-        if(self.get_end_acting()):
+        if self.get_end_acting():
             return
         self.sense()
         self.plan()

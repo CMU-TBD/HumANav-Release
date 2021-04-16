@@ -26,7 +26,7 @@ def clip_posn(sim_dt: float, old_pos3: list, new_pos3: list, v_bounds: list, eps
     assert(sim_dt > 0)
     dist_to_new = euclidean_dist2(old_pos3, new_pos3)
     req_vel = abs(dist_to_new / sim_dt)
-    if(req_vel <= v_bounds[1] + epsilon):
+    if req_vel <= v_bounds[1] + epsilon:
         return new_pos3
     # calculate theta of vector
     valid_theta = \
@@ -58,9 +58,8 @@ if os.path.exists(send_ID):
 def send_sim_state(robot):
     # send the (JSON serialized) world state per joystick's request
     if robot.joystick_requests_world == 0:
-        world_state = robot.world_state.to_json(
-            robot_on=not robot.get_end_acting()
-        )
+        world_state = \
+            robot.world_state.to_json(robot_on=not robot.get_end_acting())
         send_to_joystick(world_state)
         # immediately note that the world has been sent:
         robot.joystick_requests_world = -1
@@ -93,9 +92,9 @@ def listen_once(robot):
     data_b, response_len = conn_recv(connection, buffr_amnt=128)
     # close connection to be reaccepted when the joystick sends data
     connection.close()
-    if(data_b is not b'' and response_len > 0):
+    if data_b is not b'' and response_len > 0:
         data_str = data_b.decode("utf-8")  # bytes to str
-        if(robot.get_end_acting()):
+        if robot.get_end_acting():
             robot.joystick_requests_world = 0
         else:
             manage_data(robot, data_str)
@@ -103,17 +102,17 @@ def listen_once(robot):
 
 def is_keyword(robot, data_str: str):
     # non json important keyword
-    if(data_str == "sense"):
+    if data_str == "sense":
         robot.joystick_requests_world = \
             len(robot.joystick_inputs) - (robot.num_executed)
         return True
-    elif(data_str == "ready"):
+    elif data_str == "ready":
         robot.joystick_ready = True
         return True
-    elif("algo: " in data_str):
+    elif "algo: " in data_str:
         robot.algo_name = data_str[len("algo: "):]
         return True
-    elif(data_str == "abandon"):
+    elif data_str == "abandon":
         robot.power_off()
         return True
     return False
@@ -176,7 +175,7 @@ def force_connect():
 
 
 def establish_handshake(p):  # NOTE: p is a DotMap
-    if(p.episode_params.without_robot):
+    if p.episode_params.without_robot:
         # lite-mode episode does not include a robot or joystick
         return
     import time
