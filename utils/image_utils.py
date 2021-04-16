@@ -4,9 +4,6 @@ from utils.utils import touch, natural_sort
 from utils.utils import color_red, color_green, color_reset
 import glob
 import imageio
-import matplotlib as mpl
-mpl.use('Agg')  # for rendering without a display
-import matplotlib.pyplot as plt
 
 
 def plot_image_observation(ax, img_mkd, size=None):
@@ -183,7 +180,7 @@ def plot_topview(ax, extent, traversible, human_traversible, camera_pos_13,
                     0.5, "1m", fontsize=14, verticalalignment='top')
 
 
-def render_scene(p, rgb_image_1mk3, depth_image_1mk1, environment,
+def render_scene(plt, p, rgb_image_1mk3, depth_image_1mk1, environment,
                  camera_pos_13, pedestrians, robots,
                  sim_t: float, wall_t: float, filename: str, with_zoom=False):
     """Plots a single frame from information provided about the world state
@@ -278,12 +275,7 @@ def render_scene(p, rgb_image_1mk3, depth_image_1mk1, environment,
         touch(full_file_name)  # Just as the bash command
 
     fig.savefig(full_file_name, bbox_inches='tight', pad_inches=0)
-    fig.clear()
-    plt.cla()
-    plt.clf()
-    plt.close('all')
-    plt.close(fig)
-    del fig
+    plt.close()
     if p.verbose_printing:
         print('\033[32m', "Successfully rendered:",
               full_file_name, '\033[0m')
@@ -310,9 +302,12 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m: float, human_visible=True):
     rgb_image_1mk3 = r._get_rgb_image(
         camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
 
-    depth_image_1mk1, _, _ = r._get_depth_image(
-        camera_grid_world_pos_12, camera_pos_13[:, 2:3], xy_resolution=.05,
-        map_size=1500, pos_3=camera_pos_13[0, :3], human_visible=True)
+    depth_image_1mk1, _, _ = r._get_depth_image(camera_grid_world_pos_12,
+                                                camera_pos_13[:, 2:3],
+                                                xy_resolution=0.05,
+                                                map_size=1500,
+                                                pos_3=camera_pos_13[0, :3],
+                                                human_visible=True)
 
     return rgb_image_1mk3, depth_image_1mk1
 

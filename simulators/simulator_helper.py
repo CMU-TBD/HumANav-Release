@@ -281,11 +281,14 @@ class SimulatorHelper(object):
 
         def worker_render_sim_states(procID):
             # runs an interleaved loop across sim_states in the bank
+            import matplotlib as mpl
+            mpl.use('Agg')  # for rendering without a display
+            mpl.font_manager._get_font.cache_clear()
             for i in range(int(np.ceil(len(sim_state_bank) / self.params.num_render_cores))):
                 sim_idx = procID + i * self.params.num_render_cores
                 if sim_idx < len(sim_state_bank) and sim_state_skip[sim_idx] == 1:
                     sim_state_idx = sim_state_bank[sim_idx]
-                    self.render_sim_state(renderer, camera_pose,
+                    self.render_sim_state(mpl.pyplot, renderer, camera_pose,
                                           sim_state_idx, filename + str(sim_idx) + ".png")
                     sim_label = sim_idx * fps_scale
                     print("Rendered frames: %d out of %d, %.3f%% \r" %
@@ -315,7 +318,7 @@ class SimulatorHelper(object):
         self.save_frames_to_gif(filename=self.episode_params.name)
         return
 
-    def render_sim_state(self, renderer: SocNavRenderer, camera_pose: list,
+    def render_sim_state(self, plt, renderer: SocNavRenderer, camera_pose: list,
                          state: SimState, filename: str):
         """Converts a state into an image to be later converted to a gif movie
         Args:
@@ -355,7 +358,7 @@ class SimulatorHelper(object):
                                      state.get_environment()["map_scale"],
                                      human_visible=True)
         # plot the rbg, depth, and topview images if applicable
-        render_scene(self.params, rgb_image_1mk3, depth_image_1mk1,
+        render_scene(plt, self.params, rgb_image_1mk3, depth_image_1mk1,
                      state.get_environment(), camera_pos_13,
                      state.get_pedestrians(), state.get_robots(),
                      state.get_sim_t(), state.get_wall_t(), filename)
