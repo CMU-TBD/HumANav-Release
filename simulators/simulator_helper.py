@@ -292,16 +292,19 @@ class SimulatorHelper(object):
                                           sim_state_idx, filename + str(sim_idx) + ".png")
                     sim_label = sim_idx * fps_scale
                     print("Rendered frames: %d out of %d, %.3f%% \r" %
-                          (sim_label, num_frames, 100.0 * min(1, (sim_label + 1.) / num_frames)), sep=' ', end="", flush=True)
+                          (sim_label, num_frames, 100.0 * min(1, sim_label / num_frames)), sep=' ', end="", flush=True)
 
         gif_processes = []
-        if not self.params.render_3D and self.params.num_render_cores > 1:
-            # optimized to use multiple processes
-            for p in range(self.params.num_render_cores - 1):
-                gif_processes.append(multiprocessing.Process(target=worker_render_sim_states,
-                                                             args=(p + 1,)))
-            for proc in gif_processes:
-                proc.start()
+        if self.params.num_render_cores > 1:
+            # TODO: fix multiprocessing with Swiftshader engine!
+            # currently only runs in single-process mode, deepcopying has a problem
+            if self.params.render_3D == False:
+                # optimized to use multiple processes
+                for p in range(self.params.num_render_cores - 1):
+                    gif_processes.append(multiprocessing.Process(target=worker_render_sim_states,
+                                                                 args=(p + 1,)))
+                for proc in gif_processes:
+                    proc.start()
 
         # run the renderer on the root processor
         worker_render_sim_states(0)
@@ -310,7 +313,7 @@ class SimulatorHelper(object):
         for proc in gif_processes:
             proc.join()
         print("Rendered frames: %d out of %d, %.3f%%\nFinished rendering all frames" %
-              (num_frames, num_frames, 100.0))
+              (num_frames, num_frames, 100.0))  # make sure it says 100% at the end
         time_end = float(time.time())
         print("rendering took %.5fs" % ((time_end - start_time)))
 
@@ -437,8 +440,8 @@ def add_sim_state_to_dataframe(sim_step, sim_state, df, agent_info):
     """
     for agent_name, agent in sim_state.items():
         if not isinstance(agent, dict):
-            traj = np.squeeze(
-                agent.vehicle_trajectory.position_and_heading_nk3())
+            traj = \
+                np.squeeze(agent.vehicle_trajectory.position_and_heading_nk3())
             if not agent_name in agent_info.keys():
                 agent_info[agent_name] = [agent.get_radius()]
         else:

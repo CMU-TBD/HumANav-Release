@@ -293,14 +293,14 @@ def render_rgb_and_depth(r, camera_pos_13, dx_m: float, human_visible=True):
     Returns:
         rgb_image_1mk3, depth_image_1mk1: the rgb and depth images respectively
     """
-
     # Convert from real world units to grid world units
     camera_grid_world_pos_12 = camera_pos_13[:, :2] / dx_m
 
     # Render RGB and Depth Images. The shape of the resulting
     # image is (1 (batch), m (width), k (height), c (number channels))
-    rgb_image_1mk3 = r._get_rgb_image(
-        camera_grid_world_pos_12, camera_pos_13[:, 2:3], human_visible=True)
+    rgb_image_1mk3 = r._get_rgb_image(camera_grid_world_pos_12,
+                                      camera_pos_13[:, 2:3],
+                                      human_visible=True)
 
     depth_image_1mk1, _, _ = r._get_depth_image(camera_grid_world_pos_12,
                                                 camera_pos_13[:, 2:3],
